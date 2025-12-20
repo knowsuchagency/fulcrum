@@ -9,9 +9,10 @@ interface TerminalProps {
   className?: string
   onReady?: (terminal: XTerm) => void
   onResize?: (cols: number, rows: number) => void
+  onContainerReady?: (container: HTMLDivElement) => void
 }
 
-export function Terminal({ className, onReady, onResize }: TerminalProps) {
+export function Terminal({ className, onReady, onResize, onContainerReady }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -77,6 +78,9 @@ export function Terminal({ className, onReady, onResize }: TerminalProps) {
     requestAnimationFrame(() => {
       doFit()
       onReady?.(term)
+      if (containerRef.current) {
+        onContainerReady?.(containerRef.current)
+      }
     })
 
     const handleResize = () => {

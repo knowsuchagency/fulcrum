@@ -1,6 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Terminal as XTerm } from '@xterm/xterm'
 
+// Upload an image file and return the path
+async function uploadImage(file: File, targetDir?: string): Promise<string> {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (targetDir) {
+    formData.append('targetDir', targetDir)
+  }
+
+  const response = await fetch('/api/uploads', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to upload image')
+  }
+
+  const data = await response.json()
+  return data.path
+}
+
 // Types matching server/types.ts
 export type TerminalStatus = 'running' | 'exited' | 'error'
 
@@ -40,6 +61,11 @@ interface UseTerminalWSReturn {
   resizeTerminal: (terminalId: string, cols: number, rows: number) => void
   renameTerminal: (terminalId: string, name: string) => void
   attachXterm: (terminalId: string, xterm: XTerm) => () => void
+  setupImagePaste: (
+    container: HTMLElement,
+    terminalId: string,
+    targetDir?: string
+  ) => () => void
 }
 
 // Construct WebSocket URL based on current location
@@ -255,6 +281,43 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     [send, writeToTerminal]
   )
 
+  const setupImagePaste = useCallback(
+    (container: HTMLElement, terminalId: string, targetDir?: string) => {
+      const handlePaste = async (e: ClipboardEvent) => {
+        const items = e.clipboardData?.items
+        if (!items) return
+
+        // Check for image in clipboard
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault()
+            e.stopPropagation()
+
+            const file = item.getAsFile()
+            if (!file) return
+
+            try {
+              const path = await uploadImage(file, targetDir)
+              // Insert the path into the terminal
+              writeToTerminal(terminalId, path)
+            } catch (error) {
+              console.error('Failed to upload image:', error)
+            }
+            return
+          }
+        }
+        // If no image, let xterm handle the paste normally
+      }
+
+      container.addEventListener('paste', handlePaste, true)
+
+      return () => {
+        container.removeEventListener('paste', handlePaste, true)
+      }
+    },
+    [writeToTerminal]
+  )
+
   return {
     terminals,
     connected,
@@ -264,5 +327,6 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     resizeTerminal,
     renameTerminal,
     attachXterm,
+    setupImagePaste,
   }
 }

@@ -36,6 +36,7 @@ function TerminalsView() {
     renameTerminal,
     attachXterm,
     resizeTerminal,
+    setupImagePaste,
   } = useTerminalWS()
 
   const {
@@ -99,6 +100,8 @@ function TerminalsView() {
   }, [tasks])
 
   const cleanupFnsRef = useRef<Map<string, () => void>>(new Map())
+  const pasteCleanupFnsRef = useRef<Map<string, () => void>>(new Map())
+  const containerRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const terminalCountRef = useRef(0)
   const prevTerminalIdsRef = useRef<string[]>([])
 
@@ -182,6 +185,25 @@ function TerminalsView() {
     }
   }, [terminals, tabs, addTerminalToTab, removeTerminalFromTab, allTaskWorktrees])
 
+  // Set up image paste when container is available
+  const trySetupImagePaste = useCallback(
+    (terminalId: string) => {
+      const container = containerRefsMap.current.get(terminalId)
+      if (!container) return
+
+      // Already set up
+      if (pasteCleanupFnsRef.current.has(terminalId)) return
+
+      // Get the terminal's cwd for the target directory
+      const terminal = terminals.find((t) => t.id === terminalId)
+      const targetDir = terminal?.cwd ?? undefined
+
+      const cleanup = setupImagePaste(container, terminalId, targetDir)
+      pasteCleanupFnsRef.current.set(terminalId, cleanup)
+    },
+    [terminals, setupImagePaste]
+  )
+
   const handleTerminalClose = useCallback(
     (terminalId: string) => {
       // Clean up xterm attachment
@@ -190,6 +212,13 @@ function TerminalsView() {
         cleanup()
         cleanupFnsRef.current.delete(terminalId)
       }
+      // Clean up image paste handler
+      const pasteCleanup = pasteCleanupFnsRef.current.get(terminalId)
+      if (pasteCleanup) {
+        pasteCleanup()
+        pasteCleanupFnsRef.current.delete(terminalId)
+      }
+      containerRefsMap.current.delete(terminalId)
       removeTerminalFromTab(terminalId)
       destroyTerminal(terminalId)
     },
@@ -203,6 +232,14 @@ function TerminalsView() {
       cleanupFnsRef.current.set(terminalId, cleanup)
     },
     [attachXterm]
+  )
+
+  const handleTerminalContainerReady = useCallback(
+    (terminalId: string, container: HTMLDivElement) => {
+      containerRefsMap.current.set(terminalId, container)
+      trySetupImagePaste(terminalId)
+    },
+    [trySetupImagePaste]
   )
 
   const handleTerminalResize = useCallback(
@@ -319,6 +356,7 @@ function TerminalsView() {
           onTerminalReady={handleTerminalReady}
           onTerminalResize={handleTerminalResize}
           onTerminalRename={activeTabId === ALL_TASKS_TAB_ID ? undefined : handleTerminalRename}
+          onTerminalContainerReady={handleTerminalContainerReady}
           taskInfoByCwd={activeTabId === ALL_TASKS_TAB_ID ? taskInfoByCwd : undefined}
         />
       </div>

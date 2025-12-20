@@ -26,6 +26,7 @@ interface TerminalGridProps {
   onTerminalReady?: (terminalId: string, xterm: XTerm) => void
   onTerminalResize?: (terminalId: string, cols: number, rows: number) => void
   onTerminalRename?: (terminalId: string, name: string) => void
+  onTerminalContainerReady?: (terminalId: string, container: HTMLDivElement) => void
   /** Map terminal cwd to task info for navigation and display */
   taskInfoByCwd?: Map<string, TaskInfo>
 }
@@ -37,9 +38,10 @@ interface TerminalPaneProps {
   onReady?: (xterm: XTerm) => void
   onResize?: (cols: number, rows: number) => void
   onRename?: (name: string) => void
+  onContainerReady?: (container: HTMLDivElement) => void
 }
 
-function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename }: TerminalPaneProps) {
+function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename, onContainerReady }: TerminalPaneProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
@@ -83,7 +85,7 @@ function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename
         )}
       </div>
       <div className="flex-1">
-        <Terminal onReady={onReady} onResize={onResize} />
+        <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} />
       </div>
     </div>
   )
@@ -120,6 +122,7 @@ export function TerminalGrid({
   onTerminalReady,
   onTerminalResize,
   onTerminalRename,
+  onTerminalContainerReady,
   taskInfoByCwd,
 }: TerminalGridProps) {
   if (terminals.length === 0) {
@@ -146,6 +149,7 @@ export function TerminalGrid({
       onReady={onTerminalReady ? (xterm) => onTerminalReady(terminal.id, xterm) : undefined}
       onResize={onTerminalResize ? (c, r) => onTerminalResize(terminal.id, c, r) : undefined}
       onRename={onTerminalRename ? (name) => onTerminalRename(terminal.id, name) : undefined}
+      onContainerReady={onTerminalContainerReady ? (container) => onTerminalContainerReady(terminal.id, container) : undefined}
     />
   )
 

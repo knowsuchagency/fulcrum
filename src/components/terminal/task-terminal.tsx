@@ -28,6 +28,7 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     createTerminal,
     attachXterm,
     resizeTerminal,
+    setupImagePaste,
   } = useTerminalWS()
 
   // Get the current terminal's status
@@ -157,9 +158,11 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
 
   // Attach xterm to terminal once we have both
   useEffect(() => {
-    if (!terminalId || !termRef.current || attachedRef.current) return
+    if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
     const cleanup = attachXterm(terminalId, termRef.current)
+    // Set up image paste with worktree as target directory
+    const cleanupPaste = setupImagePaste(containerRef.current, terminalId, cwd ?? undefined)
     attachedRef.current = true
 
     // Trigger a resize after attaching
@@ -167,9 +170,10 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
 
     return () => {
       cleanup()
+      cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, doFit])
+  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit])
 
   if (!cwd) {
     return (
