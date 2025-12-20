@@ -33,7 +33,7 @@ export const CONFIG_KEYS = {
 } as const
 
 // Default values (client-side fallbacks)
-const DEFAULT_PORT = 3222
+const DEFAULT_PORT = 3333
 const DEFAULT_DATABASE_PATH = '~/.vibora/vibora.db'
 const DEFAULT_WORKTREE_BASE_PATH = '~/.vibora/worktrees'
 

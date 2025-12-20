@@ -15,6 +15,21 @@ export const tasks = sqliteTable('tasks', {
   updatedAt: text('updated_at').notNull(),
 })
 
+export const terminals = sqliteTable('terminals', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  cwd: text('cwd').notNull(),
+  cols: integer('cols').notNull().default(80),
+  rows: integer('rows').notNull().default(24),
+  tmuxSession: text('tmux_session').notNull(),
+  status: text('status').notNull().default('running'),
+  exitCode: integer('exit_code'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 // Type inference helpers
 export type Task = typeof tasks.$inferSelect
 export type NewTask = typeof tasks.$inferInsert
+export type Terminal = typeof terminals.$inferSelect
+export type NewTerminal = typeof terminals.$inferInsert

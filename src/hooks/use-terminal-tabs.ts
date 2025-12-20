@@ -149,23 +149,16 @@ export function useTerminalTabs(): UseTerminalTabsReturn {
   }, [])
 
   // Reconcile tabs with actual terminals from server
-  // - Remove terminalIds that no longer exist
-  // - Orphan terminals go to first tab
+  // - Remove terminalIds that no longer exist on server
+  // - Don't auto-assign orphans (let addTerminalToTab handle new terminals)
   const reconcileTerminals = useCallback((existingTerminalIds: string[]): void => {
     setState((prev) => {
       const existingSet = new Set(existingTerminalIds)
-      const assignedSet = new Set(prev.tabs.flatMap((t) => t.terminalIds))
 
-      // Find orphans (exist on server but not in any tab)
-      const orphans = existingTerminalIds.filter((id) => !assignedSet.has(id))
-
-      // Clean up stale IDs and add orphans to first tab
-      const newTabs = prev.tabs.map((tab, index) => ({
+      // Only clean up stale IDs - terminals that no longer exist
+      const newTabs = prev.tabs.map((tab) => ({
         ...tab,
-        terminalIds: [
-          ...tab.terminalIds.filter((id) => existingSet.has(id)),
-          ...(index === 0 ? orphans : []),
-        ],
+        terminalIds: tab.terminalIds.filter((id) => existingSet.has(id)),
       }))
 
       return {
