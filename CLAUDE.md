@@ -7,30 +7,16 @@ Vibora is a lightweight PM cockpit for streamlining the software development lif
 - Opinionated with few opinions. Provides structure without dictating workflow.
 - Currently tasks create isolated git worktrees, but the architecture supports evolution toward more general task types (multi-repo, no-repo, etc.).
 
-## Development Commands
+## Development
+
+All commands are mise tasks. Run `mise tasks` to list available commands.
 
 ```bash
-# Start both frontend and backend together (recommended)
-mise run dev
-
-# Or run separately:
-bun run dev          # Frontend dev server (port 5173, proxies to backend)
-bun run dev:server   # Backend server (port 3333, with auto-reload)
-
-# Build for production
-bun run build
-
-# Run production server
-bun run start
-
-# Lint
-bun run lint
-
-# Database operations
-bun run db:push      # Sync schema to database
-bun run db:studio    # Open Drizzle Studio GUI
-bun run db:generate  # Generate migrations
-bun run db:migrate   # Apply migrations
+mise run dev          # Start frontend and backend dev servers
+mise run build        # Build for production
+mise run lint         # Run ESLint
+mise run db:push      # Sync schema to database
+mise run db:studio    # Open Drizzle Studio GUI
 ```
 
 ## Architecture

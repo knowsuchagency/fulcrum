@@ -5,5 +5,49 @@ bun = "latest"
 description = "Start frontend and backend dev servers"
 run = """
 export VITE_BACKEND_PORT="${PORT:-3333}"
-bunx concurrently -n server,client -c blue,green 'bun run dev:server' 'bun run dev'
+bunx concurrently -n server,client -c blue,green 'mise run server' 'mise run client'
 """
+
+[tasks.server]
+description = "Start backend dev server with auto-reload"
+run = """
+mkdir -p ~/.vibora
+drizzle-kit push
+bun --watch server/index.ts
+"""
+
+[tasks.client]
+description = "Start frontend dev server"
+run = "vite --host"
+
+[tasks.build]
+description = "Build for production"
+run = "tsc -b && vite build"
+
+[tasks.start]
+description = "Run production server"
+run = "NODE_ENV=production bun server/index.ts"
+
+[tasks.lint]
+description = "Run ESLint"
+run = "eslint ."
+
+[tasks.preview]
+description = "Preview production build"
+run = "vite preview"
+
+[tasks."db:push"]
+description = "Sync schema to database"
+run = "drizzle-kit push"
+
+[tasks."db:studio"]
+description = "Open Drizzle Studio GUI"
+run = "drizzle-kit studio"
+
+[tasks."db:generate"]
+description = "Generate migrations"
+run = "drizzle-kit generate"
+
+[tasks."db:migrate"]
+description = "Apply migrations"
+run = "drizzle-kit migrate"
