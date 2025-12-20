@@ -10,11 +10,12 @@ Vibora is a lightweight PM cockpit for streamlining the software development lif
 ## Development Commands
 
 ```bash
-# Start frontend dev server (port 5173, proxies API to backend)
-bun run dev
+# Start both frontend and backend together (recommended)
+mise run dev
 
-# Start backend server (port 3222, with auto-reload)
-bun run dev:server
+# Or run separately:
+bun run dev          # Frontend dev server (port 5173, proxies to backend)
+bun run dev:server   # Backend server (port 3222, with auto-reload)
 
 # Build for production
 bun run build
@@ -31,8 +32,6 @@ bun run db:studio    # Open Drizzle Studio GUI
 bun run db:generate  # Generate migrations
 bun run db:migrate   # Apply migrations
 ```
-
-Run both `dev` and `dev:server` in separate terminals for development.
 
 ## Architecture
 
@@ -56,7 +55,7 @@ Run both `dev` and `dev:server` in separate terminals for development.
 
 ## Database
 
-- Location: `~/.vibora/vibora.db` (SQLite with WAL mode)
+- Default location: `~/.vibora/vibora.db` (SQLite with WAL mode)
 - Schema: `server/db/schema.ts`
 - Single `tasks` table with fields for task metadata, git worktree paths, and status
 
@@ -79,4 +78,30 @@ server/
 
 ## Configuration
 
-Settings stored at `~/.vibora/settings.json`. See `server/lib/settings.ts` for the `Settings` interface and defaults.
+Settings are stored in `.vibora/settings.json`. The server checks for a `.vibora` directory in the current working directory first, falling back to `~/.vibora`. This enables per-worktree isolation when developing Vibora within Vibora.
+
+### Settings
+
+| Setting | Env Var | Default |
+|---------|---------|---------|
+| port | `PORT` | 3222 |
+| databasePath | `VIBORA_DATABASE_PATH` | {viboraDir}/vibora.db |
+| worktreeBasePath | `VIBORA_WORKTREE_PATH` | ~/.vibora/worktrees |
+| defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
+
+Precedence: environment variable → settings.json → default
+
+### Per-Worktree Development
+
+To run an isolated Vibora instance in a worktree:
+
+```bash
+# Create .env with a different port
+echo "PORT=3223" > .env
+
+# Create local .vibora directory for isolated database
+mkdir -p .vibora
+
+# Run dev servers (VITE_BACKEND_PORT is set automatically from PORT)
+mise run dev
+```
