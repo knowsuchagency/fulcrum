@@ -69,7 +69,7 @@ export function useWorktreeBasePath() {
 
   return {
     ...query,
-    data: query.data?.value ?? DEFAULT_WORKTREE_BASE_PATH,
+    data: (query.data?.value as string) ?? DEFAULT_WORKTREE_BASE_PATH,
     isDefault: query.data?.isDefault ?? true,
   }
 }
@@ -80,7 +80,7 @@ export function useDefaultGitReposDir() {
   return {
     ...query,
     // Default to empty string which will make the browser use home directory
-    data: query.data?.value ?? '',
+    data: (query.data?.value as string) ?? '',
     isDefault: query.data?.isDefault ?? true,
   }
 }
