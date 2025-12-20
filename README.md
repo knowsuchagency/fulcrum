@@ -1,5 +1,8 @@
 # Vibora
 
+![vibora](https://github.com/user-attachments/assets/e58c762c-5598-4e5a-a992-9bef5d614f7d)
+
+
 A lightweight PM cockpit for streamlining the software development lifecycle. Vibora marries basic project management with actual software development by embedding terminals directly into the workflow.
 
 ## Philosophy
