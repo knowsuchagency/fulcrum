@@ -4,9 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Vibora is a task management application where each task corresponds to an isolated git worktree. It combines a React frontend with a Hono.js backend, featuring integrated terminal sessions via WebSocket.
+Vibora is a lightweight PM cockpit for streamlining the software development lifecycle. It marries basic project management with actual software development by embedding terminals directly into the workflow.
 
-**Core concept**: Task = Git Worktree. Creating a task automatically creates a git worktree for isolated development.
+**Philosophy**:
+- Terminal-first AI agent orchestration. Agents (Claude Code, Codex, etc.) run in terminals as-is—no abstraction layer, no wrapper APIs, no feature parity maintenance as agents evolve.
+- Opinionated with few opinions. Provides structure without dictating workflow.
+- Currently tasks create isolated git worktrees, but the architecture supports evolution toward more general task types (multi-repo, no-repo, etc.).
 
 ## Development Commands
 
@@ -35,8 +38,6 @@ bun run db:migrate   # Apply migrations
 
 Run both `dev` and `dev:server` in separate terminals for development.
 
-**Note**: The backend uses Bun runtime with `bun:sqlite` for the database.
-
 ## Architecture
 
 ### Frontend (`src/`)
@@ -47,8 +48,8 @@ Run both `dev` and `dev:server` in separate terminals for development.
 - Path alias: `@` → `./src/`
 
 ### Backend (`server/`)
-- **Hono.js** framework with Node.js adapter
-- **SQLite** database via better-sqlite3 + Drizzle ORM
+- **Hono.js** framework on Bun runtime
+- **SQLite** database with Drizzle ORM
 - **WebSocket** for real-time terminal I/O (`@hono/node-ws`)
 - **node-pty** for PTY management
 
