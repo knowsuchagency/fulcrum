@@ -183,19 +183,21 @@ export function CreateTaskModal() {
                 <FieldLabel htmlFor="baseBranch">Base Branch</FieldLabel>
                 <Select
                   value={baseBranch}
-                  onValueChange={setBaseBranch}
+                  onValueChange={(value) => setBaseBranch(value ?? '')}
                   disabled={!repoPath || branchesLoading}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue
-                      placeholder={
-                        !repoPath
-                          ? 'Select repository first'
-                          : branchesLoading
-                          ? 'Loading branches...'
-                          : 'Select branch'
-                      }
-                    />
+                    <SelectValue>
+                      {baseBranch || (
+                        <span className="text-muted-foreground">
+                          {!repoPath
+                            ? 'Select repository first'
+                            : branchesLoading
+                            ? 'Loading branches...'
+                            : 'Select branch'}
+                        </span>
+                      )}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {branchData?.branches.map((b) => (

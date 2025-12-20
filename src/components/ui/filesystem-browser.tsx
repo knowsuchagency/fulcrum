@@ -54,11 +54,6 @@ export function FilesystemBrowser({
     open ? (currentPath ?? '') : null
   )
 
-  // Check if current directory is a git repo
-  const currentIsGitRepo = data?.entries.some(
-    (e) => e.name === '.git' || (data.path && data.entries.length === 0)
-  )
-
   const handleNavigate = (name: string) => {
     if (data) {
       setCurrentPath(data.path + '/' + name)
@@ -94,11 +89,6 @@ export function FilesystemBrowser({
   const filteredEntries = data?.entries.filter((entry) =>
     entry.name.toLowerCase().includes(filter.toLowerCase())
   )
-
-  // Check if current path is a git repo (has .git folder detected by backend)
-  const isCurrentGitRepo =
-    data?.entries.some((e) => e.name === '.git') ||
-    filteredEntries?.some((e) => e.isGitRepo && e.name === '.')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

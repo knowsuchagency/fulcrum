@@ -13,7 +13,7 @@ interface TaskTerminalProps {
   className?: string
 }
 
-export function TaskTerminal({ taskId, taskName, cwd, className }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
