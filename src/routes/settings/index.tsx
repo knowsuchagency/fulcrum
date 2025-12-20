@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Field, FieldLabel, FieldDescription } from '@/components/ui/field'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon, RotateLeft01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
@@ -21,9 +20,9 @@ export const Route = createFileRoute('/settings/')({
 })
 
 function SettingsPage() {
-  const { data: port, isDefault: portIsDefault, isLoading: portLoading } = usePort()
-  const { data: worktreeBasePath, isDefault: worktreeIsDefault, isLoading: worktreeLoading } = useWorktreeBasePath()
-  const { data: defaultGitReposDir, isDefault: reposDirIsDefault, isLoading: reposDirLoading } = useDefaultGitReposDir()
+  const { data: port, isLoading: portLoading } = usePort()
+  const { data: worktreeBasePath, isLoading: worktreeLoading } = useWorktreeBasePath()
+  const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
 
@@ -32,103 +31,88 @@ function SettingsPage() {
   const [localReposDir, setLocalReposDir] = useState('')
   const [worktreeBrowserOpen, setWorktreeBrowserOpen] = useState(false)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
-  const [portSaved, setPortSaved] = useState(false)
-  const [worktreeSaved, setWorktreeSaved] = useState(false)
-  const [reposDirSaved, setReposDirSaved] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   // Sync local state with fetched values
   useEffect(() => {
-    if (port !== undefined) {
-      setLocalPort(String(port))
-    }
+    if (port !== undefined) setLocalPort(String(port))
   }, [port])
 
   useEffect(() => {
-    if (worktreeBasePath) {
-      setLocalWorktreePath(worktreeBasePath)
-    }
+    if (worktreeBasePath) setLocalWorktreePath(worktreeBasePath)
   }, [worktreeBasePath])
 
   useEffect(() => {
-    if (defaultGitReposDir !== undefined) {
-      setLocalReposDir(defaultGitReposDir)
-    }
+    if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
   }, [defaultGitReposDir])
 
-  const portHasChanges = localPort !== String(port)
-  const worktreeHasChanges = localWorktreePath !== worktreeBasePath
-  const reposDirHasChanges = localReposDir !== defaultGitReposDir
+  const isLoading = portLoading || worktreeLoading || reposDirLoading
+  const hasChanges =
+    localPort !== String(port) ||
+    localWorktreePath !== worktreeBasePath ||
+    localReposDir !== defaultGitReposDir
 
-  const handlePortSave = () => {
-    const portNum = parseInt(localPort, 10)
-    if (isNaN(portNum) || portNum < 1 || portNum > 65535) return
-    updateConfig.mutate(
-      { key: CONFIG_KEYS.PORT, value: portNum },
-      {
-        onSuccess: () => {
-          setPortSaved(true)
-          setTimeout(() => setPortSaved(false), 2000)
-        },
+  const handleSaveAll = async () => {
+    const promises: Promise<unknown>[] = []
+
+    if (localPort !== String(port)) {
+      const portNum = parseInt(localPort, 10)
+      if (!isNaN(portNum) && portNum >= 1 && portNum <= 65535) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate({ key: CONFIG_KEYS.PORT, value: portNum }, { onSettled: resolve })
+          })
+        )
       }
-    )
+    }
+
+    if (localWorktreePath !== worktreeBasePath) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.WORKTREE_BASE_PATH, value: localWorktreePath },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localReposDir !== defaultGitReposDir) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR, value: localReposDir },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    await Promise.all(promises)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
-  const handlePortReset = () => {
+  const handleResetPort = () => {
     resetConfig.mutate(CONFIG_KEYS.PORT, {
       onSuccess: (data) => {
-        if (data.value !== null) {
-          setLocalPort(String(data.value))
-        }
-        setPortSaved(true)
-        setTimeout(() => setPortSaved(false), 2000)
+        if (data.value !== null) setLocalPort(String(data.value))
       },
     })
   }
 
-  const handleWorktreeSave = () => {
-    updateConfig.mutate(
-      { key: CONFIG_KEYS.WORKTREE_BASE_PATH, value: localWorktreePath },
-      {
-        onSuccess: () => {
-          setWorktreeSaved(true)
-          setTimeout(() => setWorktreeSaved(false), 2000)
-        },
-      }
-    )
-  }
-
-  const handleWorktreeReset = () => {
+  const handleResetWorktree = () => {
     resetConfig.mutate(CONFIG_KEYS.WORKTREE_BASE_PATH, {
       onSuccess: (data) => {
-        if (data.value) {
-          setLocalWorktreePath(data.value)
-        }
-        setWorktreeSaved(true)
-        setTimeout(() => setWorktreeSaved(false), 2000)
+        if (data.value) setLocalWorktreePath(String(data.value))
       },
     })
   }
 
-  const handleReposDirSave = () => {
-    updateConfig.mutate(
-      { key: CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR, value: localReposDir },
-      {
-        onSuccess: () => {
-          setReposDirSaved(true)
-          setTimeout(() => setReposDirSaved(false), 2000)
-        },
-      }
-    )
-  }
-
-  const handleReposDirReset = () => {
+  const handleResetReposDir = () => {
     resetConfig.mutate(CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR, {
       onSuccess: (data) => {
-        if (data.value) {
-          setLocalReposDir(data.value)
-        }
-        setReposDirSaved(true)
-        setTimeout(() => setReposDirSaved(false), 2000)
+        if (data.value) setLocalReposDir(String(data.value))
       },
     })
   }
@@ -140,195 +124,143 @@ function SettingsPage() {
       </div>
 
       <div className="pixel-grid flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-2xl space-y-6">
+        <div className="mx-auto max-w-2xl">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Server</CardTitle>
-              <CardDescription>
-                Configure the server port. Changes require a server restart.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Field>
-                <FieldLabel>Port</FieldLabel>
-                <FieldDescription>
-                  The port the server listens on for HTTP and WebSocket connections.
-                  {portIsDefault && (
-                    <span className="ml-1 text-muted-foreground">(using default)</span>
-                  )}
-                </FieldDescription>
-                <Input
-                  type="number"
-                  min={1}
-                  max={65535}
-                  value={localPort}
-                  onChange={(e) => setLocalPort(e.target.value)}
-                  placeholder="3222"
-                  disabled={portLoading}
-                  className="w-32 font-mono text-sm"
-                />
-              </Field>
+            <CardContent className="space-y-6 pt-6">
+              {/* Server Section */}
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium text-foreground">Server</h2>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">Port</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={localPort}
+                      onChange={(e) => setLocalPort(e.target.value)}
+                      placeholder="3222"
+                      disabled={isLoading}
+                      className="w-24 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetPort}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    Requires server restart
+                  </p>
+                </div>
+              </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePortReset}
-                  disabled={portLoading || resetConfig.isPending}
-                >
-                  <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                  Reset to Default
-                </Button>
+              <div className="border-t border-border" />
 
-                <div className="flex items-center gap-2">
-                  {portSaved && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-500">
-                      <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                      Saved
-                    </span>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={handlePortSave}
-                    disabled={!portHasChanges || portLoading || updateConfig.isPending}
-                  >
-                    Save Changes
-                  </Button>
+              {/* Paths Section */}
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium text-foreground">Paths</h2>
+
+                {/* Worktree Directory */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      Worktree Directory
+                    </label>
+                    <Input
+                      value={localWorktreePath}
+                      onChange={(e) => setLocalWorktreePath(e.target.value)}
+                      placeholder="~/.vibora/worktrees"
+                      disabled={isLoading}
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={() => setWorktreeBrowserOpen(true)}
+                      disabled={isLoading}
+                      title="Browse"
+                    >
+                      <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetWorktree}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    Where task worktrees are created
+                  </p>
+                </div>
+
+                {/* Git Repos Directory */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      Git Repos Directory
+                    </label>
+                    <Input
+                      value={localReposDir}
+                      onChange={(e) => setLocalReposDir(e.target.value)}
+                      placeholder="~/projects"
+                      disabled={isLoading}
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={() => setReposDirBrowserOpen(true)}
+                      disabled={isLoading}
+                      title="Browse"
+                    >
+                      <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetReposDir}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    Starting directory for repo picker
+                  </p>
                 </div>
               </div>
             </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Git Worktrees</CardTitle>
-              <CardDescription>
-                Configure where git worktrees are created for new tasks
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Field>
-                <FieldLabel>Worktree Base Directory</FieldLabel>
-                <FieldDescription>
-                  New task worktrees will be created as subdirectories here.
-                  {worktreeIsDefault && (
-                    <span className="ml-1 text-muted-foreground">(using default)</span>
-                  )}
-                </FieldDescription>
-                <div className="flex gap-2">
-                  <Input
-                    value={localWorktreePath}
-                    onChange={(e) => setLocalWorktreePath(e.target.value)}
-                    placeholder="/tmp/vibora/worktrees"
-                    disabled={worktreeLoading}
-                    className="flex-1 font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setWorktreeBrowserOpen(true)}
-                    disabled={worktreeLoading}
-                  >
-                    <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
-                    Browse
-                  </Button>
-                </div>
-              </Field>
-
-              <div className="flex items-center justify-between pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleWorktreeReset}
-                  disabled={worktreeLoading || resetConfig.isPending}
-                >
-                  <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                  Reset to Default
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  {worktreeSaved && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-500">
-                      <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                      Saved
-                    </span>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={handleWorktreeSave}
-                    disabled={!worktreeHasChanges || worktreeLoading || updateConfig.isPending}
-                  >
-                    Save Changes
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Repository Browser</CardTitle>
-              <CardDescription>
-                Configure the default starting directory when browsing for git repositories
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Field>
-                <FieldLabel>Default Git Repos Directory</FieldLabel>
-                <FieldDescription>
-                  The repository picker will start in this directory when creating new tasks.
-                  {reposDirIsDefault && (
-                    <span className="ml-1 text-muted-foreground">(using default: home directory)</span>
-                  )}
-                </FieldDescription>
-                <div className="flex gap-2">
-                  <Input
-                    value={localReposDir}
-                    onChange={(e) => setLocalReposDir(e.target.value)}
-                    placeholder="~/projects"
-                    disabled={reposDirLoading}
-                    className="flex-1 font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setReposDirBrowserOpen(true)}
-                    disabled={reposDirLoading}
-                  >
-                    <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
-                    Browse
-                  </Button>
-                </div>
-              </Field>
-
-              <div className="flex items-center justify-between pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReposDirReset}
-                  disabled={reposDirLoading || resetConfig.isPending}
-                >
-                  <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                  Reset to Default
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  {reposDirSaved && (
-                    <span className="flex items-center gap-1 text-xs text-emerald-500">
-                      <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                      Saved
-                    </span>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={handleReposDirSave}
-                    disabled={!reposDirHasChanges || reposDirLoading || updateConfig.isPending}
-                  >
-                    Save Changes
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
+            <CardFooter className="flex items-center justify-end gap-2 border-t border-border">
+              {saved && (
+                <span className="flex items-center gap-1 text-xs text-emerald-500">
+                  <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
+                  Saved
+                </span>
+              )}
+              <Button
+                size="sm"
+                onClick={handleSaveAll}
+                disabled={!hasChanges || isLoading || updateConfig.isPending}
+              >
+                Save Changes
+              </Button>
+            </CardFooter>
           </Card>
         </div>
       </div>
