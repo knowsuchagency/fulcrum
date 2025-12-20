@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useState, useRef, useEffect } from 'react'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -64,6 +65,43 @@ function TaskView() {
   const deleteTask = useDeleteTask()
   const { tab, setTab } = useTaskTab(taskId)
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editTitleValue, setEditTitleValue] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [isEditingTitle])
+
+  const handleTitleClick = () => {
+    if (task) {
+      setEditTitleValue(task.title)
+      setIsEditingTitle(true)
+    }
+  }
+
+  const handleTitleSave = () => {
+    const trimmed = editTitleValue.trim()
+    if (trimmed && task && trimmed !== task.title) {
+      updateTask.mutate({
+        taskId: task.id,
+        updates: { title: trimmed },
+      })
+    }
+    setIsEditingTitle(false)
+  }
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleSave()
+    } else if (e.key === 'Escape') {
+      setIsEditingTitle(false)
+    }
+  }
+
   const handleStatusChange = (status: string) => {
     if (task) {
       updateTask.mutate({
@@ -107,7 +145,25 @@ function TaskView() {
       {/* Task Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2">
         <div className="flex-1">
-          <h1 className="text-sm font-medium">{task.title}</h1>
+          {isEditingTitle ? (
+            <input
+              ref={titleInputRef}
+              type="text"
+              value={editTitleValue}
+              onChange={(e) => setEditTitleValue(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={handleTitleKeyDown}
+              className="h-6 w-full max-w-md rounded border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-primary"
+            />
+          ) : (
+            <h1
+              className="cursor-pointer text-sm font-medium hover:text-primary"
+              onClick={handleTitleClick}
+              title="Click to rename"
+            >
+              {task.title}
+            </h1>
+          )}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{task.repoName}</span>
             <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
