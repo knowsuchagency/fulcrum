@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useGitDiff } from '@/hooks/use-filesystem'
 import { cn } from '@/lib/utils'
@@ -58,7 +58,9 @@ interface DiffViewerProps {
 }
 
 export function DiffViewer({ worktreePath }: DiffViewerProps) {
-  const { data, isLoading, error } = useGitDiff(worktreePath)
+  const [wrap, setWrap] = useState(false)
+  const [ignoreWhitespace, setIgnoreWhitespace] = useState(false)
+  const { data, isLoading, error } = useGitDiff(worktreePath, { ignoreWhitespace })
 
   const lines = useMemo(() => {
     if (!data?.diff) return []
@@ -119,14 +121,38 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div className="font-mono text-xs">
-        {/* Branch info */}
+    <div className="flex flex-col h-full">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-2 py-1.5 bg-muted/50 border-b border-border text-xs">
         {data?.branch && (
-          <div className="px-2 py-1 bg-muted/50 text-muted-foreground border-b border-border">
-            Branch: {data.branch}
-          </div>
+          <span className="text-muted-foreground">
+            {data.branch}
+            {data.isBranchDiff && <span className="opacity-70"> (vs master)</span>}
+          </span>
         )}
+        <div className="flex-1" />
+        <label className="flex items-center gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={wrap}
+            onChange={(e) => setWrap(e.target.checked)}
+            className="w-3 h-3"
+          />
+          Wrap
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={ignoreWhitespace}
+            onChange={(e) => setIgnoreWhitespace(e.target.checked)}
+            className="w-3 h-3"
+          />
+          Ignore whitespace
+        </label>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="font-mono text-xs">
 
         {lines.map((line, i) => (
           <div
@@ -168,7 +194,8 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
             {/* Content */}
             <span
               className={cn(
-                'flex-1 whitespace-pre',
+                'flex-1',
+                wrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre',
                 line.type === 'added' && 'text-green-400',
                 line.type === 'removed' && 'text-red-400'
               )}
@@ -177,7 +204,8 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
             </span>
           </div>
         ))}
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+    </div>
   )
 }

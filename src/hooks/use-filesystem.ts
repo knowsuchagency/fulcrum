@@ -32,6 +32,7 @@ interface GitDiff {
   files: GitFile[]
   hasStagedChanges: boolean
   hasUnstagedChanges: boolean
+  isBranchDiff?: boolean
 }
 
 interface GitStatus {
@@ -74,13 +75,15 @@ export function useBranches(repoPath: string | null) {
   })
 }
 
-export function useGitDiff(worktreePath: string | null, staged = false) {
+export function useGitDiff(worktreePath: string | null, options: { staged?: boolean; ignoreWhitespace?: boolean } = {}) {
+  const { staged = false, ignoreWhitespace = false } = options
   return useQuery({
-    queryKey: ['git', 'diff', worktreePath, staged],
+    queryKey: ['git', 'diff', worktreePath, staged, ignoreWhitespace],
     queryFn: () => {
       const params = new URLSearchParams({
         path: worktreePath!,
         ...(staged && { staged: 'true' }),
+        ...(ignoreWhitespace && { ignoreWhitespace: 'true' }),
       })
       return fetchJSON<GitDiff>(`${API_BASE}/api/git/diff?${params}`)
     },

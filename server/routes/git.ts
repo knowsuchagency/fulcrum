@@ -202,6 +202,7 @@ app.delete('/worktree', async (c) => {
 app.get('/diff', (c) => {
   const worktreePath = c.req.query('path')
   const staged = c.req.query('staged') === 'true'
+  const ignoreWhitespace = c.req.query('ignoreWhitespace') === 'true'
 
   if (!worktreePath) {
     return c.json({ error: 'path parameter is required' }, 400)
@@ -213,7 +214,8 @@ app.get('/diff', (c) => {
 
   try {
     // Get the diff
-    const diffArgs = staged ? 'diff --cached' : 'diff'
+    const wsFlag = ignoreWhitespace ? ' -w' : ''
+    const diffArgs = staged ? `diff --cached${wsFlag}` : `diff${wsFlag}`
     let diff = ''
     try {
       diff = gitExec(worktreePath, diffArgs)
@@ -238,6 +240,25 @@ app.get('/diff', (c) => {
       branch = 'unknown'
     }
 
+    // If no local changes, get diff against base branch (master/main)
+    let branchDiff = ''
+    if (!diff) {
+      try {
+        // Find the merge-base with master or main
+        let baseBranch = 'master'
+        try {
+          gitExec(worktreePath, 'rev-parse --verify master')
+        } catch {
+          baseBranch = 'main'
+        }
+        const mergeBase = gitExec(worktreePath, `merge-base ${baseBranch} HEAD`)
+        branchDiff = gitExec(worktreePath, `diff${wsFlag} ${mergeBase}..HEAD`)
+      } catch {
+        // No branch diff available
+        branchDiff = ''
+      }
+    }
+
     // Parse status into structured data
     const files = status
       .split('\n')
@@ -254,10 +275,11 @@ app.get('/diff', (c) => {
 
     return c.json({
       branch,
-      diff,
+      diff: diff || branchDiff,
       files,
       hasStagedChanges: files.some((f) => f.staged),
       hasUnstagedChanges: files.some((f) => !f.staged && f.status !== 'untracked'),
+      isBranchDiff: !diff && !!branchDiff,
     })
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to get diff' }, 500)
