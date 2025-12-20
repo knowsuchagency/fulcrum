@@ -27,6 +27,7 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
 // Config keys matching server
 export const CONFIG_KEYS = {
   WORKTREE_BASE_PATH: 'worktree_base_path',
+  DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
 } as const
 
 // Default worktree base path (client-side fallback)
@@ -45,6 +46,17 @@ export function useWorktreeBasePath() {
   return {
     ...query,
     data: query.data?.value ?? DEFAULT_WORKTREE_BASE_PATH,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useDefaultGitReposDir() {
+  const query = useConfig(CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR)
+
+  return {
+    ...query,
+    // Default to empty string which will make the browser use home directory
+    data: query.data?.value ?? '',
     isDefault: query.data?.isDefault ?? true,
   }
 }

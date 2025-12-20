@@ -24,7 +24,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { PlusSignIcon, Folder01Icon } from '@hugeicons/core-free-icons'
 import { useCreateTask } from '@/hooks/use-tasks'
 import { useBranches } from '@/hooks/use-filesystem'
-import { useWorktreeBasePath } from '@/hooks/use-config'
+import { useWorktreeBasePath, useDefaultGitReposDir } from '@/hooks/use-config'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 
 function slugify(text: string): string {
@@ -53,6 +53,7 @@ export function CreateTaskModal() {
 
   const createTask = useCreateTask()
   const { data: worktreeBasePath } = useWorktreeBasePath()
+  const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const { data: branchData, isLoading: branchesLoading } = useBranches(
     repoPath || null
   )
@@ -252,6 +253,7 @@ export function CreateTaskModal() {
         open={browserOpen}
         onOpenChange={setBrowserOpen}
         onSelect={handleRepoSelect}
+        initialPath={defaultGitReposDir || undefined}
       />
     </>
   )
