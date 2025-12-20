@@ -62,28 +62,6 @@ Run both `dev` and `dev:server` in separate terminals for development.
 
 Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELLED`
 
-## API Routes
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET/POST /api/tasks` | List/create tasks |
-| `GET/PATCH/DELETE /api/tasks/:id` | Task operations |
-| `PATCH /api/tasks/:id/status` | Update status with position reordering |
-| `DELETE /api/tasks/bulk` | Bulk delete |
-| `GET /api/git/branches` | List repo branches |
-| `POST/DELETE /api/git/worktree` | Worktree operations |
-| `GET /api/git/diff` | Get git diff |
-| `GET /api/fs/list` | Directory listing |
-| `GET/PUT/DELETE /api/config/:key` | Settings |
-
-## Terminal WebSocket Protocol
-
-Connect to `/ws/terminal`. Messages use JSON with `type` and `payload`:
-
-**Client → Server**: `terminal:create`, `terminal:input`, `terminal:resize`, `terminal:destroy`, `terminal:attach`, `terminal:rename`
-
-**Server → Client**: `terminal:created`, `terminal:output`, `terminal:exit`, `terminal:attached`, `terminal:destroyed`, `terminal:error`
-
 ## File Organization
 
 ```
@@ -92,13 +70,13 @@ src/
   components/      # React components by feature
   hooks/           # Custom hooks (use-tasks, use-terminal-ws, etc.)
 server/
-  routes/          # Hono API route handlers
+  routes/          # REST API handlers (/api/*)
   terminal/        # PTY management (pty-manager, buffer-manager)
-  websocket/       # WebSocket handlers
+  websocket/       # WebSocket protocol for terminal I/O (/ws/terminal)
   db/              # Drizzle schema and initialization
+  lib/             # Shared utilities (settings, etc.)
 ```
 
 ## Configuration
 
-Settings stored at `~/.vibora/settings.json`. Currently supports:
-- `worktreeBasePath`: Base directory for git worktrees (default: `~/.vibora/worktrees`)
+Settings stored at `~/.vibora/settings.json`. See `server/lib/settings.ts` for the `Settings` interface and defaults.

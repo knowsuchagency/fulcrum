@@ -38,9 +38,18 @@ export function ensureWorktreesDir(): void {
   }
 }
 
-// Initialize all required directories
+// Ensure settings file exists with defaults
+function ensureSettingsFile(): void {
+  const settingsPath = getSettingsPath()
+  if (!fs.existsSync(settingsPath)) {
+    fs.writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8')
+  }
+}
+
+// Initialize all required directories and files
 export function initializeViboraDirectories(): void {
   ensureViboraDir()
+  ensureSettingsFile()
   ensureWorktreesDir()
 }
 
