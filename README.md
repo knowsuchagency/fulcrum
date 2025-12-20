@@ -26,8 +26,8 @@ A lightweight PM cockpit for streamlining the software development lifecycle. Vi
 ### Development
 
 ```bash
-# Install dependencies
-bun install
+# Install tools and dependencies
+mise install
 
 # Start both frontend and backend (recommended)
 mise run dev

@@ -1,6 +1,9 @@
 [tools]
 bun = "latest"
 
+[hooks.postinstall]
+run = "bun install"
+
 [tasks.dev]
 description = "Start frontend and backend dev servers"
 run = """
