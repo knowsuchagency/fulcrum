@@ -2,6 +2,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { GridViewIcon, CommandLineIcon, Settings01Icon } from '@hugeicons/core-free-icons'
+import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
 export function Header() {
   const { location } = useRouterState()
@@ -46,14 +47,17 @@ export function Header() {
         </nav>
       </div>
 
-      <Link to="/settings">
-        <Button
-          variant={pathname === '/settings' ? 'secondary' : 'ghost'}
-          size="icon-sm"
-        >
-          <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />
-        </Button>
-      </Link>
+      <div className="flex items-center gap-2">
+        <CreateTaskModal />
+        <Link to="/settings">
+          <Button
+            variant={pathname === '/settings' ? 'secondary' : 'ghost'}
+            size="icon-sm"
+          >
+            <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />
+          </Button>
+        </Link>
+      </div>
     </header>
   )
 }

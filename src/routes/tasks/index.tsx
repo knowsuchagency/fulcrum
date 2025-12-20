@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
-import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { SelectionProvider, useSelection } from '@/components/kanban/selection-context'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -130,7 +129,6 @@ function KanbanViewContent() {
                 <HugeiconsIcon icon={CheckListIcon} size={14} strokeWidth={2} data-slot="icon" />
                 Select
               </Button>
-              <CreateTaskModal />
             </div>
           </>
         )}
