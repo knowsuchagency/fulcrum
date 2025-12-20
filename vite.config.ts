@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react"
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite"
 import { defineConfig } from "vite"
 
-const backendPort = process.env.VITE_BACKEND_PORT || '3222'
+const backendPort = process.env.VITE_BACKEND_PORT || '3333'
 
 // https://vite.dev/config/
 export default defineConfig({

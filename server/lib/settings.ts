@@ -12,7 +12,7 @@ export interface Settings {
 
 // Default settings
 const DEFAULT_SETTINGS: Settings = {
-  port: 3222,
+  port: 3333,
   databasePath: path.join(os.homedir(), '.vibora', 'vibora.db'),
   worktreeBasePath: path.join(os.homedir(), '.vibora', 'worktrees'),
   defaultGitReposDir: os.homedir(),

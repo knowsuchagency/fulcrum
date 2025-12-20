@@ -93,11 +93,8 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
         }
 
         case 'terminal:attached': {
-          const xterm = xtermMapRef.current.get(message.payload.terminalId)
-          if (xterm && message.payload.buffer) {
-            xterm.clear() // Clear before writing to prevent duplicates from React Strict Mode
-            xterm.write(message.payload.buffer)
-          }
+          // Buffer is saved to disk but not restored visually due to
+          // escape sequence conflicts with dtach's screen refresh
           break
         }
 

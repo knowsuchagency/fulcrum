@@ -113,13 +113,17 @@ export const terminalWebSocketHandlers: WSEvents = {
         }
 
         case 'terminal:attach': {
-          const buffer = ptyManager.getBuffer(message.payload.terminalId)
+          const terminalId = message.payload.terminalId
+          // Ensure terminal is attached to dtach (connects PTY if not already)
+          ptyManager.attach(terminalId)
+          const buffer = ptyManager.getBuffer(terminalId)
+          console.log(`[WS] terminal:attach ${terminalId} buffer length: ${buffer?.length ?? 'null'}`)
           if (buffer !== null) {
-            clientData.attachedTerminals.add(message.payload.terminalId)
+            clientData.attachedTerminals.add(terminalId)
             sendTo(ws, {
               type: 'terminal:attached',
               payload: {
-                terminalId: message.payload.terminalId,
+                terminalId,
                 buffer,
               },
             })

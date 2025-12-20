@@ -15,7 +15,7 @@ mise run dev
 
 # Or run separately:
 bun run dev          # Frontend dev server (port 5173, proxies to backend)
-bun run dev:server   # Backend server (port 3222, with auto-reload)
+bun run dev:server   # Backend server (port 3333, with auto-reload)
 
 # Build for production
 bun run build
@@ -84,7 +84,7 @@ Settings are stored in `.vibora/settings.json`. The server checks for a `.vibora
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
-| port | `PORT` | 3222 |
+| port | `PORT` | 3333 |
 | databasePath | `VIBORA_DATABASE_PATH` | {viboraDir}/vibora.db |
 | worktreeBasePath | `VIBORA_WORKTREE_PATH` | ~/.vibora/worktrees |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |

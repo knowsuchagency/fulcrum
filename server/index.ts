@@ -27,6 +27,9 @@ const ptyManager = initPTYManager({
   },
 })
 
+// Restore terminals from database (reconnect to existing tmux sessions)
+ptyManager.restoreFromDatabase()
+
 // Set up broadcast function for terminal destruction from task deletion
 setBroadcastDestroyed((terminalId) => {
   broadcast({
@@ -62,17 +65,17 @@ const server = serve(
 // Inject WebSocket support
 injectWebSocket(server)
 
-// Graceful shutdown
+// Graceful shutdown - detach PTYs but keep tmux sessions running for persistence
 process.on('SIGINT', () => {
-  console.log('\nShutting down...')
-  ptyManager.destroyAll()
+  console.log('\nShutting down (terminals will persist)...')
+  ptyManager.detachAll()
   server.close()
   process.exit(0)
 })
 
 process.on('SIGTERM', () => {
-  console.log('\nShutting down...')
-  ptyManager.destroyAll()
+  console.log('\nShutting down (terminals will persist)...')
+  ptyManager.detachAll()
   server.close()
   process.exit(0)
 })

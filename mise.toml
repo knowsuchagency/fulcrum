@@ -4,6 +4,6 @@ bun = "latest"
 [tasks.dev]
 description = "Start frontend and backend dev servers"
 run = """
-export VITE_BACKEND_PORT="${PORT:-3222}"
+export VITE_BACKEND_PORT="${PORT:-3333}"
 bunx concurrently -n server,client -c blue,green 'bun run dev:server' 'bun run dev'
 """

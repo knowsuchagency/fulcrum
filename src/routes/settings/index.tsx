@@ -167,7 +167,7 @@ function SettingsPage() {
                       max={65535}
                       value={localPort}
                       onChange={(e) => setLocalPort(e.target.value)}
-                      placeholder="3222"
+                      placeholder="3333"
                       disabled={isLoading}
                       className="w-24 font-mono text-sm"
                     />
