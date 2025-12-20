@@ -22,9 +22,10 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 interface KanbanColumnProps {
   status: TaskStatus
   tasks: Task[]
+  isMobile?: boolean
 }
 
-export function KanbanColumn({ status, tasks }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
 
   const sortedTasks = [...tasks].sort((a, b) => a.position - b.position)
@@ -33,7 +34,8 @@ export function KanbanColumn({ status, tasks }: KanbanColumnProps) {
     <div
       ref={setNodeRef}
       className={cn(
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border border-t-4 bg-card',
+        'flex flex-col rounded-lg border border-t-4 bg-card',
+        isMobile ? 'h-full w-full' : 'w-72 flex-shrink-0',
         STATUS_COLORS[status],
         isOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
