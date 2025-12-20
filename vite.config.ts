@@ -14,5 +14,19 @@ export default defineConfig({
   },
   server: {
     allowedHosts: ["citadel"],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3222',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:3222',
+        ws: true,
+      },
+      '/health': {
+        target: 'http://localhost:3222',
+        changeOrigin: true,
+      },
+    },
   },
 })

@@ -42,9 +42,17 @@ interface UseTerminalWSReturn {
   attachXterm: (terminalId: string, xterm: XTerm) => () => void
 }
 
+// Construct WebSocket URL based on current location
+// In dev: Vite proxies /ws to the backend
+// In production: Same origin
+function getDefaultWsUrl(): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}/ws/terminal`
+}
+
 export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWSReturn {
   const {
-    url = `ws://${window.location.hostname}:3001/ws/terminal`,
+    url = getDefaultWsUrl(),
     reconnectInterval = 2000,
     maxReconnectAttempts = 10,
   } = options

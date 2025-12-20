@@ -1,6 +1,6 @@
+import { Hono } from 'hono'
 import { db, tasks, type Task, type NewTask } from '../db'
 import { eq, asc } from 'drizzle-orm'
-import type { IncomingMessage, ServerResponse } from 'http'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -74,52 +74,18 @@ function destroyTerminalsForWorktree(worktreePath: string): void {
   }
 }
 
-// Helper to parse JSON body
-async function parseBody<T>(req: IncomingMessage): Promise<T> {
-  return new Promise((resolve, reject) => {
-    let body = ''
-    req.on('data', (chunk) => (body += chunk))
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(body))
-      } catch {
-        reject(new Error('Invalid JSON'))
-      }
-    })
-    req.on('error', reject)
-  })
-}
-
-// Helper to send JSON response
-function json(res: ServerResponse, data: unknown, status = 200) {
-  res.writeHead(status, { 'Content-Type': 'application/json' })
-  res.end(JSON.stringify(data))
-}
-
-// Helper to send error
-function error(res: ServerResponse, message: string, status = 400) {
-  json(res, { error: message }, status)
-}
+const app = new Hono()
 
 // GET /api/tasks - List all tasks
-export function listTasks(req: IncomingMessage, res: ServerResponse) {
+app.get('/', (c) => {
   const allTasks = db.select().from(tasks).orderBy(asc(tasks.position)).all()
-  json(res, allTasks)
-}
-
-// GET /api/tasks/:id - Get single task
-export function getTask(req: IncomingMessage, res: ServerResponse, id: string) {
-  const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
-  if (!task) {
-    return error(res, 'Task not found', 404)
-  }
-  json(res, task)
-}
+  return c.json(allTasks)
+})
 
 // POST /api/tasks - Create task
-export async function createTask(req: IncomingMessage, res: ServerResponse) {
+app.post('/', async (c) => {
   try {
-    const body = await parseBody<Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'>>(req)
+    const body = await c.req.json<Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'>>()
 
     // Get max position for the status
     const existingTasks = db
@@ -147,34 +113,89 @@ export async function createTask(req: IncomingMessage, res: ServerResponse) {
 
     // Create git worktree if branch and worktreePath are provided
     if (body.branch && body.worktreePath && body.repoPath && body.baseBranch) {
-      const result = createGitWorktree(
-        body.repoPath,
-        body.worktreePath,
-        body.branch,
-        body.baseBranch
-      )
+      const result = createGitWorktree(body.repoPath, body.worktreePath, body.branch, body.baseBranch)
       if (!result.success) {
-        return error(res, `Failed to create worktree: ${result.error}`, 500)
+        return c.json({ error: `Failed to create worktree: ${result.error}` }, 500)
       }
     }
 
     db.insert(tasks).values(newTask).run()
     const created = db.select().from(tasks).where(eq(tasks.id, newTask.id)).get()
-    json(res, created, 201)
+    return c.json(created, 201)
   } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to create task', 400)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to create task' }, 400)
   }
-}
+})
+
+// DELETE /api/tasks/bulk - Delete multiple tasks (must be before /:id route)
+app.delete('/bulk', async (c) => {
+  try {
+    const body = await c.req.json<{ ids: string[] }>()
+
+    if (!Array.isArray(body.ids) || body.ids.length === 0) {
+      return c.json({ error: 'ids must be a non-empty array' }, 400)
+    }
+
+    const now = new Date().toISOString()
+    let deletedCount = 0
+
+    for (const id of body.ids) {
+      const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
+      if (!existing) continue
+
+      // Destroy terminals associated with this task's worktree
+      if (existing.worktreePath) {
+        destroyTerminalsForWorktree(existing.worktreePath)
+      }
+
+      // Delete git worktree if it exists
+      if (existing.worktreePath && existing.repoPath) {
+        deleteGitWorktree(existing.repoPath, existing.worktreePath)
+      }
+
+      // Shift down tasks in the same column that were after this task
+      const columnTasks = db.select().from(tasks).where(eq(tasks.status, existing.status)).all()
+
+      for (const t of columnTasks) {
+        if (t.position > existing.position) {
+          db.update(tasks)
+            .set({ position: t.position - 1, updatedAt: now })
+            .where(eq(tasks.id, t.id))
+            .run()
+        }
+      }
+
+      db.delete(tasks).where(eq(tasks.id, id)).run()
+      deletedCount++
+    }
+
+    return c.json({ success: true, deleted: deletedCount })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to delete tasks' }, 400)
+  }
+})
+
+// GET /api/tasks/:id - Get single task
+app.get('/:id', (c) => {
+  const id = c.req.param('id')
+  const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+  return c.json(task)
+})
 
 // PATCH /api/tasks/:id - Update task
-export async function updateTask(req: IncomingMessage, res: ServerResponse, id: string) {
+app.patch('/:id', async (c) => {
+  const id = c.req.param('id')
+
   try {
     const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!existing) {
-      return error(res, 'Task not found', 404)
+      return c.json({ error: 'Task not found' }, 404)
     }
 
-    const body = await parseBody<Partial<Task>>(req)
+    const body = await c.req.json<Partial<Task>>()
     const now = new Date().toISOString()
 
     db.update(tasks)
@@ -186,25 +207,58 @@ export async function updateTask(req: IncomingMessage, res: ServerResponse, id: 
       .run()
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
-    json(res, updated)
+    return c.json(updated)
   } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to update task', 400)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to update task' }, 400)
   }
-}
+})
+
+// DELETE /api/tasks/:id - Delete task
+app.delete('/:id', (c) => {
+  const id = c.req.param('id')
+  const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
+  if (!existing) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  // Destroy terminals associated with this task's worktree
+  if (existing.worktreePath) {
+    destroyTerminalsForWorktree(existing.worktreePath)
+  }
+
+  // Delete git worktree if it exists
+  if (existing.worktreePath && existing.repoPath) {
+    deleteGitWorktree(existing.repoPath, existing.worktreePath)
+  }
+
+  // Shift down tasks in the same column that were after this task
+  const columnTasks = db.select().from(tasks).where(eq(tasks.status, existing.status)).all()
+  const now = new Date().toISOString()
+
+  for (const t of columnTasks) {
+    if (t.position > existing.position) {
+      db.update(tasks)
+        .set({ position: t.position - 1, updatedAt: now })
+        .where(eq(tasks.id, t.id))
+        .run()
+    }
+  }
+
+  db.delete(tasks).where(eq(tasks.id, id)).run()
+  return c.json({ success: true })
+})
 
 // PATCH /api/tasks/:id/status - Update task status with position reordering
-export async function updateTaskStatus(
-  req: IncomingMessage,
-  res: ServerResponse,
-  id: string
-) {
+app.patch('/:id/status', async (c) => {
+  const id = c.req.param('id')
+
   try {
     const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!existing) {
-      return error(res, 'Task not found', 404)
+      return c.json({ error: 'Task not found' }, 404)
     }
 
-    const body = await parseBody<{ status: string; position: number }>(req)
+    const body = await c.req.json<{ status: string; position: number }>()
     const now = new Date().toISOString()
 
     // If status changed or position changed, we need to reorder
@@ -215,11 +269,7 @@ export async function updateTaskStatus(
     if (oldStatus !== newStatus) {
       // Moving to a different column
       // Shift down tasks in old column that were after this task
-      const oldColumnTasks = db
-        .select()
-        .from(tasks)
-        .where(eq(tasks.status, oldStatus))
-        .all()
+      const oldColumnTasks = db.select().from(tasks).where(eq(tasks.status, oldStatus)).all()
       for (const t of oldColumnTasks) {
         if (t.position > existing.position) {
           db.update(tasks)
@@ -230,11 +280,7 @@ export async function updateTaskStatus(
       }
 
       // Shift up tasks in new column to make room
-      const newColumnTasks = db
-        .select()
-        .from(tasks)
-        .where(eq(tasks.status, newStatus))
-        .all()
+      const newColumnTasks = db.select().from(tasks).where(eq(tasks.status, newStatus)).all()
       for (const t of newColumnTasks) {
         if (t.position >= newPosition) {
           db.update(tasks)
@@ -245,11 +291,7 @@ export async function updateTaskStatus(
       }
     } else {
       // Same column, just reorder
-      const columnTasks = db
-        .select()
-        .from(tasks)
-        .where(eq(tasks.status, oldStatus))
-        .all()
+      const columnTasks = db.select().from(tasks).where(eq(tasks.status, oldStatus)).all()
 
       if (newPosition > existing.position) {
         // Moving down
@@ -285,98 +327,10 @@ export async function updateTaskStatus(
       .run()
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
-    json(res, updated)
+    return c.json(updated)
   } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to update task status', 400)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)
   }
-}
+})
 
-// DELETE /api/tasks/bulk - Delete multiple tasks
-export async function bulkDeleteTasks(req: IncomingMessage, res: ServerResponse) {
-  try {
-    const body = await parseBody<{ ids: string[] }>(req)
-
-    if (!Array.isArray(body.ids) || body.ids.length === 0) {
-      return error(res, 'ids must be a non-empty array')
-    }
-
-    const now = new Date().toISOString()
-    let deletedCount = 0
-
-    for (const id of body.ids) {
-      const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
-      if (!existing) continue
-
-      // Destroy terminals associated with this task's worktree
-      if (existing.worktreePath) {
-        destroyTerminalsForWorktree(existing.worktreePath)
-      }
-
-      // Delete git worktree if it exists
-      if (existing.worktreePath && existing.repoPath) {
-        deleteGitWorktree(existing.repoPath, existing.worktreePath)
-      }
-
-      // Shift down tasks in the same column that were after this task
-      const columnTasks = db
-        .select()
-        .from(tasks)
-        .where(eq(tasks.status, existing.status))
-        .all()
-
-      for (const t of columnTasks) {
-        if (t.position > existing.position) {
-          db.update(tasks)
-            .set({ position: t.position - 1, updatedAt: now })
-            .where(eq(tasks.id, t.id))
-            .run()
-        }
-      }
-
-      db.delete(tasks).where(eq(tasks.id, id)).run()
-      deletedCount++
-    }
-
-    json(res, { success: true, deleted: deletedCount })
-  } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to delete tasks', 400)
-  }
-}
-
-// DELETE /api/tasks/:id - Delete task
-export function deleteTask(req: IncomingMessage, res: ServerResponse, id: string) {
-  const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
-  if (!existing) {
-    return error(res, 'Task not found', 404)
-  }
-
-  // Destroy terminals associated with this task's worktree
-  if (existing.worktreePath) {
-    destroyTerminalsForWorktree(existing.worktreePath)
-  }
-
-  // Delete git worktree if it exists
-  if (existing.worktreePath && existing.repoPath) {
-    deleteGitWorktree(existing.repoPath, existing.worktreePath)
-  }
-
-  // Shift down tasks in the same column that were after this task
-  const columnTasks = db
-    .select()
-    .from(tasks)
-    .where(eq(tasks.status, existing.status))
-    .all()
-  const now = new Date().toISOString()
-
-  for (const t of columnTasks) {
-    if (t.position > existing.position) {
-      db.update(tasks)
-        .set({ position: t.position - 1, updatedAt: now })
-        .where(eq(tasks.id, t.id))
-        .run()
-    }
-  }
-
-  db.delete(tasks).where(eq(tasks.id, id)).run()
-  json(res, { success: true })
-}
+export default app

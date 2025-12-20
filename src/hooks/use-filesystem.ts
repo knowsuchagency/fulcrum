@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
-const API_BASE = `http://${window.location.hostname}:3001`
+// Use relative URLs - works with both Vite dev proxy and production
+const API_BASE = ''
 
 interface DirectoryEntry {
   name: string

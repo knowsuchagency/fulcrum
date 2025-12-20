@@ -1,34 +1,8 @@
-import type { IncomingMessage, ServerResponse } from 'http'
-import { execSync, exec } from 'child_process'
+import { Hono } from 'hono'
+import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
-
-// Helper to send JSON response
-function json(res: ServerResponse, data: unknown, status = 200) {
-  res.writeHead(status, { 'Content-Type': 'application/json' })
-  res.end(JSON.stringify(data))
-}
-
-// Helper to send error
-function error(res: ServerResponse, message: string, status = 400) {
-  json(res, { error: message }, status)
-}
-
-// Helper to parse JSON body
-async function parseBody<T>(req: IncomingMessage): Promise<T> {
-  return new Promise((resolve, reject) => {
-    let body = ''
-    req.on('data', (chunk) => (body += chunk))
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(body))
-      } catch {
-        reject(new Error('Invalid JSON'))
-      }
-    })
-    req.on('error', reject)
-  })
-}
+import * as os from 'os'
 
 // Execute git command and return output
 function gitExec(cwd: string, args: string): string {
@@ -39,30 +13,116 @@ function gitExec(cwd: string, args: string): string {
   }).trim()
 }
 
-// POST /api/git/worktree - Create a new worktree
-export async function createWorktree(req: IncomingMessage, res: ServerResponse) {
+function parseStatusCode(code: string): string {
+  const index = code[0]
+  const workTree = code[1]
+
+  if (code === '??') return 'untracked'
+  if (code === '!!') return 'ignored'
+  if (index === 'A' || workTree === 'A') return 'added'
+  if (index === 'D' || workTree === 'D') return 'deleted'
+  if (index === 'M' || workTree === 'M') return 'modified'
+  if (index === 'R' || workTree === 'R') return 'renamed'
+  if (index === 'C' || workTree === 'C') return 'copied'
+  return 'unknown'
+}
+
+// Check if a directory is a git repository
+function isGitRepo(dirPath: string): boolean {
   try {
-    const body = await parseBody<{
+    const gitDir = path.join(dirPath, '.git')
+    return fs.existsSync(gitDir)
+  } catch {
+    return false
+  }
+}
+
+const app = new Hono()
+
+// GET /api/git/branches?repo=/path/to/repo
+app.get('/branches', (c) => {
+  let repoPath = c.req.query('repo')
+
+  if (!repoPath) {
+    return c.json({ error: 'repo parameter is required' }, 400)
+  }
+
+  // Expand ~ to home directory
+  if (repoPath.startsWith('~')) {
+    repoPath = path.join(os.homedir(), repoPath.slice(1))
+  }
+
+  repoPath = path.resolve(repoPath)
+
+  try {
+    if (!fs.existsSync(repoPath)) {
+      return c.json({ error: 'Repository path does not exist' }, 404)
+    }
+
+    if (!isGitRepo(repoPath)) {
+      return c.json({ error: 'Path is not a git repository' }, 400)
+    }
+
+    // Get all local branches
+    const branchOutput = execSync('git branch --list', {
+      cwd: repoPath,
+      encoding: 'utf-8',
+    })
+
+    const branches = branchOutput
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => line.replace(/^\* /, '')) // Remove current branch marker
+
+    // Get current branch
+    let current = 'main'
+    try {
+      current = execSync('git rev-parse --abbrev-ref HEAD', {
+        cwd: repoPath,
+        encoding: 'utf-8',
+      }).trim()
+    } catch {
+      // Use first branch if HEAD is detached
+      current = branches[0] || 'main'
+    }
+
+    return c.json({
+      branches,
+      current,
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to list branches' }, 500)
+  }
+})
+
+// POST /api/git/worktree - Create a new worktree
+app.post('/worktree', async (c) => {
+  try {
+    const body = await c.req.json<{
       repoPath: string
       worktreePath: string
       branch: string
       baseBranch: string
-    }>(req)
+    }>()
 
     const { repoPath, worktreePath, branch, baseBranch } = body
 
     if (!repoPath || !worktreePath || !branch || !baseBranch) {
-      return error(res, 'Missing required fields: repoPath, worktreePath, branch, baseBranch')
+      return c.json(
+        { error: 'Missing required fields: repoPath, worktreePath, branch, baseBranch' },
+        400
+      )
     }
 
     // Verify repo exists
     if (!fs.existsSync(repoPath)) {
-      return error(res, 'Repository path does not exist', 404)
+      return c.json({ error: 'Repository path does not exist' }, 404)
     }
 
     // Check if worktree already exists
     if (fs.existsSync(worktreePath)) {
-      return error(res, 'Worktree path already exists', 409)
+      return c.json({ error: 'Worktree path already exists' }, 409)
     }
 
     // Ensure parent directory exists
@@ -74,43 +134,46 @@ export async function createWorktree(req: IncomingMessage, res: ServerResponse) 
     // Create the worktree with a new branch based on baseBranch
     try {
       gitExec(repoPath, `worktree add -b "${branch}" "${worktreePath}" "${baseBranch}"`)
-    } catch (err) {
+    } catch {
       // Branch might already exist, try without -b
       try {
         gitExec(repoPath, `worktree add "${worktreePath}" "${branch}"`)
       } catch (err2) {
         const message = err2 instanceof Error ? err2.message : 'Failed to create worktree'
-        return error(res, message, 500)
+        return c.json({ error: message }, 500)
       }
     }
 
-    json(res, {
-      success: true,
-      worktreePath,
-      branch,
-    }, 201)
+    return c.json(
+      {
+        success: true,
+        worktreePath,
+        branch,
+      },
+      201
+    )
   } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to create worktree', 500)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to create worktree' }, 500)
   }
-}
+})
 
 // DELETE /api/git/worktree - Remove a worktree
-export async function deleteWorktree(req: IncomingMessage, res: ServerResponse) {
+app.delete('/worktree', async (c) => {
   try {
-    const body = await parseBody<{
+    const body = await c.req.json<{
       repoPath: string
       worktreePath: string
-    }>(req)
+    }>()
 
     const { repoPath, worktreePath } = body
 
     if (!repoPath || !worktreePath) {
-      return error(res, 'Missing required fields: repoPath, worktreePath')
+      return c.json({ error: 'Missing required fields: repoPath, worktreePath' }, 400)
     }
 
     // Verify repo exists
     if (!fs.existsSync(repoPath)) {
-      return error(res, 'Repository path does not exist', 404)
+      return c.json({ error: 'Repository path does not exist' }, 404)
     }
 
     // Remove worktree if it exists
@@ -129,24 +192,23 @@ export async function deleteWorktree(req: IncomingMessage, res: ServerResponse) 
       }
     }
 
-    json(res, { success: true })
+    return c.json({ success: true })
   } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to delete worktree', 500)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to delete worktree' }, 500)
   }
-}
+})
 
 // GET /api/git/diff?path=/path/to/worktree - Get git diff for a worktree
-export function getDiff(req: IncomingMessage, res: ServerResponse) {
-  const url = new URL(req.url || '/', `http://${req.headers.host}`)
-  const worktreePath = url.searchParams.get('path')
-  const staged = url.searchParams.get('staged') === 'true'
+app.get('/diff', (c) => {
+  const worktreePath = c.req.query('path')
+  const staged = c.req.query('staged') === 'true'
 
   if (!worktreePath) {
-    return error(res, 'path parameter is required')
+    return c.json({ error: 'path parameter is required' }, 400)
   }
 
   if (!fs.existsSync(worktreePath)) {
-    return error(res, 'Path does not exist', 404)
+    return c.json({ error: 'Path does not exist' }, 404)
   }
 
   try {
@@ -190,7 +252,7 @@ export function getDiff(req: IncomingMessage, res: ServerResponse) {
         }
       })
 
-    json(res, {
+    return c.json({
       branch,
       diff,
       files,
@@ -198,35 +260,20 @@ export function getDiff(req: IncomingMessage, res: ServerResponse) {
       hasUnstagedChanges: files.some((f) => !f.staged && f.status !== 'untracked'),
     })
   } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to get diff', 500)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to get diff' }, 500)
   }
-}
-
-function parseStatusCode(code: string): string {
-  const index = code[0]
-  const workTree = code[1]
-
-  if (code === '??') return 'untracked'
-  if (code === '!!') return 'ignored'
-  if (index === 'A' || workTree === 'A') return 'added'
-  if (index === 'D' || workTree === 'D') return 'deleted'
-  if (index === 'M' || workTree === 'M') return 'modified'
-  if (index === 'R' || workTree === 'R') return 'renamed'
-  if (index === 'C' || workTree === 'C') return 'copied'
-  return 'unknown'
-}
+})
 
 // GET /api/git/status?path=/path/to/worktree - Get git status
-export function getStatus(req: IncomingMessage, res: ServerResponse) {
-  const url = new URL(req.url || '/', `http://${req.headers.host}`)
-  const worktreePath = url.searchParams.get('path')
+app.get('/status', (c) => {
+  const worktreePath = c.req.query('path')
 
   if (!worktreePath) {
-    return error(res, 'path parameter is required')
+    return c.json({ error: 'path parameter is required' }, 400)
   }
 
   if (!fs.existsSync(worktreePath)) {
-    return error(res, 'Path does not exist', 404)
+    return c.json({ error: 'Path does not exist' }, 404)
   }
 
   try {
@@ -274,7 +321,7 @@ export function getStatus(req: IncomingMessage, res: ServerResponse) {
         }
       })
 
-    json(res, {
+    return c.json({
       branch,
       ahead,
       behind,
@@ -282,6 +329,8 @@ export function getStatus(req: IncomingMessage, res: ServerResponse) {
       clean: files.length === 0,
     })
   } catch (err) {
-    error(res, err instanceof Error ? err.message : 'Failed to get status', 500)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to get status' }, 500)
   }
-}
+})
+
+export default app

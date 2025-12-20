@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Task, TaskStatus } from '@/types'
 
-const API_BASE = `http://${window.location.hostname}:3001`
+// Use relative URLs - works with both Vite dev proxy and production
+const API_BASE = ''
 
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
