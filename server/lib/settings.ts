@@ -5,6 +5,7 @@ import * as os from 'os'
 // Settings interface
 export interface Settings {
   port: number
+  databasePath: string
   worktreeBasePath: string
   defaultGitReposDir: string
 }
@@ -12,12 +13,18 @@ export interface Settings {
 // Default settings
 const DEFAULT_SETTINGS: Settings = {
   port: 3222,
+  databasePath: path.join(os.homedir(), '.vibora', 'vibora.db'),
   worktreeBasePath: path.join(os.homedir(), '.vibora', 'worktrees'),
   defaultGitReposDir: os.homedir(),
 }
 
 // Get the vibora directory path
+// Checks CWD first for per-worktree isolation, falls back to ~/.vibora
 export function getViboraDir(): string {
+  const cwdVibora = path.join(process.cwd(), '.vibora')
+  if (fs.existsSync(cwdVibora)) {
+    return cwdVibora
+  }
   return path.join(os.homedir(), '.vibora')
 }
 
@@ -66,38 +73,54 @@ function expandPath(p: string): string {
 }
 
 // Get settings (with defaults, persisting any missing keys)
+// Precedence: env var → settings.json → default
 export function getSettings(): Settings {
   ensureViboraDir()
+  const viboraDir = getViboraDir()
   const settingsPath = getSettingsPath()
 
-  if (!fs.existsSync(settingsPath)) {
-    fs.writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8')
-    return { ...DEFAULT_SETTINGS }
+  let parsed: Partial<Settings> = {}
+
+  if (fs.existsSync(settingsPath)) {
+    try {
+      const content = fs.readFileSync(settingsPath, 'utf-8')
+      parsed = JSON.parse(content) as Partial<Settings>
+    } catch {
+      // Use empty parsed if file is invalid
+    }
   }
 
-  try {
-    const content = fs.readFileSync(settingsPath, 'utf-8')
-    const parsed = JSON.parse(content) as Partial<Settings>
+  // Check if any keys are missing from file
+  const allKeys = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]
+  const hasMissingKeys = allKeys.some((key) => !(key in parsed))
 
-    // Check if any keys are missing
-    const allKeys = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]
-    const hasMissingKeys = allKeys.some((key) => !(key in parsed))
+  // Merge: env var → settings.json → default
+  // Note: databasePath defaults to {viboraDir}/vibora.db (CWD-aware)
+  const fileSettings: Settings = {
+    port: parsed.port ?? DEFAULT_SETTINGS.port,
+    databasePath: expandPath(parsed.databasePath ?? path.join(viboraDir, 'vibora.db')),
+    worktreeBasePath: expandPath(parsed.worktreeBasePath ?? DEFAULT_SETTINGS.worktreeBasePath),
+    defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
+  }
 
-    // Merge with defaults and expand paths
-    const merged: Settings = {
-      port: parsed.port ?? DEFAULT_SETTINGS.port,
-      worktreeBasePath: expandPath(parsed.worktreeBasePath ?? DEFAULT_SETTINGS.worktreeBasePath),
-      defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
-    }
+  // Persist missing keys back to file (only file settings, not env overrides)
+  if (hasMissingKeys) {
+    fs.writeFileSync(settingsPath, JSON.stringify(fileSettings, null, 2), 'utf-8')
+  }
 
-    // Persist missing keys back to file
-    if (hasMissingKeys) {
-      fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
-    }
-
-    return merged
-  } catch {
-    return { ...DEFAULT_SETTINGS }
+  // Apply environment variable overrides
+  const portEnv = parseInt(process.env.PORT || '', 10)
+  return {
+    port: !isNaN(portEnv) && portEnv > 0 ? portEnv : fileSettings.port,
+    databasePath: process.env.VIBORA_DATABASE_PATH
+      ? expandPath(process.env.VIBORA_DATABASE_PATH)
+      : fileSettings.databasePath,
+    worktreeBasePath: process.env.VIBORA_WORKTREE_PATH
+      ? expandPath(process.env.VIBORA_WORKTREE_PATH)
+      : fileSettings.worktreeBasePath,
+    defaultGitReposDir: process.env.VIBORA_GIT_REPOS_DIR
+      ? expandPath(process.env.VIBORA_GIT_REPOS_DIR)
+      : fileSettings.defaultGitReposDir,
   }
 }
 

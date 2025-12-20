@@ -27,13 +27,15 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
 // Config keys matching server
 export const CONFIG_KEYS = {
   PORT: 'port',
+  DATABASE_PATH: 'database_path',
   WORKTREE_BASE_PATH: 'worktree_base_path',
   DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
 } as const
 
 // Default values (client-side fallbacks)
 const DEFAULT_PORT = 3222
-const DEFAULT_WORKTREE_BASE_PATH = '/tmp/vibora/worktrees'
+const DEFAULT_DATABASE_PATH = '~/.vibora/vibora.db'
+const DEFAULT_WORKTREE_BASE_PATH = '~/.vibora/worktrees'
 
 export function useConfig(key: string) {
   return useQuery({
@@ -48,6 +50,16 @@ export function usePort() {
   return {
     ...query,
     data: (query.data?.value as number) ?? DEFAULT_PORT,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useDatabasePath() {
+  const query = useConfig(CONFIG_KEYS.DATABASE_PATH)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? DEFAULT_DATABASE_PATH,
     isDefault: query.data?.isDefault ?? true,
   }
 }

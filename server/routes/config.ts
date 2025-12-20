@@ -4,6 +4,7 @@ import { getSettings, getSetting, updateSettings, resetSettings } from '../lib/s
 // Config keys (mapped to settings keys)
 export const CONFIG_KEYS = {
   PORT: 'port',
+  DATABASE_PATH: 'databasePath',
   WORKTREE_BASE_PATH: 'worktreeBasePath',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
 } as const
@@ -20,6 +21,8 @@ app.get('/:key', (c) => {
 
   if (key === 'port' || key === CONFIG_KEYS.PORT) {
     value = settings.port
+  } else if (key === 'database_path' || key === CONFIG_KEYS.DATABASE_PATH) {
+    value = settings.databasePath
   } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
     value = settings.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
@@ -48,6 +51,12 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ port })
       return c.json({ key, value: port })
+    } else if (key === 'database_path' || key === CONFIG_KEYS.DATABASE_PATH) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
+      updateSettings({ databasePath: body.value })
+      return c.json({ key, value: body.value })
     } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
       if (typeof body.value !== 'string') {
         return c.json({ error: 'Value must be a string' }, 400)
@@ -78,6 +87,8 @@ app.delete('/:key', (c) => {
   let defaultValue: string | number | null = null
   if (key === 'port' || key === CONFIG_KEYS.PORT) {
     defaultValue = defaults.port
+  } else if (key === 'database_path' || key === CONFIG_KEYS.DATABASE_PATH) {
+    defaultValue = defaults.databasePath
   } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
     defaultValue = defaults.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
