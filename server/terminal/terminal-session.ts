@@ -1,4 +1,4 @@
-import * as pty from '@lydell/node-pty'
+import { spawn, type Pty } from 'bun-pty'
 import * as os from 'os'
 import { BufferManager } from './buffer-manager'
 import type { TerminalInfo, TerminalStatus } from '../types'
@@ -23,7 +23,7 @@ export class TerminalSession {
   private rows: number
   private status: TerminalStatus = 'running'
   private exitCode?: number
-  private ptyProcess: pty.IPty | null = null
+  private ptyProcess: Pty | null = null
   private buffer: BufferManager
   private onData: (data: string) => void
   private onExit: (exitCode: number) => void
@@ -52,7 +52,7 @@ export class TerminalSession {
     const shell = process.env.SHELL || '/bin/bash'
 
     try {
-      this.ptyProcess = pty.spawn(shell, [], {
+      this.ptyProcess = spawn(shell, [], {
         name: 'xterm-256color',
         cols: this.cols,
         rows: this.rows,
