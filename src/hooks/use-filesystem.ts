@@ -75,15 +75,16 @@ export function useBranches(repoPath: string | null) {
   })
 }
 
-export function useGitDiff(worktreePath: string | null, options: { staged?: boolean; ignoreWhitespace?: boolean } = {}) {
-  const { staged = false, ignoreWhitespace = false } = options
+export function useGitDiff(worktreePath: string | null, options: { staged?: boolean; ignoreWhitespace?: boolean; includeUntracked?: boolean } = {}) {
+  const { staged = false, ignoreWhitespace = false, includeUntracked = false } = options
   return useQuery({
-    queryKey: ['git', 'diff', worktreePath, staged, ignoreWhitespace],
+    queryKey: ['git', 'diff', worktreePath, staged, ignoreWhitespace, includeUntracked],
     queryFn: () => {
       const params = new URLSearchParams({
         path: worktreePath!,
         ...(staged && { staged: 'true' }),
         ...(ignoreWhitespace && { ignoreWhitespace: 'true' }),
+        ...(includeUntracked && { includeUntracked: 'true' }),
       })
       return fetchJSON<GitDiff>(`${API_BASE}/api/git/diff?${params}`)
     },

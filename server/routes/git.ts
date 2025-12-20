@@ -27,6 +27,71 @@ function parseStatusCode(code: string): string {
   return 'unknown'
 }
 
+// Generate diff content for an untracked file (shows all lines as additions)
+function generateUntrackedFileDiff(basePath: string, filePath: string): string {
+  const fullPath = path.join(basePath, filePath)
+  const stat = fs.statSync(fullPath)
+
+  if (stat.isDirectory()) {
+    // Recursively get all files in directory
+    const files = getAllFilesRecursive(fullPath, filePath)
+    return files.map(f => generateUntrackedFileDiff(basePath, f)).join('\n')
+  }
+
+  // Check if file is binary
+  const content = fs.readFileSync(fullPath)
+  if (isBinaryContent(content)) {
+    return `diff --git a/${filePath} b/${filePath}
+new file mode 100644
+--- /dev/null
++++ b/${filePath}
+Binary file`
+  }
+
+  const textContent = content.toString('utf-8')
+  const lines = textContent.split('\n')
+  const lineCount = lines.length
+
+  // Build diff header and content
+  let diff = `diff --git a/${filePath} b/${filePath}
+new file mode 100644
+--- /dev/null
++++ b/${filePath}
+@@ -0,0 +1,${lineCount} @@\n`
+
+  diff += lines.map(line => `+${line}`).join('\n')
+
+  return diff
+}
+
+// Get all files recursively from a directory
+function getAllFilesRecursive(dirPath: string, relativePath: string): string[] {
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true })
+  const files: string[] = []
+
+  for (const entry of entries) {
+    const entryRelativePath = path.join(relativePath, entry.name)
+    const entryFullPath = path.join(dirPath, entry.name)
+
+    if (entry.isDirectory()) {
+      files.push(...getAllFilesRecursive(entryFullPath, entryRelativePath))
+    } else {
+      files.push(entryRelativePath)
+    }
+  }
+
+  return files
+}
+
+// Simple binary detection: check for null bytes in first 8KB
+function isBinaryContent(content: Buffer): boolean {
+  const checkLength = Math.min(content.length, 8192)
+  for (let i = 0; i < checkLength; i++) {
+    if (content[i] === 0) return true
+  }
+  return false
+}
+
 // Check if a directory is a git repository
 function isGitRepo(dirPath: string): boolean {
   try {
@@ -203,6 +268,7 @@ app.get('/diff', (c) => {
   const worktreePath = c.req.query('path')
   const staged = c.req.query('staged') === 'true'
   const ignoreWhitespace = c.req.query('ignoreWhitespace') === 'true'
+  const includeUntracked = c.req.query('includeUntracked') === 'true'
 
   if (!worktreePath) {
     return c.json({ error: 'path parameter is required' }, 400)
@@ -273,9 +339,33 @@ app.get('/diff', (c) => {
         }
       })
 
+    // Generate diff for untracked files if requested
+    let untrackedDiff = ''
+    if (includeUntracked) {
+      const untrackedFiles = files.filter(f => f.status === 'untracked')
+      const untrackedDiffs: string[] = []
+      for (const file of untrackedFiles) {
+        try {
+          const fileDiff = generateUntrackedFileDiff(worktreePath, file.path)
+          if (fileDiff) {
+            untrackedDiffs.push(fileDiff)
+          }
+        } catch {
+          // Skip files that can't be read
+        }
+      }
+      untrackedDiff = untrackedDiffs.join('\n')
+    }
+
+    // Combine diffs
+    let combinedDiff = diff || branchDiff
+    if (untrackedDiff) {
+      combinedDiff = combinedDiff ? `${combinedDiff}\n${untrackedDiff}` : untrackedDiff
+    }
+
     return c.json({
       branch,
-      diff: diff || branchDiff,
+      diff: combinedDiff,
       files,
       hasStagedChanges: files.some((f) => f.staged),
       hasUnstagedChanges: files.some((f) => !f.staged && f.status !== 'untracked'),

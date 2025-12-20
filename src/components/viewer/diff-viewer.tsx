@@ -60,7 +60,8 @@ interface DiffViewerProps {
 export function DiffViewer({ worktreePath }: DiffViewerProps) {
   const [wrap, setWrap] = useState(false)
   const [ignoreWhitespace, setIgnoreWhitespace] = useState(false)
-  const { data, isLoading, error } = useGitDiff(worktreePath, { ignoreWhitespace })
+  const [includeUntracked, setIncludeUntracked] = useState(false)
+  const { data, isLoading, error } = useGitDiff(worktreePath, { ignoreWhitespace, includeUntracked })
 
   const lines = useMemo(() => {
     if (!data?.diff) return []
@@ -91,6 +92,8 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
     )
   }
 
+  const hasUntrackedFiles = data?.files?.some(f => f.status === 'untracked') ?? false
+
   if (lines.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground text-sm gap-2">
@@ -98,22 +101,36 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
         {data?.files && data.files.length > 0 && (
           <div className="text-xs">
             <p className="text-center mb-2">Modified files:</p>
-            {data.files.map((f) => (
-              <div key={f.path} className="flex gap-2">
-                <span className={cn(
-                  f.status === 'added' && 'text-green-500',
-                  f.status === 'deleted' && 'text-red-500',
-                  f.status === 'modified' && 'text-yellow-500',
-                  f.status === 'untracked' && 'text-gray-500'
-                )}>
-                  {f.status === 'added' && 'A'}
-                  {f.status === 'deleted' && 'D'}
-                  {f.status === 'modified' && 'M'}
-                  {f.status === 'untracked' && '?'}
-                </span>
-                <span>{f.path}</span>
-              </div>
-            ))}
+            <div className="flex flex-col gap-1">
+              {data.files.map((f) => (
+                <div key={f.path} className="flex gap-2">
+                  <span className={cn(
+                    'w-4 text-center',
+                    f.status === 'added' && 'text-green-500',
+                    f.status === 'deleted' && 'text-red-500',
+                    f.status === 'modified' && 'text-yellow-500',
+                    f.status === 'untracked' && 'text-gray-500'
+                  )}>
+                    {f.status === 'added' && 'A'}
+                    {f.status === 'deleted' && 'D'}
+                    {f.status === 'modified' && 'M'}
+                    {f.status === 'untracked' && '?'}
+                  </span>
+                  <span>{f.path}</span>
+                </div>
+              ))}
+              {hasUntrackedFiles && (
+                <label className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground mt-1">
+                  <input
+                    type="checkbox"
+                    checked={includeUntracked}
+                    onChange={(e) => setIncludeUntracked(e.target.checked)}
+                    className="w-4 h-3"
+                  />
+                  <span>Show untracked files</span>
+                </label>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -148,6 +165,15 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
             className="w-3 h-3"
           />
           Ignore whitespace
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={includeUntracked}
+            onChange={(e) => setIncludeUntracked(e.target.checked)}
+            className="w-3 h-3"
+          />
+          Untracked
         </label>
       </div>
 
