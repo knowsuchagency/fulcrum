@@ -311,7 +311,7 @@ function TerminalsView() {
       </div>
 
       {/* Terminal Grid */}
-      <div className="flex-1 overflow-hidden">
+      <div className="pixel-grid flex-1 overflow-hidden">
         <TerminalGrid
           terminals={visibleTerminals}
           onTerminalClose={activeTabId === ALL_TASKS_TAB_ID ? undefined : handleTerminalClose}

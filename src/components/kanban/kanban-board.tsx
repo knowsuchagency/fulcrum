@@ -147,7 +147,7 @@ export function KanbanBoard({ repoFilter }: KanbanBoardProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex h-full gap-4 overflow-x-auto p-4">
+      <div className="pixel-grid flex h-full justify-center gap-4 overflow-x-auto p-4">
         {COLUMNS.map((status) => (
           <KanbanColumn
             key={status}

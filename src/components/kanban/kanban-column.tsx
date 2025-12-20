@@ -13,10 +13,10 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  IN_PROGRESS: 'border-t-blue-500',
-  IN_REVIEW: 'border-t-yellow-500',
-  DONE: 'border-t-green-500',
-  CANCELLED: 'border-t-red-500',
+  IN_PROGRESS: 'border-t-slate-400',
+  IN_REVIEW: 'border-t-violet-400',
+  DONE: 'border-t-emerald-400',
+  CANCELLED: 'border-t-rose-500',
 }
 
 interface KanbanColumnProps {
