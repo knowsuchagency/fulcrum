@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import Database from 'better-sqlite3'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import { Database } from 'bun:sqlite'
 import * as schema from './schema'
 import * as path from 'path'
 import { initializeViboraDirectories, getViboraDir } from '../lib/settings'
@@ -11,7 +11,7 @@ const dbPath = path.join(getViboraDir(), 'vibora.db')
 const sqlite = new Database(dbPath)
 
 // Enable WAL mode for better performance
-sqlite.pragma('journal_mode = WAL')
+sqlite.exec('PRAGMA journal_mode = WAL')
 
 export const db = drizzle(sqlite, { schema })
 

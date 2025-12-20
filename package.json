@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "dev:server": "mkdir -p ~/.vibora && drizzle-kit push && tsx watch server/index.ts",
+    "dev:server": "mkdir -p ~/.vibora && drizzle-kit push && bun --watch server/index.ts",
     "build": "tsc -b && vite build",
-    "start": "NODE_ENV=production tsx server/index.ts",
+    "start": "NODE_ENV=production bun server/index.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
@@ -32,7 +32,6 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "better-sqlite3": "^12.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
@@ -49,7 +48,6 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@tanstack/router-plugin": "^1.141.8",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "^1.2.14",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
@@ -61,7 +59,6 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
