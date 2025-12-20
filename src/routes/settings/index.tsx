@@ -8,6 +8,7 @@ import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon, RotateLeft01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import {
+  usePort,
   useWorktreeBasePath,
   useDefaultGitReposDir,
   useUpdateConfig,
@@ -20,19 +21,28 @@ export const Route = createFileRoute('/settings/')({
 })
 
 function SettingsPage() {
+  const { data: port, isDefault: portIsDefault, isLoading: portLoading } = usePort()
   const { data: worktreeBasePath, isDefault: worktreeIsDefault, isLoading: worktreeLoading } = useWorktreeBasePath()
   const { data: defaultGitReposDir, isDefault: reposDirIsDefault, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
 
+  const [localPort, setLocalPort] = useState('')
   const [localWorktreePath, setLocalWorktreePath] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
   const [worktreeBrowserOpen, setWorktreeBrowserOpen] = useState(false)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
+  const [portSaved, setPortSaved] = useState(false)
   const [worktreeSaved, setWorktreeSaved] = useState(false)
   const [reposDirSaved, setReposDirSaved] = useState(false)
 
   // Sync local state with fetched values
+  useEffect(() => {
+    if (port !== undefined) {
+      setLocalPort(String(port))
+    }
+  }, [port])
+
   useEffect(() => {
     if (worktreeBasePath) {
       setLocalWorktreePath(worktreeBasePath)
@@ -45,8 +55,35 @@ function SettingsPage() {
     }
   }, [defaultGitReposDir])
 
+  const portHasChanges = localPort !== String(port)
   const worktreeHasChanges = localWorktreePath !== worktreeBasePath
   const reposDirHasChanges = localReposDir !== defaultGitReposDir
+
+  const handlePortSave = () => {
+    const portNum = parseInt(localPort, 10)
+    if (isNaN(portNum) || portNum < 1 || portNum > 65535) return
+    updateConfig.mutate(
+      { key: CONFIG_KEYS.PORT, value: portNum },
+      {
+        onSuccess: () => {
+          setPortSaved(true)
+          setTimeout(() => setPortSaved(false), 2000)
+        },
+      }
+    )
+  }
+
+  const handlePortReset = () => {
+    resetConfig.mutate(CONFIG_KEYS.PORT, {
+      onSuccess: (data) => {
+        if (data.value !== null) {
+          setLocalPort(String(data.value))
+        }
+        setPortSaved(true)
+        setTimeout(() => setPortSaved(false), 2000)
+      },
+    })
+  }
 
   const handleWorktreeSave = () => {
     updateConfig.mutate(
@@ -104,6 +141,64 @@ function SettingsPage() {
 
       <div className="pixel-grid flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-2xl space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Server</CardTitle>
+              <CardDescription>
+                Configure the server port. Changes require a server restart.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Field>
+                <FieldLabel>Port</FieldLabel>
+                <FieldDescription>
+                  The port the server listens on for HTTP and WebSocket connections.
+                  {portIsDefault && (
+                    <span className="ml-1 text-muted-foreground">(using default)</span>
+                  )}
+                </FieldDescription>
+                <Input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={localPort}
+                  onChange={(e) => setLocalPort(e.target.value)}
+                  placeholder="3222"
+                  disabled={portLoading}
+                  className="w-32 font-mono text-sm"
+                />
+              </Field>
+
+              <div className="flex items-center justify-between pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePortReset}
+                  disabled={portLoading || resetConfig.isPending}
+                >
+                  <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                  Reset to Default
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  {portSaved && (
+                    <span className="flex items-center gap-1 text-xs text-emerald-500">
+                      <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
+                      Saved
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handlePortSave}
+                    disabled={!portHasChanges || portLoading || updateConfig.isPending}
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Git Worktrees</CardTitle>

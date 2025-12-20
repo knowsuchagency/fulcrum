@@ -3,6 +3,7 @@ import { getSettings, getSetting, updateSettings, resetSettings } from '../lib/s
 
 // Config keys (mapped to settings keys)
 export const CONFIG_KEYS = {
+  PORT: 'port',
   WORKTREE_BASE_PATH: 'worktreeBasePath',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
 } as const
@@ -15,9 +16,11 @@ app.get('/:key', (c) => {
   const settings = getSettings()
 
   // Map API keys to settings keys
-  let value: string | null = null
+  let value: string | number | null = null
 
-  if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
+  if (key === 'port' || key === CONFIG_KEYS.PORT) {
+    value = settings.port
+  } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
     value = settings.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     value = settings.defaultGitReposDir
@@ -35,17 +38,26 @@ app.put('/:key', async (c) => {
   const key = c.req.param('key')
 
   try {
-    const body = await c.req.json<{ value: string }>()
-
-    if (typeof body.value !== 'string') {
-      return c.json({ error: 'Value must be a string' }, 400)
-    }
+    const body = await c.req.json<{ value: string | number }>()
 
     // Map API keys to settings keys and update
-    if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
+    if (key === 'port' || key === CONFIG_KEYS.PORT) {
+      const port = typeof body.value === 'number' ? body.value : parseInt(body.value, 10)
+      if (isNaN(port) || port < 1 || port > 65535) {
+        return c.json({ error: 'Port must be a number between 1 and 65535' }, 400)
+      }
+      updateSettings({ port })
+      return c.json({ key, value: port })
+    } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
       updateSettings({ worktreeBasePath: body.value })
       return c.json({ key, value: body.value })
     } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
       updateSettings({ defaultGitReposDir: body.value })
       return c.json({ key, value: body.value })
     } else {
@@ -63,8 +75,10 @@ app.delete('/:key', (c) => {
   // Reset all settings and return the default for the requested key
   const defaults = resetSettings()
 
-  let defaultValue: string | null = null
-  if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
+  let defaultValue: string | number | null = null
+  if (key === 'port' || key === CONFIG_KEYS.PORT) {
+    defaultValue = defaults.port
+  } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
     defaultValue = defaults.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     defaultValue = defaults.defaultGitReposDir

@@ -7,8 +7,9 @@ import {
   broadcast,
   broadcastToTerminal,
 } from './websocket/terminal-ws'
+import { getSetting } from './lib/settings'
 
-const PORT = parseInt(process.env.PORT || '3222', 10)
+const PORT = parseInt(process.env.PORT || String(getSetting('port')), 10)
 
 // Initialize PTY manager with broadcast callbacks
 const ptyManager = initPTYManager({

@@ -5,7 +5,7 @@ const API_BASE = ''
 
 interface ConfigResponse {
   key: string
-  value: string | null
+  value: string | number | null
   isDefault?: boolean
 }
 
@@ -26,11 +26,13 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
 
 // Config keys matching server
 export const CONFIG_KEYS = {
+  PORT: 'port',
   WORKTREE_BASE_PATH: 'worktree_base_path',
   DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
 } as const
 
-// Default worktree base path (client-side fallback)
+// Default values (client-side fallbacks)
+const DEFAULT_PORT = 3222
 const DEFAULT_WORKTREE_BASE_PATH = '/tmp/vibora/worktrees'
 
 export function useConfig(key: string) {
@@ -38,6 +40,16 @@ export function useConfig(key: string) {
     queryKey: ['config', key],
     queryFn: () => fetchJSON<ConfigResponse>(`${API_BASE}/api/config/${key}`),
   })
+}
+
+export function usePort() {
+  const query = useConfig(CONFIG_KEYS.PORT)
+
+  return {
+    ...query,
+    data: (query.data?.value as number) ?? DEFAULT_PORT,
+    isDefault: query.data?.isDefault ?? true,
+  }
 }
 
 export function useWorktreeBasePath() {
@@ -65,7 +77,7 @@ export function useUpdateConfig() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ key, value }: { key: string; value: string }) =>
+    mutationFn: ({ key, value }: { key: string; value: string | number }) =>
       fetchJSON<ConfigResponse>(`${API_BASE}/api/config/${key}`, {
         method: 'PUT',
         body: JSON.stringify({ value }),
