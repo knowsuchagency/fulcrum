@@ -4,12 +4,14 @@ import * as os from 'os'
 
 // Settings interface
 export interface Settings {
+  port: number
   worktreeBasePath: string
   defaultGitReposDir: string
 }
 
 // Default settings
 const DEFAULT_SETTINGS: Settings = {
+  port: 3222,
   worktreeBasePath: path.join(os.homedir(), '.vibora', 'worktrees'),
   defaultGitReposDir: os.homedir(),
 }
@@ -63,12 +65,13 @@ function expandPath(p: string): string {
   return p
 }
 
-// Get settings (with defaults)
+// Get settings (with defaults, persisting any missing keys)
 export function getSettings(): Settings {
   ensureViboraDir()
   const settingsPath = getSettingsPath()
 
   if (!fs.existsSync(settingsPath)) {
+    fs.writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8')
     return { ...DEFAULT_SETTINGS }
   }
 
@@ -76,11 +79,23 @@ export function getSettings(): Settings {
     const content = fs.readFileSync(settingsPath, 'utf-8')
     const parsed = JSON.parse(content) as Partial<Settings>
 
+    // Check if any keys are missing
+    const allKeys = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]
+    const hasMissingKeys = allKeys.some((key) => !(key in parsed))
+
     // Merge with defaults and expand paths
-    return {
+    const merged: Settings = {
+      port: parsed.port ?? DEFAULT_SETTINGS.port,
       worktreeBasePath: expandPath(parsed.worktreeBasePath ?? DEFAULT_SETTINGS.worktreeBasePath),
       defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
     }
+
+    // Persist missing keys back to file
+    if (hasMissingKeys) {
+      fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
+    }
+
+    return merged
   } catch {
     return { ...DEFAULT_SETTINGS }
   }

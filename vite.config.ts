@@ -4,6 +4,8 @@ import react from "@vitejs/plugin-react"
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite"
 import { defineConfig } from "vite"
 
+const backendPort = process.env.VITE_BACKEND_PORT || '3222'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [TanStackRouterVite(), react(), tailwindcss()],
@@ -16,15 +18,15 @@ export default defineConfig({
     allowedHosts: ["citadel"],
     proxy: {
       '/api': {
-        target: 'http://localhost:3222',
+        target: `http://localhost:${backendPort}`,
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:3222',
+        target: `ws://localhost:${backendPort}`,
         ws: true,
       },
       '/health': {
-        target: 'http://localhost:3222',
+        target: `http://localhost:${backendPort}`,
         changeOrigin: true,
       },
     },
