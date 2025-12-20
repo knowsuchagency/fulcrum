@@ -4,6 +4,7 @@ import { getSettings, getSetting, updateSettings, resetSettings } from '../lib/s
 // Config keys (mapped to settings keys)
 export const CONFIG_KEYS = {
   WORKTREE_BASE_PATH: 'worktreeBasePath',
+  DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
 } as const
 
 const app = new Hono()
@@ -18,6 +19,8 @@ app.get('/:key', (c) => {
 
   if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
     value = settings.worktreeBasePath
+  } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
+    value = settings.defaultGitReposDir
   }
 
   if (value === null) {
@@ -42,6 +45,9 @@ app.put('/:key', async (c) => {
     if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
       updateSettings({ worktreeBasePath: body.value })
       return c.json({ key, value: body.value })
+    } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
+      updateSettings({ defaultGitReposDir: body.value })
+      return c.json({ key, value: body.value })
     } else {
       return c.json({ error: `Unknown config key: ${key}` }, 400)
     }
@@ -60,6 +66,8 @@ app.delete('/:key', (c) => {
   let defaultValue: string | null = null
   if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
     defaultValue = defaults.worktreeBasePath
+  } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
+    defaultValue = defaults.defaultGitReposDir
   }
 
   return c.json({ key, value: defaultValue, isDefault: true })

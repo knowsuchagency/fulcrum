@@ -5,11 +5,13 @@ import * as os from 'os'
 // Settings interface
 export interface Settings {
   worktreeBasePath: string
+  defaultGitReposDir: string
 }
 
 // Default settings
 const DEFAULT_SETTINGS: Settings = {
   worktreeBasePath: path.join(os.homedir(), '.vibora', 'worktrees'),
+  defaultGitReposDir: os.homedir(),
 }
 
 // Get the vibora directory path
@@ -77,6 +79,7 @@ export function getSettings(): Settings {
     // Merge with defaults and expand paths
     return {
       worktreeBasePath: expandPath(parsed.worktreeBasePath ?? DEFAULT_SETTINGS.worktreeBasePath),
+      defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }
