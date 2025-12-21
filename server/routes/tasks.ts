@@ -89,12 +89,16 @@ You are working inside a Vibora task worktree. Use the \`vibora\` CLI to manage 
 # View current task info
 vibora current-task
 
+# Associate a PR with this task (enables auto-completion when merged)
+vibora current-task pr https://github.com/owner/repo/pull/123
+
 # Update task status when work is complete
 vibora current-task review    # Ready for review
 vibora current-task done      # Task complete
 \`\`\`
 
-When you complete the assigned work, run \`vibora current-task review\` to mark it for review.
+When you create a PR for this work, run \`vibora current-task pr <url>\` to link it.
+The task will automatically complete when the PR is merged.
 `
 
   // Handle CLAUDE.local.md - create or append

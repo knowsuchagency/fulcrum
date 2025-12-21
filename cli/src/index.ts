@@ -79,6 +79,7 @@ Usage: vibora <command> [options]
 
 Commands:
   current-task              Get task for current worktree
+  current-task pr <url>     Associate a PR with current task
   current-task in-progress  Mark current task as IN_PROGRESS
   current-task review       Mark current task as IN_REVIEW
   current-task done         Mark current task as DONE
@@ -126,8 +127,8 @@ Examples:
   try {
     switch (command) {
       case 'current-task': {
-        const [action] = rest
-        await handleCurrentTaskCommand(action, flags)
+        const [action, ...actionRest] = rest
+        await handleCurrentTaskCommand(action, actionRest, flags)
         break
       }
 
@@ -143,7 +144,7 @@ Examples:
       }
 
       case 'down': {
-        await handleDownCommand(flags)
+        await handleDownCommand()
         break
       }
 

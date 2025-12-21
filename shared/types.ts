@@ -51,6 +51,7 @@ export interface Task {
   branch: string | null
   worktreePath: string | null
   viewState: ViewState | null
+  prUrl: string | null
   createdAt: string
   updatedAt: string
 }

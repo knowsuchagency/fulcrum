@@ -40,6 +40,7 @@ async function findCurrentTask(client: ViboraClient, pathOverride?: string) {
 
 export async function handleCurrentTaskCommand(
   action: string | undefined,
+  rest: string[],
   flags: Record<string, string>
 ) {
   const client = new ViboraClient(flags.url, flags.port)
@@ -52,12 +53,28 @@ export async function handleCurrentTaskCommand(
     return
   }
 
+  // Handle PR association
+  if (action === 'pr') {
+    const prUrl = rest[0]
+    if (!prUrl) {
+      throw new CliError(
+        'MISSING_PR_URL',
+        'Usage: vibora current-task pr <url>',
+        ExitCodes.INVALID_ARGS
+      )
+    }
+    const task = await findCurrentTask(client, pathOverride)
+    const updatedTask = await client.updateTask(task.id, { prUrl })
+    output(updatedTask)
+    return
+  }
+
   // Handle status change actions
   const newStatus = STATUS_MAP[action]
   if (!newStatus) {
     throw new CliError(
       'INVALID_ACTION',
-      `Unknown action: ${action}. Valid actions: done, review, cancel, in-progress`,
+      `Unknown action: ${action}. Valid actions: done, review, cancel, in-progress, pr`,
       ExitCodes.INVALID_ARGS
     )
   }

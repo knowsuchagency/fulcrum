@@ -12,6 +12,7 @@ export const tasks = sqliteTable('tasks', {
   branch: text('branch'),
   worktreePath: text('worktree_path'),
   viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
+  prUrl: text('pr_url'), // GitHub PR URL for auto-completion tracking
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
