@@ -8,6 +8,8 @@ export const CONFIG_KEYS = {
   WORKTREE_BASE_PATH: 'worktreeBasePath',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
   TASK_CREATION_COMMAND: 'taskCreationCommand',
+  HOSTNAME: 'hostname',
+  SSH_PORT: 'sshPort',
 } as const
 
 const app = new Hono()
@@ -30,6 +32,10 @@ app.get('/:key', (c) => {
     value = settings.defaultGitReposDir
   } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
     value = settings.taskCreationCommand
+  } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
+    value = settings.hostname
+  } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
+    value = settings.sshPort
   }
 
   if (value === null) {
@@ -78,6 +84,19 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ taskCreationCommand: body.value })
       return c.json({ key, value: body.value })
+    } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
+      updateSettings({ hostname: body.value })
+      return c.json({ key, value: body.value })
+    } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
+      const sshPort = typeof body.value === 'number' ? body.value : parseInt(body.value, 10)
+      if (isNaN(sshPort) || sshPort < 1 || sshPort > 65535) {
+        return c.json({ error: 'SSH port must be a number between 1 and 65535' }, 400)
+      }
+      updateSettings({ sshPort })
+      return c.json({ key, value: sshPort })
     } else {
       return c.json({ error: `Unknown config key: ${key}` }, 400)
     }
@@ -104,6 +123,10 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.defaultGitReposDir
   } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
     defaultValue = defaults.taskCreationCommand
+  } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
+    defaultValue = defaults.hostname
+  } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
+    defaultValue = defaults.sshPort
   }
 
   return c.json({ key, value: defaultValue, isDefault: true })

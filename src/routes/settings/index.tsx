@@ -12,6 +12,8 @@ import {
   useWorktreeBasePath,
   useDefaultGitReposDir,
   useTaskCreationCommand,
+  useHostname,
+  useSshPort,
   useUpdateConfig,
   useResetConfig,
   CONFIG_KEYS,
@@ -27,6 +29,8 @@ function SettingsPage() {
   const { data: worktreeBasePath, isLoading: worktreeLoading } = useWorktreeBasePath()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const { data: taskCreationCommand, isLoading: taskCommandLoading } = useTaskCreationCommand()
+  const { data: hostname, isLoading: hostnameLoading } = useHostname()
+  const { data: sshPort, isLoading: sshPortLoading } = useSshPort()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
 
@@ -35,29 +39,34 @@ function SettingsPage() {
   const [localWorktreePath, setLocalWorktreePath] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
   const [localTaskCommand, setLocalTaskCommand] = useState('')
+  const [localHostname, setLocalHostname] = useState('')
+  const [localSshPort, setLocalSshPort] = useState('')
   const [databaseBrowserOpen, setDatabaseBrowserOpen] = useState(false)
   const [worktreeBrowserOpen, setWorktreeBrowserOpen] = useState(false)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
   // Sync local form state with fetched server values
-   
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
     if (databasePath) setLocalDatabasePath(databasePath)
     if (worktreeBasePath) setLocalWorktreePath(worktreeBasePath)
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
     if (taskCreationCommand !== undefined) setLocalTaskCommand(taskCreationCommand)
-  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand])
+    if (hostname !== undefined) setLocalHostname(hostname)
+    if (sshPort !== undefined) setLocalSshPort(String(sshPort))
+  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand, hostname, sshPort])
 
   const isLoading =
-    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading
+    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading
   const hasChanges =
     localPort !== String(port) ||
     localDatabasePath !== databasePath ||
     localWorktreePath !== worktreeBasePath ||
     localReposDir !== defaultGitReposDir ||
-    localTaskCommand !== taskCreationCommand
+    localTaskCommand !== taskCreationCommand ||
+    localHostname !== hostname ||
+    localSshPort !== String(sshPort)
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -117,6 +126,31 @@ function SettingsPage() {
       )
     }
 
+    if (localHostname !== hostname) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.HOSTNAME, value: localHostname },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localSshPort !== String(sshPort)) {
+      const portNum = parseInt(localSshPort, 10)
+      if (!isNaN(portNum) && portNum >= 1 && portNum <= 65535) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.SSH_PORT, value: portNum },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+    }
+
     await Promise.all(promises)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -159,6 +193,24 @@ function SettingsPage() {
       onSuccess: (data) => {
         if (data.value !== null && data.value !== undefined)
           setLocalTaskCommand(String(data.value))
+      },
+    })
+  }
+
+  const handleResetHostname = () => {
+    resetConfig.mutate(CONFIG_KEYS.HOSTNAME, {
+      onSuccess: (data) => {
+        if (data.value !== null && data.value !== undefined)
+          setLocalHostname(String(data.value))
+      },
+    })
+  }
+
+  const handleResetSshPort = () => {
+    resetConfig.mutate(CONFIG_KEYS.SSH_PORT, {
+      onSuccess: (data) => {
+        if (data.value !== null && data.value !== undefined)
+          setLocalSshPort(String(data.value))
       },
     })
   }
@@ -362,6 +414,74 @@ function SettingsPage() {
                   </div>
                   <p className="ml-40 pl-2 text-xs text-muted-foreground">
                     Command to run when a new task terminal is created (leave empty to disable)
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-border" />
+
+              {/* Remote Access Section */}
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium text-foreground">Remote Access</h2>
+
+                {/* Hostname */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      Hostname
+                    </label>
+                    <Input
+                      value={localHostname}
+                      onChange={(e) => setLocalHostname(e.target.value)}
+                      placeholder="e.g., citadel"
+                      disabled={isLoading}
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetHostname}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    Remote machine hostname for VS Code SSH URLs (leave empty for local)
+                  </p>
+                </div>
+
+                {/* SSH Port */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      SSH Port
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={localSshPort}
+                      onChange={(e) => setLocalSshPort(e.target.value)}
+                      placeholder="22"
+                      disabled={isLoading}
+                      className="w-24 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetSshPort}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    SSH port for VS Code remote connections
                   </p>
                 </div>
               </div>
