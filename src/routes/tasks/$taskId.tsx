@@ -11,6 +11,7 @@ import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useHostname, useSshPort } from '@/hooks/use-config'
+import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
 import { DiffViewer } from '@/components/viewer/diff-viewer'
@@ -91,8 +92,12 @@ function TaskView() {
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncErrorModalOpen, setSyncErrorModalOpen] = useState(false)
   const [syncSuccess, setSyncSuccess] = useState(false)
   const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
+
+  // Get terminal functions for sending commands
+  const { terminals, writeToTerminal } = useTerminalWS()
 
   // Auto-clear sync success message
   useEffect(() => {
@@ -116,8 +121,37 @@ function TaskView() {
       })
       setSyncSuccess(true)
     } catch (err) {
-      setSyncError(err instanceof Error ? err.message : 'Sync failed')
+      const errorMessage = err instanceof Error ? err.message : 'Sync failed'
+      setSyncError(errorMessage)
+      setSyncErrorModalOpen(true)
     }
+  }
+
+  // Build a prompt for Claude Code (no newlines)
+  const buildClaudePrompt = () => {
+    if (!task || !syncError) return ''
+    const baseBranch = task.baseBranch || 'main'
+    return `Fix the git sync issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${syncError} | Steps: 1) Check git status 2) Resolve conflicts or commit/stash changes 3) Pull and rebase from origin/${baseBranch}`
+  }
+
+  // Find the terminal for this task
+  const taskTerminal = terminals.find((t) => t.cwd === task?.worktreePath)
+
+  // Send prompt directly (for when Claude Code is already running)
+  const handleSendPrompt = () => {
+    if (!taskTerminal) return
+    const prompt = buildClaudePrompt()
+    writeToTerminal(taskTerminal.id, prompt + '\r')
+    setSyncErrorModalOpen(false)
+  }
+
+  // Launch Claude Code with the prompt
+  const handleLaunchClaude = () => {
+    if (!taskTerminal) return
+    const prompt = buildClaudePrompt().replace(/"/g, '\\"')
+    const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
+    writeToTerminal(taskTerminal.id, command)
+    setSyncErrorModalOpen(false)
   }
 
   const handleOpenVSCodeModal = () => {
@@ -294,11 +328,6 @@ function TaskView() {
         </Button>
 
         {/* Sync Status Feedback */}
-        {syncError && (
-          <span className="text-xs text-destructive max-w-48 truncate" title={syncError}>
-            {syncError}
-          </span>
-        )}
         {syncSuccess && (
           <span className="text-xs text-green-600">Synced!</span>
         )}
@@ -474,6 +503,42 @@ function TaskView() {
               </span>
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sync Error Modal */}
+      <Dialog open={syncErrorModalOpen} onOpenChange={setSyncErrorModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Sync Failed</DialogTitle>
+            <DialogDescription>
+              An error occurred while syncing with upstream.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {syncError}
+          </div>
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setSyncErrorModalOpen(false)}>
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSendPrompt}
+              disabled={!taskTerminal}
+              title="Send prompt to running Claude Code session"
+            >
+              Send Prompt
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLaunchClaude}
+              disabled={!taskTerminal}
+              title="Launch Claude Code with -p flag"
+            >
+              Launch Claude
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
