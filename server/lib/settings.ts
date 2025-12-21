@@ -24,13 +24,27 @@ const DEFAULT_SETTINGS: Settings = {
   sshPort: 22,
 }
 
+// Expand tilde in path
+function expandPath(p: string): string {
+  if (p.startsWith('~/')) {
+    return path.join(os.homedir(), p.slice(2))
+  }
+  return p
+}
+
 // Get the vibora directory path
-// Checks CWD first for per-worktree isolation, falls back to ~/.vibora
+// Priority: VIBORA_DIR env var → CWD .vibora → ~/.vibora
 export function getViboraDir(): string {
+  // 1. VIBORA_DIR env var (explicit override)
+  if (process.env.VIBORA_DIR) {
+    return expandPath(process.env.VIBORA_DIR)
+  }
+  // 2. CWD .vibora (per-worktree isolation)
   const cwdVibora = path.join(process.cwd(), '.vibora')
   if (fs.existsSync(cwdVibora)) {
     return cwdVibora
   }
+  // 3. ~/.vibora (default)
   return path.join(os.homedir(), '.vibora')
 }
 
@@ -70,14 +84,6 @@ export function initializeViboraDirectories(): void {
   ensureWorktreesDir()
 }
 
-// Expand tilde in path
-function expandPath(p: string): string {
-  if (p.startsWith('~/')) {
-    return path.join(os.homedir(), p.slice(2))
-  }
-  return p
-}
-
 // Get settings (with defaults, persisting any missing keys)
 // Precedence: env var → settings.json → default
 export function getSettings(): Settings {
@@ -105,7 +111,7 @@ export function getSettings(): Settings {
   const fileSettings: Settings = {
     port: parsed.port ?? DEFAULT_SETTINGS.port,
     databasePath: expandPath(parsed.databasePath ?? path.join(viboraDir, 'vibora.db')),
-    worktreeBasePath: expandPath(parsed.worktreeBasePath ?? DEFAULT_SETTINGS.worktreeBasePath),
+    worktreeBasePath: expandPath(parsed.worktreeBasePath ?? path.join(viboraDir, 'worktrees')),
     defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
     taskCreationCommand: parsed.taskCreationCommand ?? DEFAULT_SETTINGS.taskCreationCommand,
     hostname: parsed.hostname ?? DEFAULT_SETTINGS.hostname,

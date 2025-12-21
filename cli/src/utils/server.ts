@@ -6,6 +6,13 @@ interface Settings {
   port?: number
 }
 
+function expandPath(p: string): string {
+  if (p.startsWith('~/')) {
+    return join(homedir(), p.slice(2))
+  }
+  return p
+}
+
 function readSettingsFile(path: string): Settings | null {
   try {
     if (existsSync(path)) {
@@ -24,9 +31,10 @@ function readSettingsFile(path: string): Settings | null {
  * 1. Explicit URL override (--url flag)
  * 2. Explicit port override (--port flag)
  * 3. VIBORA_URL environment variable
- * 4. .vibora/settings.json in CWD (read port)
- * 5. ~/.vibora/settings.json (read port)
- * 6. Default: http://localhost:3333
+ * 4. VIBORA_DIR settings.json (read port)
+ * 5. .vibora/settings.json in CWD (read port)
+ * 6. ~/.vibora/settings.json (read port)
+ * 7. Default: http://localhost:3333
  */
 export function discoverServerUrl(urlOverride?: string, portOverride?: string): string {
   // 1. Explicit URL override
@@ -44,32 +52,47 @@ export function discoverServerUrl(urlOverride?: string, portOverride?: string): 
     return process.env.VIBORA_URL
   }
 
-  // 4. Local .vibora/settings.json
+  // 4. VIBORA_DIR settings.json
+  if (process.env.VIBORA_DIR) {
+    const viboraDirSettings = join(expandPath(process.env.VIBORA_DIR), 'settings.json')
+    const settings = readSettingsFile(viboraDirSettings)
+    if (settings?.port) {
+      return `http://localhost:${settings.port}`
+    }
+  }
+
+  // 5. Local .vibora/settings.json
   const cwdSettings = join(process.cwd(), '.vibora', 'settings.json')
   const localSettings = readSettingsFile(cwdSettings)
   if (localSettings?.port) {
     return `http://localhost:${localSettings.port}`
   }
 
-  // 5. Global ~/.vibora/settings.json
+  // 6. Global ~/.vibora/settings.json
   const globalSettings = join(homedir(), '.vibora', 'settings.json')
   const homeSettings = readSettingsFile(globalSettings)
   if (homeSettings?.port) {
     return `http://localhost:${homeSettings.port}`
   }
 
-  // 6. Default
+  // 7. Default
   return 'http://localhost:3333'
 }
 
 /**
  * Gets the .vibora directory path.
- * Checks CWD first, falls back to home directory.
+ * Priority: VIBORA_DIR env var → CWD .vibora → ~/.vibora
  */
 export function getViboraDir(): string {
+  // 1. VIBORA_DIR env var (explicit override)
+  if (process.env.VIBORA_DIR) {
+    return expandPath(process.env.VIBORA_DIR)
+  }
+  // 2. CWD .vibora (per-worktree isolation)
   const cwdViboraDir = join(process.cwd(), '.vibora')
   if (existsSync(cwdViboraDir)) {
     return cwdViboraDir
   }
+  // 3. ~/.vibora (default)
   return join(homedir(), '.vibora')
 }

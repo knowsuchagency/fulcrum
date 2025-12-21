@@ -67,30 +67,37 @@ server/
 
 ## Configuration
 
-Settings are stored in `.vibora/settings.json`. The server checks for a `.vibora` directory in the current working directory first, falling back to `~/.vibora`. This enables per-worktree isolation when developing Vibora within Vibora.
+Settings are stored in `.vibora/settings.json`. The vibora directory is resolved in this order:
+1. `VIBORA_DIR` environment variable (explicit override)
+2. `.vibora` in current working directory (per-worktree isolation)
+3. `~/.vibora` (default)
 
 ### Settings
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
+| (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
 | port | `PORT` | 3333 |
 | databasePath | `VIBORA_DATABASE_PATH` | {viboraDir}/vibora.db |
-| worktreeBasePath | `VIBORA_WORKTREE_PATH` | ~/.vibora/worktrees |
+| worktreeBasePath | `VIBORA_WORKTREE_PATH` | {viboraDir}/worktrees |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
 
 Precedence: environment variable → settings.json → default
 
-### Per-Worktree Development
+### Development vs Production
 
-To run an isolated Vibora instance in a worktree:
+The `mise run dev` command defaults to `~/.vibora/dev` (port 3222) to keep development data separate from production:
 
 ```bash
-# Create .env with a different port
-echo "PORT=3223" > .env
-
-# Create local .vibora directory for isolated database
-mkdir -p .vibora
-
-# Run dev servers (VITE_BACKEND_PORT is set automatically from PORT)
+# Development (uses ~/.vibora/dev with port 3222)
 mise run dev
+
+# Development with custom port
+mise run dev 3333
+
+# Development with custom directory
+mise run dev 3333 ~/.vibora/custom
+
+# Production (uses ~/.vibora with port 3333)
+mise run start
 ```
