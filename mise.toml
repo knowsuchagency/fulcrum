@@ -65,3 +65,18 @@ run = "drizzle-kit generate"
 [tasks."db:migrate"]
 description = "Apply migrations"
 run = "drizzle-kit migrate"
+
+# CLI tasks
+[tasks."cli"]
+description = "Run CLI command"
+usage = 'arg "[args]..." help="Arguments to pass to CLI" default=""'
+run = "bun cli/src/index.ts ${usage_args}"
+
+[tasks."cli:link"]
+description = "Link CLI for global access"
+dir = "cli"
+run = "bun link"
+
+[tasks."cli:typecheck"]
+description = "Typecheck CLI"
+run = "bunx tsc --noEmit -p cli/tsconfig.json"

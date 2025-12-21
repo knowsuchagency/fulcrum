@@ -138,6 +138,13 @@ export interface TerminalDestroyedMessage {
   }
 }
 
+export interface TaskUpdatedMessage {
+  type: 'task:updated'
+  payload: {
+    taskId: string
+  }
+}
+
 export type ServerMessage =
   | TerminalCreatedMessage
   | TerminalOutputMessage
@@ -147,3 +154,4 @@ export type ServerMessage =
   | TerminalErrorMessage
   | TerminalRenamedMessage
   | TerminalDestroyedMessage
+  | TaskUpdatedMessage

@@ -68,6 +68,51 @@ Settings are stored in `.vibora/settings.json`. The server checks for a `.vibora
 
 Precedence: environment variable → settings.json → default
 
+## CLI
+
+Vibora includes a CLI for AI agents (like Claude Code) working inside task worktrees to query and update task status.
+
+### Installation
+
+```bash
+cd cli
+bun install
+bun link    # Makes 'vibora' available globally
+```
+
+### Usage
+
+```bash
+# Get current task (auto-detected from worktree path)
+vibora current-task
+
+# Update task status
+vibora current-task in-progress  # Mark as IN_PROGRESS
+vibora current-task review       # Mark as IN_REVIEW
+vibora current-task done         # Mark as DONE
+vibora current-task cancel       # Mark as CANCELLED
+
+# Server management
+vibora up                        # Start server daemon
+vibora down                      # Stop server
+vibora status                    # Check server status
+
+# Task management
+vibora tasks list                # List all tasks
+vibora tasks get <id>            # Get task by ID
+
+# Git operations
+vibora git status                # Git status for current worktree
+vibora git diff                  # Git diff for current worktree
+```
+
+### Options
+
+```bash
+--port=<port>   # Server port (default: 3333)
+--pretty        # Pretty-print JSON output
+```
+
 ### Per-Worktree Development
 
 To run an isolated Vibora instance in a worktree:
