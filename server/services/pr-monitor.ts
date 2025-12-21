@@ -8,7 +8,7 @@ const POLL_INTERVAL = 60_000 // 60 seconds
 
 interface PRStatus {
   state: 'OPEN' | 'CLOSED' | 'MERGED'
-  merged: boolean
+  mergedAt: string | null
 }
 
 // Parse PR URL to extract owner/repo/number
@@ -31,13 +31,13 @@ function checkPrStatus(prUrl: string): PRStatus | null {
 
   try {
     const output = execSync(
-      `gh pr view ${parsed.number} --repo ${parsed.owner}/${parsed.repo} --json state,merged`,
+      `gh pr view ${parsed.number} --repo ${parsed.owner}/${parsed.repo} --json state,mergedAt`,
       { encoding: 'utf-8', timeout: 10_000, stdio: ['pipe', 'pipe', 'pipe'] }
     )
     const data = JSON.parse(output)
     return {
       state: data.state,
-      merged: data.merged ?? false,
+      mergedAt: data.mergedAt ?? null,
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -66,8 +66,8 @@ async function pollPRs(): Promise<void> {
     const status = checkPrStatus(task.prUrl)
     if (!status) continue
 
-    // If PR is merged, mark task as DONE
-    if (status.merged) {
+    // If PR is merged (state is MERGED or mergedAt is set), mark task as DONE
+    if (status.state === 'MERGED' || status.mergedAt) {
       const now = new Date().toISOString()
       db.update(tasks)
         .set({ status: 'DONE', updatedAt: now })
