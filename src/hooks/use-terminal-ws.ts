@@ -2,12 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Terminal as XTerm } from '@xterm/xterm'
 
 // Upload an image file and return the path
-async function uploadImage(file: File, targetDir?: string): Promise<string> {
+async function uploadImage(file: File): Promise<string> {
   const formData = new FormData()
   formData.append('file', file)
-  if (targetDir) {
-    formData.append('targetDir', targetDir)
-  }
 
   const response = await fetch('/api/uploads', {
     method: 'POST',
@@ -61,11 +58,7 @@ interface UseTerminalWSReturn {
   resizeTerminal: (terminalId: string, cols: number, rows: number) => void
   renameTerminal: (terminalId: string, name: string) => void
   attachXterm: (terminalId: string, xterm: XTerm) => () => void
-  setupImagePaste: (
-    container: HTMLElement,
-    terminalId: string,
-    targetDir?: string
-  ) => () => void
+  setupImagePaste: (container: HTMLElement, terminalId: string) => () => void
 }
 
 // Construct WebSocket URL based on current location
@@ -286,7 +279,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   )
 
   const setupImagePaste = useCallback(
-    (container: HTMLElement, terminalId: string, targetDir?: string) => {
+    (container: HTMLElement, terminalId: string) => {
       const handlePaste = async (e: ClipboardEvent) => {
         const items = e.clipboardData?.items
         if (!items) return
@@ -301,7 +294,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
             if (!file) return
 
             try {
-              const path = await uploadImage(file, targetDir)
+              const path = await uploadImage(file)
               // Insert the path into the terminal
               writeToTerminal(terminalId, path)
             } catch (error) {

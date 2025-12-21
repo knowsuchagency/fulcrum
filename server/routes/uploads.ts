@@ -17,11 +17,10 @@ function generateFilename(extension: string): string {
 // POST /api/uploads
 // Accepts multipart form data with:
 // - file: the image file
-// - targetDir (optional): directory to save to (e.g., task worktree path)
+// Images are always saved to {viboraDir}/uploads/
 app.post('/', async (c) => {
   const body = await c.req.parseBody()
   const file = body['file']
-  const targetDir = body['targetDir'] as string | undefined
 
   if (!file || !(file instanceof File)) {
     return c.json({ error: 'No file provided' }, 400)
@@ -42,13 +41,8 @@ app.post('/', async (c) => {
   }
   const extension = mimeToExt[file.type] || 'png'
 
-  // Determine save directory
-  let saveDir: string
-  if (targetDir && existsSync(targetDir)) {
-    saveDir = targetDir
-  } else {
-    saveDir = join(getViboraDir(), 'uploads')
-  }
+  // Always save to {viboraDir}/uploads/
+  const saveDir = join(getViboraDir(), 'uploads')
 
   // Ensure directory exists
   if (!existsSync(saveDir)) {

@@ -181,8 +181,8 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
     const cleanup = attachXterm(terminalId, termRef.current)
-    // Set up image paste with worktree as target directory
-    const cleanupPaste = setupImagePaste(containerRef.current, terminalId, cwd ?? undefined)
+    // Set up image paste handler
+    const cleanupPaste = setupImagePaste(containerRef.current, terminalId)
     attachedRef.current = true
 
     // Trigger a resize after attaching

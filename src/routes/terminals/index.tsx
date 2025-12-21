@@ -194,14 +194,10 @@ function TerminalsView() {
       // Already set up
       if (pasteCleanupFnsRef.current.has(terminalId)) return
 
-      // Get the terminal's cwd for the target directory
-      const terminal = terminals.find((t) => t.id === terminalId)
-      const targetDir = terminal?.cwd ?? undefined
-
-      const cleanup = setupImagePaste(container, terminalId, targetDir)
+      const cleanup = setupImagePaste(container, terminalId)
       pasteCleanupFnsRef.current.set(terminalId, cleanup)
     },
-    [terminals, setupImagePaste]
+    [setupImagePaste]
   )
 
   const handleTerminalClose = useCallback(
