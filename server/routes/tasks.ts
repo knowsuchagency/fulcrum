@@ -76,10 +76,18 @@ function destroyTerminalsForWorktree(worktreePath: string): void {
 
 const app = new Hono()
 
+// Helper to parse viewState JSON from database
+function parseViewState(task: Task): Task & { viewState: unknown } {
+  return {
+    ...task,
+    viewState: task.viewState ? JSON.parse(task.viewState) : null,
+  }
+}
+
 // GET /api/tasks - List all tasks
 app.get('/', (c) => {
   const allTasks = db.select().from(tasks).orderBy(asc(tasks.position)).all()
-  return c.json(allTasks)
+  return c.json(allTasks.map(parseViewState))
 })
 
 // POST /api/tasks - Create task
@@ -121,7 +129,7 @@ app.post('/', async (c) => {
 
     db.insert(tasks).values(newTask).run()
     const created = db.select().from(tasks).where(eq(tasks.id, newTask.id)).get()
-    return c.json(created, 201)
+    return c.json(created ? parseViewState(created) : null, 201)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to create task' }, 400)
   }
@@ -182,7 +190,7 @@ app.get('/:id', (c) => {
   if (!task) {
     return c.json({ error: 'Task not found' }, 404)
   }
-  return c.json(task)
+  return c.json(parseViewState(task))
 })
 
 // PATCH /api/tasks/:id - Update task
@@ -195,19 +203,22 @@ app.patch('/:id', async (c) => {
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    const body = await c.req.json<Partial<Task>>()
+    const body = await c.req.json<Partial<Task> & { viewState?: unknown }>()
     const now = new Date().toISOString()
 
+    // Stringify viewState if present (it's stored as JSON text)
+    const updates: Record<string, unknown> = { ...body, updatedAt: now }
+    if (body.viewState !== undefined) {
+      updates.viewState = body.viewState ? JSON.stringify(body.viewState) : null
+    }
+
     db.update(tasks)
-      .set({
-        ...body,
-        updatedAt: now,
-      })
+      .set(updates)
       .where(eq(tasks.id, id))
       .run()
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
-    return c.json(updated)
+    return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task' }, 400)
   }
@@ -327,7 +338,7 @@ app.patch('/:id/status', async (c) => {
       .run()
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
-    return c.json(updated)
+    return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)
   }
