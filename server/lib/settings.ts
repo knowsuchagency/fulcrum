@@ -8,6 +8,7 @@ export interface Settings {
   databasePath: string
   worktreeBasePath: string
   defaultGitReposDir: string
+  taskCreationCommand: string
 }
 
 // Default settings
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: Settings = {
   databasePath: path.join(os.homedir(), '.vibora', 'vibora.db'),
   worktreeBasePath: path.join(os.homedir(), '.vibora', 'worktrees'),
   defaultGitReposDir: os.homedir(),
+  taskCreationCommand: 'claude --dangerously-skip-permissions',
 }
 
 // Get the vibora directory path
@@ -101,6 +103,7 @@ export function getSettings(): Settings {
     databasePath: expandPath(parsed.databasePath ?? path.join(viboraDir, 'vibora.db')),
     worktreeBasePath: expandPath(parsed.worktreeBasePath ?? DEFAULT_SETTINGS.worktreeBasePath),
     defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
+    taskCreationCommand: parsed.taskCreationCommand ?? DEFAULT_SETTINGS.taskCreationCommand,
   }
 
   // Persist missing keys back to file (only file settings, not env overrides)
@@ -121,6 +124,7 @@ export function getSettings(): Settings {
     defaultGitReposDir: process.env.VIBORA_GIT_REPOS_DIR
       ? expandPath(process.env.VIBORA_GIT_REPOS_DIR)
       : fileSettings.defaultGitReposDir,
+    taskCreationCommand: process.env.VIBORA_TASK_CREATION_COMMAND ?? fileSettings.taskCreationCommand,
   }
 }
 

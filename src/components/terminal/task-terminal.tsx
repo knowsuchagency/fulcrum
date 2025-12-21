@@ -5,6 +5,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
+import { useTaskCreationCommand } from '@/hooks/use-config'
 
 interface TaskTerminalProps {
   taskId: string
@@ -19,8 +20,11 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
+  const shouldRunStartupCommandRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermReady, setXtermReady] = useState(false)
+
+  const { data: taskCreationCommand } = useTaskCreationCommand()
 
   const {
     terminals,
@@ -29,6 +33,7 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     attachXterm,
     resizeTerminal,
     setupImagePaste,
+    writeToTerminal,
   } = useTerminalWS()
 
   // Get the current terminal's status
@@ -137,6 +142,7 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
+      shouldRunStartupCommandRef.current = true // Mark that we should run startup command
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -168,12 +174,21 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     // Trigger a resize after attaching
     requestAnimationFrame(doFit)
 
+    // Run startup command if this is a newly created terminal
+    if (shouldRunStartupCommandRef.current && taskCreationCommand) {
+      shouldRunStartupCommandRef.current = false
+      // Small delay to ensure terminal is ready
+      setTimeout(() => {
+        writeToTerminal(terminalId, taskCreationCommand + '\r')
+      }, 100)
+    }
+
     return () => {
       cleanup()
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit])
+  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal])
 
   if (!cwd) {
     return (

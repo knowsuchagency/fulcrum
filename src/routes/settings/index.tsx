@@ -11,6 +11,7 @@ import {
   useDatabasePath,
   useWorktreeBasePath,
   useDefaultGitReposDir,
+  useTaskCreationCommand,
   useUpdateConfig,
   useResetConfig,
   CONFIG_KEYS,
@@ -25,6 +26,7 @@ function SettingsPage() {
   const { data: databasePath, isLoading: databaseLoading } = useDatabasePath()
   const { data: worktreeBasePath, isLoading: worktreeLoading } = useWorktreeBasePath()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
+  const { data: taskCreationCommand, isLoading: taskCommandLoading } = useTaskCreationCommand()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
 
@@ -32,6 +34,7 @@ function SettingsPage() {
   const [localDatabasePath, setLocalDatabasePath] = useState('')
   const [localWorktreePath, setLocalWorktreePath] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
+  const [localTaskCommand, setLocalTaskCommand] = useState('')
   const [databaseBrowserOpen, setDatabaseBrowserOpen] = useState(false)
   const [worktreeBrowserOpen, setWorktreeBrowserOpen] = useState(false)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
@@ -54,12 +57,18 @@ function SettingsPage() {
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
   }, [defaultGitReposDir])
 
-  const isLoading = portLoading || databaseLoading || worktreeLoading || reposDirLoading
+  useEffect(() => {
+    if (taskCreationCommand !== undefined) setLocalTaskCommand(taskCreationCommand)
+  }, [taskCreationCommand])
+
+  const isLoading =
+    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading
   const hasChanges =
     localPort !== String(port) ||
     localDatabasePath !== databasePath ||
     localWorktreePath !== worktreeBasePath ||
-    localReposDir !== defaultGitReposDir
+    localReposDir !== defaultGitReposDir ||
+    localTaskCommand !== taskCreationCommand
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -108,6 +117,17 @@ function SettingsPage() {
       )
     }
 
+    if (localTaskCommand !== taskCreationCommand) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.TASK_CREATION_COMMAND, value: localTaskCommand },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
     await Promise.all(promises)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -141,6 +161,15 @@ function SettingsPage() {
     resetConfig.mutate(CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR, {
       onSuccess: (data) => {
         if (data.value) setLocalReposDir(String(data.value))
+      },
+    })
+  }
+
+  const handleResetTaskCommand = () => {
+    resetConfig.mutate(CONFIG_KEYS.TASK_CREATION_COMMAND, {
+      onSuccess: (data) => {
+        if (data.value !== null && data.value !== undefined)
+          setLocalTaskCommand(String(data.value))
       },
     })
   }
@@ -308,6 +337,42 @@ function SettingsPage() {
                   </div>
                   <p className="ml-40 pl-2 text-xs text-muted-foreground">
                     Starting directory for repo picker
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-border" />
+
+              {/* Task Defaults Section */}
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium text-foreground">Task Defaults</h2>
+
+                {/* Task Creation Command */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      Startup Command
+                    </label>
+                    <Input
+                      value={localTaskCommand}
+                      onChange={(e) => setLocalTaskCommand(e.target.value)}
+                      placeholder="claude --dangerously-skip-permissions"
+                      disabled={isLoading}
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetTaskCommand}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    Command to run when a new task terminal is created (leave empty to disable)
                   </p>
                 </div>
               </div>

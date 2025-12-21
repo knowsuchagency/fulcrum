@@ -7,6 +7,7 @@ export const CONFIG_KEYS = {
   DATABASE_PATH: 'databasePath',
   WORKTREE_BASE_PATH: 'worktreeBasePath',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
+  TASK_CREATION_COMMAND: 'taskCreationCommand',
 } as const
 
 const app = new Hono()
@@ -27,6 +28,8 @@ app.get('/:key', (c) => {
     value = settings.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     value = settings.defaultGitReposDir
+  } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
+    value = settings.taskCreationCommand
   }
 
   if (value === null) {
@@ -69,6 +72,12 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ defaultGitReposDir: body.value })
       return c.json({ key, value: body.value })
+    } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
+      updateSettings({ taskCreationCommand: body.value })
+      return c.json({ key, value: body.value })
     } else {
       return c.json({ error: `Unknown config key: ${key}` }, 400)
     }
@@ -93,6 +102,8 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     defaultValue = defaults.defaultGitReposDir
+  } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
+    defaultValue = defaults.taskCreationCommand
   }
 
   return c.json({ key, value: defaultValue, isDefault: true })
