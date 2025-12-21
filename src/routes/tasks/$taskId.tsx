@@ -11,6 +11,7 @@ import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
+import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useHostname, useSshPort } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
@@ -29,6 +30,7 @@ import {
   GitPullRequestIcon,
   ArrowDown03Icon,
   ArrowUp03Icon,
+  Orbit01Icon,
   VisualStudioCodeIcon,
   Task01Icon,
 } from '@hugeicons/core-free-icons'
@@ -91,6 +93,7 @@ function TaskView() {
   const { tab, setTab } = useTaskTab(taskId)
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
+  const gitSyncParent = useGitSyncParent()
   const { data: hostname } = useHostname()
   const { data: sshPort } = useSshPort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
@@ -108,6 +111,9 @@ function TaskView() {
   const [mergeError, setMergeError] = useState<string | null>(null)
   const [mergeErrorModalOpen, setMergeErrorModalOpen] = useState(false)
   const [mergeSuccess, setMergeSuccess] = useState(false)
+  const [syncParentError, setSyncParentError] = useState<string | null>(null)
+  const [syncParentErrorModalOpen, setSyncParentErrorModalOpen] = useState(false)
+  const [syncParentSuccess, setSyncParentSuccess] = useState(false)
   const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
 
   // Get terminal functions for sending commands
@@ -128,6 +134,14 @@ function TaskView() {
       return () => clearTimeout(timer)
     }
   }, [mergeSuccess])
+
+  // Auto-clear sync parent success message
+  useEffect(() => {
+    if (syncParentSuccess) {
+      const timer = setTimeout(() => setSyncParentSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [syncParentSuccess])
 
   const handleSync = async () => {
     if (!task?.repoPath || !task?.worktreePath) return
@@ -183,6 +197,32 @@ function TaskView() {
     }
   }
 
+  const handleSyncParent = async () => {
+    if (!task?.repoPath) return
+
+    setSyncParentError(null)
+    setSyncParentSuccess(false)
+
+    try {
+      await gitSyncParent.mutateAsync({
+        repoPath: task.repoPath,
+        baseBranch: task.baseBranch,
+      })
+      setSyncParentSuccess(true)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Sync parent failed'
+      setSyncParentError(errorMessage)
+      setSyncParentErrorModalOpen(true)
+    }
+  }
+
+  // Build a prompt for Claude Code for sync parent errors
+  const buildSyncParentClaudePrompt = () => {
+    if (!task || !syncParentError) return ''
+    const baseBranch = task.baseBranch || 'main'
+    return `Fix the git sync parent issue. Parent repo: ${task.repoPath} | Base branch: ${baseBranch} | Error: ${syncParentError} | Steps: 1) Check git status in parent repo 2) Resolve any local changes or divergence 3) Fetch and merge/rebase from origin/${baseBranch}`
+  }
+
   // Find the terminal for this task
   const taskTerminal = terminals.find((t) => t.cwd === task?.worktreePath)
 
@@ -218,6 +258,23 @@ function TaskView() {
     const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
     writeToTerminal(taskTerminal.id, command)
     setMergeErrorModalOpen(false)
+  }
+
+  // Send sync parent prompt directly (for when Claude Code is already running)
+  const handleSendSyncParentPrompt = () => {
+    if (!taskTerminal) return
+    const prompt = buildSyncParentClaudePrompt()
+    writeToTerminal(taskTerminal.id, prompt + '\r')
+    setSyncParentErrorModalOpen(false)
+  }
+
+  // Launch Claude Code with the sync parent prompt
+  const handleLaunchClaudeForSyncParent = () => {
+    if (!taskTerminal) return
+    const prompt = buildSyncParentClaudePrompt().replace(/"/g, '\\"')
+    const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
+    writeToTerminal(taskTerminal.id, command)
+    setSyncParentErrorModalOpen(false)
   }
 
   const handleOpenVSCodeModal = () => {
@@ -418,6 +475,23 @@ function TaskView() {
           />
         </Button>
 
+        {/* Sync Parent with Origin Button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleSyncParent}
+          disabled={gitSyncParent.isPending || !task.repoPath}
+          className="text-muted-foreground hover:text-foreground"
+          title="Sync parent with origin"
+        >
+          <HugeiconsIcon
+            icon={Orbit01Icon}
+            size={16}
+            strokeWidth={2}
+            className={gitSyncParent.isPending ? 'animate-spin' : ''}
+          />
+        </Button>
+
         {/* VS Code Button */}
         <Button
           variant="ghost"
@@ -435,6 +509,9 @@ function TaskView() {
         )}
         {mergeSuccess && (
           <span className="text-xs text-green-600">Merged!</span>
+        )}
+        {syncParentSuccess && (
+          <span className="text-xs text-green-600">Parent synced!</span>
         )}
 
         <AlertDialog>
@@ -675,6 +752,42 @@ function TaskView() {
             <Button
               variant="destructive"
               onClick={handleLaunchClaudeForMerge}
+              disabled={!taskTerminal}
+              title="Launch Claude Code with -p flag"
+            >
+              Launch Claude
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sync Parent Error Modal */}
+      <Dialog open={syncParentErrorModalOpen} onOpenChange={setSyncParentErrorModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Sync Parent Failed</DialogTitle>
+            <DialogDescription>
+              An error occurred while syncing the parent repository with origin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {syncParentError}
+          </div>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" onClick={() => setSyncParentErrorModalOpen(false)}>
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSendSyncParentPrompt}
+              disabled={!taskTerminal}
+              title="Send prompt to running Claude Code session"
+            >
+              Send Prompt
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLaunchClaudeForSyncParent}
               disabled={!taskTerminal}
               title="Launch Claude Code with -p flag"
             >

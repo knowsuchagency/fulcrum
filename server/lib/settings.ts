@@ -133,16 +133,22 @@ export function getSettings(): Settings {
   }
 
   // Apply environment variable overrides
+  // VIBORA_DIR implies default paths within that directory (unless specific path env vars are set)
+  const viboraDirEnv = process.env.VIBORA_DIR
   const portEnv = parseInt(process.env.PORT || '', 10)
   const sshPortEnv = parseInt(process.env.VIBORA_SSH_PORT || '', 10)
   return {
     port: !isNaN(portEnv) && portEnv > 0 ? portEnv : fileSettings.port,
     databasePath: process.env.VIBORA_DATABASE_PATH
       ? expandPath(process.env.VIBORA_DATABASE_PATH)
-      : fileSettings.databasePath,
+      : viboraDirEnv
+        ? path.join(viboraDir, 'vibora.db')
+        : fileSettings.databasePath,
     worktreeBasePath: process.env.VIBORA_WORKTREE_PATH
       ? expandPath(process.env.VIBORA_WORKTREE_PATH)
-      : fileSettings.worktreeBasePath,
+      : viboraDirEnv
+        ? path.join(viboraDir, 'worktrees')
+        : fileSettings.worktreeBasePath,
     defaultGitReposDir: process.env.VIBORA_GIT_REPOS_DIR
       ? expandPath(process.env.VIBORA_GIT_REPOS_DIR)
       : fileSettings.defaultGitReposDir,

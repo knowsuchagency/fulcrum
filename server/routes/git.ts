@@ -92,6 +92,46 @@ function isBinaryContent(content: Buffer): boolean {
   return false
 }
 
+// Get the default branch for a repository
+// Priority: origin/HEAD → local main → local master → 'main'
+function getDefaultBranch(repoPath: string, baseBranchOverride?: string): string {
+  // If explicitly provided, use that
+  if (baseBranchOverride) {
+    return baseBranchOverride
+  }
+
+  // Try to get origin's default branch
+  try {
+    const originHead = gitExec(repoPath, 'symbolic-ref refs/remotes/origin/HEAD')
+    // Returns something like "refs/remotes/origin/main"
+    const match = originHead.match(/refs\/remotes\/origin\/(.+)/)
+    if (match) {
+      return match[1]
+    }
+  } catch {
+    // origin/HEAD not set, fall back to checking local branches
+  }
+
+  // Check if 'main' exists locally
+  try {
+    gitExec(repoPath, 'rev-parse --verify main')
+    return 'main'
+  } catch {
+    // main doesn't exist
+  }
+
+  // Check if 'master' exists locally
+  try {
+    gitExec(repoPath, 'rev-parse --verify master')
+    return 'master'
+  } catch {
+    // master doesn't exist either
+  }
+
+  // Default fallback
+  return 'main'
+}
+
 // Check if a directory is a git repository
 function isGitRepo(dirPath: string): boolean {
   try {
@@ -306,17 +346,11 @@ app.get('/diff', (c) => {
       branch = 'unknown'
     }
 
-    // If no local changes, get diff against base branch (master/main)
+    // If no local changes, get diff against base branch
     let branchDiff = ''
     if (!diff) {
       try {
-        // Find the merge-base with master or main
-        let baseBranch = 'master'
-        try {
-          gitExec(worktreePath, 'rev-parse --verify master')
-        } catch {
-          baseBranch = 'main'
-        }
+        const baseBranch = getDefaultBranch(worktreePath)
         const mergeBase = gitExec(worktreePath, `merge-base ${baseBranch} HEAD`)
         branchDiff = gitExec(worktreePath, `diff${wsFlag} ${mergeBase}..HEAD`)
       } catch {
@@ -468,57 +502,13 @@ app.post('/sync', async (c) => {
       return c.json({ error: 'Worktree path does not exist' }, 404)
     }
 
-    // Check for uncommitted changes in worktree
-    try {
-      const status = gitExec(worktreePath, 'status --porcelain')
-      if (status.trim()) {
-        return c.json({
-          error: 'Uncommitted changes in worktree. Please commit or stash before syncing.',
-          hasUncommittedChanges: true,
-        }, 400)
-      }
-    } catch {
-      // Continue if status check fails
-    }
-
     // Detect default branch
-    let defaultBranch = baseBranch || 'main'
-    if (!baseBranch) {
-      try {
-        gitExec(repoPath, 'rev-parse --verify master')
-        defaultBranch = 'master'
-      } catch {
-        defaultBranch = 'main'
-      }
-    }
+    const defaultBranch = getDefaultBranch(repoPath, baseBranch)
 
-    // Step 1: Pull on parent repo to update default branch
-    let parentUpdated = false
-    try {
-      // Save current branch in parent repo
-      const currentBranch = gitExec(repoPath, 'rev-parse --abbrev-ref HEAD')
-
-      // Fetch and update default branch
-      gitExec(repoPath, 'fetch origin')
-
-      // If we're not on the default branch, checkout, pull, and go back
-      if (currentBranch !== defaultBranch) {
-        gitExec(repoPath, `checkout ${defaultBranch}`)
-        gitExec(repoPath, 'pull')
-        gitExec(repoPath, `checkout ${currentBranch}`)
-      } else {
-        gitExec(repoPath, 'pull')
-      }
-      parentUpdated = true
-    } catch (err) {
-      // Parent pull failed, but we can still try to rebase
-      console.error('Failed to update parent repo:', err)
-    }
-
-    // Step 2: Rebase worktree on the updated default branch
+    // Rebase worktree on the parent repo's local default branch
     let worktreeRebased = false
     try {
-      gitExec(worktreePath, `pull --rebase origin ${defaultBranch}`)
+      gitExec(worktreePath, `rebase ${defaultBranch}`)
       worktreeRebased = true
     } catch (err) {
       // Check if it's a rebase conflict
@@ -543,7 +533,6 @@ app.post('/sync', async (c) => {
 
     return c.json({
       success: true,
-      parentUpdated,
       worktreeRebased,
       defaultBranch,
     })
@@ -575,19 +564,6 @@ app.post('/merge-to-main', async (c) => {
       return c.json({ error: 'Worktree path does not exist' }, 404)
     }
 
-    // Check for uncommitted changes in worktree
-    try {
-      const status = gitExec(worktreePath, 'status --porcelain')
-      if (status.trim()) {
-        return c.json({
-          error: 'Uncommitted changes in worktree. Please commit or stash before merging.',
-          hasUncommittedChanges: true,
-        }, 400)
-      }
-    } catch {
-      // Continue if status check fails
-    }
-
     // Get the worktree branch name
     let worktreeBranch: string
     try {
@@ -599,15 +575,7 @@ app.post('/merge-to-main', async (c) => {
     }
 
     // Detect default branch
-    let defaultBranch = baseBranch || 'main'
-    if (!baseBranch) {
-      try {
-        gitExec(repoPath, 'rev-parse --verify master')
-        defaultBranch = 'master'
-      } catch {
-        defaultBranch = 'main'
-      }
-    }
+    const defaultBranch = getDefaultBranch(repoPath, baseBranch)
 
     // Save current branch in parent repo
     let originalBranch: string
@@ -617,36 +585,13 @@ app.post('/merge-to-main', async (c) => {
       originalBranch = defaultBranch
     }
 
-    // Check for uncommitted changes in parent repo
     try {
-      const parentStatus = gitExec(repoPath, 'status --porcelain')
-      if (parentStatus.trim()) {
-        return c.json({
-          error: 'Uncommitted changes in parent repository. Please commit or stash before merging.',
-          hasUncommittedChanges: true,
-        }, 400)
-      }
-    } catch {
-      // Continue if status check fails
-    }
-
-    try {
-      // Fetch latest from origin
-      gitExec(repoPath, 'fetch origin')
-
       // Checkout the base branch
       if (originalBranch !== defaultBranch) {
         gitExec(repoPath, `checkout ${defaultBranch}`)
       }
 
-      // Pull latest changes
-      try {
-        gitExec(repoPath, 'pull')
-      } catch {
-        // Ignore pull errors, we'll try to merge anyway
-      }
-
-      // Attempt the merge
+      // Attempt the merge (git hooks will handle pushing to origin)
       try {
         gitExec(repoPath, `merge --no-ff ${worktreeBranch}`)
       } catch (mergeErr) {
@@ -729,6 +674,118 @@ app.post('/merge-to-main', async (c) => {
     }
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to merge' }, 500)
+  }
+})
+
+// POST /api/git/sync-parent - Sync parent repo's default branch with origin
+app.post('/sync-parent', async (c) => {
+  try {
+    const body = await c.req.json<{
+      repoPath: string
+      baseBranch?: string
+    }>()
+
+    const { repoPath, baseBranch } = body
+
+    if (!repoPath) {
+      return c.json({ error: 'Missing required field: repoPath' }, 400)
+    }
+
+    // Verify path exists
+    if (!fs.existsSync(repoPath)) {
+      return c.json({ error: 'Repository path does not exist' }, 404)
+    }
+
+    // Get default branch
+    const defaultBranch = getDefaultBranch(repoPath, baseBranch)
+
+    // Save current branch
+    let originalBranch: string
+    try {
+      originalBranch = gitExec(repoPath, 'rev-parse --abbrev-ref HEAD')
+    } catch {
+      originalBranch = defaultBranch
+    }
+
+    try {
+      // Fetch from origin (this works regardless of local state)
+      try {
+        gitExec(repoPath, 'fetch origin')
+      } catch (fetchErr) {
+        return c.json({
+          error: `Failed to fetch from origin: ${fetchErr instanceof Error ? fetchErr.message : 'Unknown error'}`,
+          fetchFailed: true,
+        }, 500)
+      }
+
+      // Checkout default branch if not already on it
+      if (originalBranch !== defaultBranch) {
+        try {
+          gitExec(repoPath, `checkout ${defaultBranch}`)
+        } catch (checkoutErr) {
+          return c.json({
+            error: `Failed to checkout ${defaultBranch}: ${checkoutErr instanceof Error ? checkoutErr.message : 'Unknown error'}`,
+          }, 500)
+        }
+      }
+
+      // Pull from origin (fast-forward only to avoid conflicts)
+      try {
+        gitExec(repoPath, `pull --ff-only origin ${defaultBranch}`)
+      } catch (pullErr) {
+        // Restore original branch if we switched
+        if (originalBranch !== defaultBranch) {
+          try {
+            gitExec(repoPath, `checkout ${originalBranch}`)
+          } catch {
+            // Ignore checkout errors
+          }
+        }
+
+        // Check if it's a divergence issue
+        const errorMsg = pullErr instanceof Error ? pullErr.message : 'Unknown error'
+        if (errorMsg.includes('diverged') || errorMsg.includes('non-fast-forward')) {
+          return c.json({
+            error: `Local ${defaultBranch} has diverged from origin. Manual resolution required.`,
+            hasDiverged: true,
+          }, 409)
+        }
+
+        return c.json({
+          error: `Failed to pull from origin: ${errorMsg}`,
+        }, 500)
+      }
+
+      // Restore original branch if we switched
+      if (originalBranch !== defaultBranch) {
+        try {
+          gitExec(repoPath, `checkout ${originalBranch}`)
+        } catch {
+          // Ignore checkout errors
+        }
+      }
+
+      return c.json({
+        success: true,
+        defaultBranch,
+        originalBranch,
+      })
+    } catch (err) {
+      // Restore original branch on any error
+      if (originalBranch !== defaultBranch) {
+        try {
+          gitExec(repoPath, `checkout ${originalBranch}`)
+        } catch {
+          // Ignore checkout errors
+        }
+      }
+
+      return c.json({
+        error: err instanceof Error ? err.message : 'Failed to sync parent',
+      }, 500)
+    }
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to sync parent' }, 500)
   }
 })
 
