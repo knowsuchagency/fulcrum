@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -30,6 +30,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,41 +75,37 @@ function TaskView() {
   const deleteTask = useDeleteTask()
   const { tab, setTab } = useTaskTab(taskId)
 
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [editTitleValue, setEditTitleValue] = useState('')
-  const titleInputRef = useRef<HTMLInputElement>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
 
-  useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus()
-      titleInputRef.current.select()
-    }
-  }, [isEditingTitle])
-
-  const handleTitleClick = () => {
+  const handleOpenEditModal = () => {
     if (task) {
-      setEditTitleValue(task.title)
-      setIsEditingTitle(true)
+      setEditTitle(task.title)
+      setEditDescription(task.description || '')
+      setEditModalOpen(true)
     }
   }
 
-  const handleTitleSave = () => {
-    const trimmed = editTitleValue.trim()
-    if (trimmed && task && trimmed !== task.title) {
+  const handleSaveEdit = () => {
+    const trimmedTitle = editTitle.trim()
+    if (!trimmedTitle || !task) return
+
+    const updates: { title?: string; description?: string } = {}
+    if (trimmedTitle !== task.title) {
+      updates.title = trimmedTitle
+    }
+    if (editDescription.trim() !== (task.description || '')) {
+      updates.description = editDescription.trim()
+    }
+
+    if (Object.keys(updates).length > 0) {
       updateTask.mutate({
         taskId: task.id,
-        updates: { title: trimmed },
+        updates,
       })
     }
-    setIsEditingTitle(false)
-  }
-
-  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleTitleSave()
-    } else if (e.key === 'Escape') {
-      setIsEditingTitle(false)
-    }
+    setEditModalOpen(false)
   }
 
   const handleStatusChange = (status: string) => {
@@ -145,25 +151,13 @@ function TaskView() {
       {/* Task Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2">
         <div className="flex-1">
-          {isEditingTitle ? (
-            <input
-              ref={titleInputRef}
-              type="text"
-              value={editTitleValue}
-              onChange={(e) => setEditTitleValue(e.target.value)}
-              onBlur={handleTitleSave}
-              onKeyDown={handleTitleKeyDown}
-              className="h-6 w-full max-w-md rounded border border-border bg-background px-2 text-sm font-medium text-foreground outline-none focus:border-primary"
-            />
-          ) : (
-            <h1
-              className="cursor-pointer text-sm font-medium hover:text-primary"
-              onClick={handleTitleClick}
-              title="Click to rename"
-            >
-              {task.title}
-            </h1>
-          )}
+          <h1
+            className="cursor-pointer text-sm font-medium hover:text-primary"
+            onClick={handleOpenEditModal}
+            title="Click to edit"
+          >
+            {task.title}
+          </h1>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{task.repoName}</span>
             <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
@@ -276,6 +270,49 @@ function TaskView() {
           </Tabs>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* Edit Task Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <FieldGroup className="mt-4">
+            <Field>
+              <FieldLabel htmlFor="edit-title">Title</FieldLabel>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSaveEdit()
+                  }
+                }}
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-description">Description</FieldLabel>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={3}
+              />
+            </Field>
+          </FieldGroup>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={!editTitle.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

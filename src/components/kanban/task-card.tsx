@@ -6,6 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useSelection } from './selection-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Folder01Icon } from '@hugeicons/core-free-icons'
 
 interface TaskCardProps {
   task: Task
@@ -72,10 +74,9 @@ export function TaskCard({ task, isDragging }: TaskCardProps) {
             {task.description}
           </p>
         )}
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{task.repoName}</span>
-          <span className="text-border">|</span>
-          <span className="font-mono">{task.branch}</span>
+        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground/70">
+          <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
+          {task.repoName}
         </div>
       </CardContent>
     </Card>
