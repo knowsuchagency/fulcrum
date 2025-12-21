@@ -8,6 +8,7 @@ import { glob } from 'glob'
 import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
 import { broadcast } from '../websocket/terminal-ws'
 import { updateLinearTicketStatus } from '../services/linear'
+import { updateTaskStatus } from '../services/task-status'
 
 // Helper to create git worktree
 function createGitWorktree(
@@ -319,19 +320,29 @@ app.patch('/:id', async (c) => {
     const body = await c.req.json<Partial<Task> & { viewState?: unknown }>()
     const now = new Date().toISOString()
 
-    // Stringify viewState if present (it's stored as JSON text)
-    const updates: Record<string, unknown> = { ...body, updatedAt: now }
+    // Handle status change via centralized function (includes Linear sync)
+    if (body.status && body.status !== existing.status) {
+      await updateTaskStatus(id, body.status)
+    }
+
+    // Handle other updates (excluding status to avoid double-update)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { status: _status, ...otherFields } = body
+    const updates: Record<string, unknown> = { ...otherFields, updatedAt: now }
     if (body.viewState !== undefined) {
       updates.viewState = body.viewState ? JSON.stringify(body.viewState) : null
     }
 
-    db.update(tasks)
-      .set(updates)
-      .where(eq(tasks.id, id))
-      .run()
+    // Only do additional db update if there are other fields to update
+    if (Object.keys(otherFields).length > 0 || body.viewState !== undefined) {
+      db.update(tasks)
+        .set(updates)
+        .where(eq(tasks.id, id))
+        .run()
+      broadcast({ type: 'task:updated', payload: { taskId: id } })
+    }
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
-    broadcast({ type: 'task:updated', payload: { taskId: id } })
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task' }, 400)
