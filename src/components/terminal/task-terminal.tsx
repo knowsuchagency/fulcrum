@@ -22,7 +22,6 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
-  const shouldRunStartupCommandRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermReady, setXtermReady] = useState(false)
 
@@ -32,6 +31,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
     terminals,
     terminalsLoaded,
     connected,
+    newTerminalIds,
     createTerminal,
     attachXterm,
     resizeTerminal,
@@ -185,7 +185,6 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
-      shouldRunStartupCommandRef.current = true // Mark that we should run startup command
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -218,9 +217,10 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
     // Trigger a resize after attaching
     requestAnimationFrame(doFit)
 
-    // Run startup commands if this is a newly created terminal
-    if (shouldRunStartupCommandRef.current) {
-      shouldRunStartupCommandRef.current = false
+    // Run startup commands only if this is a newly created terminal (not restored from persistence)
+    if (newTerminalIds.has(terminalId)) {
+      // Remove from set so startup commands don't run again
+      newTerminalIds.delete(terminalId)
 
       // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
       if (startupScript) {
@@ -248,7 +248,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, planModeDescription, taskName, startupScript])
+  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, planModeDescription, taskName, startupScript, newTerminalIds])
 
   if (!cwd) {
     return (

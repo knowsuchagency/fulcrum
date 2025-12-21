@@ -93,7 +93,7 @@ export const terminalWebSocketHandlers: WSEvents = {
               clientData.attachedTerminals.add(existing.id)
               sendTo(ws, {
                 type: 'terminal:created',
-                payload: { terminal: existing },
+                payload: { terminal: existing, isNew: false },
               })
               break
             }
@@ -103,7 +103,7 @@ export const terminalWebSocketHandlers: WSEvents = {
           clientData.attachedTerminals.add(terminal.id)
           broadcast({
             type: 'terminal:created',
-            payload: { terminal },
+            payload: { terminal, isNew: true },
           })
           break
         }
