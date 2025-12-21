@@ -17,7 +17,7 @@ bunx concurrently -n server,client -c blue,green 'mise run server' 'mise run cli
 description = "Start backend dev server with auto-reload"
 run = """
 mkdir -p ~/.vibora
-drizzle-kit push
+bun run drizzle-kit push
 bun --watch server/index.ts
 """
 
@@ -52,19 +52,19 @@ run = "vite preview"
 
 [tasks."db:push"]
 description = "Sync schema to database"
-run = "drizzle-kit push"
+run = "bun run drizzle-kit push"
 
 [tasks."db:studio"]
 description = "Open Drizzle Studio GUI"
-run = "drizzle-kit studio"
+run = "bun run drizzle-kit studio"
 
 [tasks."db:generate"]
 description = "Generate migrations"
-run = "drizzle-kit generate"
+run = "bun run drizzle-kit generate"
 
 [tasks."db:migrate"]
 description = "Apply migrations"
-run = "drizzle-kit migrate"
+run = "bun run drizzle-kit migrate"
 
 # CLI tasks
 [tasks."cli"]

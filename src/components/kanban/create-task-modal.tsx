@@ -244,7 +244,7 @@ export function CreateTaskModal() {
                     Initialize Vibora
                   </FieldLabel>
                   <FieldDescription>
-                    Create CLAUDE.local.md with CLI instructions
+                    Create or update CLAUDE.local.md with CLI instructions
                   </FieldDescription>
                 </div>
                 <Switch

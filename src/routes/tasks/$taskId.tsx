@@ -20,6 +20,7 @@ import {
   GitBranchIcon,
   Delete02Icon,
   Folder01Icon,
+  GitPullRequestIcon,
 } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
@@ -80,11 +81,13 @@ function TaskView() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editPrUrl, setEditPrUrl] = useState('')
 
   const handleOpenEditModal = () => {
     if (task) {
       setEditTitle(task.title)
       setEditDescription(task.description || '')
+      setEditPrUrl(task.prUrl || '')
       setEditModalOpen(true)
     }
   }
@@ -93,12 +96,15 @@ function TaskView() {
     const trimmedTitle = editTitle.trim()
     if (!trimmedTitle || !task) return
 
-    const updates: { title?: string; description?: string } = {}
+    const updates: { title?: string; description?: string; prUrl?: string | null } = {}
     if (trimmedTitle !== task.title) {
       updates.title = trimmedTitle
     }
     if (editDescription.trim() !== (task.description || '')) {
       updates.description = editDescription.trim()
+    }
+    if (editPrUrl.trim() !== (task.prUrl || '')) {
+      updates.prUrl = editPrUrl.trim() || null
     }
 
     if (Object.keys(updates).length > 0) {
@@ -164,6 +170,21 @@ function TaskView() {
             <span>{task.repoName}</span>
             <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
             <span className="font-mono">{task.branch}</span>
+            {task.prUrl && (
+              <>
+                <span className="text-muted-foreground/50">•</span>
+                <a
+                  href={task.prUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 hover:text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <HugeiconsIcon icon={GitPullRequestIcon} size={12} strokeWidth={2} />
+                  <span>PR</span>
+                </a>
+              </>
+            )}
           </div>
         </div>
 
@@ -315,6 +336,15 @@ function TaskView() {
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 rows={3}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-prUrl">PR URL</FieldLabel>
+              <Input
+                id="edit-prUrl"
+                value={editPrUrl}
+                onChange={(e) => setEditPrUrl(e.target.value)}
+                placeholder="https://github.com/owner/repo/pull/123"
               />
             </Field>
           </FieldGroup>
