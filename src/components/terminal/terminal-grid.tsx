@@ -162,11 +162,11 @@ export function TerminalGrid({
   if (terminals.length === 2) {
     return (
       <ResizablePanelGroup direction="horizontal" className="h-full">
-        <ResizablePanel defaultSize={50} minSize={15}>
+        <ResizablePanel key={terminals[0].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[0])}
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={50} minSize={15}>
+        <ResizablePanel key={terminals[1].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[1])}
         </ResizablePanel>
       </ResizablePanelGroup>
@@ -177,17 +177,17 @@ export function TerminalGrid({
   if (terminals.length === 3) {
     return (
       <ResizablePanelGroup direction="horizontal" className="h-full">
-        <ResizablePanel defaultSize={50} minSize={15}>
+        <ResizablePanel key={terminals[0].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[0])}
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={50} minSize={15}>
           <ResizablePanelGroup direction="vertical" className="h-full">
-            <ResizablePanel defaultSize={50} minSize={15}>
+            <ResizablePanel key={terminals[1].id} defaultSize={50} minSize={15}>
               {renderTerminalPane(terminals[1])}
             </ResizablePanel>
             <ResizableHandle />
-            <ResizablePanel defaultSize={50} minSize={15}>
+            <ResizablePanel key={terminals[2].id} defaultSize={50} minSize={15}>
               {renderTerminalPane(terminals[2])}
             </ResizablePanel>
           </ResizablePanelGroup>

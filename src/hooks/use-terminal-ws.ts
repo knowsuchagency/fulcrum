@@ -113,8 +113,10 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
         }
 
         case 'terminal:attached': {
-          // Buffer is saved to disk but not restored visually due to
-          // escape sequence conflicts with dtach's screen refresh
+          const xterm = xtermMapRef.current.get(message.payload.terminalId)
+          if (xterm && message.payload.buffer) {
+            xterm.write(message.payload.buffer)
+          }
           break
         }
 

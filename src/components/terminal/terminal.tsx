@@ -74,7 +74,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
     termRef.current = term
     fitAddonRef.current = fitAddon
 
-    // Initial fit after container is sized
+    // Initial fit after container is sized, with delayed refit to catch layout stabilization
     requestAnimationFrame(() => {
       doFit()
       onReady?.(term)
@@ -83,11 +83,28 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
       }
     })
 
+    // Schedule additional fits to catch async layout (ResizablePanel timing)
+    const refitTimeout = setTimeout(() => {
+      doFit()
+      term.refresh(0, term.rows - 1)
+    }, 100)
+
     const handleResize = () => {
       requestAnimationFrame(doFit)
     }
 
     window.addEventListener('resize', handleResize)
+
+    // Handle document visibility changes (browser tab switches)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestAnimationFrame(() => {
+          doFit()
+          term.refresh(0, term.rows - 1)
+        })
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     // Use ResizeObserver for container size changes
     const resizeObserver = new ResizeObserver(handleResize)
@@ -97,7 +114,10 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
     const visibilityObserver = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          requestAnimationFrame(doFit)
+          requestAnimationFrame(() => {
+            doFit()
+            term.refresh(0, term.rows - 1)
+          })
         }
       },
       { threshold: 0.1 }
@@ -105,7 +125,9 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
     visibilityObserver.observe(containerRef.current)
 
     return () => {
+      clearTimeout(refitTimeout)
       window.removeEventListener('resize', handleResize)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       resizeObserver.disconnect()
       visibilityObserver.disconnect()
       term.dispose()

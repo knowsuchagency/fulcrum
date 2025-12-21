@@ -90,7 +90,14 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
       setXtermReady(true)
     })
 
+    // Schedule additional fit to catch async layout (ResizablePanel timing)
+    const refitTimeout = setTimeout(() => {
+      fitAddon.fit()
+      term.refresh(0, term.rows - 1)
+    }, 100)
+
     return () => {
+      clearTimeout(refitTimeout)
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
@@ -119,6 +126,20 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     }
 
     window.addEventListener('resize', handleResize)
+
+    // Handle document visibility changes (browser tab switches)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestAnimationFrame(() => {
+          doFit()
+          if (termRef.current) {
+            termRef.current.refresh(0, termRef.current.rows - 1)
+          }
+        })
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     const resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(containerRef.current)
 
@@ -126,7 +147,12 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     const visibilityObserver = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          requestAnimationFrame(doFit)
+          requestAnimationFrame(() => {
+            doFit()
+            if (termRef.current) {
+              termRef.current.refresh(0, termRef.current.rows - 1)
+            }
+          })
         }
       },
       { threshold: 0.1 }
@@ -135,6 +161,7 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       resizeObserver.disconnect()
       visibilityObserver.disconnect()
     }
