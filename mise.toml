@@ -132,6 +132,7 @@ run = "npm publish --access public"
 # Production daemon tasks
 [tasks.up]
 description = "Build and start production server as daemon"
+depends = ["install"]
 run = """
 set -e
 
