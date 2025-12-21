@@ -173,8 +173,7 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
           {task.prUrl && (
             <>
               <span className="text-muted-foreground/30">•</span>
-              <HugeiconsIcon icon={GitPullRequestIcon} size={12} strokeWidth={2} />
-              <span>PR</span>
+              <HugeiconsIcon icon={GitPullRequestIcon} size={12} strokeWidth={2} className="text-foreground" />
             </>
           )}
         </div>
