@@ -283,12 +283,19 @@ export function CreateTaskModal() {
                         if (repo) {
                           setSelectedRepoId(id as string)
                           setRepoPath(repo.path)
-                          setRepoSearchQuery('')
+                          setRepoSearchQuery(repo.displayName)
                           setRepoError(null)
                         }
                       }}
-                      onInputValueChange={(value) => setRepoSearchQuery(value)}
-                      getOptionString={(id) =>
+                      inputValue={repoSearchQuery}
+                      onInputValueChange={(value) => {
+                        setRepoSearchQuery(value)
+                        // Clear selection if user starts typing something different
+                        if (selectedRepo && value !== selectedRepo.displayName) {
+                          setSelectedRepoId(null)
+                        }
+                      }}
+                      itemToStringLabel={(id) =>
                         repositories?.find((r) => r.id === id)?.displayName || ''
                       }
                     >

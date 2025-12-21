@@ -19,7 +19,7 @@ flag "--db" help="Database path (overrides dir/vibora.db)"
 run = """
 export PORT="${usage_port}"
 export VITE_BACKEND_PORT="${usage_port}"
-export VIBORA_DIR="${usage_dir}"
+export VIBORA_DIR="${VIBORA_DIR:-${usage_dir}}"
 if [ -n "${usage_db}" ]; then
   export VIBORA_DATABASE_PATH="${usage_db}"
 fi
