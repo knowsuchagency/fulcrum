@@ -13,6 +13,8 @@ export const tasks = sqliteTable('tasks', {
   worktreePath: text('worktree_path'),
   viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
   prUrl: text('pr_url'), // GitHub PR URL for auto-completion tracking
+  linearTicketId: text('linear_ticket_id'), // e.g., "TEAM-123"
+  linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })

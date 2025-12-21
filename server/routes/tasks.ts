@@ -7,6 +7,7 @@ import * as path from 'path'
 import { glob } from 'glob'
 import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
 import { broadcast } from '../websocket/terminal-ws'
+import { updateLinearTicketStatus } from '../services/linear'
 
 // Helper to create git worktree
 function createGitWorktree(
@@ -124,6 +125,9 @@ vibora current-task
 
 # Associate a PR with this task (enables auto-completion when merged)
 vibora current-task pr https://github.com/owner/repo/pull/123
+
+# Associate a Linear ticket with this task
+vibora current-task linear https://linear.app/team/issue/TEAM-123
 
 # Update task status when work is complete
 vibora current-task review    # Ready for review
@@ -449,6 +453,15 @@ app.patch('/:id/status', async (c) => {
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
     broadcast({ type: 'task:updated', payload: { taskId: id } })
+
+    // Sync status to Linear if task has a linked ticket and status changed
+    if (oldStatus !== newStatus && existing.linearTicketId) {
+      // Fire and forget - don't block the response
+      updateLinearTicketStatus(existing.linearTicketId, newStatus).catch((err) => {
+        console.error('Failed to update Linear ticket status:', err)
+      })
+    }
+
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)
