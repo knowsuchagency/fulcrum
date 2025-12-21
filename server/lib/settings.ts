@@ -9,6 +9,8 @@ export interface Settings {
   worktreeBasePath: string
   defaultGitReposDir: string
   taskCreationCommand: string
+  hostname: string
+  sshPort: number
 }
 
 // Default settings
@@ -18,6 +20,8 @@ const DEFAULT_SETTINGS: Settings = {
   worktreeBasePath: path.join(os.homedir(), '.vibora', 'worktrees'),
   defaultGitReposDir: os.homedir(),
   taskCreationCommand: 'claude --dangerously-skip-permissions',
+  hostname: '',
+  sshPort: 22,
 }
 
 // Get the vibora directory path
@@ -104,6 +108,8 @@ export function getSettings(): Settings {
     worktreeBasePath: expandPath(parsed.worktreeBasePath ?? DEFAULT_SETTINGS.worktreeBasePath),
     defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
     taskCreationCommand: parsed.taskCreationCommand ?? DEFAULT_SETTINGS.taskCreationCommand,
+    hostname: parsed.hostname ?? DEFAULT_SETTINGS.hostname,
+    sshPort: parsed.sshPort ?? DEFAULT_SETTINGS.sshPort,
   }
 
   // Persist missing keys back to file (only file settings, not env overrides)
@@ -113,6 +119,7 @@ export function getSettings(): Settings {
 
   // Apply environment variable overrides
   const portEnv = parseInt(process.env.PORT || '', 10)
+  const sshPortEnv = parseInt(process.env.VIBORA_SSH_PORT || '', 10)
   return {
     port: !isNaN(portEnv) && portEnv > 0 ? portEnv : fileSettings.port,
     databasePath: process.env.VIBORA_DATABASE_PATH
@@ -125,6 +132,8 @@ export function getSettings(): Settings {
       ? expandPath(process.env.VIBORA_GIT_REPOS_DIR)
       : fileSettings.defaultGitReposDir,
     taskCreationCommand: process.env.VIBORA_TASK_CREATION_COMMAND ?? fileSettings.taskCreationCommand,
+    hostname: process.env.VIBORA_HOSTNAME ?? fileSettings.hostname,
+    sshPort: !isNaN(sshPortEnv) && sshPortEnv > 0 ? sshPortEnv : fileSettings.sshPort,
   }
 }
 

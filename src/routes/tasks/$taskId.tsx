@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -9,6 +9,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useTaskTab } from '@/hooks/use-task-tab'
+import { useGitSync } from '@/hooks/use-git-sync'
+import { useHostname, useSshPort } from '@/hooks/use-config'
+import { buildVSCodeUrl } from '@/lib/vscode-url'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
 import { DiffViewer } from '@/components/viewer/diff-viewer'
 import { BrowserPreview } from '@/components/viewer/browser-preview'
@@ -21,6 +24,8 @@ import {
   Delete02Icon,
   Folder01Icon,
   GitPullRequestIcon,
+  RefreshIcon,
+  VisualStudioCodeIcon,
 } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
@@ -77,10 +82,47 @@ function TaskView() {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const { tab, setTab } = useTaskTab(taskId)
+  const gitSync = useGitSync()
+  const { data: hostname } = useHostname()
+  const { data: sshPort } = useSshPort()
 
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncSuccess, setSyncSuccess] = useState(false)
+
+  // Auto-clear sync success message
+  useEffect(() => {
+    if (syncSuccess) {
+      const timer = setTimeout(() => setSyncSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [syncSuccess])
+
+  const handleSync = async () => {
+    if (!task?.repoPath || !task?.worktreePath) return
+
+    setSyncError(null)
+    setSyncSuccess(false)
+
+    try {
+      await gitSync.mutateAsync({
+        repoPath: task.repoPath,
+        worktreePath: task.worktreePath,
+        baseBranch: task.baseBranch,
+      })
+      setSyncSuccess(true)
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'Sync failed')
+    }
+  }
+
+  const handleOpenVSCode = () => {
+    if (!task?.worktreePath) return
+    const url = buildVSCodeUrl(task.worktreePath, hostname, sshPort)
+    window.open(url, '_blank')
+  }
 
   const handleOpenEditModal = () => {
     if (task) {
@@ -208,6 +250,45 @@ function TaskView() {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Sync Button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleSync}
+          disabled={gitSync.isPending || !task.worktreePath}
+          className="text-muted-foreground hover:text-foreground"
+          title="Sync with upstream"
+        >
+          <HugeiconsIcon
+            icon={RefreshIcon}
+            size={16}
+            strokeWidth={2}
+            className={gitSync.isPending ? 'animate-spin' : ''}
+          />
+        </Button>
+
+        {/* VS Code Button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleOpenVSCode}
+          disabled={!task.worktreePath}
+          className="text-muted-foreground hover:text-foreground"
+          title="Open in VS Code"
+        >
+          <HugeiconsIcon icon={VisualStudioCodeIcon} size={16} strokeWidth={2} />
+        </Button>
+
+        {/* Sync Status Feedback */}
+        {syncError && (
+          <span className="text-xs text-destructive max-w-48 truncate" title={syncError}>
+            {syncError}
+          </span>
+        )}
+        {syncSuccess && (
+          <span className="text-xs text-green-600">Synced!</span>
+        )}
 
         <AlertDialog>
           <AlertDialogTrigger

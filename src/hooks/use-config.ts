@@ -31,6 +31,8 @@ export const CONFIG_KEYS = {
   WORKTREE_BASE_PATH: 'worktree_base_path',
   DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
   TASK_CREATION_COMMAND: 'task_creation_command',
+  HOSTNAME: 'hostname',
+  SSH_PORT: 'ssh_port',
 } as const
 
 // Default values (client-side fallbacks)
@@ -93,6 +95,26 @@ export function useTaskCreationCommand() {
   return {
     ...query,
     data: (query.data?.value as string) ?? DEFAULT_TASK_CREATION_COMMAND,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useHostname() {
+  const query = useConfig(CONFIG_KEYS.HOSTNAME)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? '',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useSshPort() {
+  const query = useConfig(CONFIG_KEYS.SSH_PORT)
+
+  return {
+    ...query,
+    data: (query.data?.value as number) ?? 22,
     isDefault: query.data?.isDefault ?? true,
   }
 }

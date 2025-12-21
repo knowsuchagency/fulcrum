@@ -445,4 +445,111 @@ app.get('/status', (c) => {
   }
 })
 
+// POST /api/git/sync - Sync worktree with upstream (pull parent repo, then rebase worktree)
+app.post('/sync', async (c) => {
+  try {
+    const body = await c.req.json<{
+      repoPath: string
+      worktreePath: string
+      baseBranch?: string
+    }>()
+
+    const { repoPath, worktreePath, baseBranch } = body
+
+    if (!repoPath || !worktreePath) {
+      return c.json({ error: 'Missing required fields: repoPath, worktreePath' }, 400)
+    }
+
+    // Verify paths exist
+    if (!fs.existsSync(repoPath)) {
+      return c.json({ error: 'Repository path does not exist' }, 404)
+    }
+    if (!fs.existsSync(worktreePath)) {
+      return c.json({ error: 'Worktree path does not exist' }, 404)
+    }
+
+    // Check for uncommitted changes in worktree
+    try {
+      const status = gitExec(worktreePath, 'status --porcelain')
+      if (status.trim()) {
+        return c.json({
+          error: 'Uncommitted changes in worktree. Please commit or stash before syncing.',
+          hasUncommittedChanges: true,
+        }, 400)
+      }
+    } catch {
+      // Continue if status check fails
+    }
+
+    // Detect default branch
+    let defaultBranch = baseBranch || 'main'
+    if (!baseBranch) {
+      try {
+        gitExec(repoPath, 'rev-parse --verify master')
+        defaultBranch = 'master'
+      } catch {
+        defaultBranch = 'main'
+      }
+    }
+
+    // Step 1: Pull on parent repo to update default branch
+    let parentUpdated = false
+    try {
+      // Save current branch in parent repo
+      const currentBranch = gitExec(repoPath, 'rev-parse --abbrev-ref HEAD')
+
+      // Fetch and update default branch
+      gitExec(repoPath, 'fetch origin')
+
+      // If we're not on the default branch, checkout, pull, and go back
+      if (currentBranch !== defaultBranch) {
+        gitExec(repoPath, `checkout ${defaultBranch}`)
+        gitExec(repoPath, 'pull')
+        gitExec(repoPath, `checkout ${currentBranch}`)
+      } else {
+        gitExec(repoPath, 'pull')
+      }
+      parentUpdated = true
+    } catch (err) {
+      // Parent pull failed, but we can still try to rebase
+      console.error('Failed to update parent repo:', err)
+    }
+
+    // Step 2: Rebase worktree on the updated default branch
+    let worktreeRebased = false
+    try {
+      gitExec(worktreePath, `pull --rebase origin ${defaultBranch}`)
+      worktreeRebased = true
+    } catch (err) {
+      // Check if it's a rebase conflict
+      try {
+        const rebaseStatus = gitExec(worktreePath, 'status')
+        if (rebaseStatus.includes('rebase in progress')) {
+          // Abort the rebase
+          gitExec(worktreePath, 'rebase --abort')
+          return c.json({
+            error: 'Rebase conflict detected. Rebase has been aborted.',
+            conflictAborted: true,
+          }, 409)
+        }
+      } catch {
+        // Ignore status check errors
+      }
+
+      return c.json({
+        error: err instanceof Error ? err.message : 'Failed to rebase worktree',
+      }, 500)
+    }
+
+    return c.json({
+      success: true,
+      parentUpdated,
+      worktreeRebased,
+      defaultBranch,
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to sync' }, 500)
+  }
+})
+
 export default app
