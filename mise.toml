@@ -33,7 +33,15 @@ run = "NODE_ENV=production bun server/index.ts"
 
 [tasks.lint]
 description = "Run ESLint"
-run = "eslint ."
+run = "bunx eslint ."
+
+[tasks.typecheck]
+description = "Check TypeScript types"
+run = "bunx tsc --noEmit"
+
+[tasks.check]
+description = "Run all checks (lint + typecheck)"
+depends = ["lint", "typecheck"]
 
 [tasks.preview]
 description = "Preview production build"

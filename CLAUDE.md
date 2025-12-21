@@ -14,7 +14,9 @@ All commands are mise tasks. Run `mise tasks` to list available commands.
 ```bash
 mise run dev          # Start frontend and backend dev servers
 mise run build        # Build for production
+mise run check        # Run all checks (lint + typecheck)
 mise run lint         # Run ESLint
+mise run typecheck    # Check TypeScript types
 mise run db:push      # Sync schema to database
 mise run db:studio    # Open Drizzle Studio GUI
 ```
