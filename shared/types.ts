@@ -54,6 +54,7 @@ export interface Task {
   prUrl: string | null
   linearTicketId: string | null
   linearTicketUrl: string | null
+  startupScript: string | null
   createdAt: string
   updatedAt: string
 }

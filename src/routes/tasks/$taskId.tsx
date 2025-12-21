@@ -553,6 +553,7 @@ function TaskView() {
             taskName={task.title}
             cwd={task.worktreePath}
             planModeDescription={planModeDescription}
+            startupScript={task.startupScript}
           />
         </ResizablePanel>
 

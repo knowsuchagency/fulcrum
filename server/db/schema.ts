@@ -15,6 +15,7 @@ export const tasks = sqliteTable('tasks', {
   prUrl: text('pr_url'), // GitHub PR URL for auto-completion tracking
   linearTicketId: text('linear_ticket_id'), // e.g., "TEAM-123"
   linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
+  startupScript: text('startup_script'), // Command to run after worktree creation
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
