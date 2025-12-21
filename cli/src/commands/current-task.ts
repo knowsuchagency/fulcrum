@@ -1,5 +1,5 @@
 import { ViboraClient } from '../client'
-import { output, outputError } from '../utils/output'
+import { output } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { TaskStatus } from '@shared/types'
 

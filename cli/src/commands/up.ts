@@ -8,7 +8,7 @@ import { writePid, readPid, isProcessRunning, getPort } from '../utils/process'
 /**
  * Finds the Vibora project root by looking for package.json with name "vibora".
  */
-function findViboraRoot(): string | null {
+async function findViboraRoot(): Promise<string | null> {
   // Check common locations
   const candidates = [
     process.cwd(),
@@ -21,8 +21,8 @@ function findViboraRoot(): string | null {
     const pkgPath = join(candidate, 'package.json')
     if (existsSync(pkgPath)) {
       try {
-        const pkg = require(pkgPath)
-        if (pkg.name === 'vibora') {
+        const pkgContent = await Bun.file(pkgPath).json()
+        if (pkgContent.name === 'vibora') {
           return candidate
         }
       } catch {
@@ -87,7 +87,7 @@ export async function handleUpCommand(flags: Record<string, string>) {
     )
   }
 
-  const viboraRoot = findViboraRoot()
+  const viboraRoot = await findViboraRoot()
   if (!viboraRoot) {
     throw new CliError(
       'VIBORA_NOT_FOUND',
