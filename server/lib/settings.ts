@@ -11,6 +11,8 @@ export interface Settings {
   taskCreationCommand: string
   hostname: string
   sshPort: number
+  basicAuthUsername: string | null
+  basicAuthPassword: string | null
 }
 
 // Default settings
@@ -22,6 +24,8 @@ const DEFAULT_SETTINGS: Settings = {
   taskCreationCommand: 'claude --dangerously-skip-permissions',
   hostname: '',
   sshPort: 22,
+  basicAuthUsername: null,
+  basicAuthPassword: null,
 }
 
 // Expand tilde in path
@@ -116,6 +120,8 @@ export function getSettings(): Settings {
     taskCreationCommand: parsed.taskCreationCommand ?? DEFAULT_SETTINGS.taskCreationCommand,
     hostname: parsed.hostname ?? DEFAULT_SETTINGS.hostname,
     sshPort: parsed.sshPort ?? DEFAULT_SETTINGS.sshPort,
+    basicAuthUsername: parsed.basicAuthUsername ?? null,
+    basicAuthPassword: parsed.basicAuthPassword ?? null,
   }
 
   // Persist missing keys back to file (only file settings, not env overrides)
@@ -140,6 +146,8 @@ export function getSettings(): Settings {
     taskCreationCommand: process.env.VIBORA_TASK_CREATION_COMMAND ?? fileSettings.taskCreationCommand,
     hostname: process.env.VIBORA_HOSTNAME ?? fileSettings.hostname,
     sshPort: !isNaN(sshPortEnv) && sshPortEnv > 0 ? sshPortEnv : fileSettings.sshPort,
+    basicAuthUsername: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.basicAuthUsername,
+    basicAuthPassword: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.basicAuthPassword,
   }
 }
 

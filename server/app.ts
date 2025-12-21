@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
+import { basicAuth } from 'hono/basic-auth'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
+import { getSettings } from './lib/settings'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -37,9 +39,21 @@ export function createApp() {
     cors({
       origin: '*',
       allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type'],
+      allowHeaders: ['Content-Type', 'Authorization'],
     })
   )
+
+  // Optional HTTP Basic Auth (when configured)
+  const settings = getSettings()
+  if (settings.basicAuthUsername && settings.basicAuthPassword) {
+    app.use(
+      '*',
+      basicAuth({
+        username: settings.basicAuthUsername,
+        password: settings.basicAuthPassword,
+      })
+    )
+  }
 
   // API Routes
   app.route('/health', healthRoutes)
