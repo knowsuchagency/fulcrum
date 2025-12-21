@@ -41,6 +41,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -91,6 +92,7 @@ function TaskView() {
   const [editDescription, setEditDescription] = useState('')
   const [syncError, setSyncError] = useState<string | null>(null)
   const [syncSuccess, setSyncSuccess] = useState(false)
+  const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
 
   // Auto-clear sync success message
   useEffect(() => {
@@ -118,10 +120,22 @@ function TaskView() {
     }
   }
 
-  const handleOpenVSCode = () => {
+  const handleOpenVSCodeModal = () => {
+    setVscodeModalOpen(true)
+  }
+
+  const handleOpenVSCodeWorktree = () => {
     if (!task?.worktreePath) return
     const url = buildVSCodeUrl(task.worktreePath, hostname, sshPort)
     window.open(url, '_blank')
+    setVscodeModalOpen(false)
+  }
+
+  const handleOpenVSCodeRepo = () => {
+    if (!task?.repoPath) return
+    const url = buildVSCodeUrl(task.repoPath, hostname, sshPort)
+    window.open(url, '_blank')
+    setVscodeModalOpen(false)
   }
 
   const handleOpenEditModal = () => {
@@ -272,8 +286,7 @@ function TaskView() {
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={handleOpenVSCode}
-          disabled={!task.worktreePath}
+          onClick={handleOpenVSCodeModal}
           className="text-muted-foreground hover:text-foreground"
           title="Open in VS Code"
         >
@@ -423,6 +436,44 @@ function TaskView() {
               Save
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* VS Code Modal */}
+      <Dialog open={vscodeModalOpen} onOpenChange={setVscodeModalOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Open in VS Code</DialogTitle>
+            <DialogDescription>
+              Choose which folder to open
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 mt-4">
+            <Button
+              variant="outline"
+              className="justify-start font-mono text-sm"
+              onClick={handleOpenVSCodeWorktree}
+              disabled={!task.worktreePath}
+            >
+              <HugeiconsIcon icon={GitBranchIcon} size={16} strokeWidth={2} className="mr-2" />
+              Worktree
+              <span className="ml-auto text-xs text-muted-foreground truncate max-w-32">
+                {task.branch}
+              </span>
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start font-mono text-sm"
+              onClick={handleOpenVSCodeRepo}
+              disabled={!task.repoPath}
+            >
+              <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} className="mr-2" />
+              Repository
+              <span className="ml-auto text-xs text-muted-foreground truncate max-w-32">
+                {task.repoName}
+              </span>
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
