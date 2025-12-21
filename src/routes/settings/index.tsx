@@ -14,6 +14,7 @@ import {
   useTaskCreationCommand,
   useHostname,
   useSshPort,
+  useLinearApiKey,
   useUpdateConfig,
   useResetConfig,
   CONFIG_KEYS,
@@ -31,6 +32,7 @@ function SettingsPage() {
   const { data: taskCreationCommand, isLoading: taskCommandLoading } = useTaskCreationCommand()
   const { data: hostname, isLoading: hostnameLoading } = useHostname()
   const { data: sshPort, isLoading: sshPortLoading } = useSshPort()
+  const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
 
@@ -41,6 +43,7 @@ function SettingsPage() {
   const [localTaskCommand, setLocalTaskCommand] = useState('')
   const [localHostname, setLocalHostname] = useState('')
   const [localSshPort, setLocalSshPort] = useState('')
+  const [localLinearApiKey, setLocalLinearApiKey] = useState('')
   const [databaseBrowserOpen, setDatabaseBrowserOpen] = useState(false)
   const [worktreeBrowserOpen, setWorktreeBrowserOpen] = useState(false)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
@@ -55,10 +58,11 @@ function SettingsPage() {
     if (taskCreationCommand !== undefined) setLocalTaskCommand(taskCreationCommand)
     if (hostname !== undefined) setLocalHostname(hostname)
     if (sshPort !== undefined) setLocalSshPort(String(sshPort))
-  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand, hostname, sshPort])
+    if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
+  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand, hostname, sshPort, linearApiKey])
 
   const isLoading =
-    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading
+    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading
   const hasChanges =
     localPort !== String(port) ||
     localDatabasePath !== databasePath ||
@@ -66,7 +70,8 @@ function SettingsPage() {
     localReposDir !== defaultGitReposDir ||
     localTaskCommand !== taskCreationCommand ||
     localHostname !== hostname ||
-    localSshPort !== String(sshPort)
+    localSshPort !== String(sshPort) ||
+    localLinearApiKey !== linearApiKey
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -151,6 +156,17 @@ function SettingsPage() {
       }
     }
 
+    if (localLinearApiKey !== linearApiKey) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.LINEAR_API_KEY, value: localLinearApiKey },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
     await Promise.all(promises)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -211,6 +227,14 @@ function SettingsPage() {
       onSuccess: (data) => {
         if (data.value !== null && data.value !== undefined)
           setLocalSshPort(String(data.value))
+      },
+    })
+  }
+
+  const handleResetLinearApiKey = () => {
+    resetConfig.mutate(CONFIG_KEYS.LINEAR_API_KEY, {
+      onSuccess: (data) => {
+        setLocalLinearApiKey(data.value !== null && data.value !== undefined ? String(data.value) : '')
       },
     })
   }
@@ -482,6 +506,43 @@ function SettingsPage() {
                   </div>
                   <p className="ml-40 pl-2 text-xs text-muted-foreground">
                     SSH port for VS Code remote connections
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-border" />
+
+              {/* Integrations Section */}
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium text-foreground">Integrations</h2>
+
+                {/* Linear API Key */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      Linear API Key
+                    </label>
+                    <Input
+                      type="password"
+                      value={localLinearApiKey}
+                      onChange={(e) => setLocalLinearApiKey(e.target.value)}
+                      placeholder="lin_api_..."
+                      disabled={isLoading}
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetLinearApiKey}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    Personal API key from Linear for syncing ticket status
                   </p>
                 </div>
               </div>

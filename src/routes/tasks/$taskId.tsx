@@ -11,6 +11,7 @@ import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useHostname, useSshPort } from '@/hooks/use-config'
+import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
@@ -27,6 +28,7 @@ import {
   GitPullRequestIcon,
   RefreshIcon,
   VisualStudioCodeIcon,
+  Task01Icon,
 } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
@@ -88,6 +90,7 @@ function TaskView() {
   const gitSync = useGitSync()
   const { data: hostname } = useHostname()
   const { data: sshPort } = useSshPort()
+  const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
 
   // Read plan mode state from navigation (only set when coming from task creation)
   const navState = location.state as { planMode?: boolean; description?: string } | undefined
@@ -272,6 +275,25 @@ function TaskView() {
                 >
                   <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
                   <span>#{task.prUrl.match(/\/pull\/(\d+)/)?.[1] ?? 'PR'}</span>
+                </a>
+              </>
+            )}
+            {task.linearTicketUrl && (
+              <>
+                <span className="text-muted-foreground/50">•</span>
+                <a
+                  href={task.linearTicketUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                  title={linearTicket?.title}
+                >
+                  <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
+                  <span>{task.linearTicketId}</span>
+                  {linearTicket?.status && (
+                    <span className="text-muted-foreground text-xs">({linearTicket.status})</span>
+                  )}
                 </a>
               </>
             )}

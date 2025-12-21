@@ -16,6 +16,7 @@ import configRoutes from './routes/config'
 import uploadsRoutes from './routes/uploads'
 import worktreesRoutes from './routes/worktrees'
 import terminalViewStateRoutes from './routes/terminal-view-state'
+import linearRoutes from './routes/linear'
 
 /**
  * Gets the path to the dist directory.
@@ -64,6 +65,7 @@ export function createApp() {
   app.route('/api/uploads', uploadsRoutes)
   app.route('/api/worktrees', worktreesRoutes)
   app.route('/api/terminal-view-state', terminalViewStateRoutes)
+  app.route('/api/linear', linearRoutes)
 
   // Serve static files in production mode or bundled CLI mode
   // Note: Check VIBORA_PACKAGE_ROOT in addition to NODE_ENV because bun build
