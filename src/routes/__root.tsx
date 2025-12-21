@@ -5,6 +5,7 @@ import { useTaskSync } from '@/hooks/use-task-sync'
 import { KeyboardProvider } from '@/contexts/keyboard-context'
 import { CommandPalette } from '@/components/command-palette/command-palette'
 import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help'
+import { Toaster } from '@/components/ui/sonner'
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -41,6 +42,7 @@ function RootLayout() {
         </main>
         <CommandPalette onNewTask={handleNewTask} onShowShortcuts={handleShowShortcuts} />
         <KeyboardShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
+        <Toaster position="bottom-right" />
       </div>
     </KeyboardProvider>
   )

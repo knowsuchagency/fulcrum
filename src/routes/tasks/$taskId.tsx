@@ -167,7 +167,7 @@ function TaskView() {
   const buildClaudePrompt = () => {
     if (!task || !syncError) return ''
     const baseBranch = task.baseBranch || 'main'
-    return `Fix the git sync issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${syncError} | Steps: 1) Check git status 2) Resolve conflicts or commit/stash changes 3) Pull and rebase from origin/${baseBranch}`
+    return `Fix the git sync issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${syncError} | Steps: 1) Check git status 2) Resolve conflicts or commit/stash changes 3) Rebase onto the parent repo's ${baseBranch} branch`
   }
 
   // Build a prompt for Claude Code for merge errors
@@ -190,6 +190,11 @@ function TaskView() {
         baseBranch: task.baseBranch,
       })
       setMergeSuccess(true)
+      // Mark task as done after successful merge
+      updateTask.mutate({
+        taskId: task.id,
+        updates: { status: 'DONE' },
+      })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Merge failed'
       setMergeError(errorMessage)

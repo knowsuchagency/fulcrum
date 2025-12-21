@@ -260,6 +260,17 @@ export interface TaskUpdatedMessage {
   }
 }
 
+export interface NotificationMessage {
+  type: 'notification'
+  payload: {
+    id: string
+    title: string
+    message: string
+    notificationType: 'success' | 'info' | 'warning' | 'error'
+    taskId?: string
+  }
+}
+
 export type ServerMessage =
   | TerminalCreatedMessage
   | TerminalOutputMessage
@@ -276,3 +287,4 @@ export type ServerMessage =
   | TabReorderedMessage
   | TabsListResponseMessage
   | TaskUpdatedMessage
+  | NotificationMessage

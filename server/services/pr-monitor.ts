@@ -67,6 +67,7 @@ async function pollPRs(): Promise<void> {
     if (!status) continue
 
     // If PR is merged (state is MERGED or mergedAt is set), mark task as DONE
+    // The status change will trigger a notification via updateTaskStatus
     if (status.state === 'MERGED' || status.mergedAt) {
       await updateTaskStatus(task.id, 'DONE')
       console.log(`Task "${task.title}" marked as DONE (PR merged)`)

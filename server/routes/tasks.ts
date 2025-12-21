@@ -9,6 +9,7 @@ import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-inst
 import { broadcast } from '../websocket/terminal-ws'
 import { updateLinearTicketStatus } from '../services/linear'
 import { updateTaskStatus } from '../services/task-status'
+import { sendNotification } from '../services/notification-service'
 
 // Helper to create git worktree
 function createGitWorktree(
@@ -472,6 +473,27 @@ app.patch('/:id/status', async (c) => {
       updateLinearTicketStatus(existing.linearTicketId, newStatus).catch((err) => {
         console.error('Failed to update Linear ticket status:', err)
       })
+    }
+
+    // Send notification for specific status transitions
+    if (oldStatus !== newStatus && updated) {
+      if (newStatus === 'IN_REVIEW') {
+        sendNotification({
+          title: 'Task Ready for Review',
+          message: `Task "${updated.title}" moved to review`,
+          taskId: updated.id,
+          taskTitle: updated.title,
+          type: 'task_status_change',
+        })
+      } else if (newStatus === 'DONE') {
+        sendNotification({
+          title: 'Task Completed',
+          message: `Task "${updated.title}" marked as done`,
+          taskId: updated.id,
+          taskTitle: updated.title,
+          type: 'task_status_change',
+        })
+      }
     }
 
     return c.json(updated ? parseViewState(updated) : null)

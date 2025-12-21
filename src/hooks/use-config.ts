@@ -158,3 +158,49 @@ export function useResetConfig() {
     },
   })
 }
+
+// Notification settings types
+export interface NotificationSettings {
+  enabled: boolean
+  sound: { enabled: boolean; soundFile?: string }
+  slack: { enabled: boolean; webhookUrl: string }
+  discord: { enabled: boolean; webhookUrl: string }
+  pushover: { enabled: boolean; appToken: string; userKey: string }
+}
+
+interface NotificationTestResult {
+  channel: string
+  success: boolean
+  error?: string
+}
+
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: ['config', 'notifications'],
+    queryFn: () => fetchJSON<NotificationSettings>(`${API_BASE}/api/config/notifications`),
+  })
+}
+
+export function useUpdateNotificationSettings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (settings: Partial<NotificationSettings>) =>
+      fetchJSON<NotificationSettings>(`${API_BASE}/api/config/notifications`, {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['config', 'notifications'] })
+    },
+  })
+}
+
+export function useTestNotificationChannel() {
+  return useMutation({
+    mutationFn: (channel: 'sound' | 'slack' | 'discord' | 'pushover') =>
+      fetchJSON<NotificationTestResult>(`${API_BASE}/api/config/notifications/test/${channel}`, {
+        method: 'POST',
+      }),
+  })
+}
