@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import {
   ResizablePanelGroup,
@@ -80,6 +80,7 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 function TaskView() {
   const { taskId } = Route.useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { data: task, isLoading } = useTask(taskId)
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
@@ -87,6 +88,10 @@ function TaskView() {
   const gitSync = useGitSync()
   const { data: hostname } = useHostname()
   const { data: sshPort } = useSshPort()
+
+  // Read plan mode state from navigation (only set when coming from task creation)
+  const navState = location.state as { planMode?: boolean; description?: string } | undefined
+  const planModeDescription = navState?.planMode && navState?.description ? navState.description : undefined
 
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editTitle, setEditTitle] = useState('')
@@ -370,6 +375,7 @@ function TaskView() {
             taskId={task.id}
             taskName={task.title}
             cwd={task.worktreePath}
+            planModeDescription={planModeDescription}
           />
         </ResizablePanel>
 
