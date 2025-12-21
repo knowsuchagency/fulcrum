@@ -699,15 +699,6 @@ app.post('/merge-to-main', async (c) => {
         }, 500)
       }
 
-      // Push to origin after successful merge
-      let pushed = false
-      try {
-        gitExec(repoPath, `push origin ${defaultBranch}`)
-        pushed = true
-      } catch {
-        // Push failed, but merge succeeded - report this in response
-      }
-
       // Restore original branch if it was different
       if (originalBranch !== defaultBranch) {
         try {
@@ -721,7 +712,6 @@ app.post('/merge-to-main', async (c) => {
         success: true,
         baseBranch: defaultBranch,
         mergedBranch: worktreeBranch,
-        pushed,
       })
     } catch (err) {
       // Restore original branch on any error
