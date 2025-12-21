@@ -122,9 +122,21 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     const resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(containerRef.current)
 
+    // Use IntersectionObserver to handle terminals becoming visible after being hidden
+    const visibilityObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          requestAnimationFrame(doFit)
+        }
+      },
+      { threshold: 0.1 }
+    )
+    visibilityObserver.observe(containerRef.current)
+
     return () => {
       window.removeEventListener('resize', handleResize)
       resizeObserver.disconnect()
+      visibilityObserver.disconnect()
     }
   }, [doFit])
 
