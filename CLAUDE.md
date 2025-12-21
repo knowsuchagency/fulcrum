@@ -26,6 +26,7 @@ mise run db:studio    # Open Drizzle Studio GUI
 ### Frontend (`src/`)
 - **React 19** with TanStack Router (file-based routing in `src/routes/`)
 - **TanStack React Query** for server state
+- **shadcn/ui** (v4 with baseui support) for UI components
 - **xterm.js** for terminal emulation
 - Components organized by feature: `kanban/`, `terminal/`, `viewer/`, `ui/`
 - Path alias: `@` → `./src/`

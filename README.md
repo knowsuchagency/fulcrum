@@ -13,7 +13,7 @@ A lightweight PM cockpit for streamlining the software development lifecycle. Vi
 
 ## Tech Stack
 
-- **Frontend**: React 19, TanStack Router & Query, xterm.js, Tailwind CSS
+- **Frontend**: React 19, TanStack Router & Query, xterm.js, Tailwind CSS, shadcn/ui (v4 with baseui support)
 - **Backend**: Hono.js on Bun, SQLite with Drizzle ORM, WebSocket for terminal I/O
 
 ## Getting Started
