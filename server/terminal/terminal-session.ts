@@ -1,4 +1,5 @@
 import { spawn, type Pty } from 'bun-pty'
+import { unlinkSync } from 'fs'
 import { getDtachService } from './dtach-service'
 import { BufferManager } from './buffer-manager'
 import { db, terminals } from '../db'
@@ -56,7 +57,7 @@ export class TerminalSession {
   // Create a new dtach session and attach to it
   start(): void {
     const dtach = getDtachService()
-    const [cmd, ...args] = dtach.getCreateCommand(this.id, this.cwd)
+    const [cmd, ...args] = dtach.getCreateCommand(this.id)
 
     try {
       // Spawn dtach which creates the session and runs the shell
@@ -203,7 +204,6 @@ export class TerminalSession {
     const dtach = getDtachService()
     const socketPath = dtach.getSocketPath(this.id)
     try {
-      const { unlinkSync } = require('fs')
       unlinkSync(socketPath)
     } catch {
       // Socket might already be gone

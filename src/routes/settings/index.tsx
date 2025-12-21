@@ -40,26 +40,15 @@ function SettingsPage() {
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Sync local state with fetched values
+  // Sync local form state with fetched server values
+   
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
-  }, [port])
-
-  useEffect(() => {
     if (databasePath) setLocalDatabasePath(databasePath)
-  }, [databasePath])
-
-  useEffect(() => {
     if (worktreeBasePath) setLocalWorktreePath(worktreeBasePath)
-  }, [worktreeBasePath])
-
-  useEffect(() => {
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
-  }, [defaultGitReposDir])
-
-  useEffect(() => {
     if (taskCreationCommand !== undefined) setLocalTaskCommand(taskCreationCommand)
-  }, [taskCreationCommand])
+  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand])
 
   const isLoading =
     portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading

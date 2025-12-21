@@ -100,7 +100,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
       termRef.current = null
       fitAddonRef.current = null
     }
-  }, [doFit, onReady])
+  }, [doFit, onReady, onContainerReady])
 
   return (
     <div

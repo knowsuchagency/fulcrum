@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from 'fs'
 import * as path from 'path'
+import { execSync } from 'child_process'
 import { getViboraDir } from '../lib/settings'
 
 export class DtachService {
@@ -22,7 +23,7 @@ export class DtachService {
   }
 
   // Get command to create a new detached session
-  getCreateCommand(terminalId: string, cwd: string): string[] {
+  getCreateCommand(terminalId: string): string[] {
     const socketPath = this.getSocketPath(terminalId)
     const shell = process.env.SHELL || '/bin/bash'
     // -n: don't attach after creating
@@ -41,7 +42,6 @@ export class DtachService {
   // Check if dtach is available
   static isAvailable(): boolean {
     try {
-      const { execSync } = require('child_process')
       execSync('which dtach', { encoding: 'utf-8' })
       return true
     } catch {
