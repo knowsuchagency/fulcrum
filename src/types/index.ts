@@ -19,7 +19,7 @@ export interface ViewState {
   activeTab: 'diff' | 'browser' | 'files'
   browserUrl: string
   diffOptions: DiffOptions
-  filesViewState?: FilesViewState
+  filesViewState: FilesViewState
 }
 
 export interface FileTreeEntry {

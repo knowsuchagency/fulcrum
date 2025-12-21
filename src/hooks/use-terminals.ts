@@ -1,12 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { mockTerminalTabs, mockTerminals } from '@/data/mock-data'
 import type { Terminal, TerminalTab, TerminalLayout } from '@/types'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// In-memory stores for mock data mutations
-let tabsStore = [...mockTerminalTabs]
-let terminalsStore = [...mockTerminals]
+// In-memory stores
+let tabsStore: TerminalTab[] = []
+let terminalsStore: Terminal[] = []
 
 // Terminal Tabs hooks
 export function useTerminalTabs() {

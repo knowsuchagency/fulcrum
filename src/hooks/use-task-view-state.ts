@@ -3,6 +3,13 @@ import { useCallback, useMemo, useRef } from 'react'
 import { useTask } from './use-tasks'
 import type { Task, ViewState, DiffOptions, FilesViewState } from '@/types'
 
+interface PendingUpdates {
+  activeTab?: ViewState['activeTab']
+  browserUrl?: string
+  diffOptions?: Partial<DiffOptions>
+  filesViewState?: Partial<FilesViewState>
+}
+
 const getDefaultBrowserUrl = () => `http://${window.location.hostname}:3000`
 
 const DEFAULT_VIEW_STATE: ViewState = {
@@ -21,8 +28,8 @@ const DEFAULT_VIEW_STATE: ViewState = {
 
 export function useTaskViewState(taskId: string) {
   const queryClient = useQueryClient()
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>()
-  const pendingUpdatesRef = useRef<Partial<ViewState>>({})
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const pendingUpdatesRef = useRef<PendingUpdates>({})
 
   const { data: task } = useTask(taskId)
 
@@ -68,38 +75,34 @@ export function useTaskViewState(taskId: string) {
 
   // Optimistic update with debounced persistence
   const updateViewState = useCallback(
-    (updates: Partial<ViewState>) => {
+    (updates: PendingUpdates) => {
       // Merge with pending updates
+      const pending = pendingUpdatesRef.current
       pendingUpdatesRef.current = {
-        ...pendingUpdatesRef.current,
+        ...pending,
         ...updates,
         diffOptions:
-          updates.diffOptions || pendingUpdatesRef.current.diffOptions
-            ? {
-                ...(pendingUpdatesRef.current.diffOptions ?? {}),
-                ...(updates.diffOptions ?? {}),
-              }
+          updates.diffOptions || pending.diffOptions
+            ? { ...pending.diffOptions, ...updates.diffOptions }
             : undefined,
         filesViewState:
-          updates.filesViewState || pendingUpdatesRef.current.filesViewState
-            ? {
-                ...(pendingUpdatesRef.current.filesViewState ?? {}),
-                ...(updates.filesViewState ?? {}),
-              }
+          updates.filesViewState || pending.filesViewState
+            ? { ...pending.filesViewState, ...updates.filesViewState }
             : undefined,
       }
 
-      // Build new view state
+      // Build new view state with full defaults
+      const merged = pendingUpdatesRef.current
       const newViewState: ViewState = {
-        ...viewState,
-        ...pendingUpdatesRef.current,
+        activeTab: merged.activeTab ?? viewState.activeTab,
+        browserUrl: merged.browserUrl ?? viewState.browserUrl,
         diffOptions: {
           ...viewState.diffOptions,
-          ...(pendingUpdatesRef.current.diffOptions ?? {}),
+          ...merged.diffOptions,
         },
         filesViewState: {
           ...viewState.filesViewState,
-          ...(pendingUpdatesRef.current.filesViewState ?? {}),
+          ...merged.filesViewState,
         },
       }
 
@@ -145,16 +148,16 @@ export function useTaskViewState(taskId: string) {
 
   const setDiffOptions = useCallback(
     (options: Partial<DiffOptions>) => {
-      updateViewState({ diffOptions: { ...viewState.diffOptions, ...options } })
+      updateViewState({ diffOptions: options })
     },
-    [updateViewState, viewState.diffOptions]
+    [updateViewState]
   )
 
   const setFilesViewState = useCallback(
     (updates: Partial<FilesViewState>) => {
-      updateViewState({ filesViewState: { ...viewState.filesViewState, ...updates } })
+      updateViewState({ filesViewState: updates })
     },
-    [updateViewState, viewState.filesViewState]
+    [updateViewState]
   )
 
   return {

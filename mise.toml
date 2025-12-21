@@ -6,8 +6,10 @@ run = "bun install"
 
 [tasks.dev]
 description = "Start frontend and backend dev servers"
+usage = 'arg "[port]" help="Port to run on" default="3333"'
 run = """
-export VITE_BACKEND_PORT="${PORT:-3333}"
+export PORT="${usage_port}"
+export VITE_BACKEND_PORT="${usage_port}"
 bunx concurrently -n server,client -c blue,green 'mise run server' 'mise run client'
 """
 
@@ -25,10 +27,11 @@ run = "vite --host"
 
 [tasks.build]
 description = "Build for production"
-run = "tsc -b && vite build"
+run = "bunx tsc -b && bunx vite build"
 
 [tasks.start]
 description = "Run production server"
+depends = ["build"]
 run = "NODE_ENV=production bun server/index.ts"
 
 [tasks.lint]
