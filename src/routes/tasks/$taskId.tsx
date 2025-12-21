@@ -518,7 +518,7 @@ function TaskView() {
           <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {syncError}
           </div>
-          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+          <DialogFooter className="mt-4 gap-2">
             <Button variant="outline" onClick={() => setSyncErrorModalOpen(false)}>
               Close
             </Button>
