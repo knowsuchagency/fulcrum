@@ -12,9 +12,10 @@ interface TaskTerminalProps {
   taskName: string
   cwd: string | null
   className?: string
+  planModeDescription?: string
 }
 
-export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, planModeDescription }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -216,12 +217,20 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
     requestAnimationFrame(doFit)
 
     // Run startup command if this is a newly created terminal
-    if (shouldRunStartupCommandRef.current && taskCreationCommand) {
+    if (shouldRunStartupCommandRef.current) {
       shouldRunStartupCommandRef.current = false
-      // Small delay to ensure terminal is ready
-      setTimeout(() => {
-        writeToTerminal(terminalId, taskCreationCommand + '\r')
-      }, 100)
+      // Determine command: use plan mode if description provided, otherwise global default
+      let command = taskCreationCommand
+      if (planModeDescription) {
+        const prompt = `${taskName}: ${planModeDescription}`.replace(/"/g, '\\"')
+        command = `claude "${prompt}" --allow-dangerously-skip-permissions --permission-mode plan`
+      }
+      if (command) {
+        // Small delay to ensure terminal is ready
+        setTimeout(() => {
+          writeToTerminal(terminalId, command + '\r')
+        }, 100)
+      }
     }
 
     return () => {
@@ -229,7 +238,7 @@ export function TaskTerminal({ taskName, cwd, className }: TaskTerminalProps) {
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal])
+  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, planModeDescription, taskName])
 
   if (!cwd) {
     return (
