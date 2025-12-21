@@ -12,6 +12,7 @@ interface MergeToMainResponse {
   success: boolean
   baseBranch: string
   mergedBranch: string
+  pushed: boolean
 }
 
 interface MergeToMainError {
