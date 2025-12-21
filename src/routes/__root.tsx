@@ -16,7 +16,7 @@ function RootLayout() {
     <div className="flex h-screen flex-col bg-background text-foreground">
       <TaskSync />
       <Header />
-      <main className="flex-1 overflow-hidden">
+      <main className="isolate flex-1 overflow-hidden">
         <Outlet />
       </main>
     </div>
