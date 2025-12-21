@@ -178,7 +178,7 @@ export function DiffViewer({ taskId, worktreePath }: DiffViewerProps) {
         </label>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="font-mono text-xs">
 
         {lines.map((line, i) => (

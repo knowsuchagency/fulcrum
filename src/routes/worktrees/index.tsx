@@ -57,12 +57,25 @@ function formatRelativeTime(isoDate: string): string {
 function WorktreeCard({
   worktree,
   onDelete,
-  isDeleting,
 }: {
   worktree: Worktree
-  onDelete: (worktree: Worktree) => void
-  isDeleting: boolean
+  onDelete: (worktree: Worktree) => Promise<void>
 }) {
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      await onDelete(worktree)
+      setDialogOpen(false)
+    } catch {
+      // Keep dialog open on error so user can retry
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   return (
     <Card className="transition-colors hover:border-border/80">
       <CardContent className="flex items-start justify-between gap-4 py-4">
@@ -134,22 +147,17 @@ function WorktreeCard({
           </div>
         </div>
 
-        <AlertDialog>
+        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <AlertDialogTrigger
             render={
               <Button
                 variant="ghost"
                 size="icon-sm"
                 className="shrink-0 text-muted-foreground hover:text-destructive"
-                disabled={isDeleting}
               />
             }
           >
-            {isDeleting ? (
-              <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-            ) : (
-              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
-            )}
+            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -168,10 +176,18 @@ function WorktreeCard({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={() => onDelete(worktree)}>
-                Delete
-              </AlertDialogAction>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="gap-2"
+              >
+                {isDeleting && (
+                  <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                )}
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -184,7 +200,6 @@ function WorktreesView() {
   const { data, isLoading, error } = useWorktrees()
   const deleteWorktree = useDeleteWorktree()
   const [showOrphanedOnly, setShowOrphanedOnly] = useState(false)
-  const [deletingPath, setDeletingPath] = useState<string | null>(null)
 
   const filteredWorktrees = useMemo(() => {
     if (!data?.worktrees) return []
@@ -195,15 +210,10 @@ function WorktreesView() {
   }, [data?.worktrees, showOrphanedOnly])
 
   const handleDelete = async (worktree: Worktree) => {
-    setDeletingPath(worktree.path)
-    try {
-      await deleteWorktree.mutateAsync({
-        worktreePath: worktree.path,
-        repoPath: worktree.repoPath,
-      })
-    } finally {
-      setDeletingPath(null)
-    }
+    await deleteWorktree.mutateAsync({
+      worktreePath: worktree.path,
+      repoPath: worktree.repoPath,
+    })
   }
 
   return (
@@ -268,7 +278,6 @@ function WorktreesView() {
               key={worktree.path}
               worktree={worktree}
               onDelete={handleDelete}
-              isDeleting={deletingPath === worktree.path}
             />
           ))}
         </div>
