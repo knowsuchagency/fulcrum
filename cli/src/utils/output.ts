@@ -1,4 +1,4 @@
-import { ExitCodes, type ExitCode, type CliError } from './errors'
+import type { ExitCode, CliError } from './errors'
 
 interface SuccessResponse<T> {
   success: true
@@ -12,8 +12,6 @@ interface ErrorResponse {
     message: string
   }
 }
-
-type Response<T> = SuccessResponse<T> | ErrorResponse
 
 let prettyOutput = false
 

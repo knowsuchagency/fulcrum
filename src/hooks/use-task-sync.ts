@@ -13,13 +13,15 @@ function getWsUrl(): string {
   return `${protocol}//${window.location.host}/ws/terminal`
 }
 
+const MAX_RECONNECT_ATTEMPTS = 10
+const RECONNECT_INTERVAL = 2000
+
 export function useTaskSync() {
   const queryClient = useQueryClient()
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const reconnectAttemptsRef = useRef(0)
-  const maxReconnectAttempts = 10
-  const reconnectInterval = 2000
+  const connectRef = useRef<() => void>()
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
@@ -57,14 +59,19 @@ export function useTaskSync() {
         wsRef.current = null
       }
 
-      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttemptsRef.current++
-        reconnectTimeoutRef.current = setTimeout(connect, reconnectInterval)
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectRef.current?.()
+        }, RECONNECT_INTERVAL)
       }
     }
 
     newWs.onerror = () => {}
   }, [handleMessage])
+
+  // Keep connectRef in sync with connect
+  connectRef.current = connect
 
   useEffect(() => {
     connect()

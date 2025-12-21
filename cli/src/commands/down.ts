@@ -2,7 +2,7 @@ import { output } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import { readPid, removePid, isProcessRunning } from '../utils/process'
 
-export async function handleDownCommand(_flags: Record<string, string>) {
+export async function handleDownCommand() {
   const pid = readPid()
 
   if (!pid) {
