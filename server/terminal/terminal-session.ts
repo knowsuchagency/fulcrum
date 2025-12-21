@@ -13,6 +13,8 @@ export interface TerminalSessionOptions {
   rows: number
   cwd: string
   createdAt: number
+  tabId?: string
+  positionInTab?: number
   onData: (data: string) => void
   onExit: (exitCode: number) => void
 }
@@ -32,6 +34,10 @@ export class TerminalSession {
   private onData: (data: string) => void
   private onExit: (exitCode: number) => void
 
+  // Tab association
+  private _tabId?: string
+  private _positionInTab: number
+
   constructor(options: TerminalSessionOptions) {
     this.id = options.id
     this._name = options.name
@@ -39,6 +45,8 @@ export class TerminalSession {
     this.rows = options.rows
     this.cwd = options.cwd
     this.createdAt = options.createdAt
+    this._tabId = options.tabId
+    this._positionInTab = options.positionInTab ?? 0
     this.buffer = new BufferManager()
     this.buffer.setTerminalId(this.id)
     this.onData = options.onData
@@ -49,9 +57,25 @@ export class TerminalSession {
     return this._name
   }
 
+  get tabId(): string | undefined {
+    return this._tabId
+  }
+
+  get positionInTab(): number {
+    return this._positionInTab
+  }
+
   rename(newName: string): void {
     this._name = newName
     this.updateDb({ name: newName })
+  }
+
+  assignTab(tabId: string | null, positionInTab?: number): void {
+    this._tabId = tabId ?? undefined
+    if (positionInTab !== undefined) {
+      this._positionInTab = positionInTab
+    }
+    this.updateDb({ tabId, positionInTab: this._positionInTab })
   }
 
   // Create a new dtach session and attach to it
@@ -197,6 +221,8 @@ export class TerminalSession {
       cols: this.cols,
       rows: this.rows,
       createdAt: this.createdAt,
+      tabId: this._tabId,
+      positionInTab: this._positionInTab,
     }
   }
 
@@ -238,6 +264,8 @@ export class TerminalSession {
       rows: number
       status: string
       exitCode: number
+      tabId: string | null
+      positionInTab: number
     }>
   ): void {
     const now = new Date().toISOString()

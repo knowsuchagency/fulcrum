@@ -43,6 +43,8 @@ export class PTYManager {
           rows: record.rows,
           cwd: record.cwd,
           createdAt: new Date(record.createdAt).getTime(),
+          tabId: record.tabId ?? undefined,
+          positionInTab: record.positionInTab ?? 0,
           onData: (data) => this.callbacks.onData(record.id, data),
           onExit: (exitCode) => this.callbacks.onExit(record.id, exitCode),
         })
@@ -63,7 +65,14 @@ export class PTYManager {
     console.log(`[PTYManager] Restored ${this.sessions.size} terminals`)
   }
 
-  create(options: { name: string; cols: number; rows: number; cwd?: string }): TerminalInfo {
+  create(options: {
+    name: string
+    cols: number
+    rows: number
+    cwd?: string
+    tabId?: string
+    positionInTab?: number
+  }): TerminalInfo {
     // Check if dtach is available
     if (!DtachService.isAvailable()) {
       throw new Error('dtach is not installed')
@@ -83,6 +92,8 @@ export class PTYManager {
         rows: options.rows,
         tmuxSession: '', // Not used with dtach but required by schema
         status: 'running',
+        tabId: options.tabId,
+        positionInTab: options.positionInTab ?? 0,
         createdAt: now,
         updatedAt: now,
       })
@@ -96,6 +107,8 @@ export class PTYManager {
       rows: options.rows,
       cwd,
       createdAt: Date.now(),
+      tabId: options.tabId,
+      positionInTab: options.positionInTab,
       onData: (data) => this.callbacks.onData(id, data),
       onExit: (exitCode) => this.callbacks.onExit(id, exitCode),
     })
@@ -160,6 +173,16 @@ export class PTYManager {
     }
 
     session.rename(name)
+    return true
+  }
+
+  assignTab(terminalId: string, tabId: string | null, positionInTab?: number): boolean {
+    const session = this.sessions.get(terminalId)
+    if (!session) {
+      return false
+    }
+
+    session.assignTab(tabId, positionInTab)
     return true
   }
 

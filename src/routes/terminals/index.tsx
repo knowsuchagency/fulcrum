@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
-import { useTerminalTabs } from '@/hooks/use-terminal-tabs'
+import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { useTasks } from '@/hooks/use-tasks'
 import { useWorktreeBasePath } from '@/hooks/use-config'
 import { cn } from '@/lib/utils'
@@ -30,27 +30,32 @@ export const Route = createFileRoute('/terminals/')({
 function TerminalsView() {
   const {
     terminals,
+    tabs,
     connected,
     createTerminal,
     destroyTerminal,
     renameTerminal,
+    assignTerminalToTab,
+    createTab,
+    renameTab,
+    deleteTab,
     attachXterm,
     resizeTerminal,
     setupImagePaste,
   } = useTerminalWS()
 
-  const {
-    tabs,
-    activeTabId,
-    activeTab,
-    createTab,
-    renameTab,
-    deleteTab,
-    setActiveTab,
-    addTerminalToTab,
-    removeTerminalFromTab,
-    reconcileTerminals,
-  } = useTerminalTabs()
+  // Track active tab via server-persisted state
+  const { activeTabId, setActiveTab, isLoading: isViewStateLoading } = useTerminalViewState()
+
+  // Ensure activeTabId is valid - set to first tab if invalid
+  useEffect(() => {
+    if (tabs.length > 0 && !isViewStateLoading) {
+      const tabIds = tabs.map((t) => t.id)
+      if (!activeTabId || (!tabIds.includes(activeTabId) && activeTabId !== ALL_TASKS_TAB_ID)) {
+        setActiveTab(tabs[0].id)
+      }
+    }
+  }, [tabs, activeTabId, isViewStateLoading, setActiveTab])
 
   const { data: tasks = [] } = useTasks()
   const { data: worktreeBasePath } = useWorktreeBasePath()
@@ -103,22 +108,6 @@ function TerminalsView() {
   const pasteCleanupFnsRef = useRef<Map<string, () => void>>(new Map())
   const containerRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const terminalCountRef = useRef(0)
-  const prevTerminalIdsRef = useRef<string[]>([])
-
-  // Reconcile tabs with actual terminals when terminal list changes
-  useEffect(() => {
-    const currentIds = terminals.map((t) => t.id)
-    const prevIds = prevTerminalIdsRef.current
-
-    // Only reconcile if the terminal IDs actually changed
-    if (
-      currentIds.length !== prevIds.length ||
-      !currentIds.every((id) => prevIds.includes(id))
-    ) {
-      reconcileTerminals(currentIds)
-      prevTerminalIdsRef.current = currentIds
-    }
-  }, [terminals, reconcileTerminals])
 
   // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
   useEffect(() => {
@@ -152,38 +141,36 @@ function TerminalsView() {
           return new Date(taskB.createdAt).getTime() - new Date(taskA.createdAt).getTime()
         })
     }
-    return activeTab
-      ? terminals.filter((t) => activeTab.terminalIds.includes(t.id))
-      : []
-  }, [activeTabId, activeTab, terminals, activeTaskWorktrees, repoFilter, tasks])
+    // Filter terminals by tabId, sorted by positionInTab
+    return terminals
+      .filter((t) => t.tabId === activeTabId)
+      .sort((a, b) => (a.positionInTab ?? 0) - (b.positionInTab ?? 0))
+  }, [activeTabId, terminals, activeTaskWorktrees, repoFilter, tasks])
 
   const handleTerminalAdd = useCallback(() => {
     terminalCountRef.current++
+    // Calculate position for new terminal (append to end)
+    const terminalsInTab = terminals.filter((t) => t.tabId === activeTabId)
+    const positionInTab = terminalsInTab.length
     createTerminal({
       name: `Terminal ${terminalCountRef.current}`,
       cols: 80,
       rows: 24,
+      tabId: activeTabId,
+      positionInTab,
     })
-  }, [createTerminal])
+  }, [createTerminal, activeTabId, terminals])
 
-  // When a standalone terminal is created, add it to the active tab
-  // Task-related terminals (those with cwd matching a task worktree) should NOT be added to regular tabs
+  // Task-related terminals should not be in regular tabs - remove them if they are
   useEffect(() => {
-    const tabTerminalIds = tabs.flatMap((t) => t.terminalIds)
-
     for (const terminal of terminals) {
       const isTaskTerminal = terminal.cwd && allTaskWorktrees.has(terminal.cwd)
-      const isInTab = tabTerminalIds.includes(terminal.id)
-
-      if (isTaskTerminal && isInTab) {
+      if (isTaskTerminal && terminal.tabId) {
         // Remove task terminals from regular tabs - they should only appear in All Tasks
-        removeTerminalFromTab(terminal.id)
-      } else if (!isTaskTerminal && !isInTab) {
-        // Add standalone terminals to the active tab
-        addTerminalToTab(terminal.id)
+        assignTerminalToTab(terminal.id, null)
       }
     }
-  }, [terminals, tabs, addTerminalToTab, removeTerminalFromTab, allTaskWorktrees])
+  }, [terminals, allTaskWorktrees, assignTerminalToTab])
 
   // Set up image paste when container is available
   const trySetupImagePaste = useCallback(
@@ -215,10 +202,9 @@ function TerminalsView() {
         pasteCleanupFnsRef.current.delete(terminalId)
       }
       containerRefsMap.current.delete(terminalId)
-      removeTerminalFromTab(terminalId)
       destroyTerminal(terminalId)
     },
-    [destroyTerminal, removeTerminalFromTab]
+    [destroyTerminal]
   )
 
   const handleTerminalReady = useCallback(
@@ -253,21 +239,20 @@ function TerminalsView() {
   )
 
   const handleTabCreate = useCallback(() => {
-    createTab()
-  }, [createTab])
+    const tabCount = tabs.length
+    createTab(`Tab ${tabCount + 1}`)
+  }, [createTab, tabs.length])
 
   const handleTabDelete = useCallback(
     (tabId: string) => {
       // Destroy all terminals in this tab
-      const tab = tabs.find((t) => t.id === tabId)
-      if (tab) {
-        for (const terminalId of tab.terminalIds) {
-          handleTerminalClose(terminalId)
-        }
+      const terminalsInTab = terminals.filter((t) => t.tabId === tabId)
+      for (const terminal of terminalsInTab) {
+        handleTerminalClose(terminal.id)
       }
       deleteTab(tabId)
     },
-    [tabs, deleteTab, handleTerminalClose]
+    [terminals, deleteTab, handleTerminalClose]
   )
 
   // Convert our tabs to the format TerminalTabBar expects

@@ -2,6 +2,15 @@
 
 export type TerminalStatus = 'running' | 'exited' | 'error'
 
+// Tab info - tabs are first-class entities
+export interface TabInfo {
+  id: string
+  name: string
+  position: number
+  createdAt: number
+}
+
+// Terminal info - terminals can optionally belong to a tab
 export interface TerminalInfo {
   id: string
   name: string
@@ -11,9 +20,13 @@ export interface TerminalInfo {
   cols: number
   rows: number
   createdAt: number
+  tabId?: string // Which tab this terminal belongs to (nullable)
+  positionInTab?: number // Order within the tab
 }
 
 // Client -> Server messages
+
+// Terminal messages
 export interface TerminalCreateMessage {
   type: 'terminal:create'
   payload: {
@@ -21,6 +34,8 @@ export interface TerminalCreateMessage {
     cols: number
     rows: number
     cwd?: string
+    tabId?: string // Assign to tab on creation
+    positionInTab?: number
   }
 }
 
@@ -67,6 +82,51 @@ export interface TerminalRenameMessage {
   }
 }
 
+export interface TerminalAssignTabMessage {
+  type: 'terminal:assignTab'
+  payload: {
+    terminalId: string
+    tabId: string | null // null to unassign
+    positionInTab?: number
+  }
+}
+
+// Tab messages
+export interface TabCreateMessage {
+  type: 'tab:create'
+  payload: {
+    name: string
+    position?: number
+  }
+}
+
+export interface TabRenameMessage {
+  type: 'tab:rename'
+  payload: {
+    tabId: string
+    name: string
+  }
+}
+
+export interface TabDeleteMessage {
+  type: 'tab:delete'
+  payload: {
+    tabId: string
+  }
+}
+
+export interface TabReorderMessage {
+  type: 'tab:reorder'
+  payload: {
+    tabId: string
+    position: number
+  }
+}
+
+export interface TabsListMessage {
+  type: 'tabs:list'
+}
+
 export type ClientMessage =
   | TerminalCreateMessage
   | TerminalDestroyMessage
@@ -75,8 +135,15 @@ export type ClientMessage =
   | TerminalAttachMessage
   | TerminalsListMessage
   | TerminalRenameMessage
+  | TerminalAssignTabMessage
+  | TabCreateMessage
+  | TabRenameMessage
+  | TabDeleteMessage
+  | TabReorderMessage
+  | TabsListMessage
 
 // Server -> Client messages
+
 export interface TerminalCreatedMessage {
   type: 'terminal:created'
   payload: {
@@ -138,6 +205,53 @@ export interface TerminalDestroyedMessage {
   }
 }
 
+export interface TerminalTabAssignedMessage {
+  type: 'terminal:tabAssigned'
+  payload: {
+    terminalId: string
+    tabId: string | null
+    positionInTab: number
+  }
+}
+
+// Tab response messages
+export interface TabCreatedMessage {
+  type: 'tab:created'
+  payload: {
+    tab: TabInfo
+  }
+}
+
+export interface TabRenamedMessage {
+  type: 'tab:renamed'
+  payload: {
+    tabId: string
+    name: string
+  }
+}
+
+export interface TabDeletedMessage {
+  type: 'tab:deleted'
+  payload: {
+    tabId: string
+  }
+}
+
+export interface TabReorderedMessage {
+  type: 'tab:reordered'
+  payload: {
+    tabId: string
+    position: number
+  }
+}
+
+export interface TabsListResponseMessage {
+  type: 'tabs:list'
+  payload: {
+    tabs: TabInfo[]
+  }
+}
+
 export interface TaskUpdatedMessage {
   type: 'task:updated'
   payload: {
@@ -154,4 +268,10 @@ export type ServerMessage =
   | TerminalErrorMessage
   | TerminalRenamedMessage
   | TerminalDestroyedMessage
+  | TerminalTabAssignedMessage
+  | TabCreatedMessage
+  | TabRenamedMessage
+  | TabDeletedMessage
+  | TabReorderedMessage
+  | TabsListResponseMessage
   | TaskUpdatedMessage

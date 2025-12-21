@@ -1,6 +1,7 @@
 import type { WSContext, WSEvents } from 'hono/ws'
 import type { ClientMessage, ServerMessage } from '../types'
 import { getPTYManager } from '../terminal/pty-instance'
+import { getTabManager } from '../terminal/tab-manager'
 
 interface ClientData {
   id: string
@@ -51,12 +52,20 @@ export const terminalWebSocketHandlers: WSEvents = {
     clients.set(ws, clientData)
     console.log(`Client connected (${clients.size} total)`)
 
-    // Send list of existing terminals
+    // Send list of existing terminals and tabs
     const ptyManager = getPTYManager()
-    const terminals = ptyManager.listTerminals()
+    const tabManager = getTabManager()
+
+    // Ensure at least one tab exists
+    tabManager.ensureDefaultTab()
+
     sendTo(ws, {
       type: 'terminals:list',
-      payload: { terminals },
+      payload: { terminals: ptyManager.listTerminals() },
+    })
+    sendTo(ws, {
+      type: 'tabs:list',
+      payload: { tabs: tabManager.list() },
     })
   },
 
@@ -69,10 +78,12 @@ export const terminalWebSocketHandlers: WSEvents = {
         typeof evt.data === 'string' ? evt.data : new TextDecoder().decode(evt.data as ArrayBuffer)
       )
       const ptyManager = getPTYManager()
+      const tabManager = getTabManager()
 
       switch (message.type) {
+        // Terminal messages
         case 'terminal:create': {
-          const { name, cols, rows, cwd } = message.payload
+          const { name, cols, rows, cwd, tabId, positionInTab } = message.payload
 
           // Prevent duplicate terminals for same cwd
           if (cwd) {
@@ -88,7 +99,7 @@ export const terminalWebSocketHandlers: WSEvents = {
             }
           }
 
-          const terminal = ptyManager.create({ name, cols, rows, cwd })
+          const terminal = ptyManager.create({ name, cols, rows, cwd, tabId, positionInTab })
           clientData.attachedTerminals.add(terminal.id)
           broadcast({
             type: 'terminal:created',
@@ -150,6 +161,78 @@ export const terminalWebSocketHandlers: WSEvents = {
               },
             })
           }
+          break
+        }
+
+        case 'terminal:assignTab': {
+          const { terminalId, tabId, positionInTab } = message.payload
+          const success = ptyManager.assignTab(terminalId, tabId, positionInTab)
+          if (success) {
+            const info = ptyManager.getInfo(terminalId)
+            broadcast({
+              type: 'terminal:tabAssigned',
+              payload: {
+                terminalId,
+                tabId,
+                positionInTab: info?.positionInTab ?? 0,
+              },
+            })
+          }
+          break
+        }
+
+        // Tab messages
+        case 'tab:create': {
+          const { name, position } = message.payload
+          const tab = tabManager.create({ name, position })
+          broadcast({
+            type: 'tab:created',
+            payload: { tab },
+          })
+          break
+        }
+
+        case 'tab:rename': {
+          const { tabId, name } = message.payload
+          const success = tabManager.rename(tabId, name)
+          if (success) {
+            broadcast({
+              type: 'tab:renamed',
+              payload: { tabId, name },
+            })
+          }
+          break
+        }
+
+        case 'tab:delete': {
+          const { tabId } = message.payload
+          const success = tabManager.delete(tabId)
+          if (success) {
+            broadcast({
+              type: 'tab:deleted',
+              payload: { tabId },
+            })
+          }
+          break
+        }
+
+        case 'tab:reorder': {
+          const { tabId, position } = message.payload
+          const success = tabManager.reorder(tabId, position)
+          if (success) {
+            broadcast({
+              type: 'tab:reordered',
+              payload: { tabId, position },
+            })
+          }
+          break
+        }
+
+        case 'tabs:list': {
+          sendTo(ws, {
+            type: 'tabs:list',
+            payload: { tabs: tabManager.list() },
+          })
           break
         }
       }

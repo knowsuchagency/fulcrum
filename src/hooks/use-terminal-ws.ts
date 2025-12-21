@@ -22,6 +22,13 @@ async function uploadImage(file: File): Promise<string> {
 // Types matching server/types.ts
 export type TerminalStatus = 'running' | 'exited' | 'error'
 
+export interface TabInfo {
+  id: string
+  name: string
+  position: number
+  createdAt: number
+}
+
 export interface TerminalInfo {
   id: string
   name: string
@@ -31,6 +38,8 @@ export interface TerminalInfo {
   cols: number
   rows: number
   createdAt: number
+  tabId?: string
+  positionInTab?: number
 }
 
 type ServerMessage =
@@ -42,6 +51,12 @@ type ServerMessage =
   | { type: 'terminal:error'; payload: { terminalId?: string; error: string } }
   | { type: 'terminal:renamed'; payload: { terminalId: string; name: string } }
   | { type: 'terminal:destroyed'; payload: { terminalId: string } }
+  | { type: 'terminal:tabAssigned'; payload: { terminalId: string; tabId: string | null; positionInTab: number } }
+  | { type: 'tab:created'; payload: { tab: TabInfo } }
+  | { type: 'tab:renamed'; payload: { tabId: string; name: string } }
+  | { type: 'tab:deleted'; payload: { tabId: string } }
+  | { type: 'tab:reordered'; payload: { tabId: string; position: number } }
+  | { type: 'tabs:list'; payload: { tabs: TabInfo[] } }
 
 interface UseTerminalWSOptions {
   url?: string
@@ -49,14 +64,29 @@ interface UseTerminalWSOptions {
   maxReconnectAttempts?: number
 }
 
+interface CreateTerminalOptions {
+  name: string
+  cols: number
+  rows: number
+  cwd?: string
+  tabId?: string
+  positionInTab?: number
+}
+
 interface UseTerminalWSReturn {
   terminals: TerminalInfo[]
+  tabs: TabInfo[]
   connected: boolean
-  createTerminal: (options: { name: string; cols: number; rows: number; cwd?: string }) => void
+  createTerminal: (options: CreateTerminalOptions) => void
   destroyTerminal: (terminalId: string) => void
   writeToTerminal: (terminalId: string, data: string) => void
   resizeTerminal: (terminalId: string, cols: number, rows: number) => void
   renameTerminal: (terminalId: string, name: string) => void
+  assignTerminalToTab: (terminalId: string, tabId: string | null, positionInTab?: number) => void
+  createTab: (name: string, position?: number) => void
+  renameTab: (tabId: string, name: string) => void
+  deleteTab: (tabId: string) => void
+  reorderTab: (tabId: string, position: number) => void
   attachXterm: (terminalId: string, xterm: XTerm) => () => void
   setupImagePaste: (container: HTMLElement, terminalId: string) => () => void
 }
@@ -77,6 +107,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   } = options
 
   const [terminals, setTerminals] = useState<TerminalInfo[]>([])
+  const [tabs, setTabs] = useState<TabInfo[]>([])
   const [connected, setConnected] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -96,6 +127,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
       const message: ServerMessage = JSON.parse(event.data)
 
       switch (message.type) {
+        // Terminal messages
         case 'terminals:list':
           setTerminals(message.payload.terminals)
           break
@@ -147,6 +179,51 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
         case 'terminal:destroyed':
           xtermMapRef.current.delete(message.payload.terminalId)
           setTerminals((prev) => prev.filter((t) => t.id !== message.payload.terminalId))
+          break
+
+        case 'terminal:tabAssigned':
+          setTerminals((prev) =>
+            prev.map((t) =>
+              t.id === message.payload.terminalId
+                ? {
+                    ...t,
+                    tabId: message.payload.tabId ?? undefined,
+                    positionInTab: message.payload.positionInTab,
+                  }
+                : t
+            )
+          )
+          break
+
+        // Tab messages
+        case 'tabs:list':
+          setTabs(message.payload.tabs)
+          break
+
+        case 'tab:created':
+          setTabs((prev) => [...prev, message.payload.tab].sort((a, b) => a.position - b.position))
+          break
+
+        case 'tab:renamed':
+          setTabs((prev) =>
+            prev.map((t) =>
+              t.id === message.payload.tabId ? { ...t, name: message.payload.name } : t
+            )
+          )
+          break
+
+        case 'tab:deleted':
+          setTabs((prev) => prev.filter((t) => t.id !== message.payload.tabId))
+          break
+
+        case 'tab:reordered':
+          setTabs((prev) =>
+            prev
+              .map((t) =>
+                t.id === message.payload.tabId ? { ...t, position: message.payload.position } : t
+              )
+              .sort((a, b) => a.position - b.position)
+          )
           break
       }
     } catch (error) {
@@ -204,8 +281,9 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     }
   }, [connect])
 
+  // Terminal operations
   const createTerminal = useCallback(
-    (options: { name: string; cols: number; rows: number; cwd?: string }) => {
+    (options: CreateTerminalOptions) => {
       send({
         type: 'terminal:create',
         payload: options,
@@ -251,6 +329,57 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
       send({
         type: 'terminal:rename',
         payload: { terminalId, name },
+      })
+    },
+    [send]
+  )
+
+  const assignTerminalToTab = useCallback(
+    (terminalId: string, tabId: string | null, positionInTab?: number) => {
+      send({
+        type: 'terminal:assignTab',
+        payload: { terminalId, tabId, positionInTab },
+      })
+    },
+    [send]
+  )
+
+  // Tab operations
+  const createTab = useCallback(
+    (name: string, position?: number) => {
+      send({
+        type: 'tab:create',
+        payload: { name, position },
+      })
+    },
+    [send]
+  )
+
+  const renameTab = useCallback(
+    (tabId: string, name: string) => {
+      send({
+        type: 'tab:rename',
+        payload: { tabId, name },
+      })
+    },
+    [send]
+  )
+
+  const deleteTab = useCallback(
+    (tabId: string) => {
+      send({
+        type: 'tab:delete',
+        payload: { tabId },
+      })
+    },
+    [send]
+  )
+
+  const reorderTab = useCallback(
+    (tabId: string, position: number) => {
+      send({
+        type: 'tab:reorder',
+        payload: { tabId, position },
       })
     },
     [send]
@@ -319,12 +448,18 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
   return {
     terminals,
+    tabs,
     connected,
     createTerminal,
     destroyTerminal,
     writeToTerminal,
     resizeTerminal,
     renameTerminal,
+    assignTerminalToTab,
+    createTab,
+    renameTab,
+    deleteTab,
+    reorderTab,
     attachXterm,
     setupImagePaste,
   }
