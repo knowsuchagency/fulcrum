@@ -75,6 +75,7 @@ interface CreateTerminalOptions {
 
 interface UseTerminalWSReturn {
   terminals: TerminalInfo[]
+  terminalsLoaded: boolean
   tabs: TabInfo[]
   connected: boolean
   createTerminal: (options: CreateTerminalOptions) => void
@@ -107,6 +108,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   } = options
 
   const [terminals, setTerminals] = useState<TerminalInfo[]>([])
+  const [terminalsLoaded, setTerminalsLoaded] = useState(false)
   const [tabs, setTabs] = useState<TabInfo[]>([])
   const [connected, setConnected] = useState(false)
 
@@ -130,6 +132,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
         // Terminal messages
         case 'terminals:list':
           setTerminals(message.payload.terminals)
+          setTerminalsLoaded(true)
           break
 
         case 'terminal:created':
@@ -250,6 +253,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
     newWs.onclose = () => {
       setConnected(false)
+      setTerminalsLoaded(false)
       // Only clear ref if this is still the current WebSocket
       if (wsRef.current === newWs) {
         wsRef.current = null
@@ -448,6 +452,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
   return {
     terminals,
+    terminalsLoaded,
     tabs,
     connected,
     createTerminal,
