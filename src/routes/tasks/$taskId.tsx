@@ -267,7 +267,7 @@ function TaskView() {
             </div>
 
             <TabsContent value="diff" className="flex-1 overflow-hidden">
-              <DiffViewer worktreePath={task.worktreePath} />
+              <DiffViewer taskId={task.id} worktreePath={task.worktreePath} />
             </TabsContent>
 
             <TabsContent value="browser" className="flex-1 overflow-hidden">

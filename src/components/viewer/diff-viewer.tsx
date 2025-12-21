@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useGitDiff } from '@/hooks/use-filesystem'
+import { useDiffOptions } from '@/hooks/use-diff-options'
 import { cn } from '@/lib/utils'
 
 interface DiffLine {
@@ -54,13 +55,13 @@ function parseDiff(diffText: string): DiffLine[] {
 }
 
 interface DiffViewerProps {
+  taskId: string
   worktreePath: string | null
 }
 
-export function DiffViewer({ worktreePath }: DiffViewerProps) {
-  const [wrap, setWrap] = useState(false)
-  const [ignoreWhitespace, setIgnoreWhitespace] = useState(false)
-  const [includeUntracked, setIncludeUntracked] = useState(false)
+export function DiffViewer({ taskId, worktreePath }: DiffViewerProps) {
+  const { options, setOption } = useDiffOptions(taskId)
+  const { wrap, ignoreWhitespace, includeUntracked } = options
   const { data, isLoading, error } = useGitDiff(worktreePath, { ignoreWhitespace, includeUntracked })
 
   const lines = useMemo(() => {
@@ -124,7 +125,7 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
                   <input
                     type="checkbox"
                     checked={includeUntracked}
-                    onChange={(e) => setIncludeUntracked(e.target.checked)}
+                    onChange={(e) => setOption('includeUntracked', e.target.checked)}
                     className="w-4 h-3"
                   />
                   <span>Show untracked files</span>
@@ -152,7 +153,7 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
           <input
             type="checkbox"
             checked={wrap}
-            onChange={(e) => setWrap(e.target.checked)}
+            onChange={(e) => setOption('wrap', e.target.checked)}
             className="w-3 h-3"
           />
           Wrap
@@ -161,7 +162,7 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
           <input
             type="checkbox"
             checked={ignoreWhitespace}
-            onChange={(e) => setIgnoreWhitespace(e.target.checked)}
+            onChange={(e) => setOption('ignoreWhitespace', e.target.checked)}
             className="w-3 h-3"
           />
           Ignore whitespace
@@ -170,7 +171,7 @@ export function DiffViewer({ worktreePath }: DiffViewerProps) {
           <input
             type="checkbox"
             checked={includeUntracked}
-            onChange={(e) => setIncludeUntracked(e.target.checked)}
+            onChange={(e) => setOption('includeUntracked', e.target.checked)}
             className="w-3 h-3"
           />
           Untracked

@@ -4,6 +4,18 @@ export type TaskStatus =
   | 'DONE'
   | 'CANCELLED'
 
+export interface DiffOptions {
+  wrap: boolean
+  ignoreWhitespace: boolean
+  includeUntracked: boolean
+}
+
+export interface ViewState {
+  activeTab: 'diff' | 'browser'
+  browserUrl: string
+  diffOptions: DiffOptions
+}
+
 export interface Task {
   id: string
   title: string
@@ -15,6 +27,7 @@ export interface Task {
   baseBranch: string
   branch: string | null
   worktreePath: string | null
+  viewState: ViewState | null
   createdAt: string
   updatedAt: string
 }

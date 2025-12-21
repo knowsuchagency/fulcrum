@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { Task, TaskStatus } from '@/types'
+import type { Task, TaskStatus, ViewState } from '@/types'
 
 // Use relative URLs - works with both Vite dev proxy and production
 const API_BASE = ''
@@ -92,7 +92,7 @@ export function useUpdateTask() {
       updates,
     }: {
       taskId: string
-      updates: Partial<Pick<Task, 'title' | 'description' | 'status'>>
+      updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'viewState'>>
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks/${taskId}`, {
         method: 'PATCH',

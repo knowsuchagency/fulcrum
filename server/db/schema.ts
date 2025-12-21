@@ -11,6 +11,7 @@ export const tasks = sqliteTable('tasks', {
   baseBranch: text('base_branch').notNull(),
   branch: text('branch'),
   worktreePath: text('worktree_path'),
+  viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
