@@ -104,27 +104,25 @@ function KanbanViewContent() {
           <>
             <h1 className="text-sm font-medium">Tasks</h1>
             <div className="flex items-center gap-2">
-              {repoNames.length > 1 && (
-                <Select
-                  value={repoFilter ?? ''}
-                  onValueChange={(v) => setRepoFilter(v || null)}
-                >
-                  <SelectTrigger size="sm" className="min-w-[120px]">
-                    <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
-                    <SelectValue>
-                      {repoFilter || 'All Repos'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[200px]">
-                    <SelectItem value="">All Repos</SelectItem>
-                    {repoNames.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select
+                value={repoFilter ?? ''}
+                onValueChange={(v) => setRepoFilter(v || null)}
+              >
+                <SelectTrigger size="sm" className="min-w-[120px]">
+                  <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
+                  <SelectValue>
+                    {repoFilter || 'All Repos'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="min-w-[200px]">
+                  <SelectItem value="">All Repos</SelectItem>
+                  {repoNames.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button variant="ghost" size="sm" onClick={() => setSelectMode(true)}>
                 <HugeiconsIcon icon={CheckListIcon} size={14} strokeWidth={2} data-slot="icon" />
                 Select
