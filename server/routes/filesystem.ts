@@ -318,4 +318,41 @@ app.get('/read', (c) => {
   }
 })
 
+// GET /api/fs/is-git-repo?path=/path/to/check
+app.get('/is-git-repo', (c) => {
+  let dirPath = c.req.query('path')
+
+  if (!dirPath) {
+    return c.json({ error: 'path parameter is required' }, 400)
+  }
+
+  // Expand ~ to home directory
+  if (dirPath.startsWith('~')) {
+    dirPath = path.join(os.homedir(), dirPath.slice(1))
+  }
+
+  // Resolve to absolute path
+  dirPath = path.resolve(dirPath)
+
+  try {
+    if (!fs.existsSync(dirPath)) {
+      return c.json({ error: 'Path does not exist' }, 404)
+    }
+
+    const stat = fs.statSync(dirPath)
+    if (!stat.isDirectory()) {
+      return c.json({ error: 'Path is not a directory' }, 400)
+    }
+
+    const isRepo = isGitRepo(dirPath)
+
+    return c.json({
+      path: dirPath,
+      isGitRepo: isRepo,
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to check path' }, 500)
+  }
+})
+
 export default app

@@ -4,6 +4,7 @@ import { eq, asc } from 'drizzle-orm'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
+import { glob } from 'glob'
 import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
 import { broadcast } from '../websocket/terminal-ws'
 
@@ -72,6 +73,38 @@ function destroyTerminalsForWorktree(worktreePath: string): void {
     }
   } catch {
     // PTY manager might not be initialized yet, ignore
+  }
+}
+
+// Copy files to worktree based on glob patterns
+function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: string): void {
+  const patternList = patterns
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  for (const pattern of patternList) {
+    try {
+      const files = glob.sync(pattern, { cwd: repoPath, nodir: true })
+      for (const file of files) {
+        const srcPath = path.join(repoPath, file)
+        const destPath = path.join(worktreePath, file)
+        const destDir = path.dirname(destPath)
+
+        // Skip if file already exists (don't overwrite)
+        if (fs.existsSync(destPath)) continue
+
+        // Create destination directory if needed
+        if (!fs.existsSync(destDir)) {
+          fs.mkdirSync(destDir, { recursive: true })
+        }
+
+        fs.copyFileSync(srcPath, destPath)
+      }
+    } catch (err) {
+      console.error(`Failed to copy files matching pattern "${pattern}":`, err)
+      // Continue with other patterns
+    }
   }
 }
 
@@ -146,7 +179,11 @@ app.get('/', (c) => {
 app.post('/', async (c) => {
   try {
     const body = await c.req.json<
-      Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & { initializeVibora?: boolean }
+      Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & {
+        initializeVibora?: boolean
+        copyFiles?: string
+        startupScript?: string
+      }
     >()
 
     // Get max position for the status
@@ -183,6 +220,16 @@ app.post('/', async (c) => {
       // Initialize worktree for Vibora CLI integration (default: true)
       if (body.initializeVibora !== false) {
         initializeWorktreeForVibora(body.worktreePath)
+      }
+
+      // Copy files if patterns provided
+      if (body.copyFiles) {
+        try {
+          copyFilesToWorktree(body.repoPath, body.worktreePath, body.copyFiles)
+        } catch (err) {
+          console.error('Failed to copy files:', err)
+          // Non-fatal: continue with task creation
+        }
       }
     }
 

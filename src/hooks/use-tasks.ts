@@ -47,6 +47,9 @@ export function useCreateTask() {
       branch: string
       worktreePath: string
       prUrl?: string | null
+      initializeVibora?: boolean
+      copyFiles?: string
+      startupScript?: string
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks`, {
         method: 'POST',

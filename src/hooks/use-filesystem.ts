@@ -144,3 +144,14 @@ export function useFileContent(
     enabled: !!worktreePath && !!filePath,
   })
 }
+
+interface IsGitRepoResponse {
+  path: string
+  isGitRepo: boolean
+}
+
+export async function checkIsGitRepo(path: string): Promise<IsGitRepoResponse> {
+  return fetchJSON<IsGitRepoResponse>(
+    `${API_BASE}/api/fs/is-git-repo?path=${encodeURIComponent(path)}`
+  )
+}

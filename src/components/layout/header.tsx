@@ -1,7 +1,13 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { GridViewIcon, CommandLineIcon, Settings01Icon, FolderSyncIcon } from '@hugeicons/core-free-icons'
+import {
+  GridViewIcon,
+  CommandLineIcon,
+  Settings01Icon,
+  FolderSyncIcon,
+  Database01Icon,
+} from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
 export function Header() {
@@ -56,6 +62,20 @@ export function Header() {
                 data-slot="icon"
               />
               Worktrees
+            </Button>
+          </Link>
+          <Link to="/repositories">
+            <Button
+              variant={pathname.startsWith('/repositories') ? 'secondary' : 'ghost'}
+              size="sm"
+            >
+              <HugeiconsIcon
+                icon={Database01Icon}
+                size={16}
+                strokeWidth={2}
+                data-slot="icon"
+              />
+              Repositories
             </Button>
           </Link>
         </nav>
