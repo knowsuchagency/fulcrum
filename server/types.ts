@@ -148,6 +148,7 @@ export interface TerminalCreatedMessage {
   type: 'terminal:created'
   payload: {
     terminal: TerminalInfo
+    isNew: boolean // true if newly created, false if returning existing terminal
   }
 }
 

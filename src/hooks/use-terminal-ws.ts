@@ -43,7 +43,7 @@ export interface TerminalInfo {
 }
 
 type ServerMessage =
-  | { type: 'terminal:created'; payload: { terminal: TerminalInfo } }
+  | { type: 'terminal:created'; payload: { terminal: TerminalInfo; isNew: boolean } }
   | { type: 'terminal:output'; payload: { terminalId: string; data: string } }
   | { type: 'terminal:exit'; payload: { terminalId: string; exitCode: number } }
   | { type: 'terminal:attached'; payload: { terminalId: string; buffer: string } }
@@ -78,6 +78,7 @@ interface UseTerminalWSReturn {
   terminalsLoaded: boolean
   tabs: TabInfo[]
   connected: boolean
+  newTerminalIds: Set<string>
   createTerminal: (options: CreateTerminalOptions) => void
   destroyTerminal: (terminalId: string) => void
   writeToTerminal: (terminalId: string, data: string) => void
@@ -116,6 +117,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   const reconnectAttemptsRef = useRef(0)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const xtermMapRef = useRef<Map<string, XTerm>>(new Map())
+  const newTerminalIdsRef = useRef<Set<string>>(new Set())
   const connectRef = useRef<() => void>(() => {})
 
   const send = useCallback((message: object) => {
@@ -137,6 +139,9 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
         case 'terminal:created':
           setTerminals((prev) => [...prev, message.payload.terminal])
+          if (message.payload.isNew) {
+            newTerminalIdsRef.current.add(message.payload.terminal.id)
+          }
           break
 
         case 'terminal:output': {
@@ -455,6 +460,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     terminalsLoaded,
     tabs,
     connected,
+    newTerminalIds: newTerminalIdsRef.current,
     createTerminal,
     destroyTerminal,
     writeToTerminal,
