@@ -552,4 +552,184 @@ app.post('/sync', async (c) => {
   }
 })
 
+// POST /api/git/merge-to-main - Merge worktree branch into base branch
+app.post('/merge-to-main', async (c) => {
+  try {
+    const body = await c.req.json<{
+      repoPath: string
+      worktreePath: string
+      baseBranch?: string
+    }>()
+
+    const { repoPath, worktreePath, baseBranch } = body
+
+    if (!repoPath || !worktreePath) {
+      return c.json({ error: 'Missing required fields: repoPath, worktreePath' }, 400)
+    }
+
+    // Verify paths exist
+    if (!fs.existsSync(repoPath)) {
+      return c.json({ error: 'Repository path does not exist' }, 404)
+    }
+    if (!fs.existsSync(worktreePath)) {
+      return c.json({ error: 'Worktree path does not exist' }, 404)
+    }
+
+    // Check for uncommitted changes in worktree
+    try {
+      const status = gitExec(worktreePath, 'status --porcelain')
+      if (status.trim()) {
+        return c.json({
+          error: 'Uncommitted changes in worktree. Please commit or stash before merging.',
+          hasUncommittedChanges: true,
+        }, 400)
+      }
+    } catch {
+      // Continue if status check fails
+    }
+
+    // Get the worktree branch name
+    let worktreeBranch: string
+    try {
+      worktreeBranch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
+    } catch (err) {
+      return c.json({
+        error: 'Failed to determine worktree branch',
+      }, 500)
+    }
+
+    // Detect default branch
+    let defaultBranch = baseBranch || 'main'
+    if (!baseBranch) {
+      try {
+        gitExec(repoPath, 'rev-parse --verify master')
+        defaultBranch = 'master'
+      } catch {
+        defaultBranch = 'main'
+      }
+    }
+
+    // Save current branch in parent repo
+    let originalBranch: string
+    try {
+      originalBranch = gitExec(repoPath, 'rev-parse --abbrev-ref HEAD')
+    } catch {
+      originalBranch = defaultBranch
+    }
+
+    // Check for uncommitted changes in parent repo
+    try {
+      const parentStatus = gitExec(repoPath, 'status --porcelain')
+      if (parentStatus.trim()) {
+        return c.json({
+          error: 'Uncommitted changes in parent repository. Please commit or stash before merging.',
+          hasUncommittedChanges: true,
+        }, 400)
+      }
+    } catch {
+      // Continue if status check fails
+    }
+
+    try {
+      // Fetch latest from origin
+      gitExec(repoPath, 'fetch origin')
+
+      // Checkout the base branch
+      if (originalBranch !== defaultBranch) {
+        gitExec(repoPath, `checkout ${defaultBranch}`)
+      }
+
+      // Pull latest changes
+      try {
+        gitExec(repoPath, 'pull')
+      } catch {
+        // Ignore pull errors, we'll try to merge anyway
+      }
+
+      // Attempt the merge
+      try {
+        gitExec(repoPath, `merge --no-ff ${worktreeBranch}`)
+      } catch (mergeErr) {
+        // Check if it's a merge conflict
+        try {
+          const mergeStatus = gitExec(repoPath, 'status')
+          if (mergeStatus.includes('Unmerged paths') || mergeStatus.includes('fix conflicts')) {
+            // Get list of conflicting files
+            let conflictFiles: string[] = []
+            try {
+              const conflictOutput = gitExec(repoPath, 'diff --name-only --diff-filter=U')
+              conflictFiles = conflictOutput.split('\n').filter(f => f.trim())
+            } catch {
+              // Ignore if we can't get conflict files
+            }
+
+            // Abort the merge
+            gitExec(repoPath, 'merge --abort')
+
+            // Restore original branch if needed
+            if (originalBranch !== defaultBranch) {
+              try {
+                gitExec(repoPath, `checkout ${originalBranch}`)
+              } catch {
+                // Ignore checkout errors
+              }
+            }
+
+            return c.json({
+              error: 'Merge conflict detected. Merge has been aborted.',
+              hasConflicts: true,
+              conflictFiles,
+            }, 409)
+          }
+        } catch {
+          // Ignore status check errors
+        }
+
+        // Restore original branch if needed
+        if (originalBranch !== defaultBranch) {
+          try {
+            gitExec(repoPath, `checkout ${originalBranch}`)
+          } catch {
+            // Ignore checkout errors
+          }
+        }
+
+        return c.json({
+          error: mergeErr instanceof Error ? mergeErr.message : 'Failed to merge',
+        }, 500)
+      }
+
+      // Restore original branch if it was different
+      if (originalBranch !== defaultBranch) {
+        try {
+          gitExec(repoPath, `checkout ${originalBranch}`)
+        } catch {
+          // Ignore checkout errors
+        }
+      }
+
+      return c.json({
+        success: true,
+        baseBranch: defaultBranch,
+        mergedBranch: worktreeBranch,
+      })
+    } catch (err) {
+      // Restore original branch on any error
+      if (originalBranch !== defaultBranch) {
+        try {
+          gitExec(repoPath, `checkout ${originalBranch}`)
+        } catch {
+          // Ignore checkout errors
+        }
+      }
+
+      return c.json({
+        error: err instanceof Error ? err.message : 'Failed to merge',
+      }, 500)
+    }
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to merge' }, 500)
+  }
+})
+
 export default app
