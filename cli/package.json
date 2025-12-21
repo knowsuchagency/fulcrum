@@ -1,0 +1,15 @@
+{
+  "name": "@vibora/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "vibora": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.14",
+    "typescript": "~5.9.3"
+  }
+}

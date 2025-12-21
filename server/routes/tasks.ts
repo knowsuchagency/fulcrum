@@ -5,6 +5,7 @@ import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
+import { broadcast } from '../websocket/terminal-ws'
 
 // Helper to create git worktree
 function createGitWorktree(
@@ -74,6 +75,53 @@ function destroyTerminalsForWorktree(worktreePath: string): void {
   }
 }
 
+// Initialize worktree with CLAUDE.local.md for Vibora CLI integration
+function initializeWorktreeForVibora(worktreePath: string): void {
+  const claudeLocalPath = path.join(worktreePath, 'CLAUDE.local.md')
+  const gitignorePath = path.join(worktreePath, '.gitignore')
+
+  const viboraSection = `
+## Vibora Task Management
+
+You are working inside a Vibora task worktree. Use the \`vibora\` CLI to manage this task:
+
+\`\`\`bash
+# View current task info
+vibora current-task
+
+# Update task status when work is complete
+vibora current-task review    # Ready for review
+vibora current-task done      # Task complete
+\`\`\`
+
+When you complete the assigned work, run \`vibora current-task review\` to mark it for review.
+`
+
+  // Handle CLAUDE.local.md - create or append
+  let claudeContent = ''
+  if (fs.existsSync(claudeLocalPath)) {
+    claudeContent = fs.readFileSync(claudeLocalPath, 'utf-8')
+  }
+
+  if (!claudeContent.includes('## Vibora Task Management')) {
+    // Append with proper spacing
+    const separator = claudeContent && !claudeContent.endsWith('\n') ? '\n' : ''
+    fs.writeFileSync(claudeLocalPath, claudeContent + separator + viboraSection)
+  }
+
+  // Handle .gitignore - add CLAUDE.local.md if not present
+  let gitignoreContent = ''
+  if (fs.existsSync(gitignorePath)) {
+    gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8')
+  }
+
+  const lines = gitignoreContent.split('\n')
+  if (!lines.some((line) => line.trim() === 'CLAUDE.local.md')) {
+    const separator = gitignoreContent && !gitignoreContent.endsWith('\n') ? '\n' : ''
+    fs.writeFileSync(gitignorePath, gitignoreContent + separator + 'CLAUDE.local.md\n')
+  }
+}
+
 const app = new Hono()
 
 // Helper to parse viewState JSON from database
@@ -93,7 +141,9 @@ app.get('/', (c) => {
 // POST /api/tasks - Create task
 app.post('/', async (c) => {
   try {
-    const body = await c.req.json<Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'>>()
+    const body = await c.req.json<
+      Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & { initializeVibora?: boolean }
+    >()
 
     // Get max position for the status
     const existingTasks = db
@@ -125,10 +175,16 @@ app.post('/', async (c) => {
       if (!result.success) {
         return c.json({ error: `Failed to create worktree: ${result.error}` }, 500)
       }
+
+      // Initialize worktree for Vibora CLI integration (default: true)
+      if (body.initializeVibora !== false) {
+        initializeWorktreeForVibora(body.worktreePath)
+      }
     }
 
     db.insert(tasks).values(newTask).run()
     const created = db.select().from(tasks).where(eq(tasks.id, newTask.id)).get()
+    broadcast({ type: 'task:updated', payload: { taskId: newTask.id } })
     return c.json(created ? parseViewState(created) : null, 201)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to create task' }, 400)
@@ -174,6 +230,7 @@ app.delete('/bulk', async (c) => {
       }
 
       db.delete(tasks).where(eq(tasks.id, id)).run()
+      broadcast({ type: 'task:updated', payload: { taskId: id } })
       deletedCount++
     }
 
@@ -218,6 +275,7 @@ app.patch('/:id', async (c) => {
       .run()
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
+    broadcast({ type: 'task:updated', payload: { taskId: id } })
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task' }, 400)
@@ -256,6 +314,7 @@ app.delete('/:id', (c) => {
   }
 
   db.delete(tasks).where(eq(tasks.id, id)).run()
+  broadcast({ type: 'task:updated', payload: { taskId: id } })
   return c.json({ success: true })
 })
 
@@ -338,6 +397,7 @@ app.patch('/:id/status', async (c) => {
       .run()
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
+    broadcast({ type: 'task:updated', payload: { taskId: id } })
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)
