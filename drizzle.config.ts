@@ -10,6 +10,9 @@ function expandPath(p: string): string {
 }
 
 function getDbPath(): string {
+  if (process.env.VIBORA_DATABASE_PATH) {
+    return expandPath(process.env.VIBORA_DATABASE_PATH)
+  }
   if (process.env.VIBORA_DIR) {
     return path.join(expandPath(process.env.VIBORA_DIR), 'vibora.db')
   }

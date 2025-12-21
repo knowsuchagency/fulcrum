@@ -69,12 +69,42 @@ export async function handleCurrentTaskCommand(
     return
   }
 
+  // Handle Linear ticket association
+  if (action === 'linear') {
+    const linearUrl = rest[0]
+    if (!linearUrl) {
+      throw new CliError(
+        'MISSING_LINEAR_URL',
+        'Usage: vibora current-task linear <url>',
+        ExitCodes.INVALID_ARGS
+      )
+    }
+
+    // Extract ticket ID from URL
+    const ticketId = linearUrl.match(/\/issue\/([A-Z]+-\d+)/i)?.[1]
+    if (!ticketId) {
+      throw new CliError(
+        'INVALID_LINEAR_URL',
+        'Invalid Linear URL. Expected format: https://linear.app/team/issue/TEAM-123',
+        ExitCodes.INVALID_ARGS
+      )
+    }
+
+    const task = await findCurrentTask(client, pathOverride)
+    const updatedTask = await client.updateTask(task.id, {
+      linearTicketId: ticketId,
+      linearTicketUrl: linearUrl,
+    })
+    output(updatedTask)
+    return
+  }
+
   // Handle status change actions
   const newStatus = STATUS_MAP[action]
   if (!newStatus) {
     throw new CliError(
       'INVALID_ACTION',
-      `Unknown action: ${action}. Valid actions: done, review, cancel, in-progress, pr`,
+      `Unknown action: ${action}. Valid actions: done, review, cancel, in-progress, pr, linear`,
       ExitCodes.INVALID_ARGS
     )
   }

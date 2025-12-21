@@ -52,6 +52,8 @@ export interface Task {
   worktreePath: string | null
   viewState: ViewState | null
   prUrl: string | null
+  linearTicketId: string | null
+  linearTicketUrl: string | null
   createdAt: string
   updatedAt: string
 }

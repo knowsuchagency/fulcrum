@@ -13,6 +13,7 @@ export interface Settings {
   sshPort: number
   basicAuthUsername: string | null
   basicAuthPassword: string | null
+  linearApiKey: string | null
 }
 
 // Default settings
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: Settings = {
   sshPort: 22,
   basicAuthUsername: null,
   basicAuthPassword: null,
+  linearApiKey: null,
 }
 
 // Expand tilde in path
@@ -122,6 +124,7 @@ export function getSettings(): Settings {
     sshPort: parsed.sshPort ?? DEFAULT_SETTINGS.sshPort,
     basicAuthUsername: parsed.basicAuthUsername ?? null,
     basicAuthPassword: parsed.basicAuthPassword ?? null,
+    linearApiKey: parsed.linearApiKey ?? null,
   }
 
   // Persist missing keys back to file (only file settings, not env overrides)
@@ -148,6 +151,7 @@ export function getSettings(): Settings {
     sshPort: !isNaN(sshPortEnv) && sshPortEnv > 0 ? sshPortEnv : fileSettings.sshPort,
     basicAuthUsername: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.basicAuthUsername,
     basicAuthPassword: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.basicAuthPassword,
+    linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.linearApiKey,
   }
 }
 
