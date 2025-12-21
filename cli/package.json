@@ -5,6 +5,16 @@
   "bin": {
     "vibora": "./src/index.ts"
   },
+  "files": [
+    "src/",
+    "server/",
+    "lib/",
+    "dist/",
+    "drizzle/"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },

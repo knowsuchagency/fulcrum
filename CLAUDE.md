@@ -14,12 +14,41 @@ All commands are mise tasks. Run `mise tasks` to list available commands.
 ```bash
 mise run dev          # Start frontend and backend dev servers
 mise run build        # Build for production
+mise run up           # Build and start production server as daemon
+mise run down         # Stop the daemon server
 mise run check        # Run all checks (lint + typecheck)
 mise run lint         # Run ESLint
 mise run typecheck    # Check TypeScript types
 mise run db:push      # Sync schema to database
 mise run db:studio    # Open Drizzle Studio GUI
+mise run cli:build    # Build CLI package for npm distribution
 ```
+
+## CLI
+
+The `@vibora/cli` package provides a global CLI for running vibora as a daemon:
+
+```bash
+vibora up             # Start the bundled server as daemon
+vibora down           # Stop the daemon
+vibora status         # Check if server is running
+vibora tasks          # List/manage tasks
+```
+
+The CLI runs a pre-bundled version of vibora (frontend + server) and can be run from any directory.
+
+### Building the CLI
+
+```bash
+mise run cli:build    # Bundle server, copy frontend, generate migrations
+mise run cli:publish  # Publish to npm (runs cli:build first)
+```
+
+The built CLI package includes:
+- `cli/server/index.js` - Bundled server
+- `cli/dist/` - Pre-built frontend assets
+- `cli/drizzle/` - SQL migrations
+- `cli/lib/librust_pty.so` - Native PTY library
 
 ## Architecture
 
@@ -63,6 +92,11 @@ server/
   websocket/       # WebSocket protocol for terminal I/O (/ws/terminal)
   db/              # Drizzle schema and initialization
   lib/             # Shared utilities (settings, etc.)
+cli/
+  src/             # CLI source (commands, utils)
+  server/          # Bundled server (generated)
+  dist/            # Frontend build (generated)
+  drizzle/         # SQL migrations (generated)
 ```
 
 ## Configuration

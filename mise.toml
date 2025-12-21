@@ -84,3 +84,102 @@ run = "bun link"
 [tasks."cli:typecheck"]
 description = "Typecheck CLI"
 run = "bunx tsc --noEmit -p cli/tsconfig.json"
+
+[tasks."cli:build"]
+description = "Build CLI package for npm distribution"
+depends = ["build"]
+run = """
+set -e
+
+# Bundle server
+echo "Bundling server..." >&2
+bun build server/index.ts --target=bun --outfile=cli/server/index.js
+
+# Copy native PTY library
+echo "Copying native PTY library..." >&2
+mkdir -p cli/lib
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.so cli/lib/
+
+# Generate SQL migrations
+echo "Generating migrations..." >&2
+bunx drizzle-kit generate
+mkdir -p cli/drizzle
+cp -r drizzle/* cli/drizzle/
+
+# Copy frontend build
+echo "Copying frontend build..." >&2
+mkdir -p cli/dist
+cp -r dist/* cli/dist/
+
+echo "CLI package built successfully"
+"""
+
+[tasks."cli:publish"]
+description = "Publish CLI to npm"
+depends = ["cli:build"]
+dir = "cli"
+run = "npm publish --access public"
+
+# Production daemon tasks
+[tasks.up]
+description = "Build and start production server as daemon"
+run = """
+set -e
+
+# Check if already running
+PID_FILE="${VIBORA_DIR:-$HOME/.vibora}/vibora.pid"
+if [ -f "$PID_FILE" ]; then
+  PID=$(cat "$PID_FILE")
+  if kill -0 "$PID" 2>/dev/null; then
+    echo "Vibora already running (PID: $PID)" >&2
+    exit 1
+  fi
+fi
+
+# Build frontend
+echo "Building frontend..." >&2
+bunx vite build
+
+# Sync database
+echo "Syncing database..." >&2
+bun run drizzle-kit push
+
+# Start server in background
+echo "Starting server..." >&2
+mkdir -p "${VIBORA_DIR:-$HOME/.vibora}"
+nohup env NODE_ENV=production PORT="${PORT:-3333}" bun server/index.ts \
+  > "${VIBORA_DIR:-$HOME/.vibora}/server.log" 2>&1 &
+PID=$!
+
+# Write PID file
+echo "$PID" > "$PID_FILE"
+
+# Verify it started
+sleep 1
+if ! kill -0 "$PID" 2>/dev/null; then
+  echo "Server failed to start. Check ${VIBORA_DIR:-$HOME/.vibora}/server.log" >&2
+  rm -f "$PID_FILE"
+  exit 1
+fi
+
+echo "Vibora started on http://localhost:${PORT:-3333} (PID: $PID)"
+"""
+
+[tasks.down]
+description = "Stop the daemon server"
+run = """
+PID_FILE="${VIBORA_DIR:-$HOME/.vibora}/vibora.pid"
+if [ ! -f "$PID_FILE" ]; then
+  echo "No PID file found" >&2
+  exit 1
+fi
+
+PID=$(cat "$PID_FILE")
+if kill -0 "$PID" 2>/dev/null; then
+  kill "$PID"
+  echo "Stopped Vibora (PID: $PID)"
+else
+  echo "Process not running"
+fi
+rm -f "$PID_FILE"
+"""
