@@ -77,7 +77,7 @@ The built CLI package includes:
 - Schema: `server/db/schema.ts`
 - Single `tasks` table with fields for task metadata, git worktree paths, and status
 
-Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELLED`
+Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 
 ## File Organization
 
@@ -115,8 +115,24 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 | databasePath | `VIBORA_DATABASE_PATH` | {viboraDir}/vibora.db |
 | worktreeBasePath | `VIBORA_WORKTREE_PATH` | {viboraDir}/worktrees |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
+| linearApiKey | `LINEAR_API_KEY` | null |
 
 Precedence: environment variable → settings.json → default
+
+### Linear Integration
+
+Vibora can sync task status with Linear tickets. Configure `linearApiKey` in settings or set the `LINEAR_API_KEY` environment variable.
+
+```bash
+# Link current task to a Linear ticket
+vibora current-task linear https://linear.app/team/issue/TEAM-123
+```
+
+When a task status changes in Vibora, the linked Linear ticket status is updated automatically:
+- `IN_PROGRESS` → "In Progress"
+- `IN_REVIEW` → "In Review"
+- `DONE` → "Done"
+- `CANCELED` → "Canceled"
 
 ### Development vs Production
 

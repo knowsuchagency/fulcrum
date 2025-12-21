@@ -4,7 +4,7 @@ export type TaskStatus =
   | 'IN_PROGRESS'
   | 'IN_REVIEW'
   | 'DONE'
-  | 'CANCELLED'
+  | 'CANCELED'
 
 export interface DiffOptions {
   wrap: boolean
@@ -52,6 +52,8 @@ export interface Task {
   worktreePath: string | null
   viewState: ViewState | null
   prUrl: string | null
+  linearTicketId: string | null
+  linearTicketUrl: string | null
   createdAt: string
   updatedAt: string
 }

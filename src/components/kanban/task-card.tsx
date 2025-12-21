@@ -13,7 +13,7 @@ import { useDrag } from './drag-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, GitPullRequestIcon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, GitPullRequestIcon, Task01Icon } from '@hugeicons/core-free-icons'
 
 interface TaskCardProps {
   task: Task
@@ -174,6 +174,12 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
             <>
               <span className="text-muted-foreground/30">•</span>
               <HugeiconsIcon icon={GitPullRequestIcon} size={12} strokeWidth={2} className="text-foreground" />
+            </>
+          )}
+          {task.linearTicketId && (
+            <>
+              <span className="text-muted-foreground/30">•</span>
+              <HugeiconsIcon icon={Task01Icon} size={12} strokeWidth={2} className="text-foreground" />
             </>
           )}
         </div>

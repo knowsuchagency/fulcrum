@@ -48,14 +48,14 @@ function checkPrStatus(prUrl: string): PRStatus | null {
 
 // Poll and update task statuses
 async function pollPRs(): Promise<void> {
-  // Get all tasks with prUrl that are not DONE or CANCELLED
+  // Get all tasks with prUrl that are not DONE or CANCELED
   const tasksWithPR = db
     .select()
     .from(tasks)
     .where(
       and(
         isNotNull(tasks.prUrl),
-        notInArray(tasks.status, ['DONE', 'CANCELLED'])
+        notInArray(tasks.status, ['DONE', 'CANCELED'])
       )
     )
     .all()
