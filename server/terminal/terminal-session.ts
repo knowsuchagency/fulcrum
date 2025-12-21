@@ -59,6 +59,9 @@ export class TerminalSession {
     const dtach = getDtachService()
     const [cmd, ...args] = dtach.getCreateCommand(this.id)
 
+    // Exclude PORT from child env to avoid conflicts with dev servers
+    const { PORT: _, ...envWithoutPort } = process.env
+
     try {
       // Spawn dtach which creates the session and runs the shell
       this.pty = spawn(cmd, args, {
@@ -67,7 +70,7 @@ export class TerminalSession {
         rows: this.rows,
         cwd: this.cwd,
         env: {
-          ...process.env,
+          ...envWithoutPort,
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
         } as Record<string, string>,
@@ -103,6 +106,9 @@ export class TerminalSession {
 
     const [cmd, ...args] = dtach.getAttachCommand(this.id)
 
+    // Exclude PORT from child env to avoid conflicts with dev servers
+    const { PORT: _, ...envWithoutPort } = process.env
+
     try {
       this.pty = spawn(cmd, args, {
         name: 'xterm-256color',
@@ -110,7 +116,7 @@ export class TerminalSession {
         rows: this.rows,
         cwd: this.cwd,
         env: {
-          ...process.env,
+          ...envWithoutPort,
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
         } as Record<string, string>,
