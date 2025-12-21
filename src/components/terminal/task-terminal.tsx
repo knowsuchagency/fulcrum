@@ -29,6 +29,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
 
   const {
     terminals,
+    terminalsLoaded,
     connected,
     createTerminal,
     attachXterm,
@@ -169,9 +170,9 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
   }, [doFit])
 
   // Find existing terminal or create new one
-   
+  // Wait for terminalsLoaded to ensure we have accurate knowledge of existing terminals
   useEffect(() => {
-    if (!connected || !cwd || !xtermReady) return
+    if (!connected || !cwd || !xtermReady || !terminalsLoaded) return
 
     // Look for an existing terminal with matching cwd
     const existingTerminal = terminals.find((t) => t.cwd === cwd)
@@ -192,7 +193,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
         cwd,
       })
     }
-  }, [connected, cwd, xtermReady, terminals, taskName, createTerminal])
+  }, [connected, cwd, xtermReady, terminalsLoaded, terminals, taskName, createTerminal])
 
   // Update terminalId when terminal appears in list
    
