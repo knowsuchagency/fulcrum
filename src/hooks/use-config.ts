@@ -33,6 +33,7 @@ export const CONFIG_KEYS = {
   TASK_CREATION_COMMAND: 'task_creation_command',
   HOSTNAME: 'hostname',
   SSH_PORT: 'ssh_port',
+  LINEAR_API_KEY: 'linear_api_key',
 } as const
 
 // Default values (client-side fallbacks)
@@ -115,6 +116,16 @@ export function useSshPort() {
   return {
     ...query,
     data: (query.data?.value as number) ?? 22,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useLinearApiKey() {
+  const query = useConfig(CONFIG_KEYS.LINEAR_API_KEY)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? '',
     isDefault: query.data?.isDefault ?? true,
   }
 }

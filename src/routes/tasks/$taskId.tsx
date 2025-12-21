@@ -12,6 +12,7 @@ import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useHostname, useSshPort } from '@/hooks/use-config'
+import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
@@ -29,6 +30,7 @@ import {
   ArrowDown03Icon,
   ArrowUp03Icon,
   VisualStudioCodeIcon,
+  Task01Icon,
 } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
@@ -69,14 +71,14 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'In Progress',
   IN_REVIEW: 'In Review',
   DONE: 'Done',
-  CANCELLED: 'Cancelled',
+  CANCELED: 'Canceled',
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'bg-blue-500/20 text-blue-500',
   IN_REVIEW: 'bg-yellow-500/20 text-yellow-600',
   DONE: 'bg-green-500/20 text-green-600',
-  CANCELLED: 'bg-red-500/20 text-red-500',
+  CANCELED: 'bg-red-500/20 text-red-500',
 }
 
 function TaskView() {
@@ -91,6 +93,7 @@ function TaskView() {
   const gitMerge = useGitMergeToMain()
   const { data: hostname } = useHostname()
   const { data: sshPort } = useSshPort()
+  const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
 
   // Read plan mode state from navigation (only set when coming from task creation)
   const navState = location.state as { planMode?: boolean; description?: string } | undefined
@@ -330,6 +333,25 @@ function TaskView() {
                 >
                   <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
                   <span>#{task.prUrl.match(/\/pull\/(\d+)/)?.[1] ?? 'PR'}</span>
+                </a>
+              </>
+            )}
+            {task.linearTicketUrl && (
+              <>
+                <span className="text-muted-foreground/50">•</span>
+                <a
+                  href={task.linearTicketUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                  title={linearTicket?.title}
+                >
+                  <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
+                  <span>{task.linearTicketId}</span>
+                  {linearTicket?.status && (
+                    <span className="text-muted-foreground text-xs">({linearTicket.status})</span>
+                  )}
                 </a>
               </>
             )}
