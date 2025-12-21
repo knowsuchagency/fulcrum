@@ -60,7 +60,8 @@ export class TerminalSession {
     const [cmd, ...args] = dtach.getCreateCommand(this.id)
 
     // Exclude PORT from child env to avoid conflicts with dev servers
-    const { PORT: _, ...envWithoutPort } = process.env
+    const { PORT: _PORT, ...envWithoutPort } = process.env
+    void _PORT // Intentionally unused
 
     try {
       // Spawn dtach which creates the session and runs the shell
@@ -107,7 +108,8 @@ export class TerminalSession {
     const [cmd, ...args] = dtach.getAttachCommand(this.id)
 
     // Exclude PORT from child env to avoid conflicts with dev servers
-    const { PORT: _, ...envWithoutPort } = process.env
+    const { PORT: _PORT, ...envWithoutPort } = process.env
+    void _PORT // Intentionally unused
 
     try {
       this.pty = spawn(cmd, args, {
