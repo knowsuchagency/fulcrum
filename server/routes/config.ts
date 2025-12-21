@@ -10,6 +10,7 @@ export const CONFIG_KEYS = {
   TASK_CREATION_COMMAND: 'taskCreationCommand',
   HOSTNAME: 'hostname',
   SSH_PORT: 'sshPort',
+  LINEAR_API_KEY: 'linearApiKey',
 } as const
 
 const app = new Hono()
@@ -36,6 +37,8 @@ app.get('/:key', (c) => {
     value = settings.hostname
   } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
     value = settings.sshPort
+  } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
+    value = settings.linearApiKey
   }
 
   if (value === null) {
@@ -97,6 +100,12 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ sshPort })
       return c.json({ key, value: sshPort })
+    } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
+      updateSettings({ linearApiKey: body.value || null })
+      return c.json({ key, value: body.value })
     } else {
       return c.json({ error: `Unknown config key: ${key}` }, 400)
     }
@@ -127,6 +136,8 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.hostname
   } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
     defaultValue = defaults.sshPort
+  } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
+    defaultValue = defaults.linearApiKey
   }
 
   return c.json({ key, value: defaultValue, isDefault: true })

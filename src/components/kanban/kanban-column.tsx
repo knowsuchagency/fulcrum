@@ -9,14 +9,14 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'In Progress',
   IN_REVIEW: 'In Review',
   DONE: 'Done',
-  CANCELLED: 'Cancelled',
+  CANCELED: 'Canceled',
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'border-t-slate-400',
   IN_REVIEW: 'border-t-violet-400',
   DONE: 'border-t-emerald-400',
-  CANCELLED: 'border-t-rose-500',
+  CANCELED: 'border-t-rose-500',
 }
 
 interface KanbanColumnProps {
@@ -50,7 +50,7 @@ export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
       ref={ref}
       className={cn(
         'flex flex-col rounded-lg border border-t-4 bg-card',
-        isMobile ? 'h-full w-full' : 'w-72 flex-shrink-0',
+        isMobile ? 'h-full w-full' : 'h-full w-72 flex-shrink-0',
         STATUS_COLORS[status],
         isOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}

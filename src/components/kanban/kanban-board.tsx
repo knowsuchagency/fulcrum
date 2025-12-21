@@ -13,14 +13,14 @@ const COLUMNS: TaskStatus[] = [
   'IN_PROGRESS',
   'IN_REVIEW',
   'DONE',
-  'CANCELLED',
+  'CANCELED',
 ]
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'In Progress',
   IN_REVIEW: 'In Review',
   DONE: 'Done',
-  CANCELLED: 'Cancelled',
+  CANCELED: 'Canceled',
 }
 
 // Mobile drop zone for cross-column drag-and-drop
@@ -79,7 +79,7 @@ function KanbanBoardInner({ repoFilter }: KanbanBoardProps) {
       IN_PROGRESS: 0,
       IN_REVIEW: 0,
       DONE: 0,
-      CANCELLED: 0,
+      CANCELED: 0,
     }
     for (const task of tasks) {
       counts[task.status]++

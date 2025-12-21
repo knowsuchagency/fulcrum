@@ -83,7 +83,7 @@ Commands:
   current-task in-progress  Mark current task as IN_PROGRESS
   current-task review       Mark current task as IN_REVIEW
   current-task done         Mark current task as DONE
-  current-task cancel       Mark current task as CANCELLED
+  current-task cancel       Mark current task as CANCELED
 
   tasks list                List all tasks
   tasks get <id>            Get a task by ID
