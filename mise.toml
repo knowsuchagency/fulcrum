@@ -4,8 +4,13 @@ bun = "latest"
 [hooks.postinstall]
 run = "bun install"
 
+[tasks.install]
+description = "Install dependencies"
+run = "bun install"
+
 [tasks.dev]
 description = "Start frontend and backend dev servers"
+depends = ["install"]
 usage = '''
 arg "[port]" help="Port to run on" default="3222"
 arg "[dir]" help="Vibora directory" default="~/.vibora/dev"
