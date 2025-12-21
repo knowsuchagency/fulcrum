@@ -3,9 +3,11 @@ import { useCallback, useMemo, useRef } from 'react'
 import { useTask } from './use-tasks'
 import type { Task, ViewState, DiffOptions, FilesViewState } from '@/types'
 
+const getDefaultBrowserUrl = () => `http://${window.location.hostname}:3000`
+
 const DEFAULT_VIEW_STATE: ViewState = {
   activeTab: 'diff',
-  browserUrl: 'http://localhost:5173',
+  browserUrl: getDefaultBrowserUrl(),
   diffOptions: {
     wrap: false,
     ignoreWhitespace: false,
