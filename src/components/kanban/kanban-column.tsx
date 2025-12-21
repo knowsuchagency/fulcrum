@@ -1,5 +1,5 @@
-import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useRef, useEffect, useState } from 'react'
+import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { TaskCard } from './task-card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { Task, TaskStatus } from '@/types'
@@ -26,13 +26,28 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: status })
+  const ref = useRef<HTMLDivElement>(null)
+  const [isOver, setIsOver] = useState(false)
 
   const sortedTasks = [...tasks].sort((a, b) => a.position - b.position)
 
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    return dropTargetForElements({
+      element: el,
+      getData: () => ({ type: 'column', status }),
+      canDrop: ({ source }) => source.data.type === 'task',
+      onDragEnter: () => setIsOver(true),
+      onDragLeave: () => setIsOver(false),
+      onDrop: () => setIsOver(false),
+    })
+  }, [status])
+
   return (
     <div
-      ref={setNodeRef}
+      ref={ref}
       className={cn(
         'flex flex-col rounded-lg border border-t-4 bg-card',
         isMobile ? 'h-full w-full' : 'w-72 flex-shrink-0',
@@ -47,16 +62,11 @@ export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
         </span>
       </div>
       <ScrollArea className="flex-1">
-        <SortableContext
-          items={sortedTasks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="flex flex-col gap-2 p-2">
-            {sortedTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
-        </SortableContext>
+        <div className="flex flex-col gap-2 p-2">
+          {sortedTasks.map((task) => (
+            <TaskCard key={task.id} task={task} />
+          ))}
+        </div>
       </ScrollArea>
     </div>
   )
