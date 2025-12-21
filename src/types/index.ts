@@ -10,10 +10,31 @@ export interface DiffOptions {
   includeUntracked: boolean
 }
 
+export interface FilesViewState {
+  selectedFile: string | null
+  expandedDirs: string[]
+}
+
 export interface ViewState {
-  activeTab: 'diff' | 'browser'
+  activeTab: 'diff' | 'browser' | 'files'
   browserUrl: string
   diffOptions: DiffOptions
+  filesViewState?: FilesViewState
+}
+
+export interface FileTreeEntry {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  children?: FileTreeEntry[]
+}
+
+export interface FileContent {
+  content: string
+  mimeType: string
+  size: number
+  lineCount: number
+  truncated: boolean
 }
 
 export interface Task {

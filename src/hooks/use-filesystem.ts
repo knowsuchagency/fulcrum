@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 // Use relative URLs - works with both Vite dev proxy and production
 const API_BASE = ''
 
+import type { FileTreeEntry, FileContent } from '@/types'
+
 interface DirectoryEntry {
   name: string
   type: 'file' | 'directory'
@@ -13,6 +15,11 @@ interface DirectoryListing {
   path: string
   parent: string
   entries: DirectoryEntry[]
+}
+
+interface FileTreeResponse {
+  root: string
+  entries: FileTreeEntry[]
 }
 
 interface BranchListing {
@@ -103,5 +110,37 @@ export function useGitStatus(worktreePath: string | null) {
     },
     enabled: !!worktreePath,
     refetchInterval: 5000, // Refresh every 5 seconds
+  })
+}
+
+export function useFileTree(worktreePath: string | null) {
+  return useQuery({
+    queryKey: ['fs', 'tree', worktreePath],
+    queryFn: () => {
+      return fetchJSON<FileTreeResponse>(
+        `${API_BASE}/api/fs/tree?root=${encodeURIComponent(worktreePath!)}`
+      )
+    },
+    enabled: !!worktreePath,
+    staleTime: 10000, // Cache for 10 seconds
+  })
+}
+
+export function useFileContent(
+  worktreePath: string | null,
+  filePath: string | null,
+  options?: { maxLines?: number }
+) {
+  return useQuery({
+    queryKey: ['fs', 'read', worktreePath, filePath, options?.maxLines],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        path: filePath!,
+        root: worktreePath!,
+        ...(options?.maxLines && { maxLines: options.maxLines.toString() }),
+      })
+      return fetchJSON<FileContent>(`${API_BASE}/api/fs/read?${params}`)
+    },
+    enabled: !!worktreePath && !!filePath,
   })
 }

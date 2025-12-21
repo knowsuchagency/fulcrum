@@ -1,7 +1,7 @@
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { useCallback, useMemo, useRef } from 'react'
 import { useTask } from './use-tasks'
-import type { Task, ViewState, DiffOptions } from '@/types'
+import type { Task, ViewState, DiffOptions, FilesViewState } from '@/types'
 
 const DEFAULT_VIEW_STATE: ViewState = {
   activeTab: 'diff',
@@ -10,6 +10,10 @@ const DEFAULT_VIEW_STATE: ViewState = {
     wrap: false,
     ignoreWhitespace: false,
     includeUntracked: false,
+  },
+  filesViewState: {
+    selectedFile: null,
+    expandedDirs: [],
   },
 }
 
@@ -31,6 +35,10 @@ export function useTaskViewState(taskId: string) {
       diffOptions: {
         ...DEFAULT_VIEW_STATE.diffOptions,
         ...stored.diffOptions,
+      },
+      filesViewState: {
+        ...DEFAULT_VIEW_STATE.filesViewState,
+        ...stored.filesViewState,
       },
     }
   }, [task?.viewState])
@@ -70,6 +78,13 @@ export function useTaskViewState(taskId: string) {
                 ...(updates.diffOptions ?? {}),
               }
             : undefined,
+        filesViewState:
+          updates.filesViewState || pendingUpdatesRef.current.filesViewState
+            ? {
+                ...(pendingUpdatesRef.current.filesViewState ?? {}),
+                ...(updates.filesViewState ?? {}),
+              }
+            : undefined,
       }
 
       // Build new view state
@@ -79,6 +94,10 @@ export function useTaskViewState(taskId: string) {
         diffOptions: {
           ...viewState.diffOptions,
           ...(pendingUpdatesRef.current.diffOptions ?? {}),
+        },
+        filesViewState: {
+          ...viewState.filesViewState,
+          ...(pendingUpdatesRef.current.filesViewState ?? {}),
         },
       }
 
@@ -109,7 +128,7 @@ export function useTaskViewState(taskId: string) {
   )
 
   const setActiveTab = useCallback(
-    (tab: 'diff' | 'browser') => {
+    (tab: 'diff' | 'browser' | 'files') => {
       updateViewState({ activeTab: tab })
     },
     [updateViewState]
@@ -129,10 +148,18 @@ export function useTaskViewState(taskId: string) {
     [updateViewState, viewState.diffOptions]
   )
 
+  const setFilesViewState = useCallback(
+    (updates: Partial<FilesViewState>) => {
+      updateViewState({ filesViewState: { ...viewState.filesViewState, ...updates } })
+    },
+    [updateViewState, viewState.filesViewState]
+  )
+
   return {
     viewState,
     setActiveTab,
     setBrowserUrl,
     setDiffOptions,
+    setFilesViewState,
   }
 }

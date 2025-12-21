@@ -12,12 +12,14 @@ import { useTaskTab } from '@/hooks/use-task-tab'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
 import { DiffViewer } from '@/components/viewer/diff-viewer'
 import { BrowserPreview } from '@/components/viewer/browser-preview'
+import { FilesViewer } from '@/components/viewer/files-viewer'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   CodeIcon,
   BrowserIcon,
   GitBranchIcon,
   Delete02Icon,
+  Folder01Icon,
 } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
@@ -257,6 +259,15 @@ function TaskView() {
                   />
                   Browser
                 </TabsTrigger>
+                <TabsTrigger value="files">
+                  <HugeiconsIcon
+                    icon={Folder01Icon}
+                    size={14}
+                    strokeWidth={2}
+                    data-slot="icon"
+                  />
+                  Files
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -266,6 +277,10 @@ function TaskView() {
 
             <TabsContent value="browser" className="flex-1 overflow-hidden">
               <BrowserPreview taskId={task.id} />
+            </TabsContent>
+
+            <TabsContent value="files" className="flex-1 overflow-hidden">
+              <FilesViewer taskId={task.id} worktreePath={task.worktreePath} />
             </TabsContent>
           </Tabs>
         </ResizablePanel>
