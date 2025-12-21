@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server'
 import { createNodeWebSocket } from '@hono/node-ws'
 import { createApp } from './app'
-import { initPTYManager, getPTYManager, setBroadcastDestroyed } from './terminal/pty-instance'
+import { initPTYManager, setBroadcastDestroyed } from './terminal/pty-instance'
 import {
   terminalWebSocketHandlers,
   broadcast,

@@ -60,17 +60,15 @@ export function CreateTaskModal() {
     repoPath || null
   )
 
-  // Set default base branch when branches are loaded
+  // Set default base branch when branches are loaded, reset when repo changes
+   
   useEffect(() => {
-    if (branchData && !baseBranch) {
+    if (branchData) {
       setBaseBranch(branchData.current || branchData.branches[0] || 'main')
+    } else {
+      setBaseBranch('')
     }
-  }, [branchData, baseBranch])
-
-  // Reset base branch when repo changes
-  useEffect(() => {
-    setBaseBranch('')
-  }, [repoPath])
+  }, [branchData, repoPath])
 
   const handleTitleChange = (value: string) => {
     setTitle(value)

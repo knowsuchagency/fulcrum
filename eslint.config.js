@@ -19,5 +19,14 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Disable overly-strict React Compiler rules that flag legitimate patterns
+      // (e.g., syncing local form state with async data, terminal ID syncing)
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+      // Allow exporting utilities alongside components (common shadcn/ui pattern)
+      'react-refresh/only-export-components': 'off',
+    },
   },
 ])

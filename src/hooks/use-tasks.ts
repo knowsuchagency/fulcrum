@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { Task, TaskStatus, ViewState } from '@/types'
+import type { Task, TaskStatus } from '@/types'
 
 // Use relative URLs - works with both Vite dev proxy and production
 const API_BASE = ''

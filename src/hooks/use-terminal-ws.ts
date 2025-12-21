@@ -90,6 +90,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   const reconnectAttemptsRef = useRef(0)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const xtermMapRef = useRef<Map<string, XTerm>>(new Map())
+  const connectRef = useRef<() => void>(() => {})
 
   const send = useCallback((message: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -184,12 +185,15 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
       if (reconnectAttemptsRef.current < maxReconnectAttempts) {
         reconnectAttemptsRef.current++
-        reconnectTimeoutRef.current = setTimeout(connect, reconnectInterval)
+        reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), reconnectInterval)
       }
     }
 
     newWs.onerror = () => {}
   }, [url, reconnectInterval, maxReconnectAttempts, handleMessage])
+
+  // Keep ref in sync for recursive calls
+  connectRef.current = connect
 
   useEffect(() => {
     connect()
