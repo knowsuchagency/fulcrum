@@ -6,7 +6,7 @@ import type { TaskStatus } from '@shared/types'
 const STATUS_MAP: Record<string, TaskStatus> = {
   done: 'DONE',
   review: 'IN_REVIEW',
-  cancel: 'CANCELLED',
+  cancel: 'CANCELED',
   'in-progress': 'IN_PROGRESS',
 }
 

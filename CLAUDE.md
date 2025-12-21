@@ -77,7 +77,7 @@ The built CLI package includes:
 - Schema: `server/db/schema.ts`
 - Single `tasks` table with fields for task metadata, git worktree paths, and status
 
-Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELLED`
+Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 
 ## File Organization
 
@@ -132,7 +132,7 @@ When a task status changes in Vibora, the linked Linear ticket status is updated
 - `IN_PROGRESS` → "In Progress"
 - `IN_REVIEW` → "In Review"
 - `DONE` → "Done"
-- `CANCELLED` → "Canceled"
+- `CANCELED` → "Canceled"
 
 ### Development vs Production
 

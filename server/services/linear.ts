@@ -52,7 +52,7 @@ const STATUS_MAP: Record<string, string[]> = {
   IN_PROGRESS: ['In Progress', 'Started', 'In Development'],
   IN_REVIEW: ['In Review', 'Review', 'Ready for Review'],
   DONE: ['Done', 'Completed', 'Closed'],
-  CANCELLED: ['Canceled', 'Cancelled'],
+  CANCELED: ['Canceled', 'Cancelled'],
 }
 
 export async function updateLinearTicketStatus(

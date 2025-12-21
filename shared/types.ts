@@ -4,7 +4,7 @@ export type TaskStatus =
   | 'IN_PROGRESS'
   | 'IN_REVIEW'
   | 'DONE'
-  | 'CANCELLED'
+  | 'CANCELED'
 
 export interface DiffOptions {
   wrap: boolean
