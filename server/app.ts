@@ -11,6 +11,7 @@ import gitRoutes from './routes/git'
 import filesystemRoutes from './routes/filesystem'
 import configRoutes from './routes/config'
 import uploadsRoutes from './routes/uploads'
+import worktreesRoutes from './routes/worktrees'
 
 export function createApp() {
   const app = new Hono()
@@ -33,6 +34,7 @@ export function createApp() {
   app.route('/api/fs', filesystemRoutes)
   app.route('/api/config', configRoutes)
   app.route('/api/uploads', uploadsRoutes)
+  app.route('/api/worktrees', worktreesRoutes)
 
   // Serve static files from dist/ in production
   if (process.env.NODE_ENV === 'production') {

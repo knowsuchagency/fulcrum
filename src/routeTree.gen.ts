@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorktreesIndexRouteImport } from './routes/worktrees/index'
 import { Route as TerminalsIndexRouteImport } from './routes/terminals/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
@@ -18,6 +19,11 @@ import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorktreesIndexRoute = WorktreesIndexRouteImport.update({
+  id: '/worktrees/',
+  path: '/worktrees/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TerminalsIndexRoute = TerminalsIndexRouteImport.update({
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsIndexRoute
   '/tasks': typeof TasksIndexRoute
   '/terminals': typeof TerminalsIndexRoute
+  '/worktrees': typeof WorktreesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/tasks': typeof TasksIndexRoute
   '/terminals': typeof TerminalsIndexRoute
+  '/worktrees': typeof WorktreesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +70,25 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/terminals/': typeof TerminalsIndexRoute
+  '/worktrees/': typeof WorktreesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/tasks/$taskId' | '/settings' | '/tasks' | '/terminals'
+  fullPaths:
+    | '/'
+    | '/tasks/$taskId'
+    | '/settings'
+    | '/tasks'
+    | '/terminals'
+    | '/worktrees'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/tasks/$taskId' | '/settings' | '/tasks' | '/terminals'
+  to:
+    | '/'
+    | '/tasks/$taskId'
+    | '/settings'
+    | '/tasks'
+    | '/terminals'
+    | '/worktrees'
   id:
     | '__root__'
     | '/'
@@ -75,6 +96,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks/'
     | '/terminals/'
+    | '/worktrees/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,6 +105,7 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
   TerminalsIndexRoute: typeof TerminalsIndexRoute
+  WorktreesIndexRoute: typeof WorktreesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worktrees/': {
+      id: '/worktrees/'
+      path: '/worktrees'
+      fullPath: '/worktrees'
+      preLoaderRoute: typeof WorktreesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terminals/': {
@@ -131,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
   TerminalsIndexRoute: TerminalsIndexRoute,
+  WorktreesIndexRoute: WorktreesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
