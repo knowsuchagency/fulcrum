@@ -568,7 +568,7 @@ app.post('/merge-to-main', async (c) => {
     let worktreeBranch: string
     try {
       worktreeBranch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
-    } catch (err) {
+    } catch {
       return c.json({
         error: 'Failed to determine worktree branch',
       }, 500)

@@ -101,7 +101,8 @@ export function useTerminalViewState() {
     (tabId: string, terminalId: string | null) => {
       if (terminalId === null) {
         // Remove the entry for this tab
-        const { [tabId]: _, ...rest } = viewState.focusedTerminals
+        const { [tabId]: _removed, ...rest } = viewState.focusedTerminals
+        void _removed // intentionally unused
         updateViewState({ focusedTerminals: rest })
       } else {
         updateViewState({ focusedTerminals: { [tabId]: terminalId } })
