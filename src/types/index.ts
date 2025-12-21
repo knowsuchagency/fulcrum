@@ -54,3 +54,28 @@ export interface Terminal {
   position: number
   cwd?: string
 }
+
+export interface Worktree {
+  path: string
+  name: string
+  size: number
+  sizeFormatted: string
+  branch: string
+  lastModified: string
+  isOrphaned: boolean
+  taskId?: string
+  taskTitle?: string
+  repoPath?: string
+}
+
+export interface WorktreesSummary {
+  total: number
+  orphaned: number
+  totalSize: number
+  totalSizeFormatted: string
+}
+
+export interface WorktreesResponse {
+  worktrees: Worktree[]
+  summary: WorktreesSummary
+}
