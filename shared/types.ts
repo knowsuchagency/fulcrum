@@ -104,6 +104,16 @@ export interface WorktreesResponse {
   summary: WorktreesSummary
 }
 
+export interface Repository {
+  id: string
+  path: string
+  displayName: string
+  startupScript: string | null
+  copyFiles: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 // Git API response types
 export interface GitBranchesResponse {
   branches: string[]
