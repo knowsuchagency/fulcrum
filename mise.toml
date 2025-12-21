@@ -6,17 +6,21 @@ run = "bun install"
 
 [tasks.dev]
 description = "Start frontend and backend dev servers"
-usage = 'arg "[port]" help="Port to run on" default="3333"'
+usage = '''
+arg "[port]" help="Port to run on" default="3222"
+arg "[dir]" help="Vibora directory" default="~/.vibora/dev"
+'''
 run = """
 export PORT="${usage_port}"
 export VITE_BACKEND_PORT="${usage_port}"
+export VIBORA_DIR="${usage_dir}"
 bunx concurrently -n server,client -c blue,green 'mise run server' 'mise run client'
 """
 
 [tasks.server]
 description = "Start backend dev server with auto-reload"
 run = """
-mkdir -p ~/.vibora
+mkdir -p "${VIBORA_DIR:-$HOME/.vibora}"
 bun run drizzle-kit push
 bun --watch server/index.ts
 """
