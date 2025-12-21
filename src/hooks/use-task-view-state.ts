@@ -16,8 +16,8 @@ const DEFAULT_VIEW_STATE: ViewState = {
   activeTab: 'diff',
   browserUrl: getDefaultBrowserUrl(),
   diffOptions: {
-    wrap: false,
-    ignoreWhitespace: false,
+    wrap: true,
+    ignoreWhitespace: true,
     includeUntracked: false,
   },
   filesViewState: {
