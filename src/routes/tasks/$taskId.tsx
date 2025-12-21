@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
+import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useHostname, useSshPort } from '@/hooks/use-config'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
@@ -25,7 +26,8 @@ import {
   Delete02Icon,
   Folder01Icon,
   GitPullRequestIcon,
-  RefreshIcon,
+  ArrowDown03Icon,
+  ArrowUp03Icon,
   VisualStudioCodeIcon,
 } from '@hugeicons/core-free-icons'
 import {
@@ -86,6 +88,7 @@ function TaskView() {
   const deleteTask = useDeleteTask()
   const { tab, setTab } = useTaskTab(taskId)
   const gitSync = useGitSync()
+  const gitMerge = useGitMergeToMain()
   const { data: hostname } = useHostname()
   const { data: sshPort } = useSshPort()
 
@@ -99,6 +102,9 @@ function TaskView() {
   const [syncError, setSyncError] = useState<string | null>(null)
   const [syncErrorModalOpen, setSyncErrorModalOpen] = useState(false)
   const [syncSuccess, setSyncSuccess] = useState(false)
+  const [mergeError, setMergeError] = useState<string | null>(null)
+  const [mergeErrorModalOpen, setMergeErrorModalOpen] = useState(false)
+  const [mergeSuccess, setMergeSuccess] = useState(false)
   const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
 
   // Get terminal functions for sending commands
@@ -111,6 +117,14 @@ function TaskView() {
       return () => clearTimeout(timer)
     }
   }, [syncSuccess])
+
+  // Auto-clear merge success message
+  useEffect(() => {
+    if (mergeSuccess) {
+      const timer = setTimeout(() => setMergeSuccess(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [mergeSuccess])
 
   const handleSync = async () => {
     if (!task?.repoPath || !task?.worktreePath) return
@@ -139,6 +153,33 @@ function TaskView() {
     return `Fix the git sync issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${syncError} | Steps: 1) Check git status 2) Resolve conflicts or commit/stash changes 3) Pull and rebase from origin/${baseBranch}`
   }
 
+  // Build a prompt for Claude Code for merge errors
+  const buildMergeClaudePrompt = () => {
+    if (!task || !mergeError) return ''
+    const baseBranch = task.baseBranch || 'main'
+    return `Fix the git merge issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${mergeError} | Steps: 1) Check git status in both worktree and parent 2) Resolve any conflicts 3) Ensure worktree changes are committed 4) Retry merge to ${baseBranch}`
+  }
+
+  const handleMergeToMain = async () => {
+    if (!task?.repoPath || !task?.worktreePath) return
+
+    setMergeError(null)
+    setMergeSuccess(false)
+
+    try {
+      await gitMerge.mutateAsync({
+        repoPath: task.repoPath,
+        worktreePath: task.worktreePath,
+        baseBranch: task.baseBranch,
+      })
+      setMergeSuccess(true)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Merge failed'
+      setMergeError(errorMessage)
+      setMergeErrorModalOpen(true)
+    }
+  }
+
   // Find the terminal for this task
   const taskTerminal = terminals.find((t) => t.cwd === task?.worktreePath)
 
@@ -157,6 +198,23 @@ function TaskView() {
     const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
     writeToTerminal(taskTerminal.id, command)
     setSyncErrorModalOpen(false)
+  }
+
+  // Send merge prompt directly (for when Claude Code is already running)
+  const handleSendMergePrompt = () => {
+    if (!taskTerminal) return
+    const prompt = buildMergeClaudePrompt()
+    writeToTerminal(taskTerminal.id, prompt + '\r')
+    setMergeErrorModalOpen(false)
+  }
+
+  // Launch Claude Code with the merge prompt
+  const handleLaunchClaudeForMerge = () => {
+    if (!taskTerminal) return
+    const prompt = buildMergeClaudePrompt().replace(/"/g, '\\"')
+    const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
+    writeToTerminal(taskTerminal.id, command)
+    setMergeErrorModalOpen(false)
   }
 
   const handleOpenVSCodeModal = () => {
@@ -304,20 +362,37 @@ function TaskView() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Sync Button */}
+        {/* Pull from Main Button */}
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={handleSync}
           disabled={gitSync.isPending || !task.worktreePath}
           className="text-muted-foreground hover:text-foreground"
-          title="Sync with upstream"
+          title="Pull from main"
         >
           <HugeiconsIcon
-            icon={RefreshIcon}
+            icon={ArrowDown03Icon}
             size={16}
             strokeWidth={2}
             className={gitSync.isPending ? 'animate-spin' : ''}
+          />
+        </Button>
+
+        {/* Merge to Main Button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleMergeToMain}
+          disabled={gitMerge.isPending || !task.worktreePath}
+          className="text-muted-foreground hover:text-foreground"
+          title="Merge to main"
+        >
+          <HugeiconsIcon
+            icon={ArrowUp03Icon}
+            size={16}
+            strokeWidth={2}
+            className={gitMerge.isPending ? 'animate-pulse' : ''}
           />
         </Button>
 
@@ -335,6 +410,9 @@ function TaskView() {
         {/* Sync Status Feedback */}
         {syncSuccess && (
           <span className="text-xs text-green-600">Synced!</span>
+        )}
+        {mergeSuccess && (
+          <span className="text-xs text-green-600">Merged!</span>
         )}
 
         <AlertDialog>
@@ -539,6 +617,42 @@ function TaskView() {
             <Button
               variant="destructive"
               onClick={handleLaunchClaude}
+              disabled={!taskTerminal}
+              title="Launch Claude Code with -p flag"
+            >
+              Launch Claude
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Error Modal */}
+      <Dialog open={mergeErrorModalOpen} onOpenChange={setMergeErrorModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Merge Failed</DialogTitle>
+            <DialogDescription>
+              An error occurred while merging to {task?.baseBranch || 'main'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {mergeError}
+          </div>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" onClick={() => setMergeErrorModalOpen(false)}>
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSendMergePrompt}
+              disabled={!taskTerminal}
+              title="Send prompt to running Claude Code session"
+            >
+              Send Prompt
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLaunchClaudeForMerge}
               disabled={!taskTerminal}
               title="Launch Claude Code with -p flag"
             >
