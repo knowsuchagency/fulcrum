@@ -87,9 +87,15 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 | (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
 | port | `PORT` | 3333 |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
+| taskCreationCommand | `VIBORA_TASK_CREATION_COMMAND` | `claude --dangerously-skip-permissions` |
+| hostname | `VIBORA_HOSTNAME` | (empty) |
+| sshPort | `VIBORA_SSH_PORT` | 22 |
 | linearApiKey | `LINEAR_API_KEY` | null |
+| githubPat | `GITHUB_PAT` | null |
 
 Database path (`{viboraDir}/vibora.db`) and worktree path (`{viboraDir}/worktrees`) are derived from the vibora directory and not separately configurable.
+
+Notification settings (sound, Slack, Discord, Pushover) are configured via the Settings UI and stored in `settings.json`.
 
 Precedence: environment variable → settings.json → default
 

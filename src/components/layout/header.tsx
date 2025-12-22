@@ -9,14 +9,16 @@ import {
   FolderSyncIcon,
   Database01Icon,
   GitPullRequestIcon,
+  BrowserIcon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
 interface HeaderProps {
   onNewTaskRef?: (openModal: () => void) => void
+  onOpenCommandPalette?: () => void
 }
 
-export function Header({ onNewTaskRef }: HeaderProps) {
+export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   const { location } = useRouterState()
   const pathname = location.pathname
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
@@ -109,6 +111,14 @@ export function Header({ onNewTaskRef }: HeaderProps) {
 
       <div className="flex items-center gap-2">
         <CreateTaskModal open={createTaskOpen} onOpenChange={setCreateTaskOpen} />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onOpenCommandPalette}
+          title="Command Palette (⌘K)"
+        >
+          <HugeiconsIcon icon={BrowserIcon} size={16} strokeWidth={2} />
+        </Button>
         <Link to="/settings">
           <Button
             variant={pathname === '/settings' ? 'secondary' : 'ghost'}

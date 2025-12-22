@@ -11,7 +11,6 @@ import {
 import { testNotificationChannel } from '../services/notification-service'
 
 // Config keys (mapped to settings keys)
-// Note: databasePath and worktreeBasePath are derived from viboraDir, not configurable
 export const CONFIG_KEYS = {
   PORT: 'port',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
@@ -79,7 +78,7 @@ app.get('/:key', (c) => {
   } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
     value = settings.githubPat
   } else if (key === 'worktree_base_path') {
-    // Read-only: derived from viboraDir
+    // Read-only: derived from VIBORA_DIR
     return c.json({ key, value: getWorktreeBasePath(), isDefault: true })
   }
 
@@ -176,8 +175,5 @@ app.delete('/:key', (c) => {
 
   return c.json({ key, value: defaultValue, isDefault: true })
 })
-
-// Export the worktree base path getter for use in other modules
-export { getWorktreeBasePath }
 
 export default app

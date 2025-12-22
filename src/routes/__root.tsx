@@ -19,6 +19,7 @@ function TaskSync() {
 function RootLayout() {
   const [openNewTask, setOpenNewTask] = useState<(() => void) | null>(null)
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   const handleNewTaskRef = useCallback((fn: () => void) => {
     setOpenNewTask(() => fn)
@@ -32,15 +33,24 @@ function RootLayout() {
     setShortcutsHelpOpen(true)
   }, [])
 
+  const handleOpenCommandPalette = useCallback(() => {
+    setCommandPaletteOpen(true)
+  }, [])
+
   return (
     <KeyboardProvider>
       <div className="flex h-screen flex-col bg-background text-foreground">
         <TaskSync />
-        <Header onNewTaskRef={handleNewTaskRef} />
+        <Header onNewTaskRef={handleNewTaskRef} onOpenCommandPalette={handleOpenCommandPalette} />
         <main className="isolate flex-1 overflow-hidden">
           <Outlet />
         </main>
-        <CommandPalette onNewTask={handleNewTask} onShowShortcuts={handleShowShortcuts} />
+        <CommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+          onNewTask={handleNewTask}
+          onShowShortcuts={handleShowShortcuts}
+        />
         <KeyboardShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
         <Toaster position="bottom-right" />
       </div>

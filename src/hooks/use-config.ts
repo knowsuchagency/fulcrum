@@ -11,10 +11,9 @@ interface ConfigResponse {
 }
 
 // Config keys matching server
-// Note: databasePath and worktreeBasePath are derived from viboraDir, not configurable
 export const CONFIG_KEYS = {
   PORT: 'port',
-  WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only
+  WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only, derived from VIBORA_DIR
   DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
   TASK_CREATION_COMMAND: 'task_creation_command',
   HOSTNAME: 'hostname',
@@ -44,14 +43,13 @@ export function usePort() {
   }
 }
 
-// Read-only: derived from viboraDir on server
+// Read-only: derived from VIBORA_DIR on server
 export function useWorktreeBasePath() {
   const query = useConfig(CONFIG_KEYS.WORKTREE_BASE_PATH)
 
   return {
     ...query,
     data: (query.data?.value as string) ?? '',
-    isDefault: true, // Always derived from viboraDir
   }
 }
 

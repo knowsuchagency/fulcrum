@@ -24,12 +24,16 @@ import {
 } from '@hugeicons/core-free-icons'
 
 interface CommandPaletteProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   onNewTask?: () => void
   onShowShortcuts?: () => void
 }
 
-export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPaletteProps) {
-  const [open, setOpen] = useState(false)
+export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, onShowShortcuts }: CommandPaletteProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { Switch } from '@/components/ui/switch'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -10,7 +9,6 @@ import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Ic
 import { toast } from 'sonner'
 import {
   usePort,
-  useWorktreeBasePath,
   useDefaultGitReposDir,
   useTaskCreationCommand,
   useHostname,
@@ -29,9 +27,19 @@ export const Route = createFileRoute('/settings/')({
   component: SettingsPage,
 })
 
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="relative rounded-lg border border-border bg-card p-4 pt-6">
+      <span className="absolute -top-2.5 left-3 bg-card px-2 text-xs font-medium text-muted-foreground">
+        {title}
+      </span>
+      {children}
+    </div>
+  )
+}
+
 function SettingsPage() {
   const { data: port, isLoading: portLoading } = usePort()
-  const { data: worktreeBasePath, isLoading: worktreeLoading } = useWorktreeBasePath()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const { data: taskCreationCommand, isLoading: taskCommandLoading } = useTaskCreationCommand()
   const { data: hostname, isLoading: hostnameLoading } = useHostname()
@@ -92,7 +100,7 @@ function SettingsPage() {
   }, [notificationSettings])
 
   const isLoading =
-    portLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading
+    portLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -302,70 +310,75 @@ function SettingsPage() {
         <h1 className="text-sm font-medium">Settings</h1>
       </div>
 
-      <div className="pixel-grid flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-2xl">
-          <Card>
-            <CardContent className="space-y-6 pt-6">
-              {/* Server Section */}
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-foreground">Server</h2>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">Port</label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={65535}
-                      value={localPort}
-                      onChange={(e) => setLocalPort(e.target.value)}
-                      placeholder="3333"
-                      disabled={isLoading}
-                      className="w-24 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetPort}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
+      <div className="pixel-grid flex-1 overflow-auto p-6">
+        <div className="mx-auto max-w-5xl space-y-4">
+              {/* Server & Defaults */}
+              <SettingsSection title="Server & Defaults">
+                <div className="space-y-4">
+                  {/* Port */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <label className="w-32 shrink-0 text-sm text-muted-foreground">Port</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={localPort}
+                        onChange={(e) => setLocalPort(e.target.value)}
+                        placeholder="3333"
+                        disabled={isLoading}
+                        className="w-24 font-mono text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={handleResetPort}
+                        disabled={isLoading || resetConfig.isPending}
+                        title="Reset to default"
+                      >
+                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                      </Button>
+                    </div>
+                    <p className="ml-32 pl-2 text-xs text-muted-foreground">
+                      Requires restart
+                    </p>
                   </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    Requires server restart
-                  </p>
-                </div>
-              </div>
 
-              <div className="border-t border-border" />
-
-              {/* Paths Section */}
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-foreground">Paths</h2>
-
-                {/* Worktree Directory (read-only) */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                      Worktree Directory
-                    </label>
-                    <Input
-                      value={worktreeBasePath}
-                      disabled
-                      className="flex-1 font-mono text-sm bg-muted"
-                    />
+                  {/* Startup Command */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <label className="w-32 shrink-0 text-sm text-muted-foreground">Startup Command</label>
+                      <Input
+                        value={localTaskCommand}
+                        onChange={(e) => setLocalTaskCommand(e.target.value)}
+                        placeholder="claude --dangerously-skip-permissions"
+                        disabled={isLoading}
+                        className="flex-1 font-mono text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={handleResetTaskCommand}
+                        disabled={isLoading || resetConfig.isPending}
+                        title="Reset to default"
+                      >
+                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                      </Button>
+                    </div>
+                    <p className="ml-32 pl-2 text-xs text-muted-foreground">
+                      Command for new task terminals
+                    </p>
                   </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    Derived from VIBORA_DIR (read-only)
-                  </p>
                 </div>
+              </SettingsSection>
 
-                {/* Git Repos Directory */}
+              {/* Paths */}
+              <SettingsSection title="Paths">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                    <label className="w-32 shrink-0 text-sm text-muted-foreground">
                       Git Repos Directory
                     </label>
                     <Input
@@ -396,363 +409,323 @@ function SettingsPage() {
                       <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                     </Button>
                   </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                  <p className="ml-32 pl-2 text-xs text-muted-foreground">
                     Starting directory for repo picker
                   </p>
                 </div>
-              </div>
+              </SettingsSection>
 
-              <div className="border-t border-border" />
-
-              {/* Task Defaults Section */}
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-foreground">Task Defaults</h2>
-
-                {/* Task Creation Command */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                      Startup Command
-                    </label>
-                    <Input
-                      value={localTaskCommand}
-                      onChange={(e) => setLocalTaskCommand(e.target.value)}
-                      placeholder="claude --dangerously-skip-permissions"
-                      disabled={isLoading}
-                      className="flex-1 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetTaskCommand}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                  </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    Command to run when a new task terminal is created (leave empty to disable)
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-border" />
-
-              {/* Remote Access Section */}
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-foreground">Remote Access</h2>
-
-                {/* Hostname */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                      Hostname
-                    </label>
-                    <Input
-                      value={localHostname}
-                      onChange={(e) => setLocalHostname(e.target.value)}
-                      placeholder="e.g., citadel"
-                      disabled={isLoading}
-                      className="flex-1 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetHostname}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                  </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    Remote machine hostname for VS Code SSH URLs (leave empty for local)
-                  </p>
-                </div>
-
-                {/* SSH Port */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                      SSH Port
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={65535}
-                      value={localSshPort}
-                      onChange={(e) => setLocalSshPort(e.target.value)}
-                      placeholder="22"
-                      disabled={isLoading}
-                      className="w-24 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetSshPort}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                  </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    SSH port for VS Code remote connections
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-border" />
-
-              {/* Integrations Section */}
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-foreground">Integrations</h2>
-
-                {/* Linear API Key */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                      Linear API Key
-                    </label>
-                    <Input
-                      type="password"
-                      value={localLinearApiKey}
-                      onChange={(e) => setLocalLinearApiKey(e.target.value)}
-                      placeholder="lin_api_..."
-                      disabled={isLoading}
-                      className="flex-1 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetLinearApiKey}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                  </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    Personal API key from Linear for syncing ticket status
-                  </p>
-                </div>
-
-                {/* GitHub PAT */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                      GitHub PAT
-                    </label>
-                    <Input
-                      type="password"
-                      value={localGitHubPat}
-                      onChange={(e) => setLocalGitHubPat(e.target.value)}
-                      placeholder="ghp_..."
-                      disabled={isLoading}
-                      className="flex-1 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetGitHubPat}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                  </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    Personal access token for GitHub API (Issues & PRs in Review)
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-border" />
-
-              {/* Notifications Section */}
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-foreground">Notifications</h2>
-
-                {/* Master toggle */}
-                <div className="flex items-center gap-2">
-                  <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                    Enable Notifications
-                  </label>
-                  <Switch
-                    checked={notificationsEnabled}
-                    onCheckedChange={setNotificationsEnabled}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* Sound */}
-                <div className="space-y-2 pl-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={soundEnabled}
-                      onCheckedChange={setSoundEnabled}
-                      disabled={isLoading || !notificationsEnabled}
-                    />
-                    <label className="text-sm text-muted-foreground">Sound (macOS only)</label>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleTestChannel('sound')}
-                      disabled={isLoading || !notificationsEnabled || !soundEnabled || testChannel.isPending}
-                      title="Test sound"
-                    >
-                      {testChannel.isPending ? (
-                        <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                      ) : (
-                        <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Slack */}
-                <div className="space-y-2 pl-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={slackEnabled}
-                      onCheckedChange={setSlackEnabled}
-                      disabled={isLoading || !notificationsEnabled}
-                    />
-                    <label className="text-sm text-muted-foreground">Slack</label>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleTestChannel('slack')}
-                      disabled={isLoading || !notificationsEnabled || !slackEnabled || !slackWebhook || testChannel.isPending}
-                      title="Test Slack"
-                    >
-                      {testChannel.isPending ? (
-                        <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                      ) : (
-                        <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
-                      )}
-                    </Button>
-                  </div>
-                  {slackEnabled && (
-                    <Input
-                      type="password"
-                      value={slackWebhook}
-                      onChange={(e) => setSlackWebhook(e.target.value)}
-                      placeholder="https://hooks.slack.com/services/..."
-                      disabled={isLoading || !notificationsEnabled}
-                      className="ml-6 flex-1 font-mono text-sm"
-                    />
-                  )}
-                </div>
-
-                {/* Discord */}
-                <div className="space-y-2 pl-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={discordEnabled}
-                      onCheckedChange={setDiscordEnabled}
-                      disabled={isLoading || !notificationsEnabled}
-                    />
-                    <label className="text-sm text-muted-foreground">Discord</label>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleTestChannel('discord')}
-                      disabled={isLoading || !notificationsEnabled || !discordEnabled || !discordWebhook || testChannel.isPending}
-                      title="Test Discord"
-                    >
-                      {testChannel.isPending ? (
-                        <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                      ) : (
-                        <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
-                      )}
-                    </Button>
-                  </div>
-                  {discordEnabled && (
-                    <Input
-                      type="password"
-                      value={discordWebhook}
-                      onChange={(e) => setDiscordWebhook(e.target.value)}
-                      placeholder="https://discord.com/api/webhooks/..."
-                      disabled={isLoading || !notificationsEnabled}
-                      className="ml-6 flex-1 font-mono text-sm"
-                    />
-                  )}
-                </div>
-
-                {/* Pushover */}
-                <div className="space-y-2 pl-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={pushoverEnabled}
-                      onCheckedChange={setPushoverEnabled}
-                      disabled={isLoading || !notificationsEnabled}
-                    />
-                    <label className="text-sm text-muted-foreground">Pushover</label>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleTestChannel('pushover')}
-                      disabled={isLoading || !notificationsEnabled || !pushoverEnabled || !pushoverAppToken || !pushoverUserKey || testChannel.isPending}
-                      title="Test Pushover"
-                    >
-                      {testChannel.isPending ? (
-                        <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                      ) : (
-                        <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
-                      )}
-                    </Button>
-                  </div>
-                  {pushoverEnabled && (
-                    <div className="ml-6 space-y-2">
-                      <Input
-                        type="password"
-                        value={pushoverAppToken}
-                        onChange={(e) => setPushoverAppToken(e.target.value)}
-                        placeholder="App Token"
-                        disabled={isLoading || !notificationsEnabled}
-                        className="flex-1 font-mono text-sm"
-                      />
-                      <Input
-                        type="password"
-                        value={pushoverUserKey}
-                        onChange={(e) => setPushoverUserKey(e.target.value)}
-                        placeholder="User Key"
-                        disabled={isLoading || !notificationsEnabled}
-                        className="flex-1 font-mono text-sm"
-                      />
+              {/* Remote Access + Integrations side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Remote Access */}
+                <SettingsSection title="Remote Access">
+                  <div className="space-y-4">
+                    {/* Hostname */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                          Hostname
+                        </label>
+                        <Input
+                          value={localHostname}
+                          onChange={(e) => setLocalHostname(e.target.value)}
+                          placeholder="e.g., citadel"
+                          disabled={isLoading}
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetHostname}
+                          disabled={isLoading || resetConfig.isPending}
+                          title="Reset to default"
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
+                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                        For VS Code SSH URLs
+                      </p>
                     </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
 
-            <CardFooter className="flex items-center justify-end gap-2 border-t border-border">
-              {saved && (
-                <span className="flex items-center gap-1 text-xs text-emerald-500">
-                  <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                  Saved
-                </span>
-              )}
-              <Button
-                size="sm"
-                onClick={handleSaveAll}
-                disabled={!hasChanges || isLoading || updateConfig.isPending}
-              >
-                Save Changes
-              </Button>
-            </CardFooter>
-          </Card>
+                    {/* SSH Port */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                          SSH Port
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={65535}
+                          value={localSshPort}
+                          onChange={(e) => setLocalSshPort(e.target.value)}
+                          placeholder="22"
+                          disabled={isLoading}
+                          className="w-20 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetSshPort}
+                          disabled={isLoading || resetConfig.isPending}
+                          title="Reset to default"
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
+                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                        Remote connection port
+                      </p>
+                    </div>
+                  </div>
+                </SettingsSection>
+
+                {/* Integrations */}
+                <SettingsSection title="Integrations">
+                  <div className="space-y-4">
+                    {/* Linear API Key */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                          Linear
+                        </label>
+                        <Input
+                          type="password"
+                          value={localLinearApiKey}
+                          onChange={(e) => setLocalLinearApiKey(e.target.value)}
+                          placeholder="lin_api_..."
+                          disabled={isLoading}
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetLinearApiKey}
+                          disabled={isLoading || resetConfig.isPending}
+                          title="Reset to default"
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
+                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                        API key for ticket sync
+                      </p>
+                    </div>
+
+                    {/* GitHub PAT */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                          GitHub
+                        </label>
+                        <Input
+                          type="password"
+                          value={localGitHubPat}
+                          onChange={(e) => setLocalGitHubPat(e.target.value)}
+                          placeholder="ghp_..."
+                          disabled={isLoading}
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetGitHubPat}
+                          disabled={isLoading || resetConfig.isPending}
+                          title="Reset to default"
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
+                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                        PAT for Issues & PRs
+                      </p>
+                    </div>
+                  </div>
+                </SettingsSection>
+              </div>
+
+              {/* Notifications */}
+              <SettingsSection title="Notifications">
+                <div className="space-y-4">
+                  {/* Master toggle */}
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      Enable Notifications
+                    </label>
+                    <Switch
+                      checked={notificationsEnabled}
+                      onCheckedChange={setNotificationsEnabled}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  {/* Sound */}
+                  <div className="space-y-2 pl-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={soundEnabled}
+                        onCheckedChange={setSoundEnabled}
+                        disabled={isLoading || !notificationsEnabled}
+                      />
+                      <label className="text-sm text-muted-foreground">Sound (macOS only)</label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleTestChannel('sound')}
+                        disabled={isLoading || !notificationsEnabled || !soundEnabled || testChannel.isPending}
+                        title="Test sound"
+                      >
+                        {testChannel.isPending ? (
+                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                        ) : (
+                          <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Slack */}
+                  <div className="space-y-2 pl-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={slackEnabled}
+                        onCheckedChange={setSlackEnabled}
+                        disabled={isLoading || !notificationsEnabled}
+                      />
+                      <label className="text-sm text-muted-foreground">Slack</label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleTestChannel('slack')}
+                        disabled={isLoading || !notificationsEnabled || !slackEnabled || !slackWebhook || testChannel.isPending}
+                        title="Test Slack"
+                      >
+                        {testChannel.isPending ? (
+                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                        ) : (
+                          <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                        )}
+                      </Button>
+                    </div>
+                    {slackEnabled && (
+                      <Input
+                        type="password"
+                        value={slackWebhook}
+                        onChange={(e) => setSlackWebhook(e.target.value)}
+                        placeholder="https://hooks.slack.com/services/..."
+                        disabled={isLoading || !notificationsEnabled}
+                        className="ml-6 flex-1 font-mono text-sm"
+                      />
+                    )}
+                  </div>
+
+                  {/* Discord */}
+                  <div className="space-y-2 pl-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={discordEnabled}
+                        onCheckedChange={setDiscordEnabled}
+                        disabled={isLoading || !notificationsEnabled}
+                      />
+                      <label className="text-sm text-muted-foreground">Discord</label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleTestChannel('discord')}
+                        disabled={isLoading || !notificationsEnabled || !discordEnabled || !discordWebhook || testChannel.isPending}
+                        title="Test Discord"
+                      >
+                        {testChannel.isPending ? (
+                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                        ) : (
+                          <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                        )}
+                      </Button>
+                    </div>
+                    {discordEnabled && (
+                      <Input
+                        type="password"
+                        value={discordWebhook}
+                        onChange={(e) => setDiscordWebhook(e.target.value)}
+                        placeholder="https://discord.com/api/webhooks/..."
+                        disabled={isLoading || !notificationsEnabled}
+                        className="ml-6 flex-1 font-mono text-sm"
+                      />
+                    )}
+                  </div>
+
+                  {/* Pushover */}
+                  <div className="space-y-2 pl-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={pushoverEnabled}
+                        onCheckedChange={setPushoverEnabled}
+                        disabled={isLoading || !notificationsEnabled}
+                      />
+                      <label className="text-sm text-muted-foreground">Pushover</label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleTestChannel('pushover')}
+                        disabled={isLoading || !notificationsEnabled || !pushoverEnabled || !pushoverAppToken || !pushoverUserKey || testChannel.isPending}
+                        title="Test Pushover"
+                      >
+                        {testChannel.isPending ? (
+                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                        ) : (
+                          <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                        )}
+                      </Button>
+                    </div>
+                    {pushoverEnabled && (
+                      <div className="ml-6 space-y-2">
+                        <Input
+                          type="password"
+                          value={pushoverAppToken}
+                          onChange={(e) => setPushoverAppToken(e.target.value)}
+                          placeholder="App Token"
+                          disabled={isLoading || !notificationsEnabled}
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Input
+                          type="password"
+                          value={pushoverUserKey}
+                          onChange={(e) => setPushoverUserKey(e.target.value)}
+                          placeholder="User Key"
+                          disabled={isLoading || !notificationsEnabled}
+                          className="flex-1 font-mono text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </SettingsSection>
+
+          {/* Save Button */}
+          <div className="flex items-center justify-end gap-2 pt-2">
+            {saved && (
+              <span className="flex items-center gap-1 text-xs text-emerald-500">
+                <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
+                Saved
+              </span>
+            )}
+            <Button
+              size="sm"
+              onClick={handleSaveAll}
+              disabled={!hasChanges || isLoading || updateConfig.isPending}
+            >
+              Save Changes
+            </Button>
+          </div>
         </div>
       </div>
 
