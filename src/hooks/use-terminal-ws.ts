@@ -126,6 +126,8 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   const newTerminalIdsRef = useRef<Set<string>>(new Set())
   const onAttachedCallbacksRef = useRef<Map<string, () => void>>(new Map())
   const connectRef = useRef<() => void>(() => {})
+  const lastFocusedTerminalRef = useRef<string | null>(null)
+  const wasConnectedRef = useRef(false)
 
   const send = useCallback((message: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -317,6 +319,25 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     }
   }, [connect])
 
+  // Restore focus after reconnection
+  useEffect(() => {
+    if (connected && !wasConnectedRef.current) {
+      // Just reconnected - restore focus after short delay for attachments to complete
+      const timeoutId = setTimeout(() => {
+        if (
+          lastFocusedTerminalRef.current &&
+          document.hasFocus() &&
+          document.visibilityState === 'visible'
+        ) {
+          const xterm = xtermMapRef.current.get(lastFocusedTerminalRef.current)
+          xterm?.focus()
+        }
+      }, 150)
+      return () => clearTimeout(timeoutId)
+    }
+    wasConnectedRef.current = connected
+  }, [connected])
+
   // Terminal operations
   const createTerminal = useCallback(
     (options: CreateTerminalOptions) => {
@@ -440,6 +461,12 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
         writeToTerminal(terminalId, data)
       })
 
+      // Track focus for reconnection restoration
+      const handleFocus = () => {
+        lastFocusedTerminalRef.current = terminalId
+      }
+      xterm.textarea?.addEventListener('focus', handleFocus)
+
       // Register onAttached callback if provided
       if (options?.onAttached) {
         onAttachedCallbacksRef.current.set(terminalId, options.onAttached)
@@ -456,6 +483,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
         disposable.dispose()
         xtermMapRef.current.delete(terminalId)
         onAttachedCallbacksRef.current.delete(terminalId)
+        xterm.textarea?.removeEventListener('focus', handleFocus)
       }
     },
     [send, writeToTerminal]
