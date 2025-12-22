@@ -84,8 +84,8 @@ function RepositoryCard({
   }
 
   return (
-    <Link to="/repositories/$repoId" params={{ repoId: repository.id }}>
-      <Card className="transition-colors hover:border-border/80 cursor-pointer">
+    <Link to="/repositories/$repoId" params={{ repoId: repository.id }} className="h-full">
+      <Card className="h-full transition-colors hover:border-border/80 cursor-pointer">
         <CardContent className="flex flex-col gap-2 py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-1">
@@ -366,7 +366,7 @@ function RepositoriesView() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {repositories?.map((repo) => (
             <RepositoryCard
               key={repo.id}
