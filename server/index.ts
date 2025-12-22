@@ -9,6 +9,7 @@ import {
 } from './websocket/terminal-ws'
 import { getSetting } from './lib/settings'
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
+import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 
 const PORT = getSetting('port')
 
@@ -69,10 +70,14 @@ injectWebSocket(server)
 // Start PR monitor service
 startPRMonitor()
 
+// Start metrics collector for monitoring
+startMetricsCollector()
+
 // Graceful shutdown - detach PTYs but keep tmux sessions running for persistence
 process.on('SIGINT', () => {
   console.log('\nShutting down (terminals will persist)...')
   stopPRMonitor()
+  stopMetricsCollector()
   ptyManager.detachAll()
   server.close()
   process.exit(0)
@@ -81,6 +86,7 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   console.log('\nShutting down (terminals will persist)...')
   stopPRMonitor()
+  stopMetricsCollector()
   ptyManager.detachAll()
   server.close()
   process.exit(0)

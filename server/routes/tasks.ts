@@ -256,7 +256,7 @@ app.post('/', async (c) => {
 // DELETE /api/tasks/bulk - Delete multiple tasks (must be before /:id route)
 app.delete('/bulk', async (c) => {
   try {
-    const body = await c.req.json<{ ids: string[] }>()
+    const body = await c.req.json<{ ids: string[]; deleteLinkedWorktrees?: boolean }>()
 
     if (!Array.isArray(body.ids) || body.ids.length === 0) {
       return c.json({ error: 'ids must be a non-empty array' }, 400)
@@ -269,14 +269,15 @@ app.delete('/bulk', async (c) => {
       const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
       if (!existing) continue
 
-      // Destroy terminals associated with this task's worktree
+      // Handle linked worktree based on deleteLinkedWorktrees flag
       if (existing.worktreePath) {
+        // Always destroy terminals for the worktree
         destroyTerminalsForWorktree(existing.worktreePath)
-      }
 
-      // Delete git worktree if it exists
-      if (existing.worktreePath && existing.repoPath) {
-        deleteGitWorktree(existing.repoPath, existing.worktreePath)
+        // Only delete the worktree if flag is true
+        if (body.deleteLinkedWorktrees && existing.repoPath) {
+          deleteGitWorktree(existing.repoPath, existing.worktreePath)
+        }
       }
 
       // Shift down tasks in the same column that were after this task
@@ -354,22 +355,25 @@ app.patch('/:id', async (c) => {
   }
 })
 
-// DELETE /api/tasks/:id - Delete task
+// DELETE /api/tasks/:id - Delete task (optionally delete linked worktree)
 app.delete('/:id', (c) => {
   const id = c.req.param('id')
+  const deleteLinkedWorktree = c.req.query('deleteLinkedWorktree') === 'true'
+
   const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
   if (!existing) {
     return c.json({ error: 'Task not found' }, 404)
   }
 
-  // Destroy terminals associated with this task's worktree
+  // Handle linked worktree based on deleteLinkedWorktree flag
   if (existing.worktreePath) {
+    // Always destroy terminals for the worktree
     destroyTerminalsForWorktree(existing.worktreePath)
-  }
 
-  // Delete git worktree if it exists
-  if (existing.worktreePath && existing.repoPath) {
-    deleteGitWorktree(existing.repoPath, existing.worktreePath)
+    // Only delete the worktree if flag is true
+    if (deleteLinkedWorktree && existing.repoPath) {
+      deleteGitWorktree(existing.repoPath, existing.worktreePath)
+    }
   }
 
   // Shift down tasks in the same column that were after this task

@@ -10,6 +10,7 @@ import {
   Database01Icon,
   GitPullRequestIcon,
   BrowserIcon,
+  ChartLineData01Icon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
@@ -109,6 +110,21 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 data-slot="icon"
               />
               <span className="max-sm:hidden">Review</span>
+            </Button>
+          </Link>
+          <Link to="/monitoring">
+            <Button
+              variant={pathname.startsWith('/monitoring') ? 'secondary' : 'ghost'}
+              size="sm"
+              className="max-sm:px-2"
+            >
+              <HugeiconsIcon
+                icon={ChartLineData01Icon}
+                size={16}
+                strokeWidth={2}
+                data-slot="icon"
+              />
+              <span className="max-sm:hidden">Monitoring</span>
             </Button>
           </Link>
         </nav>
