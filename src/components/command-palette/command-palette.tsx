@@ -184,18 +184,18 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   }, [selectedIndex])
 
   // Open command palette
-  useHotkeys('meta+k', () => setOpen(true), { allowInInput: true })
+  useHotkeys('meta+k', () => setOpen(true), { allowInInput: true, allowInTerminal: true })
 
   // Navigation shortcuts
-  useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true })
-  useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true })
+  useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+i', () => {
     setActiveTab('all-tasks')
     navigate({ to: '/terminals' })
-  }, { allowInInput: true })
-  useHotkeys('meta+3', () => navigate({ to: '/worktrees' }), { allowInInput: true })
-  useHotkeys('meta+4', () => navigate({ to: '/repositories' }), { allowInInput: true })
-  useHotkeys('meta+,', () => navigate({ to: '/settings' }), { allowInInput: true })
+  }, { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+3', () => navigate({ to: '/worktrees' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+4', () => navigate({ to: '/repositories' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+,', () => navigate({ to: '/settings' }), { allowInInput: true, allowInTerminal: true })
 
   // New task shortcut
   useHotkeys(
@@ -212,7 +212,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
     () => {
       onShowShortcuts?.()
     },
-    { allowInInput: true, deps: [onShowShortcuts] }
+    { allowInInput: true, allowInTerminal: true, deps: [onShowShortcuts] }
   )
 
   // Handle keyboard navigation in the palette
