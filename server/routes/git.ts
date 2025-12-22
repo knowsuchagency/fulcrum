@@ -574,6 +574,44 @@ app.post('/merge-to-main', async (c) => {
       }, 500)
     }
 
+    // Check for uncommitted or untracked changes in the worktree
+    try {
+      const worktreeStatus = gitExec(worktreePath, 'status --porcelain')
+      if (worktreeStatus.trim()) {
+        // Parse the status output to categorize changes
+        const lines = worktreeStatus.trim().split('\n').filter(l => l)
+        const untracked: string[] = []
+        const uncommitted: string[] = []
+
+        for (const line of lines) {
+          const statusCode = line.substring(0, 2)
+          const filename = line.substring(3)
+          if (statusCode === '??') {
+            untracked.push(filename)
+          } else {
+            uncommitted.push(filename)
+          }
+        }
+
+        const messages: string[] = []
+        if (uncommitted.length > 0) {
+          messages.push(`${uncommitted.length} uncommitted change(s)`)
+        }
+        if (untracked.length > 0) {
+          messages.push(`${untracked.length} untracked file(s)`)
+        }
+
+        return c.json({
+          error: `Worktree has ${messages.join(' and ')}. Please commit or stash changes before merging.`,
+          hasUncommittedChanges: true,
+          uncommittedFiles: uncommitted,
+          untrackedFiles: untracked,
+        }, 409)
+      }
+    } catch {
+      // If status check fails, continue with merge and let it fail naturally
+    }
+
     // Detect default branch
     const defaultBranch = getDefaultBranch(repoPath, baseBranch)
 
