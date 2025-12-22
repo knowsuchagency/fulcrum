@@ -4,6 +4,8 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { routeTree } from './routeTree.gen'
+import { AuthProvider } from './contexts/auth-context'
+import { LoginModal } from './components/login-modal'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -26,7 +28,10 @@ declare module '@tanstack/react-router' {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+        <LoginModal />
+      </AuthProvider>
     </QueryClientProvider>
   </StrictMode>
 )

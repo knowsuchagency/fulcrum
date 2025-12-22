@@ -1,23 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchJSON } from '@/lib/api'
 import type { Worktree, WorktreeBasic, WorktreeDetails, WorktreesSummary } from '@/types'
 
 const API_BASE = ''
-
-async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  })
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: 'Request failed' }))
-    throw new Error(error.error || 'Request failed')
-  }
-  return res.json()
-}
 
 interface UseWorktreesReturn {
   worktrees: Worktree[]

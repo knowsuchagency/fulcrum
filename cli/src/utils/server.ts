@@ -4,6 +4,8 @@ import { homedir } from 'node:os'
 
 interface Settings {
   port?: number
+  basicAuthUsername?: string
+  basicAuthPassword?: string
 }
 
 function expandPath(p: string): string {
@@ -95,4 +97,29 @@ export function getViboraDir(): string {
   }
   // 3. ~/.vibora (default)
   return join(homedir(), '.vibora')
+}
+
+/**
+ * Gets auth credentials from settings.json.
+ * Priority: VIBORA_DIR → CWD .vibora → ~/.vibora
+ * Returns null if no credentials are configured.
+ */
+export function getAuthCredentials(): { username: string; password: string } | null {
+  const settingsPaths = [
+    process.env.VIBORA_DIR && join(expandPath(process.env.VIBORA_DIR), 'settings.json'),
+    join(process.cwd(), '.vibora', 'settings.json'),
+    join(homedir(), '.vibora', 'settings.json'),
+  ].filter(Boolean) as string[]
+
+  for (const path of settingsPaths) {
+    const settings = readSettingsFile(path)
+    if (settings?.basicAuthUsername && settings?.basicAuthPassword) {
+      return {
+        username: settings.basicAuthUsername,
+        password: settings.basicAuthPassword,
+      }
+    }
+  }
+
+  return null
 }
