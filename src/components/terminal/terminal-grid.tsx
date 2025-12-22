@@ -40,6 +40,7 @@ interface TerminalGridProps {
 interface TerminalPaneProps {
   terminal: TerminalInfo
   taskInfo?: TaskInfo
+  isMobile?: boolean
   onClose?: () => void
   onReady?: (xterm: XTerm) => void
   onResize?: (cols: number, rows: number) => void
@@ -47,9 +48,9 @@ interface TerminalPaneProps {
   onContainerReady?: (container: HTMLDivElement) => void
 }
 
-function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename, onContainerReady }: TerminalPaneProps) {
+function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady }: TerminalPaneProps) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
         {taskInfo ? (
           // Task terminal header: [Task Link] [Repo Name] [Path] ... [Git Actions] [Close]
@@ -62,15 +63,19 @@ function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename
               <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} className="shrink-0" />
               <span className="truncate">{taskInfo.title}</span>
             </Link>
-            <Link
-              to={taskInfo.repoId ? '/repositories/$repoId' : '/repositories'}
-              params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
-              className="text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
-            >
-              {taskInfo.repoName}
-            </Link>
-            {terminal.cwd && (
-              <span className="text-xs text-muted-foreground truncate">{terminal.cwd.split('/').pop()}</span>
+            {!isMobile && (
+              <>
+                <Link
+                  to={taskInfo.repoId ? '/repositories/$repoId' : '/repositories'}
+                  params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
+                  className="text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
+                >
+                  {taskInfo.repoName}
+                </Link>
+                {terminal.cwd && (
+                  <span className="text-xs text-muted-foreground truncate">{terminal.cwd.split('/').pop()}</span>
+                )}
+              </>
             )}
             <div className="ml-auto flex items-center gap-0.5">
               <GitActionsButtons
@@ -78,31 +83,34 @@ function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename
                 worktreePath={taskInfo.worktreePath}
                 baseBranch={taskInfo.baseBranch}
                 taskId={taskInfo.taskId}
+                isMobile={isMobile}
               />
             </div>
           </div>
         ) : (
           // Regular terminal header
-          <TerminalStatusBar
-            name={terminal.name}
-            status={terminal.status}
-            exitCode={terminal.exitCode}
-            className="flex-1 border-b-0"
-            onRename={onRename}
-          />
-        )}
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={onClose}
-            className="mr-1 h-5 w-5 text-muted-foreground hover:text-foreground"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
-          </Button>
+          <>
+            <TerminalStatusBar
+              name={terminal.name}
+              status={terminal.status}
+              exitCode={terminal.exitCode}
+              className="flex-1 border-b-0"
+              onRename={onRename}
+            />
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={onClose}
+                className="mr-1 h-5 w-5 text-muted-foreground hover:text-foreground"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+              </Button>
+            )}
+          </>
         )}
       </div>
-      <div className="flex-1">
+      <div className="min-h-0 min-w-0 flex-1">
         <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} />
       </div>
     </div>
@@ -179,6 +187,7 @@ export function TerminalGrid({
     <TerminalPane
       terminal={terminal}
       taskInfo={terminal.cwd ? taskInfoByCwd?.get(terminal.cwd) : undefined}
+      isMobile={isMobile}
       onClose={onTerminalClose ? () => onTerminalClose(terminal.id) : undefined}
       onReady={onTerminalReady ? (xterm) => onTerminalReady(terminal.id, xterm) : undefined}
       onResize={onTerminalResize ? (c, r) => onTerminalResize(terminal.id, c, r) : undefined}
@@ -189,13 +198,13 @@ export function TerminalGrid({
 
   // Single terminal - no resizable panels needed
   if (terminals.length === 1) {
-    return <div className="h-full">{renderTerminalPane(terminals[0])}</div>
+    return <div className="h-full w-full max-w-full min-w-0 overflow-hidden">{renderTerminalPane(terminals[0])}</div>
   }
 
   // Two terminals - vertical on mobile, horizontal on desktop
   if (terminals.length === 2) {
     return (
-      <ResizablePanelGroup direction={isMobile ? 'vertical' : 'horizontal'} className="h-full">
+      <ResizablePanelGroup direction={isMobile ? 'vertical' : 'horizontal'} className="h-full max-w-full">
         <ResizablePanel key={terminals[0].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[0])}
         </ResizablePanel>
@@ -210,13 +219,13 @@ export function TerminalGrid({
   // Three terminals - 1 left, 2 stacked right
   if (terminals.length === 3) {
     return (
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+      <ResizablePanelGroup direction="horizontal" className="h-full max-w-full">
         <ResizablePanel key={terminals[0].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[0])}
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={50} minSize={15}>
-          <ResizablePanelGroup direction="vertical" className="h-full">
+          <ResizablePanelGroup direction="vertical" className="h-full max-w-full">
             <ResizablePanel key={terminals[1].id} defaultSize={50} minSize={15}>
               {renderTerminalPane(terminals[1])}
             </ResizablePanel>
@@ -233,7 +242,7 @@ export function TerminalGrid({
   // Four+ terminals - grid layout
   // Multiple rows with nested horizontal panels
   return (
-    <ResizablePanelGroup direction="vertical" className="h-full">
+    <ResizablePanelGroup direction="vertical" className="h-full max-w-full">
       {terminalRows.map((row, rowIndex) => (
         <Fragment key={`row-${rowIndex}`}>
           {rowIndex > 0 && <ResizableHandle />}
@@ -241,7 +250,7 @@ export function TerminalGrid({
             {row.length === 1 ? (
               renderTerminalPane(row[0])
             ) : (
-              <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanelGroup direction="horizontal" className="h-full max-w-full">
                 {row.map((terminal, colIndex) => (
                   <Fragment key={terminal.id}>
                     {colIndex > 0 && <ResizableHandle />}

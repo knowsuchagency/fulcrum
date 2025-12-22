@@ -1,6 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDown03Icon, ArrowUp03Icon, Orbit01Icon } from '@hugeicons/core-free-icons'
+import { ArrowDown03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon } from '@hugeicons/core-free-icons'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
@@ -12,6 +18,7 @@ interface GitActionsButtonsProps {
   worktreePath: string
   baseBranch: string
   taskId: string
+  isMobile?: boolean
 }
 
 export function GitActionsButtons({
@@ -19,6 +26,7 @@ export function GitActionsButtons({
   worktreePath,
   baseBranch,
   taskId,
+  isMobile,
 }: GitActionsButtonsProps) {
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
@@ -69,6 +77,54 @@ export function GitActionsButtons({
       const errorMessage = err instanceof Error ? err.message : 'Sync parent failed'
       toast.error(errorMessage)
     }
+  }
+
+  const isPending = gitSync.isPending || gitMerge.isPending || gitSyncParent.isPending
+
+  if (isMobile) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+        >
+          <HugeiconsIcon
+            icon={Menu01Icon}
+            size={12}
+            strokeWidth={2}
+            className={isPending ? 'animate-pulse' : ''}
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handleSync} disabled={gitSync.isPending}>
+            <HugeiconsIcon
+              icon={ArrowDown03Icon}
+              size={12}
+              strokeWidth={2}
+              className={gitSync.isPending ? 'animate-spin' : ''}
+            />
+            Pull from main
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleMergeToMain} disabled={gitMerge.isPending}>
+            <HugeiconsIcon
+              icon={ArrowUp03Icon}
+              size={12}
+              strokeWidth={2}
+              className={gitMerge.isPending ? 'animate-pulse' : ''}
+            />
+            Merge to main
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSyncParent} disabled={gitSyncParent.isPending}>
+            <HugeiconsIcon
+              icon={Orbit01Icon}
+              size={12}
+              strokeWidth={2}
+              className={gitSyncParent.isPending ? 'animate-spin' : ''}
+            />
+            Sync parent with origin
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
   }
 
   return (

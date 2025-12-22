@@ -29,7 +29,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   }, [onNewTaskRef])
 
   return (
-    <header className="relative z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-black px-4">
+    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-black px-4">
       <div className="flex items-center gap-4">
         <Link to="/tasks" className="hidden items-center sm:flex">
           <img src="/vibora-logo.jpeg" alt="Vibora" className="h-7" />
