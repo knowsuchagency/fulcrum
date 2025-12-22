@@ -50,7 +50,7 @@ export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
       ref={ref}
       className={cn(
         'flex flex-col rounded-lg border border-t-4 bg-card',
-        isMobile ? 'h-full w-full' : 'h-full w-72 flex-shrink-0',
+        isMobile ? 'h-full w-full' : 'h-full w-72 min-w-52 flex-shrink',
         STATUS_COLORS[status],
         isOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
