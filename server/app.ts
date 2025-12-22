@@ -1,8 +1,7 @@
 import { Hono } from 'hono'
-import { basicAuth } from 'hono/basic-auth'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { getSettings } from './lib/settings'
+import { sessionAuthMiddleware } from './middleware/auth'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
@@ -18,6 +17,7 @@ import terminalViewStateRoutes from './routes/terminal-view-state'
 import repositoriesRoutes from './routes/repositories'
 import linearRoutes from './routes/linear'
 import githubRoutes from './routes/github'
+import authRoutes from './routes/auth'
 
 /**
  * Gets the path to the dist directory.
@@ -45,17 +45,8 @@ export function createApp() {
     })
   )
 
-  // Optional HTTP Basic Auth (when configured)
-  const settings = getSettings()
-  if (settings.basicAuthUsername && settings.basicAuthPassword) {
-    app.use(
-      '*',
-      basicAuth({
-        username: settings.basicAuthUsername,
-        password: settings.basicAuthPassword,
-      })
-    )
-  }
+  // Session-based auth with Basic Auth fallback for CLI
+  app.use('*', sessionAuthMiddleware)
 
   // API Routes
   app.route('/health', healthRoutes)
@@ -69,6 +60,7 @@ export function createApp() {
   app.route('/api/repositories', repositoriesRoutes)
   app.route('/api/linear', linearRoutes)
   app.route('/api/github', githubRoutes)
+  app.route('/api/auth', authRoutes)
 
   // Serve static files in production mode or bundled CLI mode
   // Note: Check VIBORA_PACKAGE_ROOT in addition to NODE_ENV because bun build

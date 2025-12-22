@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { fetchJSON } from '@/lib/api'
+import type { FileTreeEntry, FileContent } from '@/types'
 
 // Use relative URLs - works with both Vite dev proxy and production
 const API_BASE = ''
-
-import type { FileTreeEntry, FileContent } from '@/types'
 
 interface DirectoryEntry {
   name: string
@@ -48,15 +48,6 @@ interface GitStatus {
   behind: number
   files: GitFile[]
   clean: boolean
-}
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url)
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: 'Request failed' }))
-    throw new Error(error.error || 'Request failed')
-  }
-  return res.json()
 }
 
 export function useDirectoryListing(path: string | null) {

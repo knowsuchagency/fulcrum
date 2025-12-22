@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import * as crypto from 'crypto'
 
 // Settings interface (databasePath and worktreeBasePath are derived from viboraDir)
 export interface Settings {
@@ -162,6 +163,16 @@ export function getSettings(): Settings {
 // Get a single setting value
 export function getSetting<K extends keyof Settings>(key: K): Settings[K] {
   return getSettings()[key]
+}
+
+// Get session secret derived from password (for signing session cookies)
+// Returns null if auth is not configured
+export function getSessionSecret(): string | null {
+  const settings = getSettings()
+  if (!settings.basicAuthPassword) {
+    return null
+  }
+  return crypto.createHash('sha256').update(settings.basicAuthPassword + 'vibora-session').digest('hex')
 }
 
 // Update settings (partial update)
