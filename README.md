@@ -36,6 +36,30 @@ bunx vibora@latest down    # Stop the server
 bunx vibora@latest status  # Check if running
 ```
 
+## Configuration
+
+Settings are stored in `.vibora/settings.json`. The vibora directory is resolved in this order:
+1. `VIBORA_DIR` environment variable (explicit override)
+2. `.vibora` in current working directory (per-worktree isolation)
+3. `~/.vibora` (default)
+
+| Setting | Env Var | Default |
+|---------|---------|---------|
+| (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
+| port | `PORT` | 3333 |
+| defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
+| taskCreationCommand | `VIBORA_TASK_CREATION_COMMAND` | `claude --dangerously-skip-permissions` |
+| hostname | `VIBORA_HOSTNAME` | (empty) |
+| sshPort | `VIBORA_SSH_PORT` | 22 |
+| linearApiKey | `LINEAR_API_KEY` | null |
+| githubPat | `GITHUB_PAT` | null |
+
+Database path (`{viboraDir}/vibora.db`) and worktree path (`{viboraDir}/worktrees`) are derived from the vibora directory and not separately configurable.
+
+Notification settings (sound, Slack, Discord, Pushover) are configured via the Settings UI and stored in `settings.json`.
+
+Precedence: environment variable → settings.json → default
+
 ## Development
 
 ### Prerequisites
@@ -75,30 +99,6 @@ mise run db:generate  # Generate migrations
 mise run db:migrate   # Apply migrations
 ```
 
-## Configuration
-
-Settings are stored in `.vibora/settings.json`. The vibora directory is resolved in this order:
-1. `VIBORA_DIR` environment variable (explicit override)
-2. `.vibora` in current working directory (per-worktree isolation)
-3. `~/.vibora` (default)
-
-| Setting | Env Var | Default |
-|---------|---------|---------|
-| (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
-| port | `PORT` | 3333 |
-| defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
-| taskCreationCommand | `VIBORA_TASK_CREATION_COMMAND` | `claude --dangerously-skip-permissions` |
-| hostname | `VIBORA_HOSTNAME` | (empty) |
-| sshPort | `VIBORA_SSH_PORT` | 22 |
-| linearApiKey | `LINEAR_API_KEY` | null |
-| githubPat | `GITHUB_PAT` | null |
-
-Database path (`{viboraDir}/vibora.db`) and worktree path (`{viboraDir}/worktrees`) are derived from the vibora directory and not separately configurable.
-
-Notification settings (sound, Slack, Discord, Pushover) are configured via the Settings UI and stored in `settings.json`.
-
-Precedence: environment variable → settings.json → default
-
 ## CLI
 
 The CLI lets AI agents (like Claude Code) working inside task worktrees query and update task status.
@@ -134,21 +134,6 @@ vibora git diff                  # Git diff for current worktree
 ```bash
 --port=<port>   # Server port (default: 3333)
 --pretty        # Pretty-print JSON output
-```
-
-### Per-Worktree Development
-
-To run an isolated Vibora instance in a worktree:
-
-```bash
-# Create .env with a different port
-echo "PORT=3223" > .env
-
-# Create local .vibora directory for isolated database
-mkdir -p .vibora
-
-# Run dev servers (VITE_BACKEND_PORT is set automatically from PORT)
-mise run dev
 ```
 
 ## License
