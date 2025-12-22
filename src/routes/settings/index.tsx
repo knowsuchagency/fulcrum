@@ -10,7 +10,6 @@ import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Ic
 import { toast } from 'sonner'
 import {
   usePort,
-  useDatabasePath,
   useWorktreeBasePath,
   useDefaultGitReposDir,
   useTaskCreationCommand,
@@ -32,7 +31,6 @@ export const Route = createFileRoute('/settings/')({
 
 function SettingsPage() {
   const { data: port, isLoading: portLoading } = usePort()
-  const { data: databasePath, isLoading: databaseLoading } = useDatabasePath()
   const { data: worktreeBasePath, isLoading: worktreeLoading } = useWorktreeBasePath()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const { data: taskCreationCommand, isLoading: taskCommandLoading } = useTaskCreationCommand()
@@ -47,16 +45,12 @@ function SettingsPage() {
   const testChannel = useTestNotificationChannel()
 
   const [localPort, setLocalPort] = useState('')
-  const [localDatabasePath, setLocalDatabasePath] = useState('')
-  const [localWorktreePath, setLocalWorktreePath] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
   const [localTaskCommand, setLocalTaskCommand] = useState('')
   const [localHostname, setLocalHostname] = useState('')
   const [localSshPort, setLocalSshPort] = useState('')
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
   const [localGitHubPat, setLocalGitHubPat] = useState('')
-  const [databaseBrowserOpen, setDatabaseBrowserOpen] = useState(false)
-  const [worktreeBrowserOpen, setWorktreeBrowserOpen] = useState(false)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -74,15 +68,13 @@ function SettingsPage() {
   // Sync local form state with fetched server values
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
-    if (databasePath) setLocalDatabasePath(databasePath)
-    if (worktreeBasePath) setLocalWorktreePath(worktreeBasePath)
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
     if (taskCreationCommand !== undefined) setLocalTaskCommand(taskCreationCommand)
     if (hostname !== undefined) setLocalHostname(hostname)
     if (sshPort !== undefined) setLocalSshPort(String(sshPort))
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
-  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand, hostname, sshPort, linearApiKey, githubPat])
+  }, [port, defaultGitReposDir, taskCreationCommand, hostname, sshPort, linearApiKey, githubPat])
 
   // Sync notification settings
   useEffect(() => {
@@ -100,7 +92,7 @@ function SettingsPage() {
   }, [notificationSettings])
 
   const isLoading =
-    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading
+    portLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -113,10 +105,9 @@ function SettingsPage() {
     pushoverAppToken !== (notificationSettings.pushover?.appToken ?? '') ||
     pushoverUserKey !== (notificationSettings.pushover?.userKey ?? '')
   )
+
   const hasChanges =
     localPort !== String(port) ||
-    localDatabasePath !== databasePath ||
-    localWorktreePath !== worktreeBasePath ||
     localReposDir !== defaultGitReposDir ||
     localTaskCommand !== taskCreationCommand ||
     localHostname !== hostname ||
@@ -137,28 +128,6 @@ function SettingsPage() {
           })
         )
       }
-    }
-
-    if (localDatabasePath !== databasePath) {
-      promises.push(
-        new Promise((resolve) => {
-          updateConfig.mutate(
-            { key: CONFIG_KEYS.DATABASE_PATH, value: localDatabasePath },
-            { onSettled: resolve }
-          )
-        })
-      )
-    }
-
-    if (localWorktreePath !== worktreeBasePath) {
-      promises.push(
-        new Promise((resolve) => {
-          updateConfig.mutate(
-            { key: CONFIG_KEYS.WORKTREE_BASE_PATH, value: localWorktreePath },
-            { onSettled: resolve }
-          )
-        })
-      )
     }
 
     if (localReposDir !== defaultGitReposDir) {
@@ -253,41 +222,10 @@ function SettingsPage() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const handleTestChannel = async (channel: 'sound' | 'slack' | 'discord' | 'pushover') => {
-    testChannel.mutate(channel, {
-      onSuccess: (result) => {
-        if (result.success) {
-          toast.success(`${channel} test successful`)
-        } else {
-          toast.error(`${channel} test failed: ${result.error}`)
-        }
-      },
-      onError: (error) => {
-        toast.error(`Test failed: ${error.message}`)
-      },
-    })
-  }
-
   const handleResetPort = () => {
     resetConfig.mutate(CONFIG_KEYS.PORT, {
       onSuccess: (data) => {
         if (data.value !== null) setLocalPort(String(data.value))
-      },
-    })
-  }
-
-  const handleResetDatabasePath = () => {
-    resetConfig.mutate(CONFIG_KEYS.DATABASE_PATH, {
-      onSuccess: (data) => {
-        if (data.value) setLocalDatabasePath(String(data.value))
-      },
-    })
-  }
-
-  const handleResetWorktree = () => {
-    resetConfig.mutate(CONFIG_KEYS.WORKTREE_BASE_PATH, {
-      onSuccess: (data) => {
-        if (data.value) setLocalWorktreePath(String(data.value))
       },
     })
   }
@@ -343,6 +281,21 @@ function SettingsPage() {
     })
   }
 
+  const handleTestChannel = async (channel: 'sound' | 'slack' | 'discord' | 'pushover') => {
+    testChannel.mutate(channel, {
+      onSuccess: (result) => {
+        if (result.success) {
+          toast.success(`${channel} test successful`)
+        } else {
+          toast.error(`${channel} test failed: ${result.error}`)
+        }
+      },
+      onError: (error) => {
+        toast.error(`Test failed: ${error.message}`)
+      },
+    })
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
@@ -392,81 +345,20 @@ function SettingsPage() {
               <div className="space-y-4">
                 <h2 className="text-sm font-medium text-foreground">Paths</h2>
 
-                {/* Database Path */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
-                      Database Path
-                    </label>
-                    <Input
-                      value={localDatabasePath}
-                      onChange={(e) => setLocalDatabasePath(e.target.value)}
-                      placeholder="~/.vibora/vibora.db"
-                      disabled={isLoading}
-                      className="flex-1 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => setDatabaseBrowserOpen(true)}
-                      disabled={isLoading}
-                      title="Browse"
-                    >
-                      <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetDatabasePath}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                  </div>
-                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    SQLite database file location (requires restart)
-                  </p>
-                </div>
-
-                {/* Worktree Directory */}
+                {/* Worktree Directory (read-only) */}
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <label className="w-40 shrink-0 text-sm text-muted-foreground">
                       Worktree Directory
                     </label>
                     <Input
-                      value={localWorktreePath}
-                      onChange={(e) => setLocalWorktreePath(e.target.value)}
-                      placeholder="~/.vibora/worktrees"
-                      disabled={isLoading}
-                      className="flex-1 font-mono text-sm"
+                      value={worktreeBasePath}
+                      disabled
+                      className="flex-1 font-mono text-sm bg-muted"
                     />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => setWorktreeBrowserOpen(true)}
-                      disabled={isLoading}
-                      title="Browse"
-                    >
-                      <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetWorktree}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
                   </div>
                   <p className="ml-40 pl-2 text-xs text-muted-foreground">
-                    Where task worktrees are created
+                    Derived from VIBORA_DIR (read-only)
                   </p>
                 </div>
 
@@ -829,7 +721,7 @@ function SettingsPage() {
                         onChange={(e) => setPushoverAppToken(e.target.value)}
                         placeholder="App Token"
                         disabled={isLoading || !notificationsEnabled}
-                        className="font-mono text-sm"
+                        className="flex-1 font-mono text-sm"
                       />
                       <Input
                         type="password"
@@ -837,7 +729,7 @@ function SettingsPage() {
                         onChange={(e) => setPushoverUserKey(e.target.value)}
                         placeholder="User Key"
                         disabled={isLoading || !notificationsEnabled}
-                        className="font-mono text-sm"
+                        className="flex-1 font-mono text-sm"
                       />
                     </div>
                   )}
@@ -863,20 +755,6 @@ function SettingsPage() {
           </Card>
         </div>
       </div>
-
-      <FilesystemBrowser
-        open={databaseBrowserOpen}
-        onOpenChange={setDatabaseBrowserOpen}
-        onSelect={(path) => setLocalDatabasePath(path)}
-        initialPath={localDatabasePath || undefined}
-      />
-
-      <FilesystemBrowser
-        open={worktreeBrowserOpen}
-        onOpenChange={setWorktreeBrowserOpen}
-        onSelect={(path) => setLocalWorktreePath(path)}
-        initialPath={localWorktreePath || undefined}
-      />
 
       <FilesystemBrowser
         open={reposDirBrowserOpen}

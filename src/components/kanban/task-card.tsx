@@ -13,7 +13,8 @@ import { useDrag } from './drag-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, GitPullRequestIcon, Task01Icon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, GitPullRequestIcon, Task01Icon, Settings05Icon } from '@hugeicons/core-free-icons'
+import { TaskConfigModal } from '@/components/task-config-modal'
 
 interface TaskCardProps {
   task: Task
@@ -30,6 +31,7 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [closestEdge, setClosestEdge] = useState<Edge | null>(null)
   const [previewContainer, setPreviewContainer] = useState<HTMLElement | null>(null)
+  const [configModalOpen, setConfigModalOpen] = useState(false)
 
   // Track if drag occurred to distinguish from click
   const hasDragged = useRef(false)
@@ -156,10 +158,23 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
         </div>
       )}
 
-      <CardHeader className={cn('p-3 pb-1', selectMode && 'pr-8')}>
-        <CardTitle className="text-sm font-medium leading-tight">
+      <CardHeader className={cn('p-3 pb-1 flex flex-row items-start justify-between gap-2', selectMode && 'pr-8')}>
+        <CardTitle className="text-sm font-medium leading-tight flex-1">
           {task.title}
         </CardTitle>
+        {!selectMode && !isDragPreview && (
+          <button
+            type="button"
+            className="shrink-0 p-0.5 -m-0.5 rounded hover:bg-muted transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation()
+              setConfigModalOpen(true)
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} className="text-muted-foreground" />
+          </button>
+        )}
       </CardHeader>
       <CardContent className="p-3 pt-1">
         {task.description && (
@@ -196,6 +211,11 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
         </div>,
         previewContainer
       )}
+      <TaskConfigModal
+        task={task}
+        open={configModalOpen}
+        onOpenChange={setConfigModalOpen}
+      />
     </>
   )
 }

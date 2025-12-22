@@ -10,6 +10,7 @@ import { TerminalStatusBar } from './terminal-status'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, PlusSignIcon, Task01Icon } from '@hugeicons/core-free-icons'
+import { GitActionsButtons } from './git-actions-buttons'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 
@@ -17,6 +18,10 @@ interface TaskInfo {
   taskId: string
   repoName: string
   title: string
+  repoPath: string
+  worktreePath: string
+  baseBranch: string
+  branch: string | null
 }
 
 interface TerminalGridProps {
@@ -46,7 +51,7 @@ function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
         {taskInfo ? (
-          // Task terminal header: [Task Link] [Repo Name] [Path] ... [Close]
+          // Task terminal header: [Task Link] [Repo Name] [Path] ... [Git Actions] [Close]
           <div className="flex flex-1 items-center gap-2 px-2 py-1">
             <Link
               to="/tasks/$taskId"
@@ -61,6 +66,14 @@ function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename
             {terminal.cwd && (
               <span className="text-xs text-muted-foreground truncate">{terminal.cwd}</span>
             )}
+            <div className="ml-auto flex items-center gap-0.5">
+              <GitActionsButtons
+                repoPath={taskInfo.repoPath}
+                worktreePath={taskInfo.worktreePath}
+                baseBranch={taskInfo.baseBranch}
+                taskId={taskInfo.taskId}
+              />
+            </div>
           </div>
         ) : (
           // Regular terminal header

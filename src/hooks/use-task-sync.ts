@@ -33,7 +33,7 @@ export function useTaskSync() {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const reconnectAttemptsRef = useRef(0)
-  const connectRef = useRef<() => void>()
+  const connectRef = useRef<(() => void) | undefined>(undefined)
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
@@ -41,8 +41,8 @@ export function useTaskSync() {
         const message: ServerMessage = JSON.parse(event.data)
         if (message.type === 'task:updated') {
           queryClient.invalidateQueries({ queryKey: ['tasks'] })
-        } else if (message.type === 'notification') {
-          const { title, message: description, notificationType } = message.payload
+        } else if (message.type === 'notification' && 'payload' in message) {
+          const { title, message: description, notificationType } = (message as NotificationMessage).payload
           switch (notificationType) {
             case 'success':
               toast.success(title, { description })

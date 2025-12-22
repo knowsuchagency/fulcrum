@@ -81,13 +81,25 @@ function TerminalsView() {
 
   // Map worktree path to task info for navigation and display
   const taskInfoByCwd = useMemo(() => {
-    const map = new Map<string, { taskId: string; repoName: string; title: string }>()
+    const map = new Map<string, {
+      taskId: string
+      repoName: string
+      title: string
+      repoPath: string
+      worktreePath: string
+      baseBranch: string
+      branch: string | null
+    }>()
     for (const task of tasks) {
       if (task.worktreePath) {
         map.set(task.worktreePath, {
           taskId: task.id,
           repoName: task.repoName,
           title: task.title,
+          repoPath: task.repoPath,
+          worktreePath: task.worktreePath,
+          baseBranch: task.baseBranch,
+          branch: task.branch,
         })
       }
     }
@@ -156,7 +168,7 @@ function TerminalsView() {
       name: `Terminal ${terminalCountRef.current}`,
       cols: 80,
       rows: 24,
-      tabId: activeTabId,
+      tabId: activeTabId ?? undefined,
       positionInTab,
     })
   }, [createTerminal, activeTabId, terminals])
@@ -269,7 +281,7 @@ function TerminalsView() {
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/30 px-2 py-1">
         <TerminalTabBar
           tabs={tabBarTabs}
-          activeTabId={activeTabId}
+          activeTabId={activeTabId ?? ''}
           onTabSelect={setActiveTab}
           onTabClose={handleTabDelete}
           onTabCreate={handleTabCreate}

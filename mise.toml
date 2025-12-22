@@ -132,12 +132,23 @@ run = "npm publish --access public"
 # Production daemon tasks
 [tasks.up]
 description = "Build and start production server as daemon"
-depends = ["install"]
+depends = ["install", "build"]
 run = """
 set -e
 
+VIBORA_DIR="${VIBORA_DIR:-$HOME/.vibora}"
+PID_FILE="$VIBORA_DIR/vibora.pid"
+SETTINGS_FILE="$VIBORA_DIR/settings.json"
+
+# Determine port: env var > settings.json > default 3333
+if [ -z "$PORT" ]; then
+  if [ -f "$SETTINGS_FILE" ] && command -v jq >/dev/null 2>&1; then
+    PORT=$(jq -r '.port // empty' "$SETTINGS_FILE" 2>/dev/null)
+  fi
+  PORT="${PORT:-3333}"
+fi
+
 # Check if already running
-PID_FILE="${VIBORA_DIR:-$HOME/.vibora}/vibora.pid"
 if [ -f "$PID_FILE" ]; then
   PID=$(cat "$PID_FILE")
   if kill -0 "$PID" 2>/dev/null; then
@@ -146,19 +157,15 @@ if [ -f "$PID_FILE" ]; then
   fi
 fi
 
-# Build frontend
-echo "Building frontend..." >&2
-bunx vite build
-
 # Sync database
 echo "Syncing database..." >&2
 bun run drizzle-kit push
 
 # Start server in background
 echo "Starting server..." >&2
-mkdir -p "${VIBORA_DIR:-$HOME/.vibora}"
-nohup env NODE_ENV=production PORT="${PORT:-3333}" bun server/index.ts \
-  > "${VIBORA_DIR:-$HOME/.vibora}/server.log" 2>&1 &
+mkdir -p "$VIBORA_DIR"
+nohup env NODE_ENV=production PORT="$PORT" bun server/index.ts \
+  > "$VIBORA_DIR/server.log" 2>&1 &
 PID=$!
 
 # Write PID file
@@ -167,12 +174,12 @@ echo "$PID" > "$PID_FILE"
 # Verify it started
 sleep 1
 if ! kill -0 "$PID" 2>/dev/null; then
-  echo "Server failed to start. Check ${VIBORA_DIR:-$HOME/.vibora}/server.log" >&2
+  echo "Server failed to start. Check $VIBORA_DIR/server.log" >&2
   rm -f "$PID_FILE"
   exit 1
 fi
 
-echo "Vibora started on http://localhost:${PORT:-3333} (PID: $PID)"
+echo "Vibora started on http://localhost:$PORT (PID: $PID)"
 """
 
 [tasks.down]
