@@ -15,6 +15,20 @@
       "when": 1766353424652,
       "tag": "0001_soft_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1766373320245,
+      "tag": "0002_burly_tyrannus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1766374272433,
+      "tag": "0003_conscious_shard",
+      "breakpoints": true
     }
   ]
 }

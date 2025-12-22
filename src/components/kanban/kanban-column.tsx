@@ -61,7 +61,7 @@ export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
           {tasks.length}
         </span>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-2 p-2">
           {sortedTasks.map((task) => (
             <TaskCard key={task.id} task={task} />

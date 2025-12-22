@@ -104,6 +104,13 @@ set -e
 echo "Bundling server..." >&2
 bun build server/index.ts --target=bun --outfile=cli/server/index.js
 
+# Bundle CLI with node shebang
+echo "Bundling CLI..." >&2
+mkdir -p cli/bin
+bun build cli/src/index.ts --target=bun --outfile=cli/bin/vibora.js
+# Replace bun shebang with node (npm requirement) - bun is still invoked at runtime
+sed -i '1s|#!/usr/bin/env bun|#!/usr/bin/env node|' cli/bin/vibora.js
+
 # Copy native PTY library
 echo "Copying native PTY library..." >&2
 mkdir -p cli/lib
@@ -119,6 +126,11 @@ cp -r drizzle/* cli/drizzle/
 echo "Copying frontend build..." >&2
 mkdir -p cli/dist
 cp -r dist/* cli/dist/
+
+# Copy README and LICENSE
+echo "Copying README and LICENSE..." >&2
+cp README.md cli/
+cp LICENSE cli/
 
 echo "CLI package built successfully"
 """
