@@ -174,7 +174,7 @@ function TaskView() {
   const buildMergeClaudePrompt = () => {
     if (!task || !mergeError) return ''
     const baseBranch = task.baseBranch || 'main'
-    return `Fix the git merge issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${mergeError} | Steps: 1) Check git status in both worktree and parent 2) Resolve any conflicts 3) Ensure worktree changes are committed 4) Retry merge to ${baseBranch}`
+    return `Fix the git merge issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${mergeError} | Steps: 1) Check git status in both worktree and parent 2) Resolve any conflicts 3) Ensure worktree changes are committed 4) Retry merge to ${baseBranch} 5) On successful merge, run: vibora tasks move ${task.id} --status done`
   }
 
   const handleMergeToMain = async () => {
