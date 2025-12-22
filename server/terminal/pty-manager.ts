@@ -218,6 +218,17 @@ export class PTYManager {
     return Array.from(this.sessions.values()).map((s) => s.getInfo())
   }
 
+  // Kill Claude processes in a specific terminal (but keep terminal running)
+  killClaudeInTerminal(terminalId: string): boolean {
+    const session = this.sessions.get(terminalId)
+    if (!session) {
+      return false
+    }
+
+    const dtach = getDtachService()
+    return dtach.killClaudeInSession(terminalId)
+  }
+
   // Detach all PTYs but keep dtach sessions running
   detachAll(): void {
     for (const session of this.sessions.values()) {

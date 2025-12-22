@@ -11,6 +11,7 @@ import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useUpdateTask } from '@/hooks/use-tasks'
+import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
 import { toast } from 'sonner'
 
 interface GitActionsButtonsProps {
@@ -32,6 +33,7 @@ export function GitActionsButtons({
   const gitMerge = useGitMergeToMain()
   const gitSyncParent = useGitSyncParent()
   const updateTask = useUpdateTask()
+  const killClaude = useKillClaudeInTask()
 
   const handleSync = async () => {
     try {
@@ -55,6 +57,8 @@ export function GitActionsButtons({
         baseBranch,
       })
       toast.success('Merged to main')
+      // Kill Claude if running in the task's terminals
+      killClaude.mutate(taskId)
       // Mark task as done after successful merge
       updateTask.mutate({
         taskId,

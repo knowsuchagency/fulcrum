@@ -52,6 +52,25 @@ function getDescendantPids(pid: number): number[] {
   return descendants
 }
 
+// Check if a process is a Claude process by examining its command line
+function isClaudeProcess(pid: number): boolean {
+  try {
+    const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
+    // Check for claude command (claude, claude-code, etc.)
+    return /\bclaude\b/i.test(cmdline)
+  } catch {
+    // /proc not available (non-Linux), try ps
+    try {
+      const result = execSync(`ps -p ${pid} -o args= 2>/dev/null || true`, {
+        encoding: 'utf-8',
+      })
+      return /\bclaude\b/i.test(result)
+    } catch {
+      return false
+    }
+  }
+}
+
 // Kill a process tree (parent and all descendants)
 export function killProcessTree(pid: number): void {
   const descendants = getDescendantPids(pid)
@@ -118,6 +137,30 @@ export class DtachService {
     for (const pid of dtachPids) {
       killProcessTree(pid)
     }
+  }
+
+  // Kill Claude processes within a dtach session (but keep shell running)
+  killClaudeInSession(terminalId: string): boolean {
+    const socketPath = this.getSocketPath(terminalId)
+
+    // Find dtach process(es) using this socket
+    const dtachPids = findProcessesByArg(socketPath)
+
+    let killedAny = false
+    for (const dtachPid of dtachPids) {
+      // Get all descendant processes
+      const descendants = getDescendantPids(dtachPid)
+
+      // Find claude processes among descendants
+      for (const pid of descendants) {
+        if (isClaudeProcess(pid)) {
+          killProcessTree(pid)
+          killedAny = true
+        }
+      }
+    }
+
+    return killedAny
   }
 
   // Check if dtach is available
