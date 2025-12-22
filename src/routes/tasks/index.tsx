@@ -67,17 +67,18 @@ function KanbanViewContent() {
               <span className="text-sm font-medium">
                 {selectedCount > 0 ? `${selectedCount} selected` : 'Select tasks'}
               </span>
-              <Button variant="ghost" size="sm" onClick={exitSelectMode}>
+              <Button variant="ghost" size="sm" onClick={exitSelectMode} className="max-sm:px-2">
                 <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} data-slot="icon" />
-                Cancel
+                <span className="max-sm:hidden">Cancel</span>
               </Button>
             </div>
             <AlertDialog>
               <AlertDialogTrigger
-                render={<Button variant="destructive" size="sm" disabled={bulkDelete.isPending || selectedCount === 0} />}
+                render={<Button variant="destructive" size="sm" disabled={bulkDelete.isPending || selectedCount === 0} className="max-sm:px-2" />}
               >
                 <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-                {bulkDelete.isPending ? 'Deleting...' : `Delete${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
+                <span className="max-sm:hidden">{bulkDelete.isPending ? 'Deleting...' : 'Delete'}</span>
+                {selectedCount > 0 && <span className="max-sm:hidden"> ({selectedCount})</span>}
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -102,7 +103,7 @@ function KanbanViewContent() {
           </>
         ) : (
           <>
-            <h1 className="text-sm font-medium">Tasks</h1>
+            <h1 className="text-sm font-medium max-sm:hidden">Tasks</h1>
             <div className="flex items-center gap-2">
               <Select
                 value={repoFilter ?? ''}
@@ -123,9 +124,9 @@ function KanbanViewContent() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="ghost" size="sm" onClick={() => setSelectMode(true)}>
+              <Button variant="ghost" size="sm" onClick={() => setSelectMode(true)} className="max-sm:px-2">
                 <HugeiconsIcon icon={CheckListIcon} size={14} strokeWidth={2} data-slot="icon" />
-                Select
+                <span className="max-sm:hidden">Select</span>
               </Button>
             </div>
           </>
