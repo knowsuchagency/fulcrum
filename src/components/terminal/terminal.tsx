@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
+import { MobileTerminalControls } from './mobile-terminal-controls'
 
 interface TerminalProps {
   className?: string
@@ -15,19 +16,26 @@ interface TerminalProps {
   onContainerReady?: (container: HTMLDivElement) => void
   terminalId?: string
   setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
+  onSend?: (data: string) => void
+  onFocus?: () => void
 }
 
-export function Terminal({ className, onReady, onResize, onContainerReady, terminalId, setupImagePaste }: TerminalProps) {
+export function Terminal({ className, onReady, onResize, onContainerReady, terminalId, setupImagePaste, onSend, onFocus }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const onResizeRef = useRef(onResize)
+  const onFocusRef = useRef(onFocus)
   const { setTerminalFocused } = useKeyboardContext()
 
-  // Keep onResize ref updated
+  // Keep refs updated
   useEffect(() => {
     onResizeRef.current = onResize
   }, [onResize])
+
+  useEffect(() => {
+    onFocusRef.current = onFocus
+  }, [onFocus])
 
   const doFit = useCallback(() => {
     if (!fitAddonRef.current || !termRef.current) return
@@ -90,7 +98,10 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
     })
 
     // Track terminal focus for keyboard shortcuts
-    const handleTerminalFocus = () => setTerminalFocused(true)
+    const handleTerminalFocus = () => {
+      setTerminalFocused(true)
+      onFocusRef.current?.()
+    }
     const handleTerminalBlur = () => setTerminalFocused(false)
 
     // xterm creates a hidden textarea for keyboard input - track its focus
@@ -169,17 +180,20 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
   }, [])
 
   return (
-    <div className="relative h-full w-full max-w-full">
-      <div
-        ref={containerRef}
-        className={cn('h-full w-full max-w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
-      />
-      <button
-        onClick={handleScrollToBottom}
-        className="absolute top-2 right-5 p-1 text-white/50 hover:text-white/80 transition-colors"
-      >
-        <HugeiconsIcon icon={ArrowDownDoubleIcon} size={20} strokeWidth={2} />
-      </button>
+    <div className="flex h-full w-full max-w-full flex-col">
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={containerRef}
+          className={cn('h-full w-full max-w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
+        />
+        <button
+          onClick={handleScrollToBottom}
+          className="absolute top-2 right-5 p-1 text-white/50 hover:text-white/80 transition-colors"
+        >
+          <HugeiconsIcon icon={ArrowDownDoubleIcon} size={20} strokeWidth={2} />
+        </button>
+      </div>
+      {onSend && <MobileTerminalControls onSend={onSend} />}
     </div>
   )
 }
