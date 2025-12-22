@@ -1,12 +1,24 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 interface TaskUpdatedMessage {
   type: 'task:updated'
   payload: { taskId: string }
 }
 
-type ServerMessage = TaskUpdatedMessage | { type: string }
+interface NotificationMessage {
+  type: 'notification'
+  payload: {
+    id: string
+    title: string
+    message: string
+    notificationType: 'success' | 'info' | 'warning' | 'error'
+    taskId?: string
+  }
+}
+
+type ServerMessage = TaskUpdatedMessage | NotificationMessage | { type: string }
 
 function getWsUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -29,6 +41,23 @@ export function useTaskSync() {
         const message: ServerMessage = JSON.parse(event.data)
         if (message.type === 'task:updated') {
           queryClient.invalidateQueries({ queryKey: ['tasks'] })
+        } else if (message.type === 'notification') {
+          const { title, message: description, notificationType } = message.payload
+          switch (notificationType) {
+            case 'success':
+              toast.success(title, { description })
+              break
+            case 'error':
+              toast.error(title, { description })
+              break
+            case 'warning':
+              toast.warning(title, { description })
+              break
+            case 'info':
+            default:
+              toast.info(title, { description })
+              break
+          }
         }
       } catch {
         // Ignore parse errors
