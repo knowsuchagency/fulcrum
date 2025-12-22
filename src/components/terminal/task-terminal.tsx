@@ -15,11 +15,12 @@ interface TaskTerminalProps {
   taskName: string
   cwd: string | null
   className?: string
-  planModeDescription?: string
+  aiMode?: 'default' | 'plan' | 'none'
+  description?: string
   startupScript?: string | null
 }
 
-export function TaskTerminal({ taskName, cwd, className, planModeDescription, startupScript }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -251,10 +252,14 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
 
       // 2. Then run task creation command (e.g., claude agent)
       let taskCommand = taskCreationCommand
-      if (planModeDescription) {
-        const prompt = `${taskName}: ${planModeDescription}`.replace(/"/g, '\\"')
+      if (aiMode === 'plan' && description) {
+        const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
         taskCommand = `claude "${prompt}" --allow-dangerously-skip-permissions --permission-mode plan`
+      } else if (aiMode === 'default' && description) {
+        const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
+        taskCommand = `claude "${prompt}" --dangerously-skip-permissions`
       }
+      // else: use default taskCreationCommand (for 'none' or no description)
       if (taskCommand) {
         setTimeout(() => {
           writeToTerminal(terminalId, taskCommand + '\r')
@@ -267,7 +272,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, planModeDescription, taskName, startupScript, newTerminalIds])
+  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, aiMode, description, taskName, startupScript, newTerminalIds])
 
   if (!cwd) {
     return (
