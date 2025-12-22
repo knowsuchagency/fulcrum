@@ -75,7 +75,14 @@ The built CLI package includes:
 
 - Default location: `~/.vibora/vibora.db` (SQLite with WAL mode)
 - Schema: `server/db/schema.ts`
-- Single `tasks` table with fields for task metadata, git worktree paths, and status
+
+### Tables
+
+- **tasks** - Task metadata, git worktree paths, status, Linear integration, PR tracking
+- **repositories** - Saved git repositories with startupScript and copyFiles patterns
+- **terminalTabs** - First-class tab entities for terminal organization
+- **terminals** - Terminal instances with dtach session backing
+- **terminalViewState** - Singleton UI state persistence (active tab, focused terminals)
 
 Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 
@@ -88,10 +95,12 @@ src/
   hooks/           # Custom hooks (use-tasks, use-terminal-ws, etc.)
 server/
   routes/          # REST API handlers (/api/*)
+  services/        # Business logic (pr-monitor, linear, task-status, notifications)
   terminal/        # PTY management (pty-manager, buffer-manager)
   websocket/       # WebSocket protocol for terminal I/O (/ws/terminal)
   db/              # Drizzle schema and initialization
   lib/             # Shared utilities (settings, etc.)
+shared/            # Shared types (frontend, backend, CLI)
 cli/
   src/             # CLI source (commands, utils)
   server/          # Bundled server (generated)
