@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import { Database } from 'bun:sqlite'
 import { join } from 'node:path'
+import { readdirSync } from 'node:fs'
 import * as schema from './schema'
 import { initializeViboraDirectories, getSetting } from '../lib/settings'
 
@@ -42,8 +43,7 @@ if (process.env.VIBORA_PACKAGE_ROOT) {
 
     if (migrationCount.count === 0) {
       // Database was created with drizzle-kit push - mark all migrations as applied
-      const fs = require('fs')
-      const files = fs.readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
+      const files = readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
       for (const file of files) {
         const hash = file.replace('.sql', '')
         sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${hash}', ${Date.now()})`)
