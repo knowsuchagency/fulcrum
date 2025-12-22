@@ -15,6 +15,7 @@ import {
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { useTasks } from '@/hooks/use-tasks'
+import { useRepositories } from '@/hooks/use-repositories'
 import { useWorktreeBasePath } from '@/hooks/use-config'
 import { cn } from '@/lib/utils'
 import type { Terminal as XTerm } from '@xterm/xterm'
@@ -58,8 +59,18 @@ function TerminalsView() {
   }, [tabs, activeTabId, isViewStateLoading, setActiveTab])
 
   const { data: tasks = [] } = useTasks()
+  const { data: repositories = [] } = useRepositories()
   const { data: worktreeBasePath } = useWorktreeBasePath()
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
+
+  // Map repository path to repository id for linking
+  const repoIdByPath = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const repo of repositories) {
+      map.set(repo.path, repo.id)
+    }
+    return map
+  }, [repositories])
 
   // Get worktree paths for active tasks (IN_PROGRESS, IN_REVIEW) - shown in All Tasks tab
   const activeTaskWorktrees = useMemo(() => {
@@ -83,6 +94,7 @@ function TerminalsView() {
   const taskInfoByCwd = useMemo(() => {
     const map = new Map<string, {
       taskId: string
+      repoId: string | undefined
       repoName: string
       title: string
       repoPath: string
@@ -94,6 +106,7 @@ function TerminalsView() {
       if (task.worktreePath) {
         map.set(task.worktreePath, {
           taskId: task.id,
+          repoId: repoIdByPath.get(task.repoPath),
           repoName: task.repoName,
           title: task.title,
           repoPath: task.repoPath,
@@ -104,7 +117,7 @@ function TerminalsView() {
       }
     }
     return map
-  }, [tasks])
+  }, [tasks, repoIdByPath])
 
   // Unique repo names from active tasks for filtering
   const repoNames = useMemo(() => {

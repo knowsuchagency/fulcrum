@@ -5,6 +5,8 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 
 interface TerminalProps {
   className?: string
@@ -153,10 +155,22 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
     }
   }, [doFit, onReady, onContainerReady, setTerminalFocused])
 
+  const handleScrollToBottom = useCallback(() => {
+    termRef.current?.scrollToBottom()
+  }, [])
+
   return (
-    <div
-      ref={containerRef}
-      className={cn('h-full w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
-    />
+    <div className="relative h-full w-full">
+      <div
+        ref={containerRef}
+        className={cn('h-full w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
+      />
+      <button
+        onClick={handleScrollToBottom}
+        className="absolute top-2 right-5 p-1 text-white/50 hover:text-white/80 transition-colors"
+      >
+        <HugeiconsIcon icon={ArrowDownDoubleIcon} size={20} strokeWidth={2} />
+      </button>
+    </div>
   )
 }
