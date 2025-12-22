@@ -201,7 +201,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
           setRepoError(null)
           // Reset tab to saved if repositories exist, otherwise browse
           setRepoTab(repositories && repositories.length > 0 ? 'saved' : 'browse')
-          navigate({ to: '/tasks/$taskId', params: { taskId: task.id }, state: navState })
+          navigate({ to: '/tasks/$taskId', params: { taskId: task.id }, state: navState as Record<string, unknown> })
         },
       }
     )
@@ -315,7 +315,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
                         <ComboboxList>
                           <ComboboxEmpty>No repositories found</ComboboxEmpty>
                           {filteredRepositories.map((repo) => (
-                            <ComboboxItem key={repo.id} value={repo.id} textValue={repo.displayName}>
+                            <ComboboxItem key={repo.id} value={repo.id}>
                               {repo.displayName}
                             </ComboboxItem>
                           ))}

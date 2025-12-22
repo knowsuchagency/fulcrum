@@ -156,7 +156,7 @@ function TerminalsView() {
       name: `Terminal ${terminalCountRef.current}`,
       cols: 80,
       rows: 24,
-      tabId: activeTabId,
+      tabId: activeTabId ?? undefined,
       positionInTab,
     })
   }, [createTerminal, activeTabId, terminals])
@@ -269,7 +269,7 @@ function TerminalsView() {
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/30 px-2 py-1">
         <TerminalTabBar
           tabs={tabBarTabs}
-          activeTabId={activeTabId}
+          activeTabId={activeTabId ?? ''}
           onTabSelect={setActiveTab}
           onTabClose={handleTabDelete}
           onTabCreate={handleTabCreate}
