@@ -1,8 +1,17 @@
 import { Hono } from 'hono'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { getViboraDir } from '../lib/settings'
+
+const mimeTypes: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+}
 
 const app = new Hono()
 
@@ -57,6 +66,31 @@ app.post('/', async (c) => {
   await writeFile(filePath, Buffer.from(arrayBuffer))
 
   return c.json({ path: filePath })
+})
+
+// GET /api/uploads/:filename
+// Serve uploaded images for preview display
+app.get('/:filename', async (c) => {
+  const filename = c.req.param('filename')
+
+  // Security: only allow expected filenames (clipboard-YYYY-MM-DD-HHMMSS.ext)
+  if (!/^clipboard-\d{4}-\d{2}-\d{2}-\d{6}\.\w+$/.test(filename)) {
+    return c.notFound()
+  }
+
+  const filePath = join(getViboraDir(), 'uploads', filename)
+
+  if (!existsSync(filePath)) {
+    return c.notFound()
+  }
+
+  const ext = filename.split('.').pop()?.toLowerCase() || ''
+  const contentType = mimeTypes[ext] || 'application/octet-stream'
+
+  const content = await readFile(filePath)
+  return new Response(content, {
+    headers: { 'Content-Type': contentType },
+  })
 })
 
 export default app

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { DescriptionTextarea } from '@/components/ui/description-textarea'
 import { Button } from '@/components/ui/button'
 import { useUpdateTask } from '@/hooks/use-tasks'
 import type { Task } from '@/types'
@@ -94,10 +94,10 @@ export function TaskConfigModal({ task, open, onOpenChange }: TaskConfigModalPro
           </Field>
           <Field>
             <FieldLabel htmlFor="config-description">Description</FieldLabel>
-            <Textarea
+            <DescriptionTextarea
               id="config-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onValueChange={setDescription}
               rows={3}
             />
           </Field>
