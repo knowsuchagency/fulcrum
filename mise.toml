@@ -109,12 +109,17 @@ echo "Bundling CLI..." >&2
 mkdir -p cli/bin
 bun build cli/src/index.ts --target=bun --outfile=cli/bin/vibora.js
 # Replace bun shebang with node (npm requirement) - bun is still invoked at runtime
-sed -i '1s|#!/usr/bin/env bun|#!/usr/bin/env node|' cli/bin/vibora.js
+# Use perl for cross-platform compatibility (macOS sed -i differs from GNU sed)
+perl -i -pe 's|#!/usr/bin/env bun|#!/usr/bin/env node| if $. == 1' cli/bin/vibora.js
 
-# Copy native PTY library
-echo "Copying native PTY library..." >&2
+# Copy native PTY libraries (all platforms)
+echo "Copying native PTY libraries..." >&2
 mkdir -p cli/lib
-cp node_modules/bun-pty/rust-pty/target/release/librust_pty.so cli/lib/
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.so cli/lib/ 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.so cli/lib/ 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.dylib cli/lib/ 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.dylib cli/lib/ 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/rust_pty.dll cli/lib/ 2>/dev/null || true
 
 # Generate SQL migrations
 echo "Generating migrations..." >&2
