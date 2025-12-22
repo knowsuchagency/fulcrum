@@ -3,12 +3,12 @@ import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import { Database } from 'bun:sqlite'
 import { join } from 'node:path'
 import * as schema from './schema'
-import { initializeViboraDirectories, getSetting } from '../lib/settings'
+import { initializeViboraDirectories, getDatabasePath } from '../lib/settings'
 
 // Initialize all vibora directories (data dir, worktrees, etc.)
 initializeViboraDirectories()
 
-const dbPath = getSetting('databasePath')
+const dbPath = getDatabasePath()
 const sqlite = new Database(dbPath)
 
 // Enable WAL mode for better performance

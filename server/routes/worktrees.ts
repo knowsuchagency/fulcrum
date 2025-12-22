@@ -4,7 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { db, tasks } from '../db'
 import { eq } from 'drizzle-orm'
-import { getSetting } from '../lib/settings'
+import { getWorktreeBasePath } from '../lib/settings'
 import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
 
 interface WorktreeInfo {
@@ -119,7 +119,7 @@ const app = new Hono()
 
 // GET /api/worktrees - List all worktrees
 app.get('/', (c) => {
-  const worktreeBasePath = getSetting('worktreeBasePath')
+  const worktreeBasePath = getWorktreeBasePath()
 
   // Check if base path exists
   if (!fs.existsSync(worktreeBasePath)) {
@@ -211,7 +211,7 @@ app.delete('/', async (c) => {
     }
 
     // Verify it's within the worktree base path for safety
-    const worktreeBasePath = getSetting('worktreeBasePath')
+    const worktreeBasePath = getWorktreeBasePath()
     const normalizedPath = path.normalize(body.worktreePath)
     if (!normalizedPath.startsWith(worktreeBasePath)) {
       return c.json({ error: 'Invalid worktree path' }, 400)
