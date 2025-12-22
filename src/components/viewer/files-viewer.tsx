@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -8,22 +8,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useFileTree, useFileContent } from '@/hooks/use-filesystem'
 import { useFilesViewState } from '@/hooks/use-files-view-state'
+import { useIsMobile } from '@/hooks/use-is-mobile'
 import { FileTree } from './file-tree'
 import { FileContent } from './file-content'
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-
-  return isMobile
-}
 
 interface FilesViewerProps {
   taskId: string
