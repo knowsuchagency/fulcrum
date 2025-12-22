@@ -5,7 +5,11 @@ import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { glob } from 'glob'
-import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
+import {
+  getPTYManager,
+  destroyTerminalAndBroadcast,
+  killClaudeInTerminalsForWorktree,
+} from '../terminal/pty-instance'
 import { broadcast } from '../websocket/terminal-ws'
 import { updateLinearTicketStatus } from '../services/linear'
 import { updateTaskStatus } from '../services/task-status'
@@ -499,6 +503,27 @@ app.patch('/:id/status', async (c) => {
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)
+  }
+})
+
+// POST /api/tasks/:id/kill-claude - Kill Claude processes in task terminals
+app.post('/:id/kill-claude', (c) => {
+  const id = c.req.param('id')
+  const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
+
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  if (!task.worktreePath) {
+    return c.json({ success: true, terminalsAffected: 0 })
+  }
+
+  try {
+    const count = killClaudeInTerminalsForWorktree(task.worktreePath)
+    return c.json({ success: true, terminalsAffected: count })
+  } catch {
+    return c.json({ success: true, terminalsAffected: 0 })
   }
 })
 
