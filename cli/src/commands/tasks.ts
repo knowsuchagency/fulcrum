@@ -134,7 +134,8 @@ export async function handleTasksCommand(
         throw new CliError('MISSING_ID', 'Task ID required', ExitCodes.INVALID_ARGS)
       }
 
-      await client.deleteTask(id)
+      const deleteLinkedWorktree = flags['delete-worktree'] === 'true' || flags['delete-worktree'] === ''
+      await client.deleteTask(id, deleteLinkedWorktree)
       output({ deleted: id })
       break
     }

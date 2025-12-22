@@ -20,7 +20,8 @@ export async function handleWorktreesCommand(
       if (!worktreePath) {
         throw new CliError('MISSING_PATH', '--path is required', ExitCodes.INVALID_ARGS)
       }
-      const result = await client.deleteWorktree(worktreePath, flags.repo)
+      const deleteLinkedTask = flags['delete-task'] === 'true' || flags['delete-task'] === ''
+      const result = await client.deleteWorktree(worktreePath, flags.repo, deleteLinkedTask)
       output(result)
       break
     }

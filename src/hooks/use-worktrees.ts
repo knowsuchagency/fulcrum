@@ -135,10 +135,18 @@ export function useDeleteWorktree() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ worktreePath, repoPath }: { worktreePath: string; repoPath?: string }) =>
+    mutationFn: ({
+      worktreePath,
+      repoPath,
+      deleteLinkedTask,
+    }: {
+      worktreePath: string
+      repoPath?: string
+      deleteLinkedTask?: boolean
+    }) =>
       fetchJSON<{ success: boolean; path: string }>(`${API_BASE}/api/worktrees`, {
         method: 'DELETE',
-        body: JSON.stringify({ worktreePath, repoPath }),
+        body: JSON.stringify({ worktreePath, repoPath, deleteLinkedTask }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['worktrees'] })
