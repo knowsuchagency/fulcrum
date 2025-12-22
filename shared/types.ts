@@ -96,16 +96,31 @@ export interface Worktree {
   repoPath?: string
 }
 
+// Basic worktree info (fast to compute - no du/git commands)
+export interface WorktreeBasic {
+  path: string
+  name: string
+  lastModified: string
+  isOrphaned: boolean
+  taskId?: string
+  taskTitle?: string
+  taskStatus?: TaskStatus
+  repoPath?: string
+}
+
+// Extended worktree details (slow to compute - requires du/git)
+export interface WorktreeDetails {
+  path: string
+  size: number
+  sizeFormatted: string
+  branch: string
+}
+
 export interface WorktreesSummary {
   total: number
   orphaned: number
   totalSize: number
   totalSizeFormatted: string
-}
-
-export interface WorktreesResponse {
-  worktrees: Worktree[]
-  summary: WorktreesSummary
 }
 
 export interface Repository {
