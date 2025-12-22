@@ -1,22 +1,18 @@
-import { spawn, execSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { output } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
-import { writePid, readPid, isProcessRunning, getPort } from '../utils/process'
-
-/**
- * Check if dtach is installed
- */
-function isDtachInstalled(): boolean {
-  try {
-    execSync('which dtach', { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
-}
+import { writePid, readPid, removePid, isProcessRunning, getPort } from '../utils/process'
+import { confirm } from '../utils/prompt'
+import {
+  isDtachInstalled,
+  isBunInstalled,
+  isBrewInstalled,
+  installDtach,
+  installBun,
+} from '../utils/install'
 
 /**
  * Gets the package root directory (where the CLI is installed).
@@ -43,23 +39,81 @@ function getPackageRoot(): string {
 }
 
 export async function handleUpCommand(flags: Record<string, string>) {
+  // Check if bun is installed (needed to run the server)
+  if (!isBunInstalled()) {
+    const hasBrew = isBrewInstalled()
+    const method = hasBrew ? 'Homebrew' : 'curl script'
+    console.error('Bun is required to run Vibora but is not installed.')
+
+    const shouldInstall = await confirm(`Would you like to install bun via ${method}?`)
+    if (shouldInstall) {
+      const success = installBun()
+      if (!success) {
+        throw new CliError('INSTALL_FAILED', 'Failed to install bun', ExitCodes.ERROR)
+      }
+      console.error('Bun installed successfully!')
+    } else {
+      throw new CliError(
+        'MISSING_DEPENDENCY',
+        'Bun is required. Install manually: brew install oven-sh/bun/bun (macOS) or curl -fsSL https://bun.sh/install | bash',
+        ExitCodes.ERROR
+      )
+    }
+  }
+
   // Check if dtach is installed (required for terminal persistence)
   if (!isDtachInstalled()) {
-    throw new CliError(
-      'MISSING_DEPENDENCY',
-      'dtach is required but not installed. Install it with: brew install dtach (macOS) or apt install dtach (Linux)',
-      ExitCodes.ERROR
-    )
+    const hasBrew = isBrewInstalled()
+    const method = hasBrew ? 'Homebrew' : 'apt'
+    console.error('dtach is required for terminal persistence but is not installed.')
+
+    const shouldInstall = await confirm(`Would you like to install dtach via ${method}?`)
+    if (shouldInstall) {
+      const success = installDtach()
+      if (!success) {
+        throw new CliError('INSTALL_FAILED', 'Failed to install dtach', ExitCodes.ERROR)
+      }
+      console.error('dtach installed successfully!')
+    } else {
+      throw new CliError(
+        'MISSING_DEPENDENCY',
+        'dtach is required. Install manually: brew install dtach (macOS) or apt install dtach (Linux)',
+        ExitCodes.ERROR
+      )
+    }
   }
 
   // Check if already running
   const existingPid = readPid()
   if (existingPid && isProcessRunning(existingPid)) {
-    throw new CliError(
-      'ALREADY_RUNNING',
-      `Vibora server is already running (PID: ${existingPid})`,
-      ExitCodes.ERROR
-    )
+    console.error(`Vibora server is already running (PID: ${existingPid})`)
+
+    const shouldReplace = await confirm('Would you like to stop it and start a new instance?')
+    if (shouldReplace) {
+      console.error('Stopping existing instance...')
+      process.kill(existingPid, 'SIGTERM')
+
+      // Wait for process to exit (up to 5 seconds)
+      let attempts = 0
+      while (attempts < 50 && isProcessRunning(existingPid)) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        attempts++
+      }
+
+      // Force kill if still running
+      if (isProcessRunning(existingPid)) {
+        process.kill(existingPid, 'SIGKILL')
+      }
+
+      removePid()
+      console.error('Existing instance stopped.')
+    } else {
+      throw new CliError(
+        'ALREADY_RUNNING',
+        `Server already running at http://localhost:${getPort(flags.port)}`,
+        ExitCodes.ERROR
+      )
+    }
   }
 
   const port = getPort(flags.port)
