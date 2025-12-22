@@ -66,7 +66,6 @@ function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename
           // Regular terminal header
           <TerminalStatusBar
             name={terminal.name}
-            cwd={terminal.cwd}
             status={terminal.status}
             exitCode={terminal.exitCode}
             className="flex-1 border-b-0"

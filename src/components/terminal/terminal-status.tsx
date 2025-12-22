@@ -4,7 +4,6 @@ import type { TerminalStatus } from '@/hooks/use-terminal-ws'
 
 interface TerminalStatusBarProps {
   name: string
-  cwd: string
   status: TerminalStatus
   exitCode?: number
   className?: string
@@ -13,7 +12,6 @@ interface TerminalStatusBarProps {
 
 export function TerminalStatusBar({
   name,
-  cwd,
   status,
   exitCode,
   className,
@@ -93,14 +91,6 @@ export function TerminalStatusBar({
           {name}
         </span>
       )}
-
-      {/* Separator */}
-      <span className="text-muted-foreground">·</span>
-
-      {/* CWD */}
-      <span className="truncate text-muted-foreground" title={cwd}>
-        {cwd}
-      </span>
 
       {/* Exit code if applicable */}
       {status === 'exited' && exitCode !== undefined && (
