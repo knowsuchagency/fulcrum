@@ -59,19 +59,19 @@ function ReviewPage() {
               </ul>
             </div>
             <div className="flex flex-col gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href="https://github.com/settings/tokens/new?scopes=repo,read:user,read:org&description=Vibora"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+              <a
+                href="https://github.com/settings/tokens/new?scopes=repo,read:user,read:org&description=Vibora"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="outline" size="sm" className="w-full">
                   <HugeiconsIcon icon={LinkSquare02Icon} size={14} data-slot="icon" />
                   Generate Token
-                </a>
-              </Button>
-              <Button size="sm" asChild>
-                <Link to="/settings">Go to Settings</Link>
-              </Button>
+                </Button>
+              </a>
+              <Link to="/settings">
+                <Button size="sm" className="w-full">Go to Settings</Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -114,9 +114,11 @@ function ReviewPage() {
           )}
 
           {/* Organization filter */}
-          <Select value={selectedOrg} onValueChange={setSelectedOrg}>
+          <Select value={selectedOrg} onValueChange={(v) => setSelectedOrg(v || '')}>
             <SelectTrigger size="sm" className="min-w-[140px]">
-              <SelectValue placeholder="All Orgs" />
+              <SelectValue>
+                {selectedOrg || 'All Orgs'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Organizations</SelectItem>

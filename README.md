@@ -57,14 +57,19 @@ mise run db:migrate   # Apply migrations
 
 ## Configuration
 
-Settings are stored in `.vibora/settings.json`. The server checks for a `.vibora` directory in the current working directory first, falling back to `~/.vibora`.
+Settings are stored in `.vibora/settings.json`. The vibora directory is resolved in this order:
+1. `VIBORA_DIR` environment variable (explicit override)
+2. `.vibora` in current working directory (per-worktree isolation)
+3. `~/.vibora` (default)
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
+| (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
 | port | `PORT` | 3333 |
-| databasePath | `VIBORA_DATABASE_PATH` | {viboraDir}/vibora.db |
-| worktreeBasePath | `VIBORA_WORKTREE_PATH` | ~/.vibora/worktrees |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
+| linearApiKey | `LINEAR_API_KEY` | null |
+
+Database path (`{viboraDir}/vibora.db`) and worktree path (`{viboraDir}/worktrees`) are derived from the vibora directory and not separately configurable.
 
 Precedence: environment variable → settings.json → default
 
@@ -130,4 +135,4 @@ mise run dev
 
 ## License
 
-[MIT](LICENSE)
+[PolyForm Shield 1.0.0](LICENSE)
