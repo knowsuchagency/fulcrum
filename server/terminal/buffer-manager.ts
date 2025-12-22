@@ -1,11 +1,12 @@
 // Buffer manager for terminal scrollback
+// Stores raw terminal output without parsing to preserve escape sequences
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import * as path from 'path'
 import { getViboraDir } from '../lib/settings'
 
-const MAX_BUFFER_LINES = 10000
-const MAX_LINE_LENGTH = 2000
+// 1MB total buffer size limit
+const MAX_BUFFER_BYTES = 1_000_000
 
 function getBuffersDir(): string {
   const dir = path.join(getViboraDir(), 'buffers')
@@ -15,9 +16,19 @@ function getBuffersDir(): string {
   return dir
 }
 
+interface BufferChunk {
+  data: string
+  timestamp: number
+}
+
+interface BufferFileV2 {
+  version: 2
+  content: string // base64 encoded
+}
+
 export class BufferManager {
-  private lines: string[] = []
-  private partialLine: string = ''
+  private chunks: BufferChunk[] = []
+  private totalBytes: number = 0
   private terminalId: string | null = null
 
   setTerminalId(id: string): void {
@@ -25,65 +36,74 @@ export class BufferManager {
   }
 
   append(data: string): void {
-    const combined = this.partialLine + data
-    const parts = combined.split('\n')
+    // Store raw data without any parsing - preserves escape sequences
+    this.chunks.push({ data, timestamp: Date.now() })
+    this.totalBytes += data.length
 
-    // Last part might be incomplete (no trailing newline)
-    this.partialLine = parts.pop() || ''
-
-    for (const line of parts) {
-      // Truncate extremely long lines
-      const truncated = line.length > MAX_LINE_LENGTH
-        ? line.slice(0, MAX_LINE_LENGTH) + '...'
-        : line
-      this.lines.push(truncated)
-    }
-
-    // Trim buffer if it exceeds max lines
-    if (this.lines.length > MAX_BUFFER_LINES) {
-      this.lines = this.lines.slice(-MAX_BUFFER_LINES)
+    // Evict oldest chunks if over limit
+    while (this.totalBytes > MAX_BUFFER_BYTES && this.chunks.length > 1) {
+      const removed = this.chunks.shift()!
+      this.totalBytes -= removed.data.length
     }
   }
 
   getContents(): string {
-    const content = this.lines.join('\n')
-    if (this.partialLine) {
-      return content + '\n' + this.partialLine
-    }
-    return content
+    return this.chunks.map((c) => c.data).join('')
   }
 
   clear(): void {
-    this.lines = []
-    this.partialLine = ''
+    this.chunks = []
+    this.totalBytes = 0
   }
 
   getLineCount(): number {
-    return this.lines.length + (this.partialLine ? 1 : 0)
+    // Approximate line count for compatibility
+    const content = this.getContents()
+    return content.split('\n').length
   }
 
-  // Save buffer to disk
+  // Save buffer to disk using base64 encoding to preserve all bytes
   saveToDisk(): void {
     if (!this.terminalId) return
     const filePath = path.join(getBuffersDir(), `${this.terminalId}.buf`)
     try {
-      writeFileSync(filePath, this.getContents(), 'utf-8')
+      const content = this.getContents()
+      const fileData: BufferFileV2 = {
+        version: 2,
+        content: Buffer.from(content).toString('base64'),
+      }
+      writeFileSync(filePath, JSON.stringify(fileData), 'utf-8')
     } catch (err) {
       console.error(`[BufferManager] Failed to save buffer for ${this.terminalId}:`, err)
     }
   }
 
-  // Load buffer from disk
+  // Load buffer from disk, auto-migrating legacy format
   loadFromDisk(): void {
     if (!this.terminalId) return
     const filePath = path.join(getBuffersDir(), `${this.terminalId}.buf`)
     try {
       if (existsSync(filePath)) {
-        const content = readFileSync(filePath, 'utf-8')
-        // Parse content back into lines
-        this.lines = content.split('\n')
-        this.partialLine = ''
-        console.log(`[BufferManager] Loaded ${this.lines.length} lines for ${this.terminalId}`)
+        const raw = readFileSync(filePath, 'utf-8')
+
+        let content: string
+        try {
+          const parsed = JSON.parse(raw)
+          if (parsed.version === 2 && typeof parsed.content === 'string') {
+            // V2 format: base64 encoded
+            content = Buffer.from(parsed.content, 'base64').toString()
+          } else {
+            // Unknown JSON format, treat as legacy
+            content = raw
+          }
+        } catch {
+          // Not JSON, legacy plain text format
+          content = raw
+        }
+
+        this.chunks = [{ data: content, timestamp: Date.now() }]
+        this.totalBytes = content.length
+        console.log(`[BufferManager] Loaded ${this.totalBytes} bytes for ${this.terminalId}`)
       } else {
         console.log(`[BufferManager] No buffer file for ${this.terminalId}`)
       }

@@ -195,6 +195,16 @@ export class PTYManager {
     return session.getBuffer()
   }
 
+  clearBuffer(terminalId: string): boolean {
+    const session = this.sessions.get(terminalId)
+    if (!session) {
+      return false
+    }
+
+    session.clearBuffer()
+    return true
+  }
+
   getInfo(terminalId: string): TerminalInfo | null {
     const session = this.sessions.get(terminalId)
     if (!session) {

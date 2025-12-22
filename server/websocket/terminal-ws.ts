@@ -181,6 +181,18 @@ export const terminalWebSocketHandlers: WSEvents = {
           break
         }
 
+        case 'terminal:clearBuffer': {
+          const { terminalId } = message.payload
+          const success = ptyManager.clearBuffer(terminalId)
+          if (success) {
+            broadcastToTerminal(terminalId, {
+              type: 'terminal:bufferCleared',
+              payload: { terminalId },
+            })
+          }
+          break
+        }
+
         // Tab messages
         case 'tab:create': {
           const { name, position } = message.payload
