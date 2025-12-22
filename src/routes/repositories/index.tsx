@@ -84,96 +84,101 @@ function RepositoryCard({
   }
 
   return (
-    <Link to="/repositories/$repoId" params={{ repoId: repository.id }} className="h-full">
-      <Card className="h-full transition-colors hover:border-border/80 cursor-pointer">
-        <CardContent className="flex flex-col gap-2 py-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1">
-              <span className="truncate font-medium">{repository.displayName}</span>
+    <div className="relative h-full">
+      <Link to="/repositories/$repoId" params={{ repoId: repository.id }} className="block h-full">
+        <Card className="h-full transition-colors hover:border-border/80 cursor-pointer">
+          <CardContent className="flex flex-col gap-2 py-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate font-medium">{repository.displayName}</span>
+              <div className="flex shrink-0 gap-1">
+                <div className="size-6" />
+                <div className="size-6" />
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
+                <span className="truncate font-mono">{repository.path}</span>
+              </div>
+
+              {repository.startupScript && (
+                <div className="flex items-center gap-1.5">
+                  <HugeiconsIcon
+                    icon={CommandLineIcon}
+                    size={12}
+                    strokeWidth={2}
+                    className="shrink-0"
+                  />
+                  <span className="truncate font-mono">{repository.startupScript}</span>
+                </div>
+              )}
+
+              {repository.copyFiles && (
+                <div className="flex items-center gap-1.5">
+                  <HugeiconsIcon icon={Copy01Icon} size={12} strokeWidth={2} className="shrink-0" />
+                  <span className="truncate font-mono">{repository.copyFiles}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+
+      <div className="absolute right-3 top-3 flex gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleOpenVSCode}
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+          title="Open in VS Code"
+        >
+          <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
+        </Button>
+
+        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <AlertDialogTrigger
+            render={
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={handleOpenVSCode}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-                title="Open in VS Code"
+                className="shrink-0 text-muted-foreground hover:text-destructive"
+              />
+            }
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Repository</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove "{repository.displayName}" from Vibora. The actual repository files
+                will not be affected.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="gap-2"
               >
-                <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
+                {isDeleting && (
+                  <HugeiconsIcon
+                    icon={Loading03Icon}
+                    size={14}
+                    strokeWidth={2}
+                    className="animate-spin"
+                  />
+                )}
+                {isDeleting ? 'Deleting...' : 'Delete'}
               </Button>
-            </div>
-            <div onClick={(e) => e.preventDefault()}>
-              <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <AlertDialogTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  }
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Repository</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will remove "{repository.displayName}" from Vibora. The actual repository
-                      files will not be affected.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                    <Button
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="gap-2"
-                    >
-                      {isDeleting && (
-                        <HugeiconsIcon
-                          icon={Loading03Icon}
-                          size={14}
-                          strokeWidth={2}
-                          className="animate-spin"
-                        />
-                      )}
-                      {isDeleting ? 'Deleting...' : 'Delete'}
-                    </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
-
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
-              <span className="truncate font-mono">{repository.path}</span>
-            </div>
-
-            {repository.startupScript && (
-              <div className="flex items-center gap-1.5">
-                <HugeiconsIcon
-                  icon={CommandLineIcon}
-                  size={12}
-                  strokeWidth={2}
-                  className="shrink-0"
-                />
-                <span className="truncate font-mono">{repository.startupScript}</span>
-              </div>
-            )}
-
-            {repository.copyFiles && (
-              <div className="flex items-center gap-1.5">
-                <HugeiconsIcon icon={Copy01Icon} size={12} strokeWidth={2} className="shrink-0" />
-                <span className="truncate font-mono">{repository.copyFiles}</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
   )
 }
 
