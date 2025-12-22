@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import {
   getSettings,
-  getSetting,
   updateSettings,
   resetSettings,
+  getWorktreeBasePath,
   getNotificationSettings,
   updateNotificationSettings,
   type NotificationSettings,
@@ -11,10 +11,9 @@ import {
 import { testNotificationChannel } from '../services/notification-service'
 
 // Config keys (mapped to settings keys)
+// Note: databasePath and worktreeBasePath are derived from viboraDir, not configurable
 export const CONFIG_KEYS = {
   PORT: 'port',
-  DATABASE_PATH: 'databasePath',
-  WORKTREE_BASE_PATH: 'worktreeBasePath',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
   TASK_CREATION_COMMAND: 'taskCreationCommand',
   HOSTNAME: 'hostname',
@@ -66,10 +65,6 @@ app.get('/:key', (c) => {
 
   if (key === 'port' || key === CONFIG_KEYS.PORT) {
     value = settings.port
-  } else if (key === 'database_path' || key === CONFIG_KEYS.DATABASE_PATH) {
-    value = settings.databasePath
-  } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
-    value = settings.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     value = settings.defaultGitReposDir
   } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
@@ -80,6 +75,9 @@ app.get('/:key', (c) => {
     value = settings.sshPort
   } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
     value = settings.linearApiKey
+  } else if (key === 'worktree_base_path') {
+    // Read-only: derived from viboraDir
+    return c.json({ key, value: getWorktreeBasePath(), isDefault: true })
   }
 
   if (value === null) {
@@ -104,18 +102,6 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ port })
       return c.json({ key, value: port })
-    } else if (key === 'database_path' || key === CONFIG_KEYS.DATABASE_PATH) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
-      }
-      updateSettings({ databasePath: body.value })
-      return c.json({ key, value: body.value })
-    } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
-      }
-      updateSettings({ worktreeBasePath: body.value })
-      return c.json({ key, value: body.value })
     } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
       if (typeof body.value !== 'string') {
         return c.json({ error: 'Value must be a string' }, 400)
@@ -148,7 +134,7 @@ app.put('/:key', async (c) => {
       updateSettings({ linearApiKey: body.value || null })
       return c.json({ key, value: body.value })
     } else {
-      return c.json({ error: `Unknown config key: ${key}` }, 400)
+      return c.json({ error: `Unknown or read-only config key: ${key}` }, 400)
     }
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to set config' }, 400)
@@ -165,10 +151,6 @@ app.delete('/:key', (c) => {
   let defaultValue: string | number | null = null
   if (key === 'port' || key === CONFIG_KEYS.PORT) {
     defaultValue = defaults.port
-  } else if (key === 'database_path' || key === CONFIG_KEYS.DATABASE_PATH) {
-    defaultValue = defaults.databasePath
-  } else if (key === 'worktree_base_path' || key === CONFIG_KEYS.WORKTREE_BASE_PATH) {
-    defaultValue = defaults.worktreeBasePath
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     defaultValue = defaults.defaultGitReposDir
   } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
@@ -184,9 +166,7 @@ app.delete('/:key', (c) => {
   return c.json({ key, value: defaultValue, isDefault: true })
 })
 
-// Export the default getter for use in other modules
-export function getDefaultWorktreeBasePath(): string {
-  return getSetting('worktreeBasePath')
-}
+// Export the worktree base path getter for use in other modules
+export { getWorktreeBasePath }
 
 export default app

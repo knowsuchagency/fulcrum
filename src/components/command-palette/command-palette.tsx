@@ -11,6 +11,7 @@ import {
   groupCommandsByCategory,
   categoryLabels,
 } from './command-registry'
+import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   GridViewIcon,
@@ -34,6 +35,7 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const { setActiveTab } = useTerminalViewState()
 
   // Build command list
   const commands = useMemo<Command[]>(() => {
@@ -58,6 +60,19 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
         category: 'navigation',
         icon: <HugeiconsIcon icon={CommandLineIcon} size={16} strokeWidth={2} />,
         action: () => {
+          navigate({ to: '/terminals' })
+          setOpen(false)
+        },
+      },
+      {
+        id: 'goto-task-terminals',
+        label: 'Go to Task Terminals',
+        shortcut: 'shift+meta+t',
+        keywords: ['tasks', 'shell', 'console', 'cli'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={GridViewIcon} size={16} strokeWidth={2} />,
+        action: () => {
+          setActiveTab('all-tasks')
           navigate({ to: '/terminals' })
           setOpen(false)
         },
@@ -124,7 +139,7 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
       },
     ]
     return cmds
-  }, [navigate, onNewTask, onShowShortcuts])
+  }, [navigate, onNewTask, onShowShortcuts, setActiveTab])
 
   // Filter commands based on query
   const filteredCommands = useMemo(
@@ -170,6 +185,10 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
   // Navigation shortcuts
   useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true })
   useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true })
+  useHotkeys('shift+meta+t', () => {
+    setActiveTab('all-tasks')
+    navigate({ to: '/terminals' })
+  }, { allowInInput: true })
   useHotkeys('meta+3', () => navigate({ to: '/worktrees' }), { allowInInput: true })
   useHotkeys('meta+4', () => navigate({ to: '/repositories' }), { allowInInput: true })
   useHotkeys('meta+,', () => navigate({ to: '/settings' }), { allowInInput: true })

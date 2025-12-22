@@ -25,10 +25,10 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 // Config keys matching server
+// Note: databasePath and worktreeBasePath are derived from viboraDir, not configurable
 export const CONFIG_KEYS = {
   PORT: 'port',
-  DATABASE_PATH: 'database_path',
-  WORKTREE_BASE_PATH: 'worktree_base_path',
+  WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only
   DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
   TASK_CREATION_COMMAND: 'task_creation_command',
   HOSTNAME: 'hostname',
@@ -39,8 +39,6 @@ export const CONFIG_KEYS = {
 
 // Default values (client-side fallbacks)
 const DEFAULT_PORT = 3333
-const DEFAULT_DATABASE_PATH = '~/.vibora/vibora.db'
-const DEFAULT_WORKTREE_BASE_PATH = '~/.vibora/worktrees'
 const DEFAULT_TASK_CREATION_COMMAND = 'claude --dangerously-skip-permissions'
 
 export function useConfig(key: string) {
@@ -60,23 +58,14 @@ export function usePort() {
   }
 }
 
-export function useDatabasePath() {
-  const query = useConfig(CONFIG_KEYS.DATABASE_PATH)
-
-  return {
-    ...query,
-    data: (query.data?.value as string) ?? DEFAULT_DATABASE_PATH,
-    isDefault: query.data?.isDefault ?? true,
-  }
-}
-
+// Read-only: derived from viboraDir on server
 export function useWorktreeBasePath() {
   const query = useConfig(CONFIG_KEYS.WORKTREE_BASE_PATH)
 
   return {
     ...query,
-    data: (query.data?.value as string) ?? DEFAULT_WORKTREE_BASE_PATH,
-    isDefault: query.data?.isDefault ?? true,
+    data: (query.data?.value as string) ?? '',
+    isDefault: true, // Always derived from viboraDir
   }
 }
 
