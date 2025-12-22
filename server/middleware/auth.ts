@@ -5,8 +5,8 @@ import { getSettings, getSessionSecret } from '../lib/settings'
 
 const SESSION_COOKIE_NAME = 'vibora_session'
 
-// Paths that don't require authentication
-const PUBLIC_PATHS = ['/health', '/api/auth/login', '/api/auth/check']
+// API paths that don't require authentication
+const PUBLIC_API_PATHS = ['/health', '/api/auth/login', '/api/auth/check']
 
 export const sessionAuthMiddleware = createMiddleware(async (c, next) => {
   const settings = getSettings()
@@ -16,9 +16,15 @@ export const sessionAuthMiddleware = createMiddleware(async (c, next) => {
     return next()
   }
 
-  // Allow public paths
   const path = c.req.path
-  if (PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + '/'))) {
+
+  // Allow all non-API/non-WS routes (static assets, SPA routes) so frontend can load and show login modal
+  if (!path.startsWith('/api/') && !path.startsWith('/ws/')) {
+    return next()
+  }
+
+  // Allow specific public API paths
+  if (PUBLIC_API_PATHS.some((p) => path === p || path.startsWith(p + '/'))) {
     return next()
   }
 
