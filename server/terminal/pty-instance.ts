@@ -28,3 +28,20 @@ export function destroyTerminalAndBroadcast(terminalId: string): boolean {
   }
   return success
 }
+
+// Kill Claude processes in all terminals for a worktree (keeps terminals running)
+export function killClaudeInTerminalsForWorktree(worktreePath: string): number {
+  const manager = getPTYManager()
+  const terminals = manager.listTerminals()
+  let count = 0
+
+  for (const terminal of terminals) {
+    if (terminal.cwd === worktreePath) {
+      if (manager.killClaudeInTerminal(terminal.id)) {
+        count++
+      }
+    }
+  }
+
+  return count
+}
