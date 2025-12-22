@@ -14,11 +14,15 @@ depends = ["install"]
 usage = '''
 arg "[port]" help="Port to run on" default="3222"
 arg "[dir]" help="Vibora directory" default="~/.vibora/dev"
+flag "--db" help="Database path (overrides dir/vibora.db)"
 '''
 run = """
 export PORT="${usage_port}"
 export VITE_BACKEND_PORT="${usage_port}"
-export VIBORA_DIR="${usage_dir}"
+export VIBORA_DIR="${VIBORA_DIR:-${usage_dir}}"
+if [ -n "${usage_db}" ]; then
+  export VIBORA_DATABASE_PATH="${usage_db}"
+fi
 bunx concurrently -n server,client -c blue,green 'mise run server' 'mise run client'
 """
 
@@ -128,6 +132,7 @@ run = "npm publish --access public"
 # Production daemon tasks
 [tasks.up]
 description = "Build and start production server as daemon"
+depends = ["install"]
 run = """
 set -e
 

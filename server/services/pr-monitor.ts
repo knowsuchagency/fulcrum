@@ -1,8 +1,8 @@
 import { execSync } from 'child_process'
 import { db } from '../db'
 import { tasks } from '../db/schema'
-import { eq, isNotNull, and, notInArray } from 'drizzle-orm'
-import { broadcast } from '../websocket/terminal-ws'
+import { isNotNull, and, notInArray } from 'drizzle-orm'
+import { updateTaskStatus } from './task-status'
 
 const POLL_INTERVAL = 60_000 // 60 seconds
 
@@ -48,14 +48,14 @@ function checkPrStatus(prUrl: string): PRStatus | null {
 
 // Poll and update task statuses
 async function pollPRs(): Promise<void> {
-  // Get all tasks with prUrl that are not DONE or CANCELLED
+  // Get all tasks with prUrl that are not DONE or CANCELED
   const tasksWithPR = db
     .select()
     .from(tasks)
     .where(
       and(
         isNotNull(tasks.prUrl),
-        notInArray(tasks.status, ['DONE', 'CANCELLED'])
+        notInArray(tasks.status, ['DONE', 'CANCELED'])
       )
     )
     .all()
@@ -68,13 +68,7 @@ async function pollPRs(): Promise<void> {
 
     // If PR is merged (state is MERGED or mergedAt is set), mark task as DONE
     if (status.state === 'MERGED' || status.mergedAt) {
-      const now = new Date().toISOString()
-      db.update(tasks)
-        .set({ status: 'DONE', updatedAt: now })
-        .where(eq(tasks.id, task.id))
-        .run()
-
-      broadcast({ type: 'task:updated', payload: { taskId: task.id } })
+      await updateTaskStatus(task.id, 'DONE')
       console.log(`Task "${task.title}" marked as DONE (PR merged)`)
     }
   }

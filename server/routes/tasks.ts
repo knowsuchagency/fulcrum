@@ -4,8 +4,11 @@ import { eq, asc } from 'drizzle-orm'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
+import { glob } from 'glob'
 import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
 import { broadcast } from '../websocket/terminal-ws'
+import { updateLinearTicketStatus } from '../services/linear'
+import { updateTaskStatus } from '../services/task-status'
 
 // Helper to create git worktree
 function createGitWorktree(
@@ -75,6 +78,38 @@ function destroyTerminalsForWorktree(worktreePath: string): void {
   }
 }
 
+// Copy files to worktree based on glob patterns
+function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: string): void {
+  const patternList = patterns
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  for (const pattern of patternList) {
+    try {
+      const files = glob.sync(pattern, { cwd: repoPath, nodir: true })
+      for (const file of files) {
+        const srcPath = path.join(repoPath, file)
+        const destPath = path.join(worktreePath, file)
+        const destDir = path.dirname(destPath)
+
+        // Skip if file already exists (don't overwrite)
+        if (fs.existsSync(destPath)) continue
+
+        // Create destination directory if needed
+        if (!fs.existsSync(destDir)) {
+          fs.mkdirSync(destDir, { recursive: true })
+        }
+
+        fs.copyFileSync(srcPath, destPath)
+      }
+    } catch (err) {
+      console.error(`Failed to copy files matching pattern "${pattern}":`, err)
+      // Continue with other patterns
+    }
+  }
+}
+
 // Initialize worktree with CLAUDE.local.md for Vibora CLI integration
 function initializeWorktreeForVibora(worktreePath: string): void {
   const claudeLocalPath = path.join(worktreePath, 'CLAUDE.local.md')
@@ -91,6 +126,9 @@ vibora current-task
 
 # Associate a PR with this task (enables auto-completion when merged)
 vibora current-task pr https://github.com/owner/repo/pull/123
+
+# Associate a Linear ticket with this task
+vibora current-task linear https://linear.app/team/issue/TEAM-123
 
 # Update task status when work is complete
 vibora current-task review    # Ready for review
@@ -146,7 +184,11 @@ app.get('/', (c) => {
 app.post('/', async (c) => {
   try {
     const body = await c.req.json<
-      Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & { initializeVibora?: boolean }
+      Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & {
+        initializeVibora?: boolean
+        copyFiles?: string
+        startupScript?: string
+      }
     >()
 
     // Get max position for the status
@@ -169,6 +211,7 @@ app.post('/', async (c) => {
       baseBranch: body.baseBranch,
       branch: body.branch || null,
       worktreePath: body.worktreePath || null,
+      startupScript: body.startupScript || null,
       createdAt: now,
       updatedAt: now,
     }
@@ -183,6 +226,16 @@ app.post('/', async (c) => {
       // Initialize worktree for Vibora CLI integration (default: true)
       if (body.initializeVibora !== false) {
         initializeWorktreeForVibora(body.worktreePath)
+      }
+
+      // Copy files if patterns provided
+      if (body.copyFiles) {
+        try {
+          copyFilesToWorktree(body.repoPath, body.worktreePath, body.copyFiles)
+        } catch (err) {
+          console.error('Failed to copy files:', err)
+          // Non-fatal: continue with task creation
+        }
       }
     }
 
@@ -267,19 +320,29 @@ app.patch('/:id', async (c) => {
     const body = await c.req.json<Partial<Task> & { viewState?: unknown }>()
     const now = new Date().toISOString()
 
-    // Stringify viewState if present (it's stored as JSON text)
-    const updates: Record<string, unknown> = { ...body, updatedAt: now }
+    // Handle status change via centralized function (includes Linear sync)
+    if (body.status && body.status !== existing.status) {
+      await updateTaskStatus(id, body.status)
+    }
+
+    // Handle other updates (excluding status to avoid double-update)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { status: _status, ...otherFields } = body
+    const updates: Record<string, unknown> = { ...otherFields, updatedAt: now }
     if (body.viewState !== undefined) {
       updates.viewState = body.viewState ? JSON.stringify(body.viewState) : null
     }
 
-    db.update(tasks)
-      .set(updates)
-      .where(eq(tasks.id, id))
-      .run()
+    // Only do additional db update if there are other fields to update
+    if (Object.keys(otherFields).length > 0 || body.viewState !== undefined) {
+      db.update(tasks)
+        .set(updates)
+        .where(eq(tasks.id, id))
+        .run()
+      broadcast({ type: 'task:updated', payload: { taskId: id } })
+    }
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
-    broadcast({ type: 'task:updated', payload: { taskId: id } })
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task' }, 400)
@@ -402,6 +465,15 @@ app.patch('/:id/status', async (c) => {
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
     broadcast({ type: 'task:updated', payload: { taskId: id } })
+
+    // Sync status to Linear if task has a linked ticket and status changed
+    if (oldStatus !== newStatus && existing.linearTicketId) {
+      // Fire and forget - don't block the response
+      updateLinearTicketStatus(existing.linearTicketId, newStatus).catch((err) => {
+        console.error('Failed to update Linear ticket status:', err)
+      })
+    }
+
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)

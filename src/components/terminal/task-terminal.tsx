@@ -14,15 +14,15 @@ interface TaskTerminalProps {
   cwd: string | null
   className?: string
   planModeDescription?: string
+  startupScript?: string | null
 }
 
-export function TaskTerminal({ taskName, cwd, className, planModeDescription }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, planModeDescription, startupScript }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
-  const shouldRunStartupCommandRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermReady, setXtermReady] = useState(false)
 
@@ -33,6 +33,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
     terminals,
     terminalsLoaded,
     connected,
+    newTerminalIds,
     createTerminal,
     attachXterm,
     resizeTerminal,
@@ -201,7 +202,6 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
-      shouldRunStartupCommandRef.current = true // Mark that we should run startup command
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -234,20 +234,29 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
     // Trigger a resize after attaching
     requestAnimationFrame(doFit)
 
-    // Run startup command if this is a newly created terminal
-    if (shouldRunStartupCommandRef.current) {
-      shouldRunStartupCommandRef.current = false
-      // Determine command: use plan mode if description provided, otherwise global default
-      let command = taskCreationCommand
+    // Run startup commands only if this is a newly created terminal (not restored from persistence)
+    if (newTerminalIds.has(terminalId)) {
+      // Remove from set so startup commands don't run again
+      newTerminalIds.delete(terminalId)
+
+      // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
+      if (startupScript) {
+        setTimeout(() => {
+          // Write the script as-is - newlines act as Enter presses in terminals
+          writeToTerminal(terminalId, startupScript + '\r')
+        }, 100)
+      }
+
+      // 2. Then run task creation command (e.g., claude agent)
+      let taskCommand = taskCreationCommand
       if (planModeDescription) {
         const prompt = `${taskName}: ${planModeDescription}`.replace(/"/g, '\\"')
-        command = `claude "${prompt}" --allow-dangerously-skip-permissions --permission-mode plan`
+        taskCommand = `claude "${prompt}" --allow-dangerously-skip-permissions --permission-mode plan`
       }
-      if (command) {
-        // Small delay to ensure terminal is ready
+      if (taskCommand) {
         setTimeout(() => {
-          writeToTerminal(terminalId, command + '\r')
-        }, 100)
+          writeToTerminal(terminalId, taskCommand + '\r')
+        }, startupScript ? 300 : 100)
       }
     }
 
@@ -256,7 +265,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, planModeDescription, taskName])
+  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, planModeDescription, taskName, startupScript, newTerminalIds])
 
   if (!cwd) {
     return (

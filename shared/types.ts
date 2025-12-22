@@ -4,7 +4,7 @@ export type TaskStatus =
   | 'IN_PROGRESS'
   | 'IN_REVIEW'
   | 'DONE'
-  | 'CANCELLED'
+  | 'CANCELED'
 
 export interface DiffOptions {
   wrap: boolean
@@ -52,6 +52,9 @@ export interface Task {
   worktreePath: string | null
   viewState: ViewState | null
   prUrl: string | null
+  linearTicketId: string | null
+  linearTicketUrl: string | null
+  startupScript: string | null
   createdAt: string
   updatedAt: string
 }
@@ -102,6 +105,16 @@ export interface WorktreesSummary {
 export interface WorktreesResponse {
   worktrees: Worktree[]
   summary: WorktreesSummary
+}
+
+export interface Repository {
+  id: string
+  path: string
+  displayName: string
+  startupScript: string | null
+  copyFiles: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 // Git API response types

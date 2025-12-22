@@ -28,6 +28,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { label: 'Go to Tasks', shortcut: 'meta+1' },
       { label: 'Go to Terminals', shortcut: 'meta+2' },
       { label: 'Go to Worktrees', shortcut: 'meta+3' },
+      { label: 'Go to Repositories', shortcut: 'meta+4' },
       { label: 'Go to Settings', shortcut: 'meta+,' },
     ],
   },

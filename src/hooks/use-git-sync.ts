@@ -10,7 +10,6 @@ interface SyncRequest {
 
 interface SyncResponse {
   success: boolean
-  parentUpdated: boolean
   worktreeRebased: boolean
   defaultBranch: string
 }

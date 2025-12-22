@@ -16,6 +16,7 @@ import {
   GridViewIcon,
   CommandLineIcon,
   FolderSyncIcon,
+  Database01Icon,
   Settings01Icon,
   PlusSignIcon,
   Keyboard01Icon,
@@ -70,6 +71,18 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
         icon: <HugeiconsIcon icon={FolderSyncIcon} size={16} strokeWidth={2} />,
         action: () => {
           navigate({ to: '/worktrees' })
+          setOpen(false)
+        },
+      },
+      {
+        id: 'goto-repositories',
+        label: 'Go to Repositories',
+        shortcut: 'meta+4',
+        keywords: ['repos', 'git', 'projects'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={Database01Icon} size={16} strokeWidth={2} />,
+        action: () => {
+          navigate({ to: '/repositories' })
           setOpen(false)
         },
       },
@@ -158,6 +171,7 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
   useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true })
   useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true })
   useHotkeys('meta+3', () => navigate({ to: '/worktrees' }), { allowInInput: true })
+  useHotkeys('meta+4', () => navigate({ to: '/repositories' }), { allowInInput: true })
   useHotkeys('meta+,', () => navigate({ to: '/settings' }), { allowInInput: true })
 
   // New task shortcut

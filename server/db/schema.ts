@@ -13,6 +13,9 @@ export const tasks = sqliteTable('tasks', {
   worktreePath: text('worktree_path'),
   viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
   prUrl: text('pr_url'), // GitHub PR URL for auto-completion tracking
+  linearTicketId: text('linear_ticket_id'), // e.g., "TEAM-123"
+  linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
+  startupScript: text('startup_script'), // Command to run after worktree creation
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
@@ -50,7 +53,20 @@ export const terminalViewState = sqliteTable('terminal_view_state', {
   updatedAt: text('updated_at').notNull(),
 })
 
+// Repositories - saved git repositories with startup configuration
+export const repositories = sqliteTable('repositories', {
+  id: text('id').primaryKey(),
+  path: text('path').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  startupScript: text('startup_script'), // Command to run after worktree creation
+  copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 // Type inference helpers
+export type Repository = typeof repositories.$inferSelect
+export type NewRepository = typeof repositories.$inferInsert
 export type Task = typeof tasks.$inferSelect
 export type NewTask = typeof tasks.$inferInsert
 export type TerminalTab = typeof terminalTabs.$inferSelect
