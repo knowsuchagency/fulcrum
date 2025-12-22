@@ -81,13 +81,25 @@ function TerminalsView() {
 
   // Map worktree path to task info for navigation and display
   const taskInfoByCwd = useMemo(() => {
-    const map = new Map<string, { taskId: string; repoName: string; title: string }>()
+    const map = new Map<string, {
+      taskId: string
+      repoName: string
+      title: string
+      repoPath: string
+      worktreePath: string
+      baseBranch: string
+      branch: string | null
+    }>()
     for (const task of tasks) {
       if (task.worktreePath) {
         map.set(task.worktreePath, {
           taskId: task.id,
           repoName: task.repoName,
           title: task.title,
+          repoPath: task.repoPath,
+          worktreePath: task.worktreePath,
+          baseBranch: task.baseBranch,
+          branch: task.branch,
         })
       }
     }
