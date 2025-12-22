@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { readdirSync, readFileSync, readlinkSync } from 'fs'
 import { execSync } from 'child_process'
 import { db, tasks } from '../db'
-import { eq } from 'drizzle-orm'
 import { getPTYManager } from '../terminal/pty-instance'
 import { getDtachService } from '../terminal/dtach-service'
 import { getMetrics, getCurrentMetrics } from '../services/metrics-collector'
@@ -154,7 +153,7 @@ monitoringRoutes.get('/claude-instances', (c) => {
   const allClaudeProcesses = findAllClaudeProcesses()
 
   // Get Vibora terminals and their process trees
-  let viboraManagedPids = new Map<number, { terminalId: string; terminalName: string; cwd: string }>()
+  const viboraManagedPids = new Map<number, { terminalId: string; terminalName: string; cwd: string }>()
 
   try {
     const ptyManager = getPTYManager()

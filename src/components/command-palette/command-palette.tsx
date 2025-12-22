@@ -143,7 +143,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
     ]
     return cmds
-  }, [navigate, onNewTask, onShowShortcuts, setActiveTab])
+  }, [navigate, onNewTask, onShowShortcuts, setActiveTab, setOpen])
 
   // Filter commands based on query
   const filteredCommands = useMemo(
@@ -239,7 +239,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
           break
       }
     },
-    [flattenedCommands, selectedIndex]
+    [flattenedCommands, selectedIndex, setOpen]
   )
 
   // Reset state when dialog opens/closes
