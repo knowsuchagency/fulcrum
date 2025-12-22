@@ -39,7 +39,7 @@ function RootLayout() {
 
   return (
     <KeyboardProvider>
-      <div className="flex h-screen flex-col bg-background text-foreground">
+      <div className="flex h-screen flex-col overflow-x-hidden bg-background text-foreground">
         <TaskSync />
         <Header onNewTaskRef={handleNewTaskRef} onOpenCommandPalette={handleOpenCommandPalette} />
         <main className="isolate flex-1 overflow-hidden">

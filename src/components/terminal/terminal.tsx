@@ -160,10 +160,10 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
   }, [])
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full max-w-full">
       <div
         ref={containerRef}
-        className={cn('h-full w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
+        className={cn('h-full w-full max-w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
       />
       <button
         onClick={handleScrollToBottom}

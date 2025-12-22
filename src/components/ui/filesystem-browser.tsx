@@ -161,7 +161,7 @@ export function FilesystemBrowser({
           >
             <HugeiconsIcon icon={ArrowUp01Icon} size={14} strokeWidth={2} />
           </Button>
-          <code className="flex-1 text-xs bg-muted/50 px-2 py-1 rounded truncate">
+          <code className="min-w-0 flex-1 text-xs bg-muted/50 px-2 py-1 rounded truncate">
             {data?.path || '~'}
           </code>
           <Button
@@ -169,8 +169,11 @@ export function FilesystemBrowser({
             size="sm"
             onClick={() => data && handleSelect(data.path)}
             disabled={!data}
+            className="max-sm:px-2"
+            title="Select current directory"
           >
-            Select Current
+            <HugeiconsIcon icon={FolderOpenIcon} size={14} strokeWidth={2} className="sm:hidden" />
+            <span className="max-sm:hidden">Select Current</span>
           </Button>
         </div>
 
@@ -215,8 +218,9 @@ export function FilesystemBrowser({
                           {entry.name}
                         </button>
                         {entry.isGitRepo && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/50 text-emerald-500 font-medium">
-                            git repo
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/50 text-emerald-500 font-medium shrink-0">
+                            <span className="max-sm:hidden">git repo</span>
+                            <span className="sm:hidden">git</span>
                           </span>
                         )}
                       </>

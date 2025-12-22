@@ -64,6 +64,20 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { TaskStatus } from '@/types'
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  return isMobile
+}
+
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskView,
 })
@@ -113,6 +127,8 @@ function TaskView() {
   const [syncParentErrorModalOpen, setSyncParentErrorModalOpen] = useState(false)
   const [syncParentSuccess, setSyncParentSuccess] = useState(false)
   const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
+  const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
+  const isMobile = useIsMobile()
 
   // Get terminal functions for sending commands
   const { terminals, writeToTerminal } = useTerminalWS()
@@ -524,71 +540,130 @@ function TaskView() {
         </AlertDialog>
       </div>
 
-      {/* Split Pane Content */}
-      <ResizablePanelGroup direction="horizontal" className="min-h-0 flex-1">
-        {/* Left: Terminal */}
-        <ResizablePanel defaultSize={50} minSize={30}>
-          <TaskTerminal
-            taskId={task.id}
-            taskName={task.title}
-            cwd={task.worktreePath}
-            aiMode={aiMode}
-            description={aiModeDescription}
-            startupScript={task.startupScript}
-          />
-        </ResizablePanel>
+      {/* Main Content - Mobile tabs or Desktop split */}
+      {isMobile ? (
+        <Tabs
+          value={mobileTab}
+          onValueChange={(v) => setMobileTab(v as 'terminal' | 'details')}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="shrink-0 border-b border-border px-2 py-1">
+            <TabsList className="w-full">
+              <TabsTrigger value="terminal" className="flex-1">Terminal</TabsTrigger>
+              <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+            </TabsList>
+          </div>
 
-        <ResizableHandle withHandle />
+          <TabsContent value="terminal" className="flex-1 min-h-0">
+            <TaskTerminal
+              taskId={task.id}
+              taskName={task.title}
+              cwd={task.worktreePath}
+              aiMode={aiMode}
+              description={aiModeDescription}
+              startupScript={task.startupScript}
+            />
+          </TabsContent>
 
-        {/* Right: Diff/Browser Toggle */}
-        <ResizablePanel defaultSize={50} minSize={30}>
-          <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
-            <div className="shrink-0 border-b border-border px-2 py-1">
-              <TabsList variant="line">
-                <TabsTrigger value="diff">
-                  <HugeiconsIcon
-                    icon={CodeIcon}
-                    size={14}
-                    strokeWidth={2}
-                    data-slot="icon"
-                  />
-                  Diff
-                </TabsTrigger>
-                <TabsTrigger value="browser">
-                  <HugeiconsIcon
-                    icon={BrowserIcon}
-                    size={14}
-                    strokeWidth={2}
-                    data-slot="icon"
-                  />
-                  Browser
-                </TabsTrigger>
-                <TabsTrigger value="files">
-                  <HugeiconsIcon
-                    icon={Folder01Icon}
-                    size={14}
-                    strokeWidth={2}
-                    data-slot="icon"
-                  />
-                  Files
-                </TabsTrigger>
-              </TabsList>
-            </div>
+          <TabsContent value="details" className="flex-1 min-h-0">
+            <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
+              <div className="shrink-0 border-b border-border px-2 py-1">
+                <TabsList variant="line">
+                  <TabsTrigger value="diff">
+                    <HugeiconsIcon icon={CodeIcon} size={14} strokeWidth={2} data-slot="icon" />
+                    Diff
+                  </TabsTrigger>
+                  <TabsTrigger value="browser">
+                    <HugeiconsIcon icon={BrowserIcon} size={14} strokeWidth={2} data-slot="icon" />
+                    Browser
+                  </TabsTrigger>
+                  <TabsTrigger value="files">
+                    <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} data-slot="icon" />
+                    Files
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-            <TabsContent value="diff" className="flex-1 overflow-hidden">
-              <DiffViewer taskId={task.id} worktreePath={task.worktreePath} />
-            </TabsContent>
+              <TabsContent value="diff" className="flex-1 overflow-hidden">
+                <DiffViewer taskId={task.id} worktreePath={task.worktreePath} />
+              </TabsContent>
 
-            <TabsContent value="browser" className="flex-1 overflow-hidden">
-              <BrowserPreview taskId={task.id} />
-            </TabsContent>
+              <TabsContent value="browser" className="flex-1 overflow-hidden">
+                <BrowserPreview taskId={task.id} />
+              </TabsContent>
 
-            <TabsContent value="files" className="flex-1 overflow-hidden">
-              <FilesViewer taskId={task.id} worktreePath={task.worktreePath} />
-            </TabsContent>
-          </Tabs>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+              <TabsContent value="files" className="flex-1 overflow-hidden">
+                <FilesViewer taskId={task.id} worktreePath={task.worktreePath} />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <ResizablePanelGroup direction="horizontal" className="min-h-0 flex-1">
+          {/* Left: Terminal */}
+          <ResizablePanel defaultSize={50} minSize={30}>
+            <TaskTerminal
+              taskId={task.id}
+              taskName={task.title}
+              cwd={task.worktreePath}
+              aiMode={aiMode}
+              description={aiModeDescription}
+              startupScript={task.startupScript}
+            />
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Right: Diff/Browser Toggle */}
+          <ResizablePanel defaultSize={50} minSize={30}>
+            <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
+              <div className="shrink-0 border-b border-border px-2 py-1">
+                <TabsList variant="line">
+                  <TabsTrigger value="diff">
+                    <HugeiconsIcon
+                      icon={CodeIcon}
+                      size={14}
+                      strokeWidth={2}
+                      data-slot="icon"
+                    />
+                    Diff
+                  </TabsTrigger>
+                  <TabsTrigger value="browser">
+                    <HugeiconsIcon
+                      icon={BrowserIcon}
+                      size={14}
+                      strokeWidth={2}
+                      data-slot="icon"
+                    />
+                    Browser
+                  </TabsTrigger>
+                  <TabsTrigger value="files">
+                    <HugeiconsIcon
+                      icon={Folder01Icon}
+                      size={14}
+                      strokeWidth={2}
+                      data-slot="icon"
+                    />
+                    Files
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="diff" className="flex-1 overflow-hidden">
+                <DiffViewer taskId={task.id} worktreePath={task.worktreePath} />
+              </TabsContent>
+
+              <TabsContent value="browser" className="flex-1 overflow-hidden">
+                <BrowserPreview taskId={task.id} />
+              </TabsContent>
+
+              <TabsContent value="files" className="flex-1 overflow-hidden">
+                <FilesViewer taskId={task.id} worktreePath={task.worktreePath} />
+              </TabsContent>
+            </Tabs>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
 
       {/* Task Config Modal */}
       <TaskConfigModal

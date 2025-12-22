@@ -227,16 +227,16 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
           <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
           New Task
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col overflow-hidden">
+          <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+            <DialogHeader className="shrink-0">
               <DialogTitle>Create New Task</DialogTitle>
               <DialogDescription>
                 Create a new task with a git worktree for isolated development.
               </DialogDescription>
             </DialogHeader>
 
-            <FieldGroup className="mt-4">
+            <FieldGroup className="mt-4 pb-4 overflow-y-auto min-h-0 flex-1">
               <Field>
                 <FieldLabel htmlFor="title">Title</FieldLabel>
                 <Input
@@ -439,7 +439,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
               </Field>
             </FieldGroup>
 
-            <DialogFooter className="mt-4">
+            <DialogFooter className="mt-4 shrink-0">
               <DialogClose render={<Button variant="outline" type="button" />}>
                 Cancel
               </DialogClose>

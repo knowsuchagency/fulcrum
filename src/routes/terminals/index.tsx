@@ -289,18 +289,20 @@ function TerminalsView() {
   }))
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full max-w-full flex-col overflow-hidden">
       {/* Tab Bar + Actions */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/30 px-2 py-1">
-        <TerminalTabBar
-          tabs={tabBarTabs}
-          activeTabId={activeTabId ?? ''}
-          onTabSelect={setActiveTab}
-          onTabClose={handleTabDelete}
-          onTabCreate={handleTabCreate}
-          onTabRename={renameTab}
-        />
-        <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-muted/30 px-2 py-1">
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <TerminalTabBar
+            tabs={tabBarTabs}
+            activeTabId={activeTabId ?? ''}
+            onTabSelect={setActiveTab}
+            onTabClose={handleTabDelete}
+            onTabCreate={handleTabCreate}
+            onTabRename={renameTab}
+          />
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
           {/* Repo filter (only when Task Terminals is active and multiple repos exist) */}
           {activeTabId === ALL_TASKS_TAB_ID && repoNames.length > 1 && (
             <Select
@@ -327,20 +329,21 @@ function TerminalsView() {
           <button
             onClick={() => setActiveTab(ALL_TASKS_TAB_ID)}
             className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors',
+              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
               activeTabId === ALL_TASKS_TAB_ID
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
             <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
-            Task Terminals
+            <span className="max-sm:hidden">Task Terminals</span>
           </button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleTerminalAdd}
             disabled={!connected || terminals.length >= 12 || activeTabId === ALL_TASKS_TAB_ID}
+            className="max-sm:px-2"
           >
             <HugeiconsIcon
               icon={PlusSignIcon}
@@ -348,13 +351,13 @@ function TerminalsView() {
               strokeWidth={2}
               data-slot="icon"
             />
-            New Terminal
+            <span className="max-sm:hidden">New Terminal</span>
           </Button>
         </div>
       </div>
 
       {/* Terminal Grid */}
-      <div className="pixel-grid flex-1 overflow-hidden">
+      <div className="pixel-grid min-w-0 flex-1 overflow-hidden">
         <TerminalGrid
           terminals={visibleTerminals}
           onTerminalClose={activeTabId === ALL_TASKS_TAB_ID ? undefined : handleTerminalClose}
