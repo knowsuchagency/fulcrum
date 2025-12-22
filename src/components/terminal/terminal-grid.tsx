@@ -16,6 +16,7 @@ import type { Terminal as XTerm } from '@xterm/xterm'
 
 interface TaskInfo {
   taskId: string
+  repoId?: string
   repoName: string
   title: string
   repoPath: string
@@ -56,15 +57,20 @@ function TerminalPane({ terminal, taskInfo, onClose, onReady, onResize, onRename
             <Link
               to="/tasks/$taskId"
               params={{ taskId: taskInfo.taskId }}
-              className="flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10"
-              title={taskInfo.title}
+              className="flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 truncate"
             >
-              <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
-              <span>Task</span>
+              <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} className="shrink-0" />
+              <span className="truncate">{taskInfo.title}</span>
             </Link>
-            <span className="text-xs font-medium text-foreground">{taskInfo.repoName}</span>
+            <Link
+              to={taskInfo.repoId ? '/repositories/$repoId' : '/repositories'}
+              params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
+              className="text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
+            >
+              {taskInfo.repoName}
+            </Link>
             {terminal.cwd && (
-              <span className="text-xs text-muted-foreground truncate">{terminal.cwd}</span>
+              <span className="text-xs text-muted-foreground truncate">{terminal.cwd.split('/').pop()}</span>
             )}
             <div className="ml-auto flex items-center gap-0.5">
               <GitActionsButtons
