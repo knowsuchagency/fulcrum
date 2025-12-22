@@ -1,6 +1,6 @@
 ## Project Overview
 
-Vibora is a lightweight PM cockpit for streamlining the software development lifecycle. It marries basic project management with actual software development by embedding terminals directly into the workflow.
+Vibora is the Vibe Engineer's Cockpit. It marries basic project management with actual software development by embedding terminals directly into the workflow.
 
 **Philosophy**:
 - Terminal-first AI agent orchestration. Agents (Claude Code, Codex, etc.) run in terminals as-is—no abstraction layer, no wrapper APIs, no feature parity maintenance as agents evolve.
