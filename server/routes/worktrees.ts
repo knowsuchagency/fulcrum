@@ -1,35 +1,12 @@
 import { Hono } from 'hono'
-import { execSync } from 'child_process'
+import { streamSSE } from 'hono/streaming'
 import * as fs from 'fs'
 import * as path from 'path'
 import { db, tasks } from '../db'
 import { eq } from 'drizzle-orm'
 import { getSetting } from '../lib/settings'
 import { getPTYManager, destroyTerminalAndBroadcast } from '../terminal/pty-instance'
-
-interface WorktreeInfo {
-  path: string
-  name: string
-  size: number
-  sizeFormatted: string
-  branch: string
-  lastModified: string
-  isOrphaned: boolean
-  taskId?: string
-  taskTitle?: string
-  taskStatus?: string
-  repoPath?: string
-}
-
-interface WorktreesResponse {
-  worktrees: WorktreeInfo[]
-  summary: {
-    total: number
-    orphaned: number
-    totalSize: number
-    totalSizeFormatted: string
-  }
-}
+import type { WorktreeBasic, WorktreeDetails, WorktreesSummary } from '../../shared/types'
 
 // Format bytes to human-readable string
 function formatBytes(bytes: number): string {
@@ -40,32 +17,31 @@ function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
-// Get directory size using du command
-function getDirectorySize(dirPath: string): number {
+// Get directory size using du command (async)
+async function getDirectorySizeAsync(dirPath: string): Promise<number> {
   try {
-    // Use du -sb on Linux, du -sk on macOS (multiply by 1024)
     const platform = process.platform
-    if (platform === 'darwin') {
-      const output = execSync(`du -sk "${dirPath}" 2>/dev/null`, { encoding: 'utf-8' })
-      const sizeKb = parseInt(output.split('\t')[0], 10)
-      return sizeKb * 1024
-    } else {
-      const output = execSync(`du -sb "${dirPath}" 2>/dev/null`, { encoding: 'utf-8' })
-      return parseInt(output.split('\t')[0], 10)
-    }
+    const cmd = platform === 'darwin' ? ['du', '-sk', dirPath] : ['du', '-sb', dirPath]
+
+    const proc = Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe' })
+    const output = await new Response(proc.stdout).text()
+    const sizeValue = parseInt(output.split('\t')[0], 10)
+    return platform === 'darwin' ? sizeValue * 1024 : sizeValue
   } catch {
     return 0
   }
 }
 
-// Get git branch for a worktree path
-function getGitBranch(gitPath: string): string {
+// Get git branch for a worktree path (async)
+async function getGitBranchAsync(gitPath: string): Promise<string> {
   try {
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
+    const proc = Bun.spawn(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], {
       cwd: gitPath,
-      encoding: 'utf-8',
-    }).trim()
-    return branch
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
+    const output = await new Response(proc.stdout).text()
+    return output.trim() || 'unknown'
   } catch {
     return 'unknown'
   }
@@ -86,18 +62,20 @@ function destroyTerminalsForWorktree(worktreePath: string): void {
   }
 }
 
-// Delete git worktree
-function deleteWorktree(worktreePath: string, repoPath?: string): void {
+// Delete git worktree (async)
+async function deleteWorktree(worktreePath: string, repoPath?: string): Promise<void> {
   if (!fs.existsSync(worktreePath)) return
 
   // Try git worktree remove if we have the repo path
   if (repoPath && fs.existsSync(repoPath)) {
     try {
-      execSync(`git worktree remove "${worktreePath}" --force`, {
+      const proc = Bun.spawn(['git', 'worktree', 'remove', worktreePath, '--force'], {
         cwd: repoPath,
-        encoding: 'utf-8',
+        stdout: 'pipe',
+        stderr: 'pipe',
       })
-      return
+      await proc.exited
+      if (proc.exitCode === 0) return
     } catch {
       // Fall through to manual removal
     }
@@ -109,7 +87,7 @@ function deleteWorktree(worktreePath: string, repoPath?: string): void {
   // Try to find the parent repo and prune
   if (repoPath && fs.existsSync(repoPath)) {
     try {
-      execSync('git worktree prune', { cwd: repoPath, encoding: 'utf-8' })
+      Bun.spawn(['git', 'worktree', 'prune'], { cwd: repoPath })
     } catch {
       // Ignore prune errors
     }
@@ -118,89 +96,131 @@ function deleteWorktree(worktreePath: string, repoPath?: string): void {
 
 const app = new Hono()
 
-// GET /api/worktrees - List all worktrees
+// GET /api/worktrees - Stream worktrees via SSE for progressive loading
 app.get('/', (c) => {
-  const worktreeBasePath = getSetting('worktreeBasePath')
+  return streamSSE(c, async (stream) => {
+    const worktreeBasePath = getSetting('worktreeBasePath')
 
-  // Check if base path exists
-  if (!fs.existsSync(worktreeBasePath)) {
-    const response: WorktreesResponse = {
-      worktrees: [],
-      summary: {
-        total: 0,
-        orphaned: 0,
-        totalSize: 0,
-        totalSizeFormatted: '0 B',
-      },
+    // Handle missing directory
+    if (!fs.existsSync(worktreeBasePath)) {
+      await stream.writeSSE({
+        event: 'worktree:basic',
+        data: JSON.stringify([]),
+      })
+      await stream.writeSSE({
+        event: 'worktree:complete',
+        data: JSON.stringify({
+          total: 0,
+          orphaned: 0,
+          totalSize: 0,
+          totalSizeFormatted: '0 B',
+        } satisfies WorktreesSummary),
+      })
+      return
     }
-    return c.json(response)
-  }
 
-  // Get all tasks to build a map of worktreePath -> task
-  const allTasks = db.select().from(tasks).all()
-  const worktreeToTask = new Map<string, (typeof allTasks)[0]>()
-  for (const task of allTasks) {
-    if (task.worktreePath) {
-      worktreeToTask.set(task.worktreePath, task)
+    // Get all tasks to build a map of worktreePath -> task
+    const allTasks = db.select().from(tasks).all()
+    const worktreeToTask = new Map<string, (typeof allTasks)[0]>()
+    for (const task of allTasks) {
+      if (task.worktreePath) {
+        worktreeToTask.set(task.worktreePath, task)
+      }
     }
-  }
 
-  // Read all directories in worktreeBasePath
-  const entries = fs.readdirSync(worktreeBasePath, { withFileTypes: true })
-  const worktrees: WorktreeInfo[] = []
+    // Read all directories in worktreeBasePath (fast operation)
+    const entries = fs.readdirSync(worktreeBasePath, { withFileTypes: true })
+    const basicWorktrees: WorktreeBasic[] = []
+    const pathsToProcess: string[] = []
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
 
-    const fullPath = path.join(worktreeBasePath, entry.name)
+      const fullPath = path.join(worktreeBasePath, entry.name)
 
-    // Check if it's a git worktree (has .git file or directory)
-    const gitPath = path.join(fullPath, '.git')
-    if (!fs.existsSync(gitPath)) continue
+      // Check if it's a git worktree (has .git file or directory)
+      const gitPath = path.join(fullPath, '.git')
+      if (!fs.existsSync(gitPath)) continue
 
-    // Get worktree info
-    const size = getDirectorySize(fullPath)
-    const branch = getGitBranch(fullPath)
-    const stats = fs.statSync(fullPath)
-    const linkedTask = worktreeToTask.get(fullPath)
+      const stats = fs.statSync(fullPath)
+      const linkedTask = worktreeToTask.get(fullPath)
 
-    worktrees.push({
-      path: fullPath,
-      name: entry.name,
-      size,
-      sizeFormatted: formatBytes(size),
-      branch,
-      lastModified: stats.mtime.toISOString(),
-      isOrphaned: !linkedTask,
-      taskId: linkedTask?.id,
-      taskTitle: linkedTask?.title,
-      taskStatus: linkedTask?.status,
-      repoPath: linkedTask?.repoPath,
+      basicWorktrees.push({
+        path: fullPath,
+        name: entry.name,
+        lastModified: stats.mtime.toISOString(),
+        isOrphaned: !linkedTask,
+        taskId: linkedTask?.id,
+        taskTitle: linkedTask?.title,
+        taskStatus: linkedTask?.status,
+        repoPath: linkedTask?.repoPath,
+      })
+      pathsToProcess.push(fullPath)
+    }
+
+    // Sort: orphaned first, then by last modified (newest first)
+    basicWorktrees.sort((a, b) => {
+      if (a.isOrphaned !== b.isOrphaned) {
+        return a.isOrphaned ? -1 : 1
+      }
+      return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
     })
-  }
 
-  // Sort: orphaned first, then by last modified (newest first)
-  worktrees.sort((a, b) => {
-    if (a.isOrphaned !== b.isOrphaned) {
-      return a.isOrphaned ? -1 : 1
+    // Send basic info immediately
+    await stream.writeSSE({
+      event: 'worktree:basic',
+      data: JSON.stringify(basicWorktrees),
+    })
+
+    // Process details in parallel with concurrency limit
+    let totalSize = 0
+    const CONCURRENCY = 4
+
+    async function processWorktree(fullPath: string) {
+      try {
+        const [size, branch] = await Promise.all([
+          getDirectorySizeAsync(fullPath),
+          getGitBranchAsync(fullPath),
+        ])
+        totalSize += size
+
+        await stream.writeSSE({
+          event: 'worktree:details',
+          data: JSON.stringify({
+            path: fullPath,
+            size,
+            sizeFormatted: formatBytes(size),
+            branch,
+          } satisfies WorktreeDetails),
+        })
+      } catch (error) {
+        await stream.writeSSE({
+          event: 'worktree:error',
+          data: JSON.stringify({
+            path: fullPath,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }),
+        })
+      }
     }
-    return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+
+    // Process in batches with concurrency limit
+    for (let i = 0; i < pathsToProcess.length; i += CONCURRENCY) {
+      const batch = pathsToProcess.slice(i, i + CONCURRENCY)
+      await Promise.all(batch.map(processWorktree))
+    }
+
+    // Send completion summary
+    await stream.writeSSE({
+      event: 'worktree:complete',
+      data: JSON.stringify({
+        total: basicWorktrees.length,
+        orphaned: basicWorktrees.filter((w) => w.isOrphaned).length,
+        totalSize,
+        totalSizeFormatted: formatBytes(totalSize),
+      } satisfies WorktreesSummary),
+    })
   })
-
-  const totalSize = worktrees.reduce((sum, w) => sum + w.size, 0)
-  const orphanedCount = worktrees.filter((w) => w.isOrphaned).length
-
-  const response: WorktreesResponse = {
-    worktrees,
-    summary: {
-      total: worktrees.length,
-      orphaned: orphanedCount,
-      totalSize,
-      totalSizeFormatted: formatBytes(totalSize),
-    },
-  }
-
-  return c.json(response)
 })
 
 // DELETE /api/worktrees - Delete a worktree and its linked task
@@ -234,7 +254,7 @@ app.delete('/', async (c) => {
     destroyTerminalsForWorktree(body.worktreePath)
 
     // Delete the worktree
-    deleteWorktree(body.worktreePath, body.repoPath || linkedTask?.repoPath)
+    await deleteWorktree(body.worktreePath, body.repoPath || linkedTask?.repoPath)
 
     // Delete the linked task if it exists
     let deletedTaskId: string | undefined
