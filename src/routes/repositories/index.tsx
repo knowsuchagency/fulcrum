@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   useRepositories,
   useCreateRepository,
-  useUpdateRepository,
   useDeleteRepository,
 } from '@/hooks/use-repositories'
 import { Button } from '@/components/ui/button'
@@ -36,7 +35,6 @@ import {
   Delete02Icon,
   PlusSignIcon,
   Folder01Icon,
-  Edit02Icon,
   Loading03Icon,
   Alert02Icon,
   CommandLineIcon,
@@ -52,17 +50,17 @@ export const Route = createFileRoute('/repositories/')({
 
 function RepositoryCard({
   repository,
-  onEdit,
   onDelete,
 }: {
   repository: Repository
-  onEdit: () => void
   onDelete: () => Promise<void>
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     setIsDeleting(true)
     try {
       await onDelete()
@@ -75,88 +73,88 @@ function RepositoryCard({
   }
 
   return (
-    <Card className="transition-colors hover:border-border/80">
-      <CardContent className="flex items-start justify-between gap-4 py-4">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-medium">{repository.displayName}</span>
-          </div>
-
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
-              <span className="truncate font-mono">{repository.path}</span>
+    <Link to="/repositories/$repoId" params={{ repoId: repository.id }}>
+      <Card className="transition-colors hover:border-border/80 cursor-pointer">
+        <CardContent className="flex items-start justify-between gap-4 py-4">
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="truncate font-medium">{repository.displayName}</span>
             </div>
 
-            {repository.startupScript && (
+            <div className="space-y-1 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <HugeiconsIcon
-                  icon={CommandLineIcon}
-                  size={12}
-                  strokeWidth={2}
-                  className="shrink-0"
-                />
-                <span className="truncate font-mono">{repository.startupScript}</span>
+                <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
+                <span className="truncate font-mono">{repository.path}</span>
               </div>
-            )}
 
-            {repository.copyFiles && (
-              <div className="flex items-center gap-1.5">
-                <HugeiconsIcon icon={Copy01Icon} size={12} strokeWidth={2} className="shrink-0" />
-                <span className="truncate font-mono">{repository.copyFiles}</span>
-              </div>
-            )}
+              {repository.startupScript && (
+                <div className="flex items-center gap-1.5">
+                  <HugeiconsIcon
+                    icon={CommandLineIcon}
+                    size={12}
+                    strokeWidth={2}
+                    className="shrink-0"
+                  />
+                  <span className="truncate font-mono">{repository.startupScript}</span>
+                </div>
+              )}
+
+              {repository.copyFiles && (
+                <div className="flex items-center gap-1.5">
+                  <HugeiconsIcon icon={Copy01Icon} size={12} strokeWidth={2} className="shrink-0" />
+                  <span className="truncate font-mono">{repository.copyFiles}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon-sm" onClick={onEdit}>
-            <HugeiconsIcon icon={Edit02Icon} size={14} strokeWidth={2} />
-          </Button>
-          <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground hover:text-destructive"
-                />
-              }
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Repository</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove "{repository.displayName}" from Vibora. The actual repository
-                  files will not be affected.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="gap-2"
-                >
-                  {isDeleting && (
-                    <HugeiconsIcon
-                      icon={Loading03Icon}
-                      size={14}
-                      strokeWidth={2}
-                      className="animate-spin"
-                    />
-                  )}
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <AlertDialogTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                }
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Repository</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove "{repository.displayName}" from Vibora. The actual repository
+                    files will not be affected.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="gap-2"
+                  >
+                    {isDeleting && (
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        size={14}
+                        strokeWidth={2}
+                        className="animate-spin"
+                      />
+                    )}
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
 
@@ -301,105 +299,9 @@ function CreateRepositoryDialog() {
   )
 }
 
-function EditRepositoryDialog({
-  repository,
-  open,
-  onOpenChange,
-}: {
-  repository: Repository
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const [displayName, setDisplayName] = useState(repository.displayName)
-  const [startupScript, setStartupScript] = useState(repository.startupScript || '')
-  const [copyFiles, setCopyFiles] = useState(repository.copyFiles || '')
-
-  const updateRepository = useUpdateRepository()
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    updateRepository.mutate(
-      {
-        id: repository.id,
-        updates: {
-          displayName: displayName.trim() || repository.path.split('/').pop() || 'repo',
-          startupScript: startupScript.trim() || null,
-          copyFiles: copyFiles.trim() || null,
-        },
-      },
-      {
-        onSuccess: () => {
-          onOpenChange(false)
-        },
-      }
-    )
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Repository</DialogTitle>
-            <DialogDescription className="font-mono">{repository.path}</DialogDescription>
-          </DialogHeader>
-
-          <FieldGroup className="mt-4">
-            <Field>
-              <FieldLabel htmlFor="editDisplayName">Display Name</FieldLabel>
-              <Input
-                id="editDisplayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder={repository.path.split('/').pop() || 'My Project'}
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="editStartupScript">Startup Script</FieldLabel>
-              <Textarea
-                id="editStartupScript"
-                value={startupScript}
-                onChange={(e) => setStartupScript(e.target.value)}
-                placeholder="npm install && npm run dev"
-                rows={2}
-              />
-              <FieldDescription>
-                Command to run in the terminal when creating a worktree.
-              </FieldDescription>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="editCopyFiles">Copy Files</FieldLabel>
-              <Input
-                id="editCopyFiles"
-                value={copyFiles}
-                onChange={(e) => setCopyFiles(e.target.value)}
-                placeholder=".env, config.local.json"
-              />
-              <FieldDescription>
-                Comma-separated glob patterns for files to copy into new worktrees.
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
-
-          <DialogFooter className="mt-4">
-            <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
-            <Button type="submit" disabled={updateRepository.isPending}>
-              {updateRepository.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 function RepositoriesView() {
   const { data: repositories, isLoading, error } = useRepositories()
   const deleteRepository = useDeleteRepository()
-  const [editingRepo, setEditingRepo] = useState<Repository | null>(null)
 
   const handleDelete = async (id: string) => {
     await deleteRepository.mutateAsync(id)
@@ -450,20 +352,11 @@ function RepositoriesView() {
             <RepositoryCard
               key={repo.id}
               repository={repo}
-              onEdit={() => setEditingRepo(repo)}
               onDelete={() => handleDelete(repo.id)}
             />
           ))}
         </div>
       </div>
-
-      {editingRepo && (
-        <EditRepositoryDialog
-          repository={editingRepo}
-          open={!!editingRepo}
-          onOpenChange={(open) => !open && setEditingRepo(null)}
-        />
-      )}
     </div>
   )
 }

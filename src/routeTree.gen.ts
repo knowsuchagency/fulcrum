@@ -17,6 +17,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ReviewIndexRouteImport } from './routes/review/index'
 import { Route as RepositoriesIndexRouteImport } from './routes/repositories/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
+import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories/$repoId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,9 +59,15 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
   path: '/tasks/$taskId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RepositoriesRepoIdRoute = RepositoriesRepoIdRouteImport.update({
+  id: '/repositories/$repoId',
+  path: '/repositories/$repoId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/repositories': typeof RepositoriesIndexRoute
   '/review': typeof ReviewIndexRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/repositories': typeof RepositoriesIndexRoute
   '/review': typeof ReviewIndexRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/repositories/': typeof RepositoriesIndexRoute
   '/review/': typeof ReviewIndexRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/repositories/$repoId'
     | '/tasks/$taskId'
     | '/repositories'
     | '/review'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/repositories/$repoId'
     | '/tasks/$taskId'
     | '/repositories'
     | '/review'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/repositories/$repoId'
     | '/tasks/$taskId'
     | '/repositories/'
     | '/review/'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RepositoriesRepoIdRoute: typeof RepositoriesRepoIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   RepositoriesIndexRoute: typeof RepositoriesIndexRoute
   ReviewIndexRoute: typeof ReviewIndexRoute
@@ -192,11 +205,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksTaskIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/repositories/$repoId': {
+      id: '/repositories/$repoId'
+      path: '/repositories/$repoId'
+      fullPath: '/repositories/$repoId'
+      preLoaderRoute: typeof RepositoriesRepoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   RepositoriesIndexRoute: RepositoriesIndexRoute,
   ReviewIndexRoute: ReviewIndexRoute,
