@@ -444,7 +444,7 @@ function WorktreesView() {
             <p className="text-sm">
               {selectedStatuses.size > 0
                 ? 'No worktrees match the selected filters.'
-                : 'No worktrees found. Worktrees are created when you create tasks with branches.'}
+                : 'No worktrees found. Worktrees are created when you create tasks.'}
             </p>
           </div>
         )}
