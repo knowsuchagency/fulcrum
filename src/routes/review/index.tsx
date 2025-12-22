@@ -81,16 +81,16 @@ function ReviewPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
-        <div className="flex items-center gap-4">
-          <h1 className="text-sm font-medium">Review</h1>
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 max-sm:px-2">
+        <div className="flex items-center gap-4 max-sm:gap-2">
+          <h1 className="text-sm font-medium max-sm:hidden">Review</h1>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 max-sm:gap-2">
           {/* Filter dropdown - different options for PRs vs Issues */}
           {activeTab === 'prs' ? (
             <Select value={prFilter} onValueChange={(v) => setPrFilter(v as PRFilter)}>
-              <SelectTrigger size="sm" className="min-w-[160px]">
+              <SelectTrigger size="sm" className="max-sm:w-auto">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -102,7 +102,7 @@ function ReviewPage() {
             </Select>
           ) : (
             <Select value={issueFilter} onValueChange={(v) => setIssueFilter(v as IssueFilter)}>
-              <SelectTrigger size="sm" className="min-w-[160px]">
+              <SelectTrigger size="sm" className="max-sm:w-auto">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -115,7 +115,7 @@ function ReviewPage() {
 
           {/* Organization filter */}
           <Select value={selectedOrg} onValueChange={(v) => setSelectedOrg(v || '')}>
-            <SelectTrigger size="sm" className="min-w-[140px]">
+            <SelectTrigger size="sm" className="max-sm:w-auto">
               <SelectValue>
                 {selectedOrg || 'All Orgs'}
               </SelectValue>
@@ -131,13 +131,13 @@ function ReviewPage() {
           </Select>
 
           {/* Repo scope toggle */}
-          <label className="flex cursor-pointer items-center gap-2 text-xs">
+          <label className="flex cursor-pointer items-center gap-2 text-xs" title="Vibora repos only">
             <Switch
               checked={viboraReposOnly}
               onCheckedChange={setViboraReposOnly}
               disabled={!!selectedOrg}
             />
-            <span className="text-muted-foreground">Vibora repos only</span>
+            <span className="text-muted-foreground max-sm:hidden">Vibora repos only</span>
           </label>
         </div>
       </div>

@@ -206,7 +206,7 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
     <>
       {cardContent}
       {previewContainer && createPortal(
-        <div className="w-72">
+        <div className="w-72 max-w-[90vw]">
           <TaskCard task={task} isDragPreview />
         </div>,
         previewContainer

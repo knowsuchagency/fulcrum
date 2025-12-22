@@ -109,13 +109,13 @@ function KanbanViewContent() {
                 value={repoFilter ?? ''}
                 onValueChange={(v) => setRepoFilter(v || null)}
               >
-                <SelectTrigger size="sm" className="min-w-[120px]">
+                <SelectTrigger size="sm" className="max-sm:w-auto">
                   <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
                   <SelectValue>
                     {repoFilter || 'All Repos'}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="min-w-[200px]">
+                <SelectContent>
                   <SelectItem value="">All Repos</SelectItem>
                   {repoNames.map((name) => (
                     <SelectItem key={name} value={name}>
