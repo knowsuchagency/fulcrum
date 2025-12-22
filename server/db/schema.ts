@@ -60,6 +60,7 @@ export const repositories = sqliteTable('repositories', {
   displayName: text('display_name').notNull(),
   startupScript: text('startup_script'), // Command to run after worktree creation
   copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
+  remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })

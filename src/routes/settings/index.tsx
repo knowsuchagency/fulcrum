@@ -17,6 +17,7 @@ import {
   useHostname,
   useSshPort,
   useLinearApiKey,
+  useGitHubPat,
   useUpdateConfig,
   useResetConfig,
   useNotificationSettings,
@@ -38,6 +39,7 @@ function SettingsPage() {
   const { data: hostname, isLoading: hostnameLoading } = useHostname()
   const { data: sshPort, isLoading: sshPortLoading } = useSshPort()
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
+  const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
@@ -52,6 +54,7 @@ function SettingsPage() {
   const [localHostname, setLocalHostname] = useState('')
   const [localSshPort, setLocalSshPort] = useState('')
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
+  const [localGitHubPat, setLocalGitHubPat] = useState('')
   const [databaseBrowserOpen, setDatabaseBrowserOpen] = useState(false)
   const [worktreeBrowserOpen, setWorktreeBrowserOpen] = useState(false)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
@@ -78,7 +81,8 @@ function SettingsPage() {
     if (hostname !== undefined) setLocalHostname(hostname)
     if (sshPort !== undefined) setLocalSshPort(String(sshPort))
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
-  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand, hostname, sshPort, linearApiKey])
+    if (githubPat !== undefined) setLocalGitHubPat(githubPat)
+  }, [port, databasePath, worktreeBasePath, defaultGitReposDir, taskCreationCommand, hostname, sshPort, linearApiKey, githubPat])
 
   // Sync notification settings
   useEffect(() => {
@@ -96,7 +100,7 @@ function SettingsPage() {
   }, [notificationSettings])
 
   const isLoading =
-    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || notificationsLoading
+    portLoading || databaseLoading || worktreeLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -118,6 +122,7 @@ function SettingsPage() {
     localHostname !== hostname ||
     localSshPort !== String(sshPort) ||
     localLinearApiKey !== linearApiKey ||
+    localGitHubPat !== githubPat ||
     hasNotificationChanges
 
   const handleSaveAll = async () => {
@@ -208,6 +213,17 @@ function SettingsPage() {
         new Promise((resolve) => {
           updateConfig.mutate(
             { key: CONFIG_KEYS.LINEAR_API_KEY, value: localLinearApiKey },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localGitHubPat !== githubPat) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.GITHUB_PAT, value: localGitHubPat },
             { onSettled: resolve }
           )
         })
@@ -315,6 +331,14 @@ function SettingsPage() {
     resetConfig.mutate(CONFIG_KEYS.LINEAR_API_KEY, {
       onSuccess: (data) => {
         setLocalLinearApiKey(data.value !== null && data.value !== undefined ? String(data.value) : '')
+      },
+    })
+  }
+
+  const handleResetGitHubPat = () => {
+    resetConfig.mutate(CONFIG_KEYS.GITHUB_PAT, {
+      onSuccess: (data) => {
+        setLocalGitHubPat(data.value !== null && data.value !== undefined ? String(data.value) : '')
       },
     })
   }
@@ -623,6 +647,36 @@ function SettingsPage() {
                   </div>
                   <p className="ml-40 pl-2 text-xs text-muted-foreground">
                     Personal API key from Linear for syncing ticket status
+                  </p>
+                </div>
+
+                {/* GitHub PAT */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                      GitHub PAT
+                    </label>
+                    <Input
+                      type="password"
+                      value={localGitHubPat}
+                      onChange={(e) => setLocalGitHubPat(e.target.value)}
+                      placeholder="ghp_..."
+                      disabled={isLoading}
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={handleResetGitHubPat}
+                      disabled={isLoading || resetConfig.isPending}
+                      title="Reset to default"
+                    >
+                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </div>
+                  <p className="ml-40 pl-2 text-xs text-muted-foreground">
+                    Personal access token for GitHub API (Issues & PRs in Review)
                   </p>
                 </div>
               </div>

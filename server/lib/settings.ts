@@ -44,6 +44,7 @@ export interface Settings {
   basicAuthUsername: string | null
   basicAuthPassword: string | null
   linearApiKey: string | null
+  githubPat: string | null
   notifications: NotificationSettings
 }
 
@@ -68,6 +69,7 @@ const DEFAULT_SETTINGS: Settings = {
   basicAuthUsername: null,
   basicAuthPassword: null,
   linearApiKey: null,
+  githubPat: null,
   notifications: DEFAULT_NOTIFICATION_SETTINGS,
 }
 
@@ -176,6 +178,7 @@ export function getSettings(): Settings {
     basicAuthUsername: parsed.basicAuthUsername ?? null,
     basicAuthPassword: parsed.basicAuthPassword ?? null,
     linearApiKey: parsed.linearApiKey ?? null,
+    githubPat: parsed.githubPat ?? null,
     notifications,
   }
 
@@ -210,6 +213,7 @@ export function getSettings(): Settings {
     basicAuthUsername: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.basicAuthUsername,
     basicAuthPassword: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.basicAuthPassword,
     linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.linearApiKey,
+    githubPat: process.env.GITHUB_PAT ?? fileSettings.githubPat,
     notifications: fileSettings.notifications,
   }
 }

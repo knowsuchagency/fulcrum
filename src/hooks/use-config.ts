@@ -34,6 +34,7 @@ export const CONFIG_KEYS = {
   HOSTNAME: 'hostname',
   SSH_PORT: 'ssh_port',
   LINEAR_API_KEY: 'linear_api_key',
+  GITHUB_PAT: 'github_pat',
 } as const
 
 // Default values (client-side fallbacks)
@@ -122,6 +123,16 @@ export function useSshPort() {
 
 export function useLinearApiKey() {
   const query = useConfig(CONFIG_KEYS.LINEAR_API_KEY)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? '',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useGitHubPat() {
+  const query = useConfig(CONFIG_KEYS.GITHUB_PAT)
 
   return {
     ...query,
