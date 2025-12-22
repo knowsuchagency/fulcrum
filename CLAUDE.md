@@ -112,10 +112,10 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 |---------|---------|---------|
 | (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
 | port | `PORT` | 3333 |
-| databasePath | `VIBORA_DATABASE_PATH` | {viboraDir}/vibora.db |
-| worktreeBasePath | `VIBORA_WORKTREE_PATH` | {viboraDir}/worktrees |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
 | linearApiKey | `LINEAR_API_KEY` | null |
+
+Database path (`{viboraDir}/vibora.db`) and worktree path (`{viboraDir}/worktrees`) are derived from the vibora directory and not separately configurable.
 
 Precedence: environment variable → settings.json → default
 
