@@ -35,6 +35,9 @@ cli/server/
 cli/dist/
 cli/drizzle/
 cli/lib/
+cli/bin/
+cli/README.md
+cli/LICENSE
 
 # Claude
 CLAUDE.local.md
