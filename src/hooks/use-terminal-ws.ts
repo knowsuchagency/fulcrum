@@ -435,6 +435,17 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => {
       xtermMapRef.current.set(terminalId, xterm)
 
+      // Handle Shift+Enter to insert a newline for Claude Code multi-line input
+      xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+        if (event.type === 'keydown' && event.shiftKey && event.key === 'Enter') {
+          event.preventDefault()
+          event.stopPropagation()
+          writeToTerminal(terminalId, '\n')
+          return false // Prevent xterm from processing (would send regular CR)
+        }
+        return true // Allow all other keys to be processed normally
+      })
+
       // Set up input handling
       const disposable = xterm.onData((data) => {
         writeToTerminal(terminalId, data)
