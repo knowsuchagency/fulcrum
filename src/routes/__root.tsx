@@ -1,6 +1,10 @@
+import { useState, useCallback } from 'react'
 import { Outlet, createRootRoute } from '@tanstack/react-router'
 import { Header } from '@/components/layout/header'
 import { useTaskSync } from '@/hooks/use-task-sync'
+import { KeyboardProvider } from '@/contexts/keyboard-context'
+import { CommandPalette } from '@/components/command-palette/command-palette'
+import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help'
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -12,13 +16,32 @@ function TaskSync() {
 }
 
 function RootLayout() {
+  const [openNewTask, setOpenNewTask] = useState<(() => void) | null>(null)
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
+
+  const handleNewTaskRef = useCallback((fn: () => void) => {
+    setOpenNewTask(() => fn)
+  }, [])
+
+  const handleNewTask = useCallback(() => {
+    openNewTask?.()
+  }, [openNewTask])
+
+  const handleShowShortcuts = useCallback(() => {
+    setShortcutsHelpOpen(true)
+  }, [])
+
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
-      <TaskSync />
-      <Header />
-      <main className="isolate flex-1 overflow-hidden">
-        <Outlet />
-      </main>
-    </div>
+    <KeyboardProvider>
+      <div className="flex h-screen flex-col bg-background text-foreground">
+        <TaskSync />
+        <Header onNewTaskRef={handleNewTaskRef} />
+        <main className="isolate flex-1 overflow-hidden">
+          <Outlet />
+        </main>
+        <CommandPalette onNewTask={handleNewTask} onShowShortcuts={handleShowShortcuts} />
+        <KeyboardShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
+      </div>
+    </KeyboardProvider>
   )
 }

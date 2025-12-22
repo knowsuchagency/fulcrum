@@ -1,12 +1,23 @@
+import { useState, useEffect } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { GridViewIcon, CommandLineIcon, Settings01Icon, FolderSyncIcon } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
-export function Header() {
+interface HeaderProps {
+  onNewTaskRef?: (openModal: () => void) => void
+}
+
+export function Header({ onNewTaskRef }: HeaderProps) {
   const { location } = useRouterState()
   const pathname = location.pathname
+  const [createTaskOpen, setCreateTaskOpen] = useState(false)
+
+  // Expose the open function to parent via callback ref pattern
+  useEffect(() => {
+    onNewTaskRef?.(() => setCreateTaskOpen(true))
+  }, [onNewTaskRef])
 
   return (
     <header className="relative z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-black px-4">
@@ -62,7 +73,7 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-2">
-        <CreateTaskModal />
+        <CreateTaskModal open={createTaskOpen} onOpenChange={setCreateTaskOpen} />
         <Link to="/settings">
           <Button
             variant={pathname === '/settings' ? 'secondary' : 'ghost'}

@@ -6,6 +6,7 @@ import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useTaskCreationCommand } from '@/hooks/use-config'
+import { useKeyboardContext } from '@/contexts/keyboard-context'
 
 interface TaskTerminalProps {
   taskId: string
@@ -26,6 +27,7 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
   const [xtermReady, setXtermReady] = useState(false)
 
   const { data: taskCreationCommand } = useTaskCreationCommand()
+  const { setTerminalFocused } = useKeyboardContext()
 
   const {
     terminals,
@@ -98,14 +100,29 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription }: 
       term.refresh(0, term.rows - 1)
     }, 100)
 
+    // Track terminal focus for keyboard shortcuts
+    const handleTerminalFocus = () => setTerminalFocused(true)
+    const handleTerminalBlur = () => setTerminalFocused(false)
+
+    // xterm creates a hidden textarea for keyboard input - track its focus
+    if (term.textarea) {
+      term.textarea.addEventListener('focus', handleTerminalFocus)
+      term.textarea.addEventListener('blur', handleTerminalBlur)
+    }
+
     return () => {
       clearTimeout(refitTimeout)
+      if (term.textarea) {
+        term.textarea.removeEventListener('focus', handleTerminalFocus)
+        term.textarea.removeEventListener('blur', handleTerminalBlur)
+      }
+      setTerminalFocused(false)
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
       setXtermReady(false)
     }
-  }, [])
+  }, [setTerminalFocused])
 
   // Handle resize
   const doFit = useCallback(() => {

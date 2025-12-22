@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
+import { useKeyboardContext } from '@/contexts/keyboard-context'
 
 interface TerminalProps {
   className?: string
@@ -17,6 +18,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const onResizeRef = useRef(onResize)
+  const { setTerminalFocused } = useKeyboardContext()
 
   // Keep onResize ref updated
   useEffect(() => {
@@ -83,6 +85,16 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
       }
     })
 
+    // Track terminal focus for keyboard shortcuts
+    const handleTerminalFocus = () => setTerminalFocused(true)
+    const handleTerminalBlur = () => setTerminalFocused(false)
+
+    // xterm creates a hidden textarea for keyboard input - track its focus
+    if (term.textarea) {
+      term.textarea.addEventListener('focus', handleTerminalFocus)
+      term.textarea.addEventListener('blur', handleTerminalBlur)
+    }
+
     // Schedule additional fits to catch async layout (ResizablePanel timing)
     const refitTimeout = setTimeout(() => {
       doFit()
@@ -130,11 +142,16 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       resizeObserver.disconnect()
       visibilityObserver.disconnect()
+      if (term.textarea) {
+        term.textarea.removeEventListener('focus', handleTerminalFocus)
+        term.textarea.removeEventListener('blur', handleTerminalBlur)
+      }
+      setTerminalFocused(false)
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
     }
-  }, [doFit, onReady, onContainerReady])
+  }, [doFit, onReady, onContainerReady, setTerminalFocused])
 
   return (
     <div

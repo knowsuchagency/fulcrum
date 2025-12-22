@@ -43,8 +43,17 @@ function generateBranchName(text: string): string {
   return `${slug}-${suffix}`
 }
 
-export function CreateTaskModal() {
-  const [open, setOpen] = useState(false)
+interface CreateTaskModalProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTaskModalProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  // Support both controlled and uncontrolled modes
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
   const [browserOpen, setBrowserOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
