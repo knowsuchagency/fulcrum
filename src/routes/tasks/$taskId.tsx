@@ -12,6 +12,7 @@ import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
+import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
 import { useHostname, useSshPort } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
@@ -107,6 +108,7 @@ function TaskView() {
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
   const gitSyncParent = useGitSyncParent()
+  const killClaude = useKillClaudeInTask()
   const { data: hostname } = useHostname()
   const { data: sshPort } = useSshPort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
@@ -204,6 +206,8 @@ function TaskView() {
         baseBranch: task.baseBranch,
       })
       setMergeSuccess(true)
+      // Kill Claude if running in the task's terminals
+      killClaude.mutate(task.id)
       // Mark task as done after successful merge
       updateTask.mutate({
         taskId: task.id,
