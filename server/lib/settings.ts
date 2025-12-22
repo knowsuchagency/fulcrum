@@ -177,3 +177,100 @@ export function resetSettings(): Settings {
   fs.writeFileSync(getSettingsPath(), JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8')
   return { ...DEFAULT_SETTINGS }
 }
+
+// Notification settings types
+export interface SoundNotificationConfig {
+  enabled: boolean
+  soundFile?: string
+}
+
+export interface SlackNotificationConfig {
+  enabled: boolean
+  webhookUrl?: string
+}
+
+export interface DiscordNotificationConfig {
+  enabled: boolean
+  webhookUrl?: string
+}
+
+export interface PushoverNotificationConfig {
+  enabled: boolean
+  appToken?: string
+  userKey?: string
+}
+
+export interface NotificationSettings {
+  enabled: boolean
+  sound: SoundNotificationConfig
+  slack: SlackNotificationConfig
+  discord: DiscordNotificationConfig
+  pushover: PushoverNotificationConfig
+}
+
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: false,
+  sound: { enabled: false },
+  slack: { enabled: false },
+  discord: { enabled: false },
+  pushover: { enabled: false },
+}
+
+// Get notification settings from settings.json
+export function getNotificationSettings(): NotificationSettings {
+  ensureViboraDir()
+  const settingsPath = getSettingsPath()
+
+  if (!fs.existsSync(settingsPath)) {
+    return DEFAULT_NOTIFICATION_SETTINGS
+  }
+
+  try {
+    const content = fs.readFileSync(settingsPath, 'utf-8')
+    const parsed = JSON.parse(content)
+    const notifications = parsed.notifications as Partial<NotificationSettings> | undefined
+
+    if (!notifications) {
+      return DEFAULT_NOTIFICATION_SETTINGS
+    }
+
+    return {
+      enabled: notifications.enabled ?? false,
+      sound: { enabled: false, ...notifications.sound },
+      slack: { enabled: false, ...notifications.slack },
+      discord: { enabled: false, ...notifications.discord },
+      pushover: { enabled: false, ...notifications.pushover },
+    }
+  } catch {
+    return DEFAULT_NOTIFICATION_SETTINGS
+  }
+}
+
+// Update notification settings
+export function updateNotificationSettings(updates: Partial<NotificationSettings>): NotificationSettings {
+  ensureViboraDir()
+  const settingsPath = getSettingsPath()
+
+  let parsed: Record<string, unknown> = {}
+  if (fs.existsSync(settingsPath)) {
+    try {
+      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+    } catch {
+      // Use empty if invalid
+    }
+  }
+
+  const current = getNotificationSettings()
+  const updated: NotificationSettings = {
+    enabled: updates.enabled ?? current.enabled,
+    sound: { ...current.sound, ...updates.sound },
+    slack: { ...current.slack, ...updates.slack },
+    discord: { ...current.discord, ...updates.discord },
+    pushover: { ...current.pushover, ...updates.pushover },
+  }
+
+  parsed.notifications = updated
+  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
+
+  return updated
+}

@@ -1,5 +1,14 @@
 import { Hono } from 'hono'
-import { getSettings, updateSettings, resetSettings, getWorktreeBasePath } from '../lib/settings'
+import {
+  getSettings,
+  updateSettings,
+  resetSettings,
+  getWorktreeBasePath,
+  getNotificationSettings,
+  updateNotificationSettings,
+  type NotificationSettings,
+} from '../lib/settings'
+import { testNotificationChannel } from '../services/notification-service'
 
 // Config keys (mapped to settings keys)
 // Note: databasePath and worktreeBasePath are derived from viboraDir, not configurable
@@ -13,6 +22,38 @@ export const CONFIG_KEYS = {
 } as const
 
 const app = new Hono()
+
+// Notification routes must come before generic /:key routes
+
+// GET /api/config/notifications - Get notification settings
+app.get('/notifications', (c) => {
+  const notifications = getNotificationSettings()
+  return c.json(notifications)
+})
+
+// PUT /api/config/notifications - Update notification settings
+app.put('/notifications', async (c) => {
+  try {
+    const body = await c.req.json<Partial<NotificationSettings>>()
+    const updated = updateNotificationSettings(body)
+    return c.json(updated)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to update notifications' }, 400)
+  }
+})
+
+// POST /api/config/notifications/test/:channel - Test a notification channel
+app.post('/notifications/test/:channel', async (c) => {
+  const channel = c.req.param('channel') as 'sound' | 'slack' | 'discord' | 'pushover'
+  const validChannels = ['sound', 'slack', 'discord', 'pushover']
+
+  if (!validChannels.includes(channel)) {
+    return c.json({ error: `Invalid channel: ${channel}` }, 400)
+  }
+
+  const result = await testNotificationChannel(channel)
+  return c.json(result)
+})
 
 // GET /api/config/:key - Get config value
 app.get('/:key', (c) => {
