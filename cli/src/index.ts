@@ -9,6 +9,7 @@ import { handleGitCommand } from './commands/git'
 import { handleWorktreesCommand } from './commands/worktrees'
 import { handleConfigCommand } from './commands/config'
 import { handleHealthCommand } from './commands/health'
+import { handleHooksCommand } from './commands/hooks'
 import { outputError, setPrettyOutput } from './utils/output'
 import { CliError, ExitCodes } from './utils/errors'
 
@@ -106,6 +107,10 @@ Commands:
   config get <key>          Get a config value
   config set <key> <value>  Set a config value
 
+  hooks install             Install Claude Code Stop hook
+  hooks uninstall           Remove Claude Code Stop hook
+  hooks status              Check if Stop hook is installed
+
   health                    Check server health
 
 Global Options:
@@ -173,6 +178,12 @@ Examples:
 
       case 'health': {
         await handleHealthCommand(flags)
+        break
+      }
+
+      case 'hooks': {
+        const [action, ...hooksRest] = rest
+        await handleHooksCommand(action, hooksRest, flags)
         break
       }
 
