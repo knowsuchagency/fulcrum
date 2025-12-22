@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useTaskCreationCommand } from '@/hooks/use-config'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 
 interface TaskTerminalProps {
   taskId: string
@@ -295,10 +297,18 @@ export function TaskTerminal({ taskName, cwd, className, planModeDescription, st
       )}
 
       {/* Terminal */}
-      <div
-        ref={containerRef}
-        className={cn('flex-1 overflow-hidden bg-[#0a0a0a] p-2', className)}
-      />
+      <div className="relative flex-1">
+        <div
+          ref={containerRef}
+          className={cn('h-full w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
+        />
+        <button
+          onClick={() => termRef.current?.scrollToBottom()}
+          className="absolute top-2 right-5 p-1 text-white/50 hover:text-white/80 transition-colors"
+        >
+          <HugeiconsIcon icon={ArrowDownDoubleIcon} size={20} strokeWidth={2} />
+        </button>
+      </div>
     </div>
   )
 }
