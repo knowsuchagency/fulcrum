@@ -92,6 +92,7 @@ export interface Worktree {
   isOrphaned: boolean
   taskId?: string
   taskTitle?: string
+  taskStatus?: TaskStatus
   repoPath?: string
 }
 

@@ -17,6 +17,7 @@ interface WorktreeInfo {
   isOrphaned: boolean
   taskId?: string
   taskTitle?: string
+  taskStatus?: string
   repoPath?: string
 }
 
@@ -173,6 +174,7 @@ app.get('/', (c) => {
       isOrphaned: !linkedTask,
       taskId: linkedTask?.id,
       taskTitle: linkedTask?.title,
+      taskStatus: linkedTask?.status,
       repoPath: linkedTask?.repoPath,
     })
   }

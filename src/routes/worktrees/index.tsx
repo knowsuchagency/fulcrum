@@ -17,7 +17,6 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
-  FilterIcon,
   GitBranchIcon,
   Folder01Icon,
   Calendar03Icon,
@@ -25,8 +24,28 @@ import {
   ArrowRight01Icon,
   Loading03Icon,
   Alert02Icon,
+  Cancel01Icon,
 } from '@hugeicons/core-free-icons'
-import type { Worktree } from '@/types'
+import { cn } from '@/lib/utils'
+import type { Worktree, TaskStatus } from '@/types'
+
+type StatusFilter = TaskStatus | 'ORPHANED'
+
+const STATUS_LABELS: Record<StatusFilter, string> = {
+  IN_PROGRESS: 'In Progress',
+  IN_REVIEW: 'In Review',
+  DONE: 'Done',
+  CANCELED: 'Canceled',
+  ORPHANED: 'Orphaned',
+}
+
+const STATUS_BADGE_COLORS: Record<StatusFilter, string> = {
+  IN_PROGRESS: 'bg-slate-400/20 text-slate-600 dark:text-slate-400',
+  IN_REVIEW: 'bg-violet-400/20 text-violet-600 dark:text-violet-400',
+  DONE: 'bg-emerald-400/20 text-emerald-600 dark:text-emerald-400',
+  CANCELED: 'bg-rose-400/20 text-rose-600 dark:text-rose-400',
+  ORPHANED: 'bg-destructive/20 text-destructive',
+}
 
 export const Route = createFileRoute('/worktrees/')({
   component: WorktreesView,
@@ -81,11 +100,15 @@ function WorktreeCard({
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <span className="truncate font-medium">{worktree.name}</span>
-            {worktree.isOrphaned && (
-              <Badge variant="destructive" className="shrink-0">
+            {worktree.isOrphaned ? (
+              <Badge className={cn('shrink-0', STATUS_BADGE_COLORS.ORPHANED)}>
                 Orphaned
               </Badge>
-            )}
+            ) : worktree.taskStatus ? (
+              <Badge className={cn('shrink-0', STATUS_BADGE_COLORS[worktree.taskStatus])}>
+                {STATUS_LABELS[worktree.taskStatus]}
+              </Badge>
+            ) : null}
           </div>
 
           <div className="space-y-1 text-xs text-muted-foreground">
@@ -195,18 +218,39 @@ function WorktreeCard({
   )
 }
 
+const ALL_STATUSES: StatusFilter[] = ['IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED', 'ORPHANED']
+
 function WorktreesView() {
   const { data, isLoading, error } = useWorktrees()
   const deleteWorktree = useDeleteWorktree()
-  const [showOrphanedOnly, setShowOrphanedOnly] = useState(false)
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set())
+
+  const toggleStatus = (status: StatusFilter) => {
+    setSelectedStatuses((prev) => {
+      const next = new Set(prev)
+      if (next.has(status)) {
+        next.delete(status)
+      } else {
+        next.add(status)
+      }
+      return next
+    })
+  }
+
+  const clearFilters = () => {
+    setSelectedStatuses(new Set())
+  }
 
   const filteredWorktrees = useMemo(() => {
     if (!data?.worktrees) return []
-    if (showOrphanedOnly) {
-      return data.worktrees.filter((w) => w.isOrphaned)
-    }
-    return data.worktrees
-  }, [data?.worktrees, showOrphanedOnly])
+    if (selectedStatuses.size === 0) return data.worktrees
+
+    return data.worktrees.filter((w) => {
+      if (w.isOrphaned && selectedStatuses.has('ORPHANED')) return true
+      if (w.taskStatus && selectedStatuses.has(w.taskStatus)) return true
+      return false
+    })
+  }, [data?.worktrees, selectedStatuses])
 
   const handleDelete = async (worktree: Worktree) => {
     await deleteWorktree.mutateAsync({
@@ -217,29 +261,47 @@ function WorktreesView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
-        <div className="flex items-center gap-4">
-          <h1 className="text-sm font-medium">Worktrees</h1>
-          {data?.summary && (
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>{data.summary.total} total</span>
-              {data.summary.orphaned > 0 && (
-                <span className="text-destructive">{data.summary.orphaned} orphaned</span>
-              )}
-              <span>{data.summary.totalSizeFormatted}</span>
-            </div>
+      <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-sm font-medium">Worktrees</h1>
+            {data?.summary && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>{data.summary.total} total</span>
+                {data.summary.orphaned > 0 && (
+                  <span className="text-destructive">{data.summary.orphaned} orphaned</span>
+                )}
+                <span>{data.summary.totalSizeFormatted}</span>
+              </div>
+            )}
+          </div>
+          {selectedStatuses.size > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-xs">
+              <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+              Clear filters
+            </Button>
           )}
         </div>
 
-        <Button
-          variant={showOrphanedOnly ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setShowOrphanedOnly(!showOrphanedOnly)}
-          className="gap-1.5"
-        >
-          <HugeiconsIcon icon={FilterIcon} size={14} strokeWidth={2} />
-          {showOrphanedOnly ? 'Showing Orphaned' : 'Show Orphaned Only'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {ALL_STATUSES.map((status) => {
+            const isSelected = selectedStatuses.has(status)
+            return (
+              <button
+                key={status}
+                onClick={() => toggleStatus(status)}
+                className={cn(
+                  'rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                  isSelected
+                    ? STATUS_BADGE_COLORS[status]
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+              >
+                {STATUS_LABELS[status]}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="pixel-grid flex-1 overflow-auto p-4">
@@ -264,8 +326,8 @@ function WorktreesView() {
         {!isLoading && !error && filteredWorktrees.length === 0 && (
           <div className="py-12 text-muted-foreground">
             <p className="text-sm">
-              {showOrphanedOnly
-                ? 'No orphaned worktrees found.'
+              {selectedStatuses.size > 0
+                ? 'No worktrees match the selected filters.'
                 : 'No worktrees found. Worktrees are created when you create tasks with branches.'}
             </p>
           </div>
