@@ -72,6 +72,10 @@ function formatRelativeTime(isoDate: string): string {
   return 'just now'
 }
 
+function LoadingSkeleton({ className }: { className?: string }) {
+  return <span className={`inline-block animate-pulse rounded bg-muted ${className}`} />
+}
+
 function WorktreeCard({
   worktree,
   onDelete,
@@ -81,6 +85,7 @@ function WorktreeCard({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const isLoadingDetails = worktree.sizeFormatted === '...' || worktree.branch === '...'
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -125,7 +130,11 @@ function WorktreeCard({
                   strokeWidth={2}
                   className="shrink-0"
                 />
-                <span className="font-mono">{worktree.branch}</span>
+                {worktree.branch === '...' ? (
+                  <LoadingSkeleton className="h-3 w-16" />
+                ) : (
+                  <span className="font-mono">{worktree.branch}</span>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -135,7 +144,11 @@ function WorktreeCard({
                   strokeWidth={2}
                   className="shrink-0"
                 />
-                <span>{worktree.sizeFormatted}</span>
+                {worktree.sizeFormatted === '...' ? (
+                  <LoadingSkeleton className="h-3 w-12" />
+                ) : (
+                  <span>{worktree.sizeFormatted}</span>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -176,6 +189,7 @@ function WorktreeCard({
                 variant="ghost"
                 size="icon-sm"
                 className="shrink-0 text-muted-foreground hover:text-destructive"
+                disabled={isLoadingDetails}
               />
             }
           >
@@ -221,7 +235,7 @@ function WorktreeCard({
 const ALL_STATUSES: StatusFilter[] = ['IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED', 'ORPHANED']
 
 function WorktreesView() {
-  const { data, isLoading, error } = useWorktrees()
+  const { worktrees, summary, isLoading, isLoadingDetails, error, refetch } = useWorktrees()
   const deleteWorktree = useDeleteWorktree()
   const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set())
 
@@ -242,21 +256,21 @@ function WorktreesView() {
   }
 
   const filteredWorktrees = useMemo(() => {
-    if (!data?.worktrees) return []
-    if (selectedStatuses.size === 0) return data.worktrees
+    if (selectedStatuses.size === 0) return worktrees
 
-    return data.worktrees.filter((w) => {
+    return worktrees.filter((w) => {
       if (w.isOrphaned && selectedStatuses.has('ORPHANED')) return true
       if (w.taskStatus && selectedStatuses.has(w.taskStatus)) return true
       return false
     })
-  }, [data?.worktrees, selectedStatuses])
+  }, [worktrees, selectedStatuses])
 
   const handleDelete = async (worktree: Worktree) => {
     await deleteWorktree.mutateAsync({
       worktreePath: worktree.path,
       repoPath: worktree.repoPath,
     })
+    refetch()
   }
 
   return (
@@ -265,13 +279,19 @@ function WorktreesView() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-sm font-medium">Worktrees</h1>
-            {data?.summary && (
+            {(summary || worktrees.length > 0) && (
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>{data.summary.total} total</span>
-                {data.summary.orphaned > 0 && (
-                  <span className="text-destructive">{data.summary.orphaned} orphaned</span>
+                <span>{summary?.total ?? worktrees.length} total</span>
+                {(summary?.orphaned ?? worktrees.filter((w) => w.isOrphaned).length) > 0 && (
+                  <span className="text-destructive">
+                    {summary?.orphaned ?? worktrees.filter((w) => w.isOrphaned).length} orphaned
+                  </span>
                 )}
-                <span>{data.summary.totalSizeFormatted}</span>
+                {isLoadingDetails ? (
+                  <span className="animate-pulse">calculating...</span>
+                ) : summary ? (
+                  <span>{summary.totalSizeFormatted}</span>
+                ) : null}
               </div>
             )}
           </div>
@@ -333,15 +353,17 @@ function WorktreesView() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredWorktrees.map((worktree) => (
-            <WorktreeCard
-              key={worktree.path}
-              worktree={worktree}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        {!isLoading && (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredWorktrees.map((worktree) => (
+              <WorktreeCard
+                key={worktree.path}
+                worktree={worktree}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
