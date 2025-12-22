@@ -13,9 +13,11 @@ interface TerminalProps {
   onReady?: (terminal: XTerm) => void
   onResize?: (cols: number, rows: number) => void
   onContainerReady?: (container: HTMLDivElement) => void
+  terminalId?: string
+  setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
 }
 
-export function Terminal({ className, onReady, onResize, onContainerReady }: TerminalProps) {
+export function Terminal({ className, onReady, onResize, onContainerReady, terminalId, setupImagePaste }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -154,6 +156,13 @@ export function Terminal({ className, onReady, onResize, onContainerReady }: Ter
       fitAddonRef.current = null
     }
   }, [doFit, onReady, onContainerReady, setTerminalFocused])
+
+  // Set up image paste when terminalId is available
+  useEffect(() => {
+    if (!containerRef.current || !terminalId || !setupImagePaste) return
+    const cleanup = setupImagePaste(containerRef.current, terminalId)
+    return cleanup
+  }, [terminalId, setupImagePaste])
 
   const handleScrollToBottom = useCallback(() => {
     termRef.current?.scrollToBottom()
