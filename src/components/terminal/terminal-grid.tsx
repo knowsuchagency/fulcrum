@@ -33,6 +33,7 @@ interface TerminalGridProps {
   onTerminalResize?: (terminalId: string, cols: number, rows: number) => void
   onTerminalRename?: (terminalId: string, name: string) => void
   onTerminalContainerReady?: (terminalId: string, container: HTMLDivElement) => void
+  setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
   /** Map terminal cwd to task info for navigation and display */
   taskInfoByCwd?: Map<string, TaskInfo>
 }
@@ -46,9 +47,10 @@ interface TerminalPaneProps {
   onResize?: (cols: number, rows: number) => void
   onRename?: (name: string) => void
   onContainerReady?: (container: HTMLDivElement) => void
+  setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
 }
 
-function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady }: TerminalPaneProps) {
+function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste }: TerminalPaneProps) {
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
@@ -111,7 +113,7 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
         )}
       </div>
       <div className="min-h-0 min-w-0 flex-1">
-        <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} />
+        <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} terminalId={terminal.id} setupImagePaste={setupImagePaste} />
       </div>
     </div>
   )
@@ -163,6 +165,7 @@ export function TerminalGrid({
   onTerminalResize,
   onTerminalRename,
   onTerminalContainerReady,
+  setupImagePaste,
   taskInfoByCwd,
 }: TerminalGridProps) {
   const isMobile = useIsMobile()
@@ -193,6 +196,7 @@ export function TerminalGrid({
       onResize={onTerminalResize ? (c, r) => onTerminalResize(terminal.id, c, r) : undefined}
       onRename={onTerminalRename ? (name) => onTerminalRename(terminal.id, name) : undefined}
       onContainerReady={onTerminalContainerReady ? (container) => onTerminalContainerReady(terminal.id, container) : undefined}
+      setupImagePaste={setupImagePaste}
     />
   )
 

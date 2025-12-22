@@ -130,8 +130,6 @@ function TerminalsView() {
   }, [tasks])
 
   const cleanupFnsRef = useRef<Map<string, () => void>>(new Map())
-  const pasteCleanupFnsRef = useRef<Map<string, () => void>>(new Map())
-  const containerRefsMap = useRef<Map<string, HTMLDivElement>>(new Map())
   const terminalCountRef = useRef(0)
 
   // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
@@ -197,21 +195,6 @@ function TerminalsView() {
     }
   }, [terminals, allTaskWorktrees, assignTerminalToTab])
 
-  // Set up image paste when container is available
-  const trySetupImagePaste = useCallback(
-    (terminalId: string) => {
-      const container = containerRefsMap.current.get(terminalId)
-      if (!container) return
-
-      // Already set up
-      if (pasteCleanupFnsRef.current.has(terminalId)) return
-
-      const cleanup = setupImagePaste(container, terminalId)
-      pasteCleanupFnsRef.current.set(terminalId, cleanup)
-    },
-    [setupImagePaste]
-  )
-
   const handleTerminalClose = useCallback(
     (terminalId: string) => {
       // Clean up xterm attachment
@@ -220,13 +203,6 @@ function TerminalsView() {
         cleanup()
         cleanupFnsRef.current.delete(terminalId)
       }
-      // Clean up image paste handler
-      const pasteCleanup = pasteCleanupFnsRef.current.get(terminalId)
-      if (pasteCleanup) {
-        pasteCleanup()
-        pasteCleanupFnsRef.current.delete(terminalId)
-      }
-      containerRefsMap.current.delete(terminalId)
       destroyTerminal(terminalId)
     },
     [destroyTerminal]
@@ -239,14 +215,6 @@ function TerminalsView() {
       cleanupFnsRef.current.set(terminalId, cleanup)
     },
     [attachXterm]
-  )
-
-  const handleTerminalContainerReady = useCallback(
-    (terminalId: string, container: HTMLDivElement) => {
-      containerRefsMap.current.set(terminalId, container)
-      trySetupImagePaste(terminalId)
-    },
-    [trySetupImagePaste]
   )
 
   const handleTerminalResize = useCallback(
@@ -365,7 +333,7 @@ function TerminalsView() {
           onTerminalReady={handleTerminalReady}
           onTerminalResize={handleTerminalResize}
           onTerminalRename={activeTabId === ALL_TASKS_TAB_ID ? undefined : handleTerminalRename}
-          onTerminalContainerReady={handleTerminalContainerReady}
+          setupImagePaste={setupImagePaste}
           taskInfoByCwd={activeTabId === ALL_TASKS_TAB_ID ? taskInfoByCwd : undefined}
         />
       </div>
