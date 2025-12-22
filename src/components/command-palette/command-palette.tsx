@@ -67,7 +67,7 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
       {
         id: 'goto-task-terminals',
         label: 'Go to Task Terminals',
-        shortcut: 'shift+meta+t',
+        shortcut: 'meta+i',
         keywords: ['tasks', 'shell', 'console', 'cli'],
         category: 'navigation',
         icon: <HugeiconsIcon icon={GridViewIcon} size={16} strokeWidth={2} />,
@@ -116,7 +116,7 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
       {
         id: 'new-task',
         label: 'New Task',
-        shortcut: 'meta+n',
+        shortcut: 'meta+j',
         keywords: ['create', 'add'],
         category: 'actions',
         icon: <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} />,
@@ -185,7 +185,7 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
   // Navigation shortcuts
   useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true })
   useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true })
-  useHotkeys('shift+meta+t', () => {
+  useHotkeys('meta+i', () => {
     setActiveTab('all-tasks')
     navigate({ to: '/terminals' })
   }, { allowInInput: true })
@@ -195,7 +195,7 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
 
   // New task shortcut
   useHotkeys(
-    'meta+n',
+    'meta+j',
     () => {
       onNewTask?.()
     },

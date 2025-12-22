@@ -27,7 +27,7 @@ const shortcutGroups: ShortcutGroup[] = [
     items: [
       { label: 'Go to Tasks', shortcut: 'meta+1' },
       { label: 'Go to Terminals', shortcut: 'meta+2' },
-      { label: 'Go to Task Terminals', shortcut: 'shift+meta+t' },
+      { label: 'Go to Task Terminals', shortcut: 'meta+i' },
       { label: 'Go to Worktrees', shortcut: 'meta+3' },
       { label: 'Go to Repositories', shortcut: 'meta+4' },
       { label: 'Go to Settings', shortcut: 'meta+,' },
@@ -37,7 +37,7 @@ const shortcutGroups: ShortcutGroup[] = [
     title: 'Actions',
     items: [
       { label: 'Command Palette', shortcut: 'meta+k' },
-      { label: 'New Task', shortcut: 'meta+n' },
+      { label: 'New Task', shortcut: 'meta+j' },
       { label: 'Keyboard Shortcuts', shortcut: 'meta+/' },
     ],
   },
