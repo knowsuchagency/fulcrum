@@ -19,6 +19,28 @@ export function setPrettyOutput(value: boolean) {
   prettyOutput = value
 }
 
+export function isPrettyOutput(): boolean {
+  return prettyOutput
+}
+
+export function prettyLog(type: 'success' | 'info' | 'error' | 'warning', message: string): void {
+  const prefixes = {
+    success: '✓',
+    info: '→',
+    error: '✗',
+    warning: '⚠',
+  }
+  console.log(`${prefixes[type]} ${message}`)
+}
+
+export function outputSuccess(message: string): void {
+  if (prettyOutput) {
+    prettyLog('success', message)
+  } else {
+    output({ message })
+  }
+}
+
 export function output<T>(data: T): void {
   const response: SuccessResponse<T> = {
     success: true,
