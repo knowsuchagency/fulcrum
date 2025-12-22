@@ -97,9 +97,10 @@ function TaskView() {
   const { data: sshPort } = useSshPort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
 
-  // Read plan mode state from navigation (only set when coming from task creation)
-  const navState = location.state as { planMode?: boolean; description?: string } | undefined
-  const planModeDescription = navState?.planMode && navState?.description ? navState.description : undefined
+  // Read AI mode state from navigation (only set when coming from task creation)
+  const navState = location.state as { aiMode?: 'default' | 'plan' | 'none'; description?: string } | undefined
+  const aiMode = navState?.aiMode && navState?.description ? navState.aiMode : undefined
+  const aiModeDescription = navState?.description
 
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
@@ -531,7 +532,8 @@ function TaskView() {
             taskId={task.id}
             taskName={task.title}
             cwd={task.worktreePath}
-            planModeDescription={planModeDescription}
+            aiMode={aiMode}
+            description={aiModeDescription}
             startupScript={task.startupScript}
           />
         </ResizablePanel>
