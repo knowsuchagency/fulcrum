@@ -144,7 +144,8 @@ echo "CLI package built successfully"
 description = "Publish CLI to npm"
 depends = ["cli:build"]
 dir = "cli"
-run = "npm publish --access public"
+usage = 'arg "<otp>" help="npm one-time password for 2FA"'
+run = "npm publish --access public --otp=${usage_otp}"
 
 # Production daemon tasks
 [tasks.up]
