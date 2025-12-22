@@ -29,13 +29,13 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   }, [onNewTaskRef])
 
   return (
-    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-black px-4">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-black px-4 max-sm:px-2">
+      <div className="flex min-w-0 items-center gap-4 max-sm:gap-1">
         <Link to="/tasks" className="hidden items-center sm:flex">
           <img src="/vibora-logo.jpeg" alt="Vibora" className="h-7" />
         </Link>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 max-sm:gap-0">
           <Link to="/tasks">
             <Button
               variant={pathname.startsWith('/tasks') ? 'secondary' : 'ghost'}
@@ -114,7 +114,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
         </nav>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2 max-sm:gap-1">
         <CreateTaskModal open={createTaskOpen} onOpenChange={setCreateTaskOpen} />
         <Button
           variant="ghost"

@@ -302,20 +302,20 @@ function TerminalsView() {
             onTabRename={renameTab}
           />
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3 max-sm:gap-1">
           {/* Repo filter (only when Task Terminals is active and multiple repos exist) */}
           {activeTabId === ALL_TASKS_TAB_ID && repoNames.length > 1 && (
             <Select
               value={repoFilter ?? ''}
               onValueChange={(v) => setRepoFilter(v || null)}
             >
-              <SelectTrigger size="sm" className="min-w-[120px]">
+              <SelectTrigger size="sm" className="max-sm:w-auto">
                 <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
                 <SelectValue>
                   {repoFilter || 'All Repos'}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="min-w-[200px]">
+              <SelectContent>
                 <SelectItem value="">All Repos</SelectItem>
                 {repoNames.map((name) => (
                   <SelectItem key={name} value={name}>
