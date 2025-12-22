@@ -17,6 +17,7 @@ import worktreesRoutes from './routes/worktrees'
 import terminalViewStateRoutes from './routes/terminal-view-state'
 import repositoriesRoutes from './routes/repositories'
 import linearRoutes from './routes/linear'
+import githubRoutes from './routes/github'
 
 /**
  * Gets the path to the dist directory.
@@ -67,6 +68,7 @@ export function createApp() {
   app.route('/api/terminal-view-state', terminalViewStateRoutes)
   app.route('/api/repositories', repositoriesRoutes)
   app.route('/api/linear', linearRoutes)
+  app.route('/api/github', githubRoutes)
 
   // Serve static files in production mode or bundled CLI mode
   // Note: Check VIBORA_PACKAGE_ROOT in addition to NODE_ENV because bun build
