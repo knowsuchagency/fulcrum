@@ -132,7 +132,7 @@ run = "npm publish --access public"
 # Production daemon tasks
 [tasks.up]
 description = "Build and start production server as daemon"
-depends = ["install"]
+depends = ["install", "build"]
 run = """
 set -e
 
@@ -156,10 +156,6 @@ if [ -f "$PID_FILE" ]; then
     exit 1
   fi
 fi
-
-# Build frontend
-echo "Building frontend..." >&2
-bunx vite build
 
 # Sync database
 echo "Syncing database..." >&2
