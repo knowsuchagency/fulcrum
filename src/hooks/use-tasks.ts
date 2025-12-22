@@ -99,12 +99,23 @@ export function useDeleteTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (taskId: string) =>
-      fetchJSON<{ success: boolean }>(`${API_BASE}/api/tasks/${taskId}`, {
+    mutationFn: ({
+      taskId,
+      deleteLinkedWorktree,
+    }: {
+      taskId: string
+      deleteLinkedWorktree?: boolean
+    }) => {
+      const url = deleteLinkedWorktree
+        ? `${API_BASE}/api/tasks/${taskId}?deleteLinkedWorktree=true`
+        : `${API_BASE}/api/tasks/${taskId}`
+      return fetchJSON<{ success: boolean }>(url, {
         method: 'DELETE',
-      }),
+      })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['worktrees'] })
     },
   })
 }
@@ -113,13 +124,20 @@ export function useBulkDeleteTasks() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (ids: string[]) =>
+    mutationFn: ({
+      ids,
+      deleteLinkedWorktrees,
+    }: {
+      ids: string[]
+      deleteLinkedWorktrees?: boolean
+    }) =>
       fetchJSON<{ success: boolean; deleted: number }>(`${API_BASE}/api/tasks/bulk`, {
         method: 'DELETE',
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ ids, deleteLinkedWorktrees }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['worktrees'] })
     },
   })
 }

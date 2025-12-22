@@ -28,6 +28,7 @@ import {
   CleanIcon,
 } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { Worktree, TaskStatus } from '@/types'
 
 type StatusFilter = TaskStatus | 'ORPHANED'
@@ -82,21 +83,31 @@ function WorktreeCard({
   onDelete,
 }: {
   worktree: Worktree
-  onDelete: (worktree: Worktree) => Promise<void>
+  onDelete: (worktree: Worktree, deleteLinkedTask: boolean) => Promise<void>
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteLinkedTask, setDeleteLinkedTask] = useState(false)
   const isLoadingDetails = worktree.sizeFormatted === '...' || worktree.branch === '...'
+  const hasLinkedTask = !worktree.isOrphaned && worktree.taskId
 
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      await onDelete(worktree)
+      await onDelete(worktree, deleteLinkedTask)
       setDialogOpen(false)
     } catch {
       // Keep dialog open on error so user can retry
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  // Reset checkbox when dialog closes
+  const handleOpenChange = (open: boolean) => {
+    setDialogOpen(open)
+    if (!open) {
+      setDeleteLinkedTask(false)
     }
   }
 
@@ -183,7 +194,7 @@ function WorktreeCard({
           </div>
         </div>
 
-        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialog open={dialogOpen} onOpenChange={handleOpenChange}>
           <AlertDialogTrigger
             render={
               <Button
@@ -199,17 +210,31 @@ function WorktreeCard({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Worktree</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the worktree directory at{' '}
-                <span className="font-mono">{worktree.name}</span>.
-                {!worktree.isOrphaned && (
-                  <>
-                    {' '}
-                    The linked task <span className="font-medium">"{worktree.taskTitle}"</span> will
-                    also be deleted.
-                  </>
-                )}{' '}
-                This action cannot be undone.
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>
+                    This will permanently delete the worktree directory at{' '}
+                    <span className="font-mono">{worktree.name}</span>.
+                    {deleteLinkedTask && hasLinkedTask && (
+                      <>
+                        {' '}
+                        The linked task <span className="font-medium">"{worktree.taskTitle}"</span>{' '}
+                        will also be deleted.
+                      </>
+                    )}{' '}
+                    This action cannot be undone.
+                  </p>
+                  {hasLinkedTask && (
+                    <label className="flex items-center gap-2 text-sm text-foreground">
+                      <Checkbox
+                        checked={deleteLinkedTask}
+                        onCheckedChange={(checked) => setDeleteLinkedTask(checked === true)}
+                        disabled={isDeleting}
+                      />
+                      Also delete linked task "{worktree.taskTitle}"
+                    </label>
+                  )}
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -241,6 +266,7 @@ function WorktreesView() {
   const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set())
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [bulkDeleteLinkedTasks, setBulkDeleteLinkedTasks] = useState(false)
 
   const toggleStatus = (status: StatusFilter) => {
     setSelectedStatuses((prev) => {
@@ -280,6 +306,7 @@ function WorktreesView() {
         await deleteWorktree.mutateAsync({
           worktreePath: worktree.path,
           repoPath: worktree.repoPath,
+          deleteLinkedTask: bulkDeleteLinkedTasks,
         })
       }
       setBulkDeleteDialogOpen(false)
@@ -291,10 +318,18 @@ function WorktreesView() {
     }
   }
 
-  const handleDelete = async (worktree: Worktree) => {
+  const handleBulkDeleteDialogChange = (open: boolean) => {
+    setBulkDeleteDialogOpen(open)
+    if (!open) {
+      setBulkDeleteLinkedTasks(false)
+    }
+  }
+
+  const handleDelete = async (worktree: Worktree, deleteLinkedTask: boolean) => {
     await deleteWorktree.mutateAsync({
       worktreePath: worktree.path,
       repoPath: worktree.repoPath,
+      deleteLinkedTask,
     })
     refetch()
   }
@@ -323,7 +358,7 @@ function WorktreesView() {
           </div>
           <div className="flex items-center gap-2">
             {completedWorktrees.length > 0 && (
-              <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+              <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={handleBulkDeleteDialogChange}>
                 <AlertDialogTrigger
                   render={
                     <Button
@@ -340,32 +375,43 @@ function WorktreesView() {
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete Completed Worktrees</AlertDialogTitle>
-                    <AlertDialogDescription className="space-y-2">
-                      <span className="block">
-                        This will permanently delete {completedWorktrees.length} worktree
-                        {completedWorktrees.length !== 1 ? 's' : ''} and their linked tasks:
-                      </span>
-                      <span className="block text-sm">
-                        {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length > 0 && (
-                          <span className="mr-3">
-                            <span className="font-medium text-emerald-600">
-                              {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length}
-                            </span>{' '}
-                            Done
-                          </span>
-                        )}
-                        {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length > 0 && (
-                          <span>
-                            <span className="font-medium text-rose-600">
-                              {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length}
-                            </span>{' '}
-                            Canceled
-                          </span>
-                        )}
-                      </span>
-                      <span className="block font-medium text-destructive">
-                        This action cannot be undone.
-                      </span>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3">
+                        <p>
+                          This will permanently delete {completedWorktrees.length} worktree
+                          {completedWorktrees.length !== 1 ? 's' : ''}.
+                          {bulkDeleteLinkedTasks && ' Their linked tasks will also be deleted.'}
+                        </p>
+                        <p className="text-sm">
+                          {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length > 0 && (
+                            <span className="mr-3">
+                              <span className="font-medium text-emerald-600">
+                                {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length}
+                              </span>{' '}
+                              Done
+                            </span>
+                          )}
+                          {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length > 0 && (
+                            <span>
+                              <span className="font-medium text-rose-600">
+                                {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length}
+                              </span>{' '}
+                              Canceled
+                            </span>
+                          )}
+                        </p>
+                        <label className="flex items-center gap-2 text-sm text-foreground">
+                          <Checkbox
+                            checked={bulkDeleteLinkedTasks}
+                            onCheckedChange={(checked) => setBulkDeleteLinkedTasks(checked === true)}
+                            disabled={isBulkDeleting}
+                          />
+                          Also delete linked tasks
+                        </label>
+                        <p className="font-medium text-destructive">
+                          This action cannot be undone.
+                        </p>
+                      </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
