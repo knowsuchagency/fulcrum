@@ -525,25 +525,21 @@ function TaskView() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Task</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3">
-                  <p>
-                    This will permanently delete "{task.title}" and close its terminal.
-                    {deleteLinkedWorktree && task.worktreePath && ' The linked worktree will also be removed.'}
-                    {' '}This action cannot be undone.
-                  </p>
-                  {task.worktreePath && (
-                    <label className="flex items-center gap-2 text-sm text-foreground">
-                      <Checkbox
-                        checked={deleteLinkedWorktree}
-                        onCheckedChange={(checked) => setDeleteLinkedWorktree(checked === true)}
-                        disabled={deleteTask.isPending}
-                      />
-                      Also delete linked worktree
-                    </label>
-                  )}
-                </div>
+              <AlertDialogDescription>
+                This will permanently delete "{task.title}" and close its terminal.
+                {deleteLinkedWorktree && task.worktreePath && ' The linked worktree will also be removed.'}
+                {' '}This action cannot be undone.
               </AlertDialogDescription>
+              {task.worktreePath && (
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    checked={deleteLinkedWorktree}
+                    onCheckedChange={(checked) => setDeleteLinkedWorktree(checked === true)}
+                    disabled={deleteTask.isPending}
+                  />
+                  Also delete linked worktree
+                </label>
+              )}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={deleteTask.isPending}>Cancel</AlertDialogCancel>

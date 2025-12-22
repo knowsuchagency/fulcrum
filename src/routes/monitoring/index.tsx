@@ -16,6 +16,7 @@ import {
   formatTimeWindow,
   type TimeWindow,
   type ClaudeFilter,
+  type ClaudeInstance,
 } from '@/hooks/use-monitoring'
 
 export const Route = createFileRoute('/monitoring/')({
@@ -46,7 +47,7 @@ function ClaudeInstancesTab() {
 
   const totalRam = instances?.reduce((sum, i) => sum + i.ramMB, 0) || 0
 
-  const handleKill = (instance: typeof instances extends (infer T)[] ? T : never) => {
+  const handleKill = (instance: ClaudeInstance) => {
     if (instance.isViboraManaged && instance.terminalId) {
       killInstance.mutate({ terminalId: instance.terminalId })
     } else {
