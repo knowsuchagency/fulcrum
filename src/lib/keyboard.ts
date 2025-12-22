@@ -64,7 +64,17 @@ export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean
     return eventKey === targetKey
   }
 
-  // Handle ? which is shift+/
+  // Handle / key
+  if (targetKey === '/' && !parsed.shift) {
+    return eventKey === '/'
+  }
+
+  // Handle ? which is shift+/ - when shortcut is "shift+meta+/", event.key is "?"
+  if (targetKey === '/' && parsed.shift) {
+    return eventKey === '?'
+  }
+
+  // Handle ? directly
   if (targetKey === '?') {
     return eventKey === '?'
   }
@@ -72,6 +82,11 @@ export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean
   // Handle comma
   if (targetKey === ',') {
     return eventKey === ','
+  }
+
+  // Handle backslash
+  if (targetKey === '\\') {
+    return eventKey === '\\'
   }
 
   return eventKey === targetKey
@@ -103,7 +118,9 @@ export function formatShortcut(shortcut: string): string {
   if (key === 'ARROWLEFT') key = '\u2190'
   if (key === 'ARROWRIGHT') key = '\u2192'
   if (key === ',') key = ','
+  if (key === '/') key = '/'
   if (key === '?') key = '?'
+  if (key === '\\') key = '\\'
 
   parts.push(key)
 

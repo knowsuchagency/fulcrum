@@ -37,7 +37,7 @@ const shortcutGroups: ShortcutGroup[] = [
     items: [
       { label: 'Command Palette', shortcut: 'meta+k' },
       { label: 'New Task', shortcut: 'meta+n' },
-      { label: 'Keyboard Shortcuts', shortcut: 'shift+meta+/' },
+      { label: 'Keyboard Shortcuts', shortcut: 'meta+/' },
     ],
   },
   {

@@ -19,7 +19,7 @@ import {
   Database01Icon,
   Settings01Icon,
   PlusSignIcon,
-  Keyboard01Icon,
+  HelpCircleIcon,
 } from '@hugeicons/core-free-icons'
 
 interface CommandPaletteProps {
@@ -113,10 +113,10 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
       {
         id: 'show-shortcuts',
         label: 'Keyboard Shortcuts',
-        shortcut: 'shift+meta+/',
+        shortcut: 'meta+/',
         keywords: ['help', 'hotkeys', 'keys'],
         category: 'actions',
-        icon: <HugeiconsIcon icon={Keyboard01Icon} size={16} strokeWidth={2} />,
+        icon: <HugeiconsIcon icon={HelpCircleIcon} size={16} strokeWidth={2} />,
         action: () => {
           setOpen(false)
           onShowShortcuts?.()
@@ -183,9 +183,9 @@ export function CommandPalette({ onNewTask, onShowShortcuts }: CommandPalettePro
     { allowInInput: false, deps: [onNewTask] }
   )
 
-  // Help shortcut (Cmd+?)
+  // Help shortcut (Cmd+/)
   useHotkeys(
-    'shift+meta+/',
+    'meta+/',
     () => {
       onShowShortcuts?.()
     },
