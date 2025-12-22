@@ -31,6 +31,14 @@ export interface GitHubUser {
   avatarUrl: string
 }
 
+export interface GitHubOrg {
+  login: string
+  avatarUrl: string
+}
+
+export type PRFilter = 'all' | 'created' | 'assigned' | 'review_requested' | 'mentioned'
+export type IssueFilter = 'assigned' | 'created' | 'mentioned'
+
 export function useGitHubUser() {
   return useQuery({
     queryKey: ['github-user'],
@@ -44,12 +52,29 @@ export function useGitHubUser() {
   })
 }
 
-export function useGitHubIssues(viboraReposOnly: boolean) {
+export function useGitHubOrgs() {
   return useQuery({
-    queryKey: ['github-issues', viboraReposOnly],
+    queryKey: ['github-orgs'],
+    queryFn: async (): Promise<GitHubOrg[]> => {
+      const res = await fetch(`${API_BASE}/api/github/orgs`)
+      if (!res.ok) return []
+      return res.json()
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  })
+}
+
+export function useGitHubIssues(
+  filter: IssueFilter,
+  viboraReposOnly: boolean,
+  org?: string
+) {
+  return useQuery({
+    queryKey: ['github-issues', filter, viboraReposOnly, org],
     queryFn: async (): Promise<GitHubIssue[]> => {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams({ filter })
       if (viboraReposOnly) params.set('viboraReposOnly', 'true')
+      if (org) params.set('org', org)
       const res = await fetch(`${API_BASE}/api/github/issues?${params}`)
       if (!res.ok) throw new Error('Failed to fetch issues')
       return res.json()
@@ -58,14 +83,17 @@ export function useGitHubIssues(viboraReposOnly: boolean) {
   })
 }
 
-export type PRFilter = 'all' | 'created' | 'assigned'
-
-export function useGitHubPRs(filter: PRFilter, viboraReposOnly: boolean) {
+export function useGitHubPRs(
+  filter: PRFilter,
+  viboraReposOnly: boolean,
+  org?: string
+) {
   return useQuery({
-    queryKey: ['github-prs', filter, viboraReposOnly],
+    queryKey: ['github-prs', filter, viboraReposOnly, org],
     queryFn: async (): Promise<GitHubPR[]> => {
       const params = new URLSearchParams({ filter })
       if (viboraReposOnly) params.set('viboraReposOnly', 'true')
+      if (org) params.set('org', org)
       const res = await fetch(`${API_BASE}/api/github/prs?${params}`)
       if (!res.ok) throw new Error('Failed to fetch PRs')
       return res.json()

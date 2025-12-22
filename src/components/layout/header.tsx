@@ -76,20 +76,6 @@ export function Header({ onNewTaskRef }: HeaderProps) {
               Worktrees
             </Button>
           </Link>
-          <Link to="/review">
-            <Button
-              variant={pathname.startsWith('/review') ? 'secondary' : 'ghost'}
-              size="sm"
-            >
-              <HugeiconsIcon
-                icon={GitPullRequestIcon}
-                size={16}
-                strokeWidth={2}
-                data-slot="icon"
-              />
-              Review
-            </Button>
-          </Link>
           <Link to="/repositories">
             <Button
               variant={pathname.startsWith('/repositories') ? 'secondary' : 'ghost'}
@@ -102,6 +88,20 @@ export function Header({ onNewTaskRef }: HeaderProps) {
                 data-slot="icon"
               />
               Repositories
+            </Button>
+          </Link>
+          <Link to="/review">
+            <Button
+              variant={pathname.startsWith('/review') ? 'secondary' : 'ghost'}
+              size="sm"
+            >
+              <HugeiconsIcon
+                icon={GitPullRequestIcon}
+                size={16}
+                strokeWidth={2}
+                data-slot="icon"
+              />
+              Review
             </Button>
           </Link>
         </nav>

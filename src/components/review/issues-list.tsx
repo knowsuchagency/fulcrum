@@ -1,15 +1,17 @@
-import { useGitHubIssues, type GitHubIssue } from '@/hooks/use-github'
+import { useGitHubIssues, type GitHubIssue, type IssueFilter } from '@/hooks/use-github'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Loading03Icon, Alert02Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 
 interface Props {
+  filter: IssueFilter
   viboraReposOnly: boolean
+  org?: string
 }
 
-export function IssuesList({ viboraReposOnly }: Props) {
-  const { data: issues, isLoading, error } = useGitHubIssues(viboraReposOnly)
+export function IssuesList({ filter, viboraReposOnly, org }: Props) {
+  const { data: issues, isLoading, error } = useGitHubIssues(filter, viboraReposOnly, org)
 
   if (isLoading) {
     return (
@@ -33,20 +35,31 @@ export function IssuesList({ viboraReposOnly }: Props) {
     )
   }
 
+  const emptyMessages: Record<IssueFilter, string> = {
+    assigned: 'No issues assigned to you',
+    created: 'No issues created by you',
+    mentioned: 'No issues mentioning you',
+  }
+
   if (!issues?.length) {
     return (
       <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <HugeiconsIcon icon={Tick02Icon} size={24} />
-        <p className="text-sm">No open issues</p>
+        <p className="text-sm">{emptyMessages[filter]}</p>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {issues.map((issue) => (
-        <IssueCard key={issue.id} issue={issue} />
-      ))}
+    <div className="space-y-4">
+      <div className="text-xs text-muted-foreground">
+        {issues.length} result{issues.length !== 1 ? 's' : ''}
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {issues.map((issue) => (
+          <IssueCard key={issue.id} issue={issue} />
+        ))}
+      </div>
     </div>
   )
 }

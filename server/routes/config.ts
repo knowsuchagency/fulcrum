@@ -19,6 +19,7 @@ export const CONFIG_KEYS = {
   HOSTNAME: 'hostname',
   SSH_PORT: 'sshPort',
   LINEAR_API_KEY: 'linearApiKey',
+  GITHUB_PAT: 'githubPat',
 } as const
 
 const app = new Hono()
@@ -75,6 +76,8 @@ app.get('/:key', (c) => {
     value = settings.sshPort
   } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
     value = settings.linearApiKey
+  } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
+    value = settings.githubPat
   } else if (key === 'worktree_base_path') {
     // Read-only: derived from viboraDir
     return c.json({ key, value: getWorktreeBasePath(), isDefault: true })
@@ -133,6 +136,12 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ linearApiKey: body.value || null })
       return c.json({ key, value: body.value })
+    } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
+      updateSettings({ githubPat: body.value || null })
+      return c.json({ key, value: body.value })
     } else {
       return c.json({ error: `Unknown or read-only config key: ${key}` }, 400)
     }
@@ -161,6 +170,8 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.sshPort
   } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
     defaultValue = defaults.linearApiKey
+  } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
+    defaultValue = defaults.githubPat
   }
 
   return c.json({ key, value: defaultValue, isDefault: true })

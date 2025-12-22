@@ -30,6 +30,14 @@ export interface GitHubUser {
   avatarUrl: string
 }
 
+export interface GitHubOrg {
+  login: string
+  avatarUrl: string
+}
+
+export type PRFilter = 'all' | 'created' | 'assigned' | 'review_requested' | 'mentioned'
+export type IssueFilter = 'assigned' | 'created' | 'mentioned'
+
 let octokitClient: Octokit | null = null
 let cachedPat: string | null = null
 
@@ -79,17 +87,45 @@ export async function getAuthenticatedUser(): Promise<GitHubUser | null> {
   }
 }
 
+export async function fetchUserOrgs(): Promise<GitHubOrg[]> {
+  const octokit = getOctokit()
+  if (!octokit) return []
+
+  try {
+    const { data } = await octokit.orgs.listForAuthenticatedUser({
+      per_page: 100,
+    })
+    return data.map((org) => ({
+      login: org.login,
+      avatarUrl: org.avatar_url,
+    }))
+  } catch (err) {
+    console.error('Failed to fetch GitHub orgs:', err)
+    return []
+  }
+}
+
 export async function fetchUserIssues(
-  repoFilters?: { owner: string; repo: string }[]
+  filter: IssueFilter = 'assigned',
+  repoFilters?: { owner: string; repo: string }[],
+  org?: string
 ): Promise<GitHubIssue[]> {
   const octokit = getOctokit()
   if (!octokit) return []
 
   try {
-    // Build search query
-    let query = 'is:issue is:open author:@me'
+    // Build search query based on filter
+    const filterQueries: Record<IssueFilter, string> = {
+      assigned: 'is:issue is:open assignee:@me',
+      created: 'is:issue is:open author:@me',
+      mentioned: 'is:issue is:open mentions:@me',
+    }
+    let query = filterQueries[filter]
 
-    if (repoFilters && repoFilters.length > 0) {
+    // Add org filter
+    if (org) {
+      query = `${query} org:${org}`
+    } else if (repoFilters && repoFilters.length > 0) {
       const repoQueries = repoFilters.map((r) => `repo:${r.owner}/${r.repo}`).join(' ')
       query = `${query} ${repoQueries}`
     }
@@ -136,8 +172,9 @@ export async function fetchUserIssues(
 }
 
 export async function fetchUserPRs(
-  filter: 'all' | 'created' | 'assigned',
-  repoFilters?: { owner: string; repo: string }[]
+  filter: PRFilter,
+  repoFilters?: { owner: string; repo: string }[],
+  org?: string
 ): Promise<GitHubPR[]> {
   const octokit = getOctokit()
   if (!octokit) return []
@@ -145,99 +182,107 @@ export async function fetchUserPRs(
   try {
     const results: GitHubPR[] = []
 
-    // Build repo filter string
-    const repoQueryPart =
-      repoFilters && repoFilters.length > 0
-        ? repoFilters.map((r) => `repo:${r.owner}/${r.repo}`).join(' ')
-        : ''
+    // Build scope filter (org or repo list)
+    let scopeQueryPart = ''
+    if (org) {
+      scopeQueryPart = `org:${org}`
+    } else if (repoFilters && repoFilters.length > 0) {
+      scopeQueryPart = repoFilters.map((r) => `repo:${r.owner}/${r.repo}`).join(' ')
+    }
+
+    // Helper to parse PR from API response
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsePR = (pr: any): GitHubPR => {
+      const repoMatch = pr.repository_url.match(/repos\/([^/]+)\/([^/]+)$/)
+      const owner = repoMatch?.[1] ?? ''
+      const repo = repoMatch?.[2] ?? ''
+
+      return {
+        id: pr.id,
+        number: pr.number,
+        title: pr.title,
+        htmlUrl: pr.html_url,
+        createdAt: pr.created_at,
+        updatedAt: pr.updated_at,
+        draft: pr.draft ?? false,
+        repository: {
+          owner,
+          repo,
+          fullName: `${owner}/${repo}`,
+        },
+        author: {
+          login: pr.user?.login ?? '',
+          avatarUrl: pr.user?.avatar_url ?? '',
+        },
+        labels: (pr.labels ?? [])
+          .filter((l): l is { name: string; color: string } => typeof l === 'object' && l !== null && 'name' in l)
+          .map((l) => ({
+            name: l.name ?? '',
+            color: l.color ?? '',
+          })),
+      }
+    }
 
     // Fetch based on filter
     if (filter === 'all' || filter === 'created') {
-      const query = `is:pr is:open author:@me ${repoQueryPart}`.trim()
+      const query = `is:pr is:open author:@me ${scopeQueryPart}`.trim()
       const { data } = await octokit.search.issuesAndPullRequests({
         q: query,
         sort: 'updated',
         order: 'desc',
         per_page: 100,
       })
-
       for (const pr of data.items) {
-        const repoMatch = pr.repository_url.match(/repos\/([^/]+)\/([^/]+)$/)
-        const owner = repoMatch?.[1] ?? ''
-        const repo = repoMatch?.[2] ?? ''
-
-        results.push({
-          id: pr.id,
-          number: pr.number,
-          title: pr.title,
-          htmlUrl: pr.html_url,
-          createdAt: pr.created_at,
-          updatedAt: pr.updated_at,
-          draft: pr.draft ?? false,
-          repository: {
-            owner,
-            repo,
-            fullName: `${owner}/${repo}`,
-          },
-          author: {
-            login: pr.user?.login ?? '',
-            avatarUrl: pr.user?.avatar_url ?? '',
-          },
-          labels: (pr.labels ?? [])
-            .filter((l): l is { name: string; color: string } => typeof l === 'object' && l !== null && 'name' in l)
-            .map((l) => ({
-              name: l.name ?? '',
-              color: l.color ?? '',
-            })),
-        })
+        results.push(parsePR(pr))
       }
     }
 
     if (filter === 'all' || filter === 'assigned') {
-      const query = `is:pr is:open assignee:@me ${repoQueryPart}`.trim()
+      const query = `is:pr is:open assignee:@me ${scopeQueryPart}`.trim()
       const { data } = await octokit.search.issuesAndPullRequests({
         q: query,
         sort: 'updated',
         order: 'desc',
         per_page: 100,
       })
-
       for (const pr of data.items) {
-        // Skip if already in results (for 'all' filter)
-        if (results.some((r) => r.id === pr.id)) continue
-
-        const repoMatch = pr.repository_url.match(/repos\/([^/]+)\/([^/]+)$/)
-        const owner = repoMatch?.[1] ?? ''
-        const repo = repoMatch?.[2] ?? ''
-
-        results.push({
-          id: pr.id,
-          number: pr.number,
-          title: pr.title,
-          htmlUrl: pr.html_url,
-          createdAt: pr.created_at,
-          updatedAt: pr.updated_at,
-          draft: pr.draft ?? false,
-          repository: {
-            owner,
-            repo,
-            fullName: `${owner}/${repo}`,
-          },
-          author: {
-            login: pr.user?.login ?? '',
-            avatarUrl: pr.user?.avatar_url ?? '',
-          },
-          labels: (pr.labels ?? [])
-            .filter((l): l is { name: string; color: string } => typeof l === 'object' && l !== null && 'name' in l)
-            .map((l) => ({
-              name: l.name ?? '',
-              color: l.color ?? '',
-            })),
-        })
+        if (!results.some((r) => r.id === pr.id)) {
+          results.push(parsePR(pr))
+        }
       }
     }
 
-    // Sort by updated date
+    if (filter === 'all' || filter === 'review_requested') {
+      const query = `is:pr is:open review-requested:@me ${scopeQueryPart}`.trim()
+      const { data } = await octokit.search.issuesAndPullRequests({
+        q: query,
+        sort: 'updated',
+        order: 'desc',
+        per_page: 100,
+      })
+      for (const pr of data.items) {
+        if (!results.some((r) => r.id === pr.id)) {
+          results.push(parsePR(pr))
+        }
+      }
+    }
+
+    if (filter === 'all' || filter === 'mentioned') {
+      const query = `is:pr is:open mentions:@me ${scopeQueryPart}`.trim()
+      const { data } = await octokit.search.issuesAndPullRequests({
+        q: query,
+        sort: 'updated',
+        order: 'desc',
+        per_page: 100,
+      })
+      for (const pr of data.items) {
+        if (!results.some((r) => r.id === pr.id)) {
+          results.push(parsePR(pr))
+        }
+      }
+    }
+
+    // Sort by updated date (newest first)
     results.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
     return results

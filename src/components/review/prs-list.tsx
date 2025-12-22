@@ -8,10 +8,11 @@ import { cn } from '@/lib/utils'
 interface Props {
   filter: PRFilter
   viboraReposOnly: boolean
+  org?: string
 }
 
-export function PRsList({ filter, viboraReposOnly }: Props) {
-  const { data: prs, isLoading, error } = useGitHubPRs(filter, viboraReposOnly)
+export function PRsList({ filter, viboraReposOnly, org }: Props) {
+  const { data: prs, isLoading, error } = useGitHubPRs(filter, viboraReposOnly, org)
 
   if (isLoading) {
     return (
@@ -35,20 +36,33 @@ export function PRsList({ filter, viboraReposOnly }: Props) {
     )
   }
 
+  const emptyMessages: Record<PRFilter, string> = {
+    all: 'No open pull requests',
+    created: 'No pull requests created by you',
+    assigned: 'No pull requests assigned to you',
+    review_requested: 'No pull requests awaiting your review',
+    mentioned: 'No pull requests mentioning you',
+  }
+
   if (!prs?.length) {
     return (
       <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <HugeiconsIcon icon={Tick02Icon} size={24} />
-        <p className="text-sm">No open pull requests</p>
+        <p className="text-sm">{emptyMessages[filter]}</p>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {prs.map((pr) => (
-        <PRCard key={pr.id} pr={pr} />
-      ))}
+    <div className="space-y-4">
+      <div className="text-xs text-muted-foreground">
+        {prs.length} result{prs.length !== 1 ? 's' : ''}
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {prs.map((pr) => (
+          <PRCard key={pr.id} pr={pr} />
+        ))}
+      </div>
     </div>
   )
 }

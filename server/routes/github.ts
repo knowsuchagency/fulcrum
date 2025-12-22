@@ -5,7 +5,10 @@ import {
   getAuthenticatedUser,
   fetchUserIssues,
   fetchUserPRs,
+  fetchUserOrgs,
   parseGitHubRemoteUrl,
+  type PRFilter,
+  type IssueFilter,
 } from '../services/github'
 
 const app = new Hono()
@@ -19,14 +22,23 @@ app.get('/user', async (c) => {
   return c.json(user)
 })
 
+// GET /api/github/orgs - Get user's organizations
+app.get('/orgs', async (c) => {
+  const orgs = await fetchUserOrgs()
+  return c.json(orgs)
+})
+
 // GET /api/github/issues - Fetch user's open issues
-// Query params: ?viboraReposOnly=true
+// Query params: ?filter=assigned|created|mentioned&org=orgname&viboraReposOnly=true
 app.get('/issues', async (c) => {
+  const filter = (c.req.query('filter') || 'assigned') as IssueFilter
+  const org = c.req.query('org') || undefined
   const viboraReposOnly = c.req.query('viboraReposOnly') === 'true'
 
   let repoFilters: { owner: string; repo: string }[] | undefined
 
-  if (viboraReposOnly) {
+  // Org filter takes precedence over viboraReposOnly
+  if (!org && viboraReposOnly) {
     const repos = db.select().from(repositories).all()
     repoFilters = repos
       .filter((r) => r.remoteUrl)
@@ -39,19 +51,21 @@ app.get('/issues', async (c) => {
     }
   }
 
-  const issues = await fetchUserIssues(repoFilters)
+  const issues = await fetchUserIssues(filter, repoFilters, org)
   return c.json(issues)
 })
 
 // GET /api/github/prs - Fetch user's PRs
-// Query params: ?filter=all|created|assigned&viboraReposOnly=true
+// Query params: ?filter=all|created|assigned|review_requested|mentioned&org=orgname&viboraReposOnly=true
 app.get('/prs', async (c) => {
-  const filter = (c.req.query('filter') || 'all') as 'all' | 'created' | 'assigned'
+  const filter = (c.req.query('filter') || 'all') as PRFilter
+  const org = c.req.query('org') || undefined
   const viboraReposOnly = c.req.query('viboraReposOnly') === 'true'
 
   let repoFilters: { owner: string; repo: string }[] | undefined
 
-  if (viboraReposOnly) {
+  // Org filter takes precedence over viboraReposOnly
+  if (!org && viboraReposOnly) {
     const repos = db.select().from(repositories).all()
     repoFilters = repos
       .filter((r) => r.remoteUrl)
@@ -64,7 +78,7 @@ app.get('/prs', async (c) => {
     }
   }
 
-  const prs = await fetchUserPRs(filter, repoFilters)
+  const prs = await fetchUserPRs(filter, repoFilters, org)
   return c.json(prs)
 })
 
