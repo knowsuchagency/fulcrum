@@ -1,16 +1,25 @@
 {
-  "name": "@vibora/cli",
-  "version": "0.1.0",
+  "name": "vibora",
+  "version": "0.1.10",
+  "description": "A lightweight PM cockpit for streamlining the software development lifecycle",
+  "license": "PolyForm-Shield-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/knowsuchagency/vibora"
+  },
+  "homepage": "https://github.com/knowsuchagency/vibora",
   "type": "module",
   "bin": {
-    "vibora": "./src/index.ts"
+    "vibora": "bin/vibora.js"
   },
   "files": [
-    "src/",
+    "bin/",
     "server/",
     "lib/",
     "dist/",
-    "drizzle/"
+    "drizzle/",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "bun": ">=1.0.0"
