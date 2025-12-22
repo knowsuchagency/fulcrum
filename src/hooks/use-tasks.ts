@@ -96,7 +96,7 @@ export function useUpdateTask() {
       updates,
     }: {
       taskId: string
-      updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'viewState' | 'prUrl'>>
+      updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'viewState' | 'prUrl' | 'linearTicketId' | 'linearTicketUrl'>>
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks/${taskId}`, {
         method: 'PATCH',

@@ -2,41 +2,9 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 
-// Notification channel configurations
-export interface SoundNotificationConfig {
-  enabled: boolean
-  soundFile?: string
-}
-
-export interface SlackNotificationConfig {
-  enabled: boolean
-  webhookUrl: string
-}
-
-export interface DiscordNotificationConfig {
-  enabled: boolean
-  webhookUrl: string
-}
-
-export interface PushoverNotificationConfig {
-  enabled: boolean
-  appToken: string
-  userKey: string
-}
-
-export interface NotificationSettings {
-  enabled: boolean
-  sound: SoundNotificationConfig
-  slack: SlackNotificationConfig
-  discord: DiscordNotificationConfig
-  pushover: PushoverNotificationConfig
-}
-
-// Settings interface
+// Settings interface (databasePath and worktreeBasePath are derived from viboraDir)
 export interface Settings {
   port: number
-  databasePath: string
-  worktreeBasePath: string
   defaultGitReposDir: string
   taskCreationCommand: string
   hostname: string
@@ -44,23 +12,11 @@ export interface Settings {
   basicAuthUsername: string | null
   basicAuthPassword: string | null
   linearApiKey: string | null
-  notifications: NotificationSettings
-}
-
-// Default notification settings
-const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  enabled: false,
-  sound: { enabled: false },
-  slack: { enabled: false, webhookUrl: '' },
-  discord: { enabled: false, webhookUrl: '' },
-  pushover: { enabled: false, appToken: '', userKey: '' },
 }
 
 // Default settings
 const DEFAULT_SETTINGS: Settings = {
   port: 3333,
-  databasePath: path.join(os.homedir(), '.vibora', 'vibora.db'),
-  worktreeBasePath: path.join(os.homedir(), '.vibora', 'worktrees'),
   defaultGitReposDir: os.homedir(),
   taskCreationCommand: 'claude --dangerously-skip-permissions',
   hostname: '',
@@ -68,13 +24,16 @@ const DEFAULT_SETTINGS: Settings = {
   basicAuthUsername: null,
   basicAuthPassword: null,
   linearApiKey: null,
-  notifications: DEFAULT_NOTIFICATION_SETTINGS,
 }
 
-// Expand tilde in path
+// Expand tilde in path and ensure absolute path
 function expandPath(p: string): string {
   if (p.startsWith('~/')) {
     return path.join(os.homedir(), p.slice(2))
+  }
+  // Convert relative paths to absolute
+  if (!path.isAbsolute(p)) {
+    return path.resolve(p)
   }
   return p
 }
@@ -95,6 +54,16 @@ export function getViboraDir(): string {
   return path.join(os.homedir(), '.vibora')
 }
 
+// Get database path (always derived from viboraDir)
+export function getDatabasePath(): string {
+  return path.join(getViboraDir(), 'vibora.db')
+}
+
+// Get worktree base path (always derived from viboraDir)
+export function getWorktreeBasePath(): string {
+  return path.join(getViboraDir(), 'worktrees')
+}
+
 // Get the settings file path
 function getSettingsPath(): string {
   return path.join(getViboraDir(), 'settings.json')
@@ -110,9 +79,9 @@ export function ensureViboraDir(): void {
 
 // Ensure the worktrees directory exists
 export function ensureWorktreesDir(): void {
-  const settings = getSettings()
-  if (!fs.existsSync(settings.worktreeBasePath)) {
-    fs.mkdirSync(settings.worktreeBasePath, { recursive: true })
+  const worktreesDir = getWorktreeBasePath()
+  if (!fs.existsSync(worktreesDir)) {
+    fs.mkdirSync(worktreesDir, { recursive: true })
   }
 }
 
@@ -135,7 +104,6 @@ export function initializeViboraDirectories(): void {
 // Precedence: env var → settings.json → default
 export function getSettings(): Settings {
   ensureViboraDir()
-  const viboraDir = getViboraDir()
   const settingsPath = getSettingsPath()
 
   let parsed: Partial<Settings> = {}
@@ -153,22 +121,9 @@ export function getSettings(): Settings {
   const allKeys = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]
   const hasMissingKeys = allKeys.some((key) => !(key in parsed))
 
-  // Merge notification settings with defaults (deep merge)
-  const parsedNotifications = parsed.notifications ?? {}
-  const notifications: NotificationSettings = {
-    enabled: parsedNotifications.enabled ?? DEFAULT_NOTIFICATION_SETTINGS.enabled,
-    sound: { ...DEFAULT_NOTIFICATION_SETTINGS.sound, ...parsedNotifications.sound },
-    slack: { ...DEFAULT_NOTIFICATION_SETTINGS.slack, ...parsedNotifications.slack },
-    discord: { ...DEFAULT_NOTIFICATION_SETTINGS.discord, ...parsedNotifications.discord },
-    pushover: { ...DEFAULT_NOTIFICATION_SETTINGS.pushover, ...parsedNotifications.pushover },
-  }
-
-  // Merge: env var → settings.json → default
-  // Note: databasePath defaults to {viboraDir}/vibora.db (CWD-aware)
+  // Merge: settings.json → default
   const fileSettings: Settings = {
     port: parsed.port ?? DEFAULT_SETTINGS.port,
-    databasePath: expandPath(parsed.databasePath ?? path.join(viboraDir, 'vibora.db')),
-    worktreeBasePath: expandPath(parsed.worktreeBasePath ?? path.join(viboraDir, 'worktrees')),
     defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
     taskCreationCommand: parsed.taskCreationCommand ?? DEFAULT_SETTINGS.taskCreationCommand,
     hostname: parsed.hostname ?? DEFAULT_SETTINGS.hostname,
@@ -176,7 +131,6 @@ export function getSettings(): Settings {
     basicAuthUsername: parsed.basicAuthUsername ?? null,
     basicAuthPassword: parsed.basicAuthPassword ?? null,
     linearApiKey: parsed.linearApiKey ?? null,
-    notifications,
   }
 
   // Persist missing keys back to file (only file settings, not env overrides)
@@ -185,22 +139,10 @@ export function getSettings(): Settings {
   }
 
   // Apply environment variable overrides
-  // VIBORA_DIR implies default paths within that directory (unless specific path env vars are set)
-  const viboraDirEnv = process.env.VIBORA_DIR
   const portEnv = parseInt(process.env.PORT || '', 10)
   const sshPortEnv = parseInt(process.env.VIBORA_SSH_PORT || '', 10)
   return {
     port: !isNaN(portEnv) && portEnv > 0 ? portEnv : fileSettings.port,
-    databasePath: process.env.VIBORA_DATABASE_PATH
-      ? expandPath(process.env.VIBORA_DATABASE_PATH)
-      : viboraDirEnv
-        ? path.join(viboraDir, 'vibora.db')
-        : fileSettings.databasePath,
-    worktreeBasePath: process.env.VIBORA_WORKTREE_PATH
-      ? expandPath(process.env.VIBORA_WORKTREE_PATH)
-      : viboraDirEnv
-        ? path.join(viboraDir, 'worktrees')
-        : fileSettings.worktreeBasePath,
     defaultGitReposDir: process.env.VIBORA_GIT_REPOS_DIR
       ? expandPath(process.env.VIBORA_GIT_REPOS_DIR)
       : fileSettings.defaultGitReposDir,
@@ -210,7 +152,6 @@ export function getSettings(): Settings {
     basicAuthUsername: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.basicAuthUsername,
     basicAuthPassword: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.basicAuthPassword,
     linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.linearApiKey,
-    notifications: fileSettings.notifications,
   }
 }
 
@@ -235,28 +176,4 @@ export function resetSettings(): Settings {
   ensureViboraDir()
   fs.writeFileSync(getSettingsPath(), JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8')
   return { ...DEFAULT_SETTINGS }
-}
-
-// Get default worktree base path (for backward compatibility)
-export function getDefaultWorktreeBasePath(): string {
-  return getSetting('worktreeBasePath')
-}
-
-// Get notification settings
-export function getNotificationSettings(): NotificationSettings {
-  return getSetting('notifications')
-}
-
-// Update notification settings (deep merge)
-export function updateNotificationSettings(updates: Partial<NotificationSettings>): NotificationSettings {
-  const current = getNotificationSettings()
-  const updated: NotificationSettings = {
-    enabled: updates.enabled ?? current.enabled,
-    sound: { ...current.sound, ...updates.sound },
-    slack: { ...current.slack, ...updates.slack },
-    discord: { ...current.discord, ...updates.discord },
-    pushover: { ...current.pushover, ...updates.pushover },
-  }
-  updateSettings({ notifications: updated })
-  return updated
 }

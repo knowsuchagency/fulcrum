@@ -33,7 +33,9 @@ import {
   Orbit01Icon,
   VisualStudioCodeIcon,
   Task01Icon,
+  Settings05Icon,
 } from '@hugeicons/core-free-icons'
+import { TaskConfigModal } from '@/components/task-config-modal'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,9 +55,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,9 +101,7 @@ function TaskView() {
   const navState = location.state as { planMode?: boolean; description?: string } | undefined
   const planModeDescription = navState?.planMode && navState?.description ? navState.description : undefined
 
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [editTitle, setEditTitle] = useState('')
-  const [editDescription, setEditDescription] = useState('')
+  const [configModalOpen, setConfigModalOpen] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [syncErrorModalOpen, setSyncErrorModalOpen] = useState(false)
   const [syncSuccess, setSyncSuccess] = useState(false)
@@ -300,35 +297,6 @@ function TaskView() {
     setVscodeModalOpen(false)
   }
 
-  const handleOpenEditModal = () => {
-    if (task) {
-      setEditTitle(task.title)
-      setEditDescription(task.description || '')
-      setEditModalOpen(true)
-    }
-  }
-
-  const handleSaveEdit = () => {
-    const trimmedTitle = editTitle.trim()
-    if (!trimmedTitle || !task) return
-
-    const updates: { title?: string; description?: string } = {}
-    if (trimmedTitle !== task.title) {
-      updates.title = trimmedTitle
-    }
-    if (editDescription.trim() !== (task.description || '')) {
-      updates.description = editDescription.trim()
-    }
-
-    if (Object.keys(updates).length > 0) {
-      updateTask.mutate({
-        taskId: task.id,
-        updates,
-      })
-    }
-    setEditModalOpen(false)
-  }
-
   const handleStatusChange = (status: string) => {
     if (task) {
       updateTask.mutate({
@@ -372,13 +340,19 @@ function TaskView() {
       {/* Task Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2">
         <div className="flex-1">
-          <h1
-            className="cursor-pointer text-sm font-medium hover:text-primary"
-            onClick={handleOpenEditModal}
-            title="Click to edit"
-          >
-            {task.title}
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-sm font-medium">
+              {task.title}
+            </h1>
+            <button
+              type="button"
+              className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              onClick={() => setConfigModalOpen(true)}
+              title="Task settings"
+            >
+              <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
+            </button>
+          </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>{task.repoName}</span>
             <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
@@ -614,48 +588,12 @@ function TaskView() {
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      {/* Edit Task Modal */}
-      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-          </DialogHeader>
-          <FieldGroup className="mt-4">
-            <Field>
-              <FieldLabel htmlFor="edit-title">Title</FieldLabel>
-              <Input
-                id="edit-title"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSaveEdit()
-                  }
-                }}
-                autoFocus
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="edit-description">Description</FieldLabel>
-              <Textarea
-                id="edit-description"
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={3}
-              />
-            </Field>
-          </FieldGroup>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={!editTitle.trim()}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Task Config Modal */}
+      <TaskConfigModal
+        task={task}
+        open={configModalOpen}
+        onOpenChange={setConfigModalOpen}
+      />
 
       {/* VS Code Modal */}
       <Dialog open={vscodeModalOpen} onOpenChange={setVscodeModalOpen}>
