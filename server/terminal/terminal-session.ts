@@ -227,15 +227,17 @@ export class TerminalSession {
   }
 
   kill(): void {
-    // Kill the PTY connection
+    // Kill the PTY connection (our attachment to dtach)
     if (this.pty) {
       this.pty.kill()
       this.pty = null
     }
 
-    // The dtach socket will be cleaned up when the shell exits
-    // Send SIGHUP to the session by removing the socket
+    // Kill the dtach process and its entire process tree (shell + children like Claude)
     const dtach = getDtachService()
+    dtach.killSession(this.id)
+
+    // Clean up the socket file if it still exists
     const socketPath = dtach.getSocketPath(this.id)
     try {
       unlinkSync(socketPath)
