@@ -22,7 +22,10 @@ import {
   Folder01Icon,
   Loading03Icon,
   Alert02Icon,
+  VisualStudioCodeIcon,
 } from '@hugeicons/core-free-icons'
+import { useHostname, useSshPort } from '@/hooks/use-config'
+import { buildVSCodeUrl } from '@/lib/vscode-url'
 
 export const Route = createFileRoute('/repositories/$repoId')({
   component: RepositoryDetailView,
@@ -34,6 +37,8 @@ function RepositoryDetailView() {
   const { data: repository, isLoading, error } = useRepository(repoId)
   const updateRepository = useUpdateRepository()
   const deleteRepository = useDeleteRepository()
+  const { data: hostname } = useHostname()
+  const { data: sshPort } = useSshPort()
 
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
@@ -78,6 +83,12 @@ function RepositoryDetailView() {
     if (!repository) return
     await deleteRepository.mutateAsync(repository.id)
     navigate({ to: '/repositories' })
+  }
+
+  const handleOpenVSCode = () => {
+    if (!repository) return
+    const url = buildVSCodeUrl(repository.path, hostname, sshPort)
+    window.open(url, '_blank')
   }
 
   if (isLoading) {
@@ -125,6 +136,16 @@ function RepositoryDetailView() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleOpenVSCode}
+            className="text-muted-foreground hover:text-foreground"
+            title="Open in VS Code"
+          >
+            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
+          </Button>
+
           <AlertDialog>
             <AlertDialogTrigger
               render={

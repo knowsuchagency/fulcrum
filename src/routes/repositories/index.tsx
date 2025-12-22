@@ -39,9 +39,11 @@ import {
   Alert02Icon,
   CommandLineIcon,
   Copy01Icon,
+  VisualStudioCodeIcon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
-import { useDefaultGitReposDir } from '@/hooks/use-config'
+import { useDefaultGitReposDir, useHostname, useSshPort } from '@/hooks/use-config'
+import { buildVSCodeUrl } from '@/lib/vscode-url'
 import type { Repository } from '@/types'
 
 export const Route = createFileRoute('/repositories/')({
@@ -57,6 +59,15 @@ function RepositoryCard({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const { data: hostname } = useHostname()
+  const { data: sshPort } = useSshPort()
+
+  const handleOpenVSCode = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const url = buildVSCodeUrl(repository.path, hostname, sshPort)
+    window.open(url, '_blank')
+  }
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -75,10 +86,19 @@ function RepositoryCard({
   return (
     <Link to="/repositories/$repoId" params={{ repoId: repository.id }}>
       <Card className="transition-colors hover:border-border/80 cursor-pointer">
-        <CardContent className="flex items-start justify-between gap-4 py-4">
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex items-center gap-2">
+        <CardContent className="flex flex-col gap-3 py-4">
+          <div className="min-w-0 space-y-2 overflow-hidden">
+            <div className="flex items-center justify-between gap-2">
               <span className="truncate font-medium">{repository.displayName}</span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleOpenVSCode}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+                title="Open in VS Code"
+              >
+                <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
+              </Button>
             </div>
 
             <div className="space-y-1 text-xs text-muted-foreground">
@@ -108,7 +128,7 @@ function RepositoryCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+          <div className="flex items-center justify-end" onClick={(e) => e.preventDefault()}>
             <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <AlertDialogTrigger
                 render={

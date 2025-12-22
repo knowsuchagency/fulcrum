@@ -25,6 +25,7 @@ import {
   Loading03Icon,
   Alert02Icon,
   Cancel01Icon,
+  CleanIcon,
 } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
 import type { Worktree, TaskStatus } from '@/types'
@@ -238,6 +239,8 @@ function WorktreesView() {
   const { worktrees, summary, isLoading, isLoadingDetails, error, refetch } = useWorktrees()
   const deleteWorktree = useDeleteWorktree()
   const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set())
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   const toggleStatus = (status: StatusFilter) => {
     setSelectedStatuses((prev) => {
@@ -264,6 +267,29 @@ function WorktreesView() {
       return false
     })
   }, [worktrees, selectedStatuses])
+
+  const completedWorktrees = useMemo(() => {
+    return worktrees.filter((w) => w.taskStatus === 'DONE' || w.taskStatus === 'CANCELED')
+  }, [worktrees])
+
+  const handleBulkDelete = async () => {
+    if (completedWorktrees.length === 0) return
+    setIsBulkDeleting(true)
+    try {
+      for (const worktree of completedWorktrees) {
+        await deleteWorktree.mutateAsync({
+          worktreePath: worktree.path,
+          repoPath: worktree.repoPath,
+        })
+      }
+      setBulkDeleteDialogOpen(false)
+      refetch()
+    } catch {
+      // Keep dialog open on error so user can see what happened
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
 
   const handleDelete = async (worktree: Worktree) => {
     await deleteWorktree.mutateAsync({
@@ -295,12 +321,82 @@ function WorktreesView() {
               </div>
             )}
           </div>
-          {selectedStatuses.size > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-xs">
-              <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
-              Clear filters
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {completedWorktrees.length > 0 && (
+              <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+                <AlertDialogTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+                      disabled={isLoadingDetails}
+                    />
+                  }
+                >
+                  <HugeiconsIcon icon={CleanIcon} size={12} strokeWidth={2} />
+                  Clean up ({completedWorktrees.length})
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Completed Worktrees</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <span className="block">
+                        This will permanently delete {completedWorktrees.length} worktree
+                        {completedWorktrees.length !== 1 ? 's' : ''} and their linked tasks:
+                      </span>
+                      <span className="block text-sm">
+                        {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length > 0 && (
+                          <span className="mr-3">
+                            <span className="font-medium text-emerald-600">
+                              {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length}
+                            </span>{' '}
+                            Done
+                          </span>
+                        )}
+                        {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length > 0 && (
+                          <span>
+                            <span className="font-medium text-rose-600">
+                              {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length}
+                            </span>{' '}
+                            Canceled
+                          </span>
+                        )}
+                      </span>
+                      <span className="block font-medium text-destructive">
+                        This action cannot be undone.
+                      </span>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+                    <Button
+                      variant="destructive"
+                      onClick={handleBulkDelete}
+                      disabled={isBulkDeleting}
+                      className="gap-2"
+                    >
+                      {isBulkDeleting && (
+                        <HugeiconsIcon
+                          icon={Loading03Icon}
+                          size={14}
+                          strokeWidth={2}
+                          className="animate-spin"
+                        />
+                      )}
+                      {isBulkDeleting ? 'Deleting...' : `Delete ${completedWorktrees.length}`}
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {selectedStatuses.size > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-xs">
+                <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+                Clear filters
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
