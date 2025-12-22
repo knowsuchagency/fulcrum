@@ -56,7 +56,8 @@ function parseArgs(args: string[]): {
 }
 
 async function main() {
-  const args = Bun.argv.slice(2)
+  // Use process.argv for Node compatibility (bunx runs with node shebang)
+  const args = process.argv.slice(2)
   const { positional, flags } = parseArgs(args)
 
   // Handle global flags

@@ -59,6 +59,23 @@ function getViboraDir() {
   }
   return join(homedir(), ".vibora");
 }
+function getAuthCredentials() {
+  const settingsPaths = [
+    process.env.VIBORA_DIR && join(expandPath(process.env.VIBORA_DIR), "settings.json"),
+    join(process.cwd(), ".vibora", "settings.json"),
+    join(homedir(), ".vibora", "settings.json")
+  ].filter(Boolean);
+  for (const path of settingsPaths) {
+    const settings = readSettingsFile(path);
+    if (settings?.basicAuthUsername && settings?.basicAuthPassword) {
+      return {
+        username: settings.basicAuthUsername,
+        password: settings.basicAuthPassword
+      };
+    }
+  }
+  return null;
+}
 
 // cli/src/utils/errors.ts
 var ExitCodes = {
@@ -95,19 +112,34 @@ class ApiError extends CliError {
 // cli/src/client.ts
 class ViboraClient {
   baseUrl;
+  authHeader;
   constructor(urlOverride, portOverride) {
     this.baseUrl = discoverServerUrl(urlOverride, portOverride);
+    const credentials = getAuthCredentials();
+    if (credentials) {
+      const encoded = btoa(`${credentials.username}:${credentials.password}`);
+      this.authHeader = `Basic ${encoded}`;
+    } else {
+      this.authHeader = null;
+    }
   }
   async fetch(path, options) {
     const url = `${this.baseUrl}${path}`;
+    const headers = {
+      "Content-Type": "application/json",
+      ...options?.headers
+    };
+    if (this.authHeader) {
+      headers["Authorization"] = this.authHeader;
+    }
     try {
       const res = await fetch(url, {
         ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers
-        }
+        headers
       });
+      if (res.status === 401) {
+        throw new ApiError(401, "Authentication required. Configure basicAuthUsername and basicAuthPassword in settings.json");
+      }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new ApiError(res.status, body.error || body.message || `Request failed: ${res.status}`);
@@ -671,6 +703,8 @@ async function handleHealthCommand(flags) {
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { execSync } from "child_process";
+import { fileURLToPath as fileURLToPath2 } from "url";
 function getClaudeSettingsPath(global) {
   if (global) {
     return path.join(os.homedir(), ".claude", "settings.json");
@@ -696,7 +730,8 @@ function writeClaudeSettings(settingsPath, settings) {
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
 }
 function getViboraHookPath() {
-  const scriptDir = path.dirname(Bun.main);
+  const currentFile = fileURLToPath2(import.meta.url);
+  const scriptDir = path.dirname(currentFile);
   const possiblePaths = [
     path.join(scriptDir, "..", "scripts", "vibora-plan-complete-hook"),
     path.join(scriptDir, "..", "..", "scripts", "vibora-plan-complete-hook"),
@@ -705,10 +740,8 @@ function getViboraHookPath() {
   for (const p of possiblePaths) {
     if (p === "vibora-plan-complete-hook") {
       try {
-        const result = Bun.spawnSync(["which", "vibora-plan-complete-hook"]);
-        if (result.exitCode === 0) {
-          return "vibora-plan-complete-hook";
-        }
+        execSync("which vibora-plan-complete-hook", { stdio: "pipe" });
+        return "vibora-plan-complete-hook";
       } catch {
         continue;
       }
@@ -892,7 +925,7 @@ function parseArgs(args) {
   return { positional, flags };
 }
 async function main() {
-  const args = Bun.argv.slice(2);
+  const args = process.argv.slice(2);
   const { positional, flags } = parseArgs(args);
   if (flags.pretty) {
     setPrettyOutput(true);

@@ -1,6 +1,8 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
 import { CliError, ExitCodes } from '../utils/errors'
 import { outputSuccess, prettyLog, isPrettyOutput } from '../utils/output'
 
@@ -47,7 +49,8 @@ function writeClaudeSettings(settingsPath: string, settings: ClaudeSettings): vo
 
 function getViboraHookPath(): string {
   // Check if running from installed CLI or development
-  const scriptDir = path.dirname(Bun.main)
+  const currentFile = fileURLToPath(import.meta.url)
+  const scriptDir = path.dirname(currentFile)
 
   // Check common locations
   const possiblePaths = [
@@ -63,10 +66,8 @@ function getViboraHookPath(): string {
     if (p === 'vibora-plan-complete-hook') {
       // Check if in PATH
       try {
-        const result = Bun.spawnSync(['which', 'vibora-plan-complete-hook'])
-        if (result.exitCode === 0) {
-          return 'vibora-plan-complete-hook'
-        }
+        execSync('which vibora-plan-complete-hook', { stdio: 'pipe' })
+        return 'vibora-plan-complete-hook'
       } catch {
         continue
       }
