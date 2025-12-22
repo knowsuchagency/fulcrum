@@ -229,43 +229,49 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   useEffect(() => {
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
-    const cleanup = attachXterm(terminalId, termRef.current)
+    const isNewTerminal = newTerminalIds.has(terminalId)
+    // Remove from set immediately so startup commands don't run again on re-mount
+    if (isNewTerminal) {
+      newTerminalIds.delete(terminalId)
+    }
+
+    // Callback when terminal is fully attached (buffer received from server)
+    const onAttached = () => {
+      // Trigger a resize after attaching
+      requestAnimationFrame(doFit)
+
+      // Run startup commands only if this is a newly created terminal (not restored from persistence)
+      if (isNewTerminal) {
+        // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
+        if (startupScript) {
+          setTimeout(() => {
+            // Write the script as-is - newlines act as Enter presses in terminals
+            writeToTerminal(terminalId, startupScript + '\r')
+          }, 100)
+        }
+
+        // 2. Then run task creation command (e.g., claude agent)
+        let taskCommand = taskCreationCommand
+        if (aiMode === 'plan' && description) {
+          const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
+          taskCommand = `claude "${prompt}" --allow-dangerously-skip-permissions --permission-mode plan`
+        } else if (aiMode === 'default' && description) {
+          const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
+          taskCommand = `claude "${prompt}" --dangerously-skip-permissions`
+        }
+        // else: use default taskCreationCommand (for 'none' or no description)
+        if (taskCommand) {
+          setTimeout(() => {
+            writeToTerminal(terminalId, taskCommand + '\r')
+          }, startupScript ? 300 : 100)
+        }
+      }
+    }
+
+    const cleanup = attachXterm(terminalId, termRef.current, { onAttached })
     // Set up image paste handler
     const cleanupPaste = setupImagePaste(containerRef.current, terminalId)
     attachedRef.current = true
-
-    // Trigger a resize after attaching
-    requestAnimationFrame(doFit)
-
-    // Run startup commands only if this is a newly created terminal (not restored from persistence)
-    if (newTerminalIds.has(terminalId)) {
-      // Remove from set so startup commands don't run again
-      newTerminalIds.delete(terminalId)
-
-      // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
-      if (startupScript) {
-        setTimeout(() => {
-          // Write the script as-is - newlines act as Enter presses in terminals
-          writeToTerminal(terminalId, startupScript + '\r')
-        }, 100)
-      }
-
-      // 2. Then run task creation command (e.g., claude agent)
-      let taskCommand = taskCreationCommand
-      if (aiMode === 'plan' && description) {
-        const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
-        taskCommand = `claude "${prompt}" --allow-dangerously-skip-permissions --permission-mode plan`
-      } else if (aiMode === 'default' && description) {
-        const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
-        taskCommand = `claude "${prompt}" --dangerously-skip-permissions`
-      }
-      // else: use default taskCreationCommand (for 'none' or no description)
-      if (taskCommand) {
-        setTimeout(() => {
-          writeToTerminal(terminalId, taskCommand + '\r')
-        }, startupScript ? 300 : 100)
-      }
-    }
 
     return () => {
       cleanup()

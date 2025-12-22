@@ -73,6 +73,10 @@ interface CreateTerminalOptions {
   positionInTab?: number
 }
 
+interface AttachXtermOptions {
+  onAttached?: () => void
+}
+
 interface UseTerminalWSReturn {
   terminals: TerminalInfo[]
   terminalsLoaded: boolean
@@ -89,7 +93,7 @@ interface UseTerminalWSReturn {
   renameTab: (tabId: string, name: string) => void
   deleteTab: (tabId: string) => void
   reorderTab: (tabId: string, position: number) => void
-  attachXterm: (terminalId: string, xterm: XTerm) => () => void
+  attachXterm: (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => () => void
   setupImagePaste: (container: HTMLElement, terminalId: string) => () => void
 }
 
@@ -118,6 +122,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const xtermMapRef = useRef<Map<string, XTerm>>(new Map())
   const newTerminalIdsRef = useRef<Set<string>>(new Set())
+  const onAttachedCallbacksRef = useRef<Map<string, () => void>>(new Map())
   const connectRef = useRef<() => void>(() => {})
 
   const send = useCallback((message: object) => {
@@ -156,6 +161,12 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
           if (xterm && message.payload.buffer) {
             xterm.write(message.payload.buffer)
+          }
+          // Call onAttached callback if registered
+          const callback = onAttachedCallbacksRef.current.get(message.payload.terminalId)
+          if (callback) {
+            onAttachedCallbacksRef.current.delete(message.payload.terminalId)
+            callback()
           }
           break
         }
@@ -395,13 +406,18 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   )
 
   const attachXterm = useCallback(
-    (terminalId: string, xterm: XTerm) => {
+    (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => {
       xtermMapRef.current.set(terminalId, xterm)
 
       // Set up input handling
       const disposable = xterm.onData((data) => {
         writeToTerminal(terminalId, data)
       })
+
+      // Register onAttached callback if provided
+      if (options?.onAttached) {
+        onAttachedCallbacksRef.current.set(terminalId, options.onAttached)
+      }
 
       // Request attachment to get buffer
       send({
@@ -413,6 +429,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
       return () => {
         disposable.dispose()
         xtermMapRef.current.delete(terminalId)
+        onAttachedCallbacksRef.current.delete(terminalId)
       }
     },
     [send, writeToTerminal]
