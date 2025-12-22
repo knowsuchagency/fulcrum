@@ -211,6 +211,11 @@ export class TerminalSession {
     return this.buffer.getContents()
   }
 
+  clearBuffer(): void {
+    this.buffer.clear()
+    this.buffer.saveToDisk()
+  }
+
   getInfo(): TerminalInfo {
     return {
       id: this.id,

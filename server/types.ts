@@ -91,6 +91,13 @@ export interface TerminalAssignTabMessage {
   }
 }
 
+export interface TerminalClearBufferMessage {
+  type: 'terminal:clearBuffer'
+  payload: {
+    terminalId: string
+  }
+}
+
 // Tab messages
 export interface TabCreateMessage {
   type: 'tab:create'
@@ -136,6 +143,7 @@ export type ClientMessage =
   | TerminalsListMessage
   | TerminalRenameMessage
   | TerminalAssignTabMessage
+  | TerminalClearBufferMessage
   | TabCreateMessage
   | TabRenameMessage
   | TabDeleteMessage
@@ -215,6 +223,13 @@ export interface TerminalTabAssignedMessage {
   }
 }
 
+export interface TerminalBufferClearedMessage {
+  type: 'terminal:bufferCleared'
+  payload: {
+    terminalId: string
+  }
+}
+
 // Tab response messages
 export interface TabCreatedMessage {
   type: 'tab:created'
@@ -276,6 +291,7 @@ export type ServerMessage =
   | TerminalOutputMessage
   | TerminalExitMessage
   | TerminalAttachedMessage
+  | TerminalBufferClearedMessage
   | TerminalsListResponseMessage
   | TerminalErrorMessage
   | TerminalRenamedMessage

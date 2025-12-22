@@ -47,6 +47,7 @@ type ServerMessage =
   | { type: 'terminal:output'; payload: { terminalId: string; data: string } }
   | { type: 'terminal:exit'; payload: { terminalId: string; exitCode: number } }
   | { type: 'terminal:attached'; payload: { terminalId: string; buffer: string } }
+  | { type: 'terminal:bufferCleared'; payload: { terminalId: string } }
   | { type: 'terminals:list'; payload: { terminals: TerminalInfo[] } }
   | { type: 'terminal:error'; payload: { terminalId?: string; error: string } }
   | { type: 'terminal:renamed'; payload: { terminalId: string; name: string } }
@@ -88,6 +89,7 @@ interface UseTerminalWSReturn {
   writeToTerminal: (terminalId: string, data: string) => void
   resizeTerminal: (terminalId: string, cols: number, rows: number) => void
   renameTerminal: (terminalId: string, name: string) => void
+  clearTerminalBuffer: (terminalId: string) => void
   assignTerminalToTab: (terminalId: string, tabId: string | null, positionInTab?: number) => void
   createTab: (name: string, position?: number) => void
   renameTab: (tabId: string, name: string) => void
@@ -159,14 +161,28 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
         case 'terminal:attached': {
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
-          if (xterm && message.payload.buffer) {
-            xterm.write(message.payload.buffer)
+          if (xterm) {
+            // Reset terminal to clean state before replaying buffer
+            // This prevents corrupted escape sequences from persisting
+            xterm.reset()
+            if (message.payload.buffer) {
+              xterm.write(message.payload.buffer)
+            }
           }
           // Call onAttached callback if registered
           const callback = onAttachedCallbacksRef.current.get(message.payload.terminalId)
           if (callback) {
             onAttachedCallbacksRef.current.delete(message.payload.terminalId)
             callback()
+          }
+          break
+        }
+
+        case 'terminal:bufferCleared': {
+          const xterm = xtermMapRef.current.get(message.payload.terminalId)
+          if (xterm) {
+            // Full terminal reset - clears screen and resets state
+            xterm.reset()
           }
           break
         }
@@ -354,6 +370,16 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     [send]
   )
 
+  const clearTerminalBuffer = useCallback(
+    (terminalId: string) => {
+      send({
+        type: 'terminal:clearBuffer',
+        payload: { terminalId },
+      })
+    },
+    [send]
+  )
+
   const assignTerminalToTab = useCallback(
     (terminalId: string, tabId: string | null, positionInTab?: number) => {
       send({
@@ -483,6 +509,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     writeToTerminal,
     resizeTerminal,
     renameTerminal,
+    clearTerminalBuffer,
     assignTerminalToTab,
     createTab,
     renameTab,
