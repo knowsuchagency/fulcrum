@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { DescriptionTextarea } from '@/components/ui/description-textarea'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
 import {
   Select,
@@ -250,10 +250,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
 
               <Field>
                 <FieldLabel htmlFor="description">Description</FieldLabel>
-                <Textarea
+                <DescriptionTextarea
                   id="description"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onValueChange={setDescription}
                   placeholder="Implement OAuth2 login flow..."
                   rows={2}
                 />
