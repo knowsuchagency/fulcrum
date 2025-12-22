@@ -317,57 +317,61 @@ function SettingsPage() {
                 <div className="space-y-4">
                   {/* Port */}
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <label className="w-32 shrink-0 text-sm text-muted-foreground">Port</label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={65535}
-                        value={localPort}
-                        onChange={(e) => setLocalPort(e.target.value)}
-                        placeholder="3333"
-                        disabled={isLoading}
-                        className="w-24 font-mono text-sm"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={handleResetPort}
-                        disabled={isLoading || resetConfig.isPending}
-                        title="Reset to default"
-                      >
-                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                      </Button>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Port</label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={65535}
+                          value={localPort}
+                          onChange={(e) => setLocalPort(e.target.value)}
+                          placeholder="3333"
+                          disabled={isLoading}
+                          className="w-24 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetPort}
+                          disabled={isLoading || resetConfig.isPending}
+                          title="Reset to default"
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
                     </div>
-                    <p className="ml-32 pl-2 text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
                       Requires restart
                     </p>
                   </div>
 
                   {/* Startup Command */}
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <label className="w-32 shrink-0 text-sm text-muted-foreground">Startup Command</label>
-                      <Input
-                        value={localTaskCommand}
-                        onChange={(e) => setLocalTaskCommand(e.target.value)}
-                        placeholder="claude --dangerously-skip-permissions"
-                        disabled={isLoading}
-                        className="flex-1 font-mono text-sm"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={handleResetTaskCommand}
-                        disabled={isLoading || resetConfig.isPending}
-                        title="Reset to default"
-                      >
-                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                      </Button>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Startup Command</label>
+                      <div className="flex flex-1 items-center gap-2">
+                        <Input
+                          value={localTaskCommand}
+                          onChange={(e) => setLocalTaskCommand(e.target.value)}
+                          placeholder="claude --dangerously-skip-permissions"
+                          disabled={isLoading}
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetTaskCommand}
+                          disabled={isLoading || resetConfig.isPending}
+                          title="Reset to default"
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
                     </div>
-                    <p className="ml-32 pl-2 text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
                       Command for new task terminals
                     </p>
                   </div>
@@ -377,106 +381,112 @@ function SettingsPage() {
               {/* Paths */}
               <SettingsSection title="Paths">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="w-32 shrink-0 text-sm text-muted-foreground">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
                       Git Repos Directory
                     </label>
-                    <Input
-                      value={localReposDir}
-                      onChange={(e) => setLocalReposDir(e.target.value)}
-                      placeholder="~/projects"
-                      disabled={isLoading}
-                      className="flex-1 font-mono text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => setReposDirBrowserOpen(true)}
-                      disabled={isLoading}
-                      title="Browse"
-                    >
-                      <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={handleResetReposDir}
-                      disabled={isLoading || resetConfig.isPending}
-                      title="Reset to default"
-                    >
-                      <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                    </Button>
+                    <div className="flex flex-1 items-center gap-2">
+                      <Input
+                        value={localReposDir}
+                        onChange={(e) => setLocalReposDir(e.target.value)}
+                        placeholder="~/projects"
+                        disabled={isLoading}
+                        className="flex-1 font-mono text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => setReposDirBrowserOpen(true)}
+                        disabled={isLoading}
+                        title="Browse"
+                      >
+                        <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={handleResetReposDir}
+                        disabled={isLoading || resetConfig.isPending}
+                        title="Reset to default"
+                      >
+                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                      </Button>
+                    </div>
                   </div>
-                  <p className="ml-32 pl-2 text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
                     Starting directory for repo picker
                   </p>
                 </div>
               </SettingsSection>
 
               {/* Remote Access + Integrations side by side */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Remote Access */}
                 <SettingsSection title="Remote Access">
                   <div className="space-y-4">
                     {/* Hostname */}
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
                           Hostname
                         </label>
-                        <Input
-                          value={localHostname}
-                          onChange={(e) => setLocalHostname(e.target.value)}
-                          placeholder="e.g., citadel"
-                          disabled={isLoading}
-                          className="flex-1 font-mono text-sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={handleResetHostname}
-                          disabled={isLoading || resetConfig.isPending}
-                          title="Reset to default"
-                        >
-                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                        </Button>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            value={localHostname}
+                            onChange={(e) => setLocalHostname(e.target.value)}
+                            placeholder="e.g., citadel"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleResetHostname}
+                            disabled={isLoading || resetConfig.isPending}
+                            title="Reset to default"
+                          >
+                            <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
                         For VS Code SSH URLs
                       </p>
                     </div>
 
                     {/* SSH Port */}
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
                           SSH Port
                         </label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={65535}
-                          value={localSshPort}
-                          onChange={(e) => setLocalSshPort(e.target.value)}
-                          placeholder="22"
-                          disabled={isLoading}
-                          className="w-20 font-mono text-sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={handleResetSshPort}
-                          disabled={isLoading || resetConfig.isPending}
-                          title="Reset to default"
-                        >
-                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={65535}
+                            value={localSshPort}
+                            onChange={(e) => setLocalSshPort(e.target.value)}
+                            placeholder="22"
+                            disabled={isLoading}
+                            className="w-20 font-mono text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleResetSshPort}
+                            disabled={isLoading || resetConfig.isPending}
+                            title="Reset to default"
+                          >
+                            <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
                         Remote connection port
                       </p>
                     </div>
@@ -488,60 +498,64 @@ function SettingsPage() {
                   <div className="space-y-4">
                     {/* Linear API Key */}
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
                           Linear
                         </label>
-                        <Input
-                          type="password"
-                          value={localLinearApiKey}
-                          onChange={(e) => setLocalLinearApiKey(e.target.value)}
-                          placeholder="lin_api_..."
-                          disabled={isLoading}
-                          className="flex-1 font-mono text-sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={handleResetLinearApiKey}
-                          disabled={isLoading || resetConfig.isPending}
-                          title="Reset to default"
-                        >
-                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                        </Button>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            type="password"
+                            value={localLinearApiKey}
+                            onChange={(e) => setLocalLinearApiKey(e.target.value)}
+                            placeholder="lin_api_..."
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleResetLinearApiKey}
+                            disabled={isLoading || resetConfig.isPending}
+                            title="Reset to default"
+                          >
+                            <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
                         API key for ticket sync
                       </p>
                     </div>
 
                     {/* GitHub PAT */}
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <label className="w-20 shrink-0 text-sm text-muted-foreground">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
                           GitHub
                         </label>
-                        <Input
-                          type="password"
-                          value={localGitHubPat}
-                          onChange={(e) => setLocalGitHubPat(e.target.value)}
-                          placeholder="ghp_..."
-                          disabled={isLoading}
-                          className="flex-1 font-mono text-sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={handleResetGitHubPat}
-                          disabled={isLoading || resetConfig.isPending}
-                          title="Reset to default"
-                        >
-                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                        </Button>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            type="password"
+                            value={localGitHubPat}
+                            onChange={(e) => setLocalGitHubPat(e.target.value)}
+                            placeholder="ghp_..."
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleResetGitHubPat}
+                            disabled={isLoading || resetConfig.isPending}
+                            title="Reset to default"
+                          >
+                            <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                          </Button>
+                        </div>
                       </div>
-                      <p className="ml-20 pl-2 text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
                         PAT for Issues & PRs
                       </p>
                     </div>
@@ -553,8 +567,8 @@ function SettingsPage() {
               <SettingsSection title="Notifications">
                 <div className="space-y-4">
                   {/* Master toggle */}
-                  <div className="flex items-center gap-2">
-                    <label className="w-40 shrink-0 text-sm text-muted-foreground">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-40 sm:shrink-0">
                       Enable Notifications
                     </label>
                     <Switch

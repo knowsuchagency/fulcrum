@@ -55,12 +55,14 @@ export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
         isOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <h3 className="text-sm font-medium">{STATUS_LABELS[status]}</h3>
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium">
-          {tasks.length}
-        </span>
-      </div>
+      {!isMobile && (
+        <div className="flex items-center justify-between border-b border-border px-3 py-2">
+          <h3 className="text-sm font-medium">{STATUS_LABELS[status]}</h3>
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium">
+            {tasks.length}
+          </span>
+        </div>
+      )}
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-2 p-2">
           {sortedTasks.map((task) => (

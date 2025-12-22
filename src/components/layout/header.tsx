@@ -31,7 +31,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   return (
     <header className="relative z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-black px-4">
       <div className="flex items-center gap-4">
-        <Link to="/tasks" className="flex items-center">
+        <Link to="/tasks" className="hidden items-center sm:flex">
           <img src="/vibora-logo.jpeg" alt="Vibora" className="h-7" />
         </Link>
 
@@ -40,6 +40,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
             <Button
               variant={pathname.startsWith('/tasks') ? 'secondary' : 'ghost'}
               size="sm"
+              className="max-sm:px-2"
             >
               <HugeiconsIcon
                 icon={GridViewIcon}
@@ -47,13 +48,14 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              Tasks
+              <span className="max-sm:hidden">Tasks</span>
             </Button>
           </Link>
           <Link to="/terminals">
             <Button
               variant={pathname === '/terminals' ? 'secondary' : 'ghost'}
               size="sm"
+              className="max-sm:px-2"
             >
               <HugeiconsIcon
                 icon={CommandLineIcon}
@@ -61,13 +63,14 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              Terminals
+              <span className="max-sm:hidden">Terminals</span>
             </Button>
           </Link>
           <Link to="/worktrees">
             <Button
               variant={pathname.startsWith('/worktrees') ? 'secondary' : 'ghost'}
               size="sm"
+              className="max-sm:px-2"
             >
               <HugeiconsIcon
                 icon={FolderSyncIcon}
@@ -75,13 +78,14 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              Worktrees
+              <span className="max-sm:hidden">Worktrees</span>
             </Button>
           </Link>
           <Link to="/repositories">
             <Button
               variant={pathname.startsWith('/repositories') ? 'secondary' : 'ghost'}
               size="sm"
+              className="max-sm:px-2"
             >
               <HugeiconsIcon
                 icon={Database01Icon}
@@ -89,13 +93,14 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              Repositories
+              <span className="max-sm:hidden">Repositories</span>
             </Button>
           </Link>
           <Link to="/review">
             <Button
               variant={pathname.startsWith('/review') ? 'secondary' : 'ghost'}
               size="sm"
+              className="max-sm:px-2"
             >
               <HugeiconsIcon
                 icon={GitPullRequestIcon}
@@ -103,7 +108,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              Review
+              <span className="max-sm:hidden">Review</span>
             </Button>
           </Link>
         </nav>

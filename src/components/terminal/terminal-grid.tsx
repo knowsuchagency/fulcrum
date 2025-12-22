@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   ResizablePanelGroup,
@@ -133,6 +133,20 @@ function getGridLayout(count: number): { rows: number; cols: number } {
   return { rows: 3, cols: 4 } // max 12
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  return isMobile
+}
+
 export function TerminalGrid({
   terminals,
   onTerminalClose,
@@ -143,6 +157,8 @@ export function TerminalGrid({
   onTerminalContainerReady,
   taskInfoByCwd,
 }: TerminalGridProps) {
+  const isMobile = useIsMobile()
+
   if (terminals.length === 0) {
     return <EmptyPane onAdd={onTerminalAdd} />
   }
@@ -176,10 +192,10 @@ export function TerminalGrid({
     return <div className="h-full">{renderTerminalPane(terminals[0])}</div>
   }
 
-  // Two terminals - horizontal split
+  // Two terminals - vertical on mobile, horizontal on desktop
   if (terminals.length === 2) {
     return (
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+      <ResizablePanelGroup direction={isMobile ? 'vertical' : 'horizontal'} className="h-full">
         <ResizablePanel key={terminals[0].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[0])}
         </ResizablePanel>
