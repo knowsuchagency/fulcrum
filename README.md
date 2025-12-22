@@ -38,10 +38,7 @@ bunx vibora@latest status  # Check if running
 
 ## Configuration
 
-Settings are stored in `.vibora/settings.json`. The vibora directory is resolved in this order:
-1. `VIBORA_DIR` environment variable (explicit override)
-2. `.vibora` in current working directory (per-worktree isolation)
-3. `~/.vibora` (default)
+Settings are stored in `.vibora/settings.json`.
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
