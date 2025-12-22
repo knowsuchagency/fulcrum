@@ -125,6 +125,14 @@ export function useUpdateConfig() {
       }),
     onSuccess: (_, { key }) => {
       queryClient.invalidateQueries({ queryKey: ['config', key] })
+
+      // When GitHub PAT changes, invalidate all GitHub-related queries
+      if (key === CONFIG_KEYS.GITHUB_PAT) {
+        queryClient.invalidateQueries({ queryKey: ['github-user'] })
+        queryClient.invalidateQueries({ queryKey: ['github-prs'] })
+        queryClient.invalidateQueries({ queryKey: ['github-issues'] })
+        queryClient.invalidateQueries({ queryKey: ['github-orgs'] })
+      }
     },
   })
 }
