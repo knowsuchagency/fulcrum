@@ -441,7 +441,8 @@ async function handleTasksCommand(action, positional, flags) {
 }
 
 // cli/src/commands/up.ts
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
+import { existsSync as existsSync3 } from "fs";
 import { dirname as dirname2, join as join3 } from "path";
 import { fileURLToPath } from "url";
 
@@ -501,11 +502,29 @@ function getPort(portOverride) {
 }
 
 // cli/src/commands/up.ts
+function isDtachInstalled() {
+  try {
+    execSync("which dtach", { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
 function getPackageRoot() {
   const currentFile = fileURLToPath(import.meta.url);
+  let dir = dirname2(currentFile);
+  for (let i = 0;i < 5; i++) {
+    if (existsSync3(join3(dir, "server", "index.js"))) {
+      return dir;
+    }
+    dir = dirname2(dir);
+  }
   return dirname2(dirname2(dirname2(currentFile)));
 }
 async function handleUpCommand(flags) {
+  if (!isDtachInstalled()) {
+    throw new CliError("MISSING_DEPENDENCY", "dtach is required but not installed. Install it with: brew install dtach (macOS) or apt install dtach (Linux)", ExitCodes.ERROR);
+  }
   const existingPid = readPid();
   if (existingPid && isProcessRunning(existingPid)) {
     throw new CliError("ALREADY_RUNNING", `Vibora server is already running (PID: ${existingPid})`, ExitCodes.ERROR);
@@ -513,7 +532,17 @@ async function handleUpCommand(flags) {
   const port = getPort(flags.port);
   const packageRoot = getPackageRoot();
   const serverPath = join3(packageRoot, "server", "index.js");
-  const ptyLibPath = join3(packageRoot, "lib", "librust_pty.so");
+  const platform = process.platform;
+  const arch = process.arch;
+  let ptyLibName;
+  if (platform === "darwin") {
+    ptyLibName = arch === "arm64" ? "librust_pty_arm64.dylib" : "librust_pty.dylib";
+  } else if (platform === "win32") {
+    ptyLibName = "rust_pty.dll";
+  } else {
+    ptyLibName = arch === "arm64" ? "librust_pty_arm64.so" : "librust_pty.so";
+  }
+  const ptyLibPath = join3(packageRoot, "lib", ptyLibName);
   console.error("Starting Vibora server...");
   const serverProc = spawn("bun", [serverPath], {
     detached: true,
@@ -703,7 +732,7 @@ async function handleHealthCommand(flags) {
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { execSync } from "child_process";
+import { execSync as execSync2 } from "child_process";
 import { fileURLToPath as fileURLToPath2 } from "url";
 function getClaudeSettingsPath(global) {
   if (global) {
@@ -740,7 +769,7 @@ function getViboraHookPath() {
   for (const p of possiblePaths) {
     if (p === "vibora-plan-complete-hook") {
       try {
-        execSync("which vibora-plan-complete-hook", { stdio: "pipe" });
+        execSync2("which vibora-plan-complete-hook", { stdio: "pipe" });
         return "vibora-plan-complete-hook";
       } catch {
         continue;

@@ -11,6 +11,11 @@ A lightweight PM cockpit for streamlining the software development lifecycle. Vi
 - **Opinionated with few opinions** — Provides structure without dictating workflow.
 - **Git worktree isolation** — Tasks create isolated git worktrees, with architecture supporting evolution toward more general task types.
 
+## Requirements
+
+- [Bun](https://bun.sh/) — JavaScript runtime
+- [dtach](https://github.com/crigler/dtach) — Terminal session persistence
+
 ## Tech Stack
 
 - **Frontend**: React 19, TanStack Router & Query, xterm.js, Tailwind CSS, shadcn/ui (v4 with baseui support)
