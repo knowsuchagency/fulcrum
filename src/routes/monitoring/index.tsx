@@ -12,11 +12,14 @@ import {
   useClaudeInstances,
   useSystemMetrics,
   useKillClaudeInstance,
+  useTopProcesses,
+  useDockerStats,
   formatBytes,
   formatTimeWindow,
   type TimeWindow,
   type ClaudeFilter,
   type ClaudeInstance,
+  type ProcessSortBy,
 } from '@/hooks/use-monitoring'
 
 export const Route = createFileRoute('/monitoring/')({
@@ -30,9 +33,13 @@ const chartConfig: ChartConfig = {
     label: 'CPU',
     color: '#22c55e', // Green
   },
-  memory: {
-    label: 'Memory',
-    color: '#3b82f6', // Blue
+  memoryUsed: {
+    label: 'Used',
+    color: '#22c55e', // Green (darker)
+  },
+  memoryCache: {
+    label: 'Cache / Buffers',
+    color: 'hsl(160 60% 45%)', // Lighter green (matches Beszel)
   },
   disk: {
     label: 'Disk',
@@ -196,7 +203,8 @@ function SystemMetricsTab() {
       time: new Date(point.timestamp * 1000).toLocaleTimeString(),
       timestamp: point.timestamp,
       cpu: Math.round(point.cpuPercent * 10) / 10,
-      memory: Math.round(point.memoryUsedPercent * 10) / 10,
+      memoryUsed: Math.round(point.memoryUsedPercent * 10) / 10,
+      memoryCache: Math.round(point.memoryCachePercent * 10) / 10,
     })) || []
 
   return (
@@ -255,7 +263,7 @@ function SystemMetricsTab() {
                   tickFormatter={(value) => `${value}%`}
                 />
                 <ChartTooltip
-                  content={<ChartTooltipContent hideLabel formatter={(value) => [`${value}%`, 'CPU']} />}
+                  content={<ChartTooltipContent hideLabel formatter={(value) => [`${value}% `, 'CPU']} />}
                 />
                 <Area
                   type="monotone"
@@ -274,8 +282,8 @@ function SystemMetricsTab() {
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-medium">Memory Usage</h3>
               <span className="text-sm text-muted-foreground tabular-nums">
-                {metrics.current.memory.usedPercent.toFixed(1)}% ({formatBytes(metrics.current.memory.used)}{' '}
-                / {formatBytes(metrics.current.memory.total)})
+                {formatBytes(metrics.current.memory.used)} used + {formatBytes(metrics.current.memory.cache)} cache
+                {' / '}{formatBytes(metrics.current.memory.total)}
               </span>
             </div>
             <ChartContainer config={chartConfig} className="h-[150px] w-full">
@@ -296,15 +304,33 @@ function SystemMetricsTab() {
                   tickFormatter={(value) => `${value}%`}
                 />
                 <ChartTooltip
-                  content={<ChartTooltipContent hideLabel formatter={(value) => [`${value}%`, 'Memory']} />}
+                  content={
+                    <ChartTooltipContent
+                      hideLabel
+                      formatter={(value, name) => {
+                        const label = name === 'memoryUsed' ? 'Used' : 'Cache / Buffers'
+                        return [`${value}% `, label]
+                      }}
+                    />
+                  }
                 />
                 <Area
                   type="monotone"
-                  dataKey="memory"
-                  stroke="var(--color-memory)"
-                  fill="var(--color-memory)"
-                  fillOpacity={0.4}
+                  dataKey="memoryUsed"
+                  stroke="var(--color-memoryUsed)"
+                  fill="var(--color-memoryUsed)"
+                  fillOpacity={0.5}
                   strokeWidth={2}
+                  stackId="memory"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="memoryCache"
+                  stroke="var(--color-memoryCache)"
+                  fill="var(--color-memoryCache)"
+                  fillOpacity={0.4}
+                  strokeWidth={1}
+                  stackId="memory"
                 />
               </AreaChart>
             </ChartContainer>
@@ -332,6 +358,130 @@ function SystemMetricsTab() {
   )
 }
 
+function ProcessesTab() {
+  const [sortBy, setSortBy] = useState<ProcessSortBy>('memory')
+  const { data: processes, isLoading: processesLoading, error: processesError } = useTopProcesses(sortBy)
+  const { data: dockerData, isLoading: dockerLoading } = useDockerStats()
+
+  return (
+    <div className="space-y-6">
+      {/* Top Processes */}
+      <Card className="p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-medium">Top Processes</h3>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as ProcessSortBy)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="memory">By Memory</SelectItem>
+              <SelectItem value="cpu">By CPU</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {processesLoading && (
+          <div className="flex items-center justify-center py-8">
+            <HugeiconsIcon icon={Loading03Icon} className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {processesError && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+            Failed to load processes: {processesError.message}
+          </div>
+        )}
+
+        {processes && processes.length > 0 && (
+          <div className="space-y-1">
+            <div className="grid grid-cols-[60px_120px_1fr_70px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+              <span>PID</span>
+              <span>Name</span>
+              <span>Command</span>
+              <span className="text-right">Memory</span>
+              <span className="text-right">%</span>
+            </div>
+            {processes.map((proc) => (
+              <div
+                key={proc.pid}
+                className="grid grid-cols-[60px_120px_1fr_70px_80px] gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
+              >
+                <span className="font-mono text-xs text-muted-foreground">{proc.pid}</span>
+                <span className="truncate font-medium" title={proc.name}>
+                  {proc.name}
+                </span>
+                <span className="truncate text-muted-foreground text-xs" title={proc.command}>
+                  {proc.command}
+                </span>
+                <span className="text-right tabular-nums">{proc.memoryMB.toFixed(0)} MB</span>
+                <span className="text-right tabular-nums text-muted-foreground">{proc.memoryPercent.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {processes && processes.length === 0 && (
+          <div className="py-8 text-center text-muted-foreground">No processes found</div>
+        )}
+      </Card>
+
+      {/* Docker Containers */}
+      <Card className="p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-medium">
+            Containers
+            {dockerData?.runtime && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">({dockerData.runtime})</span>
+            )}
+          </h3>
+        </div>
+
+        {dockerLoading && (
+          <div className="flex items-center justify-center py-8">
+            <HugeiconsIcon icon={Loading03Icon} className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {dockerData && !dockerData.available && (
+          <div className="py-8 text-center text-muted-foreground">
+            Docker/Podman not available
+          </div>
+        )}
+
+        {dockerData && dockerData.available && dockerData.containers.length === 0 && (
+          <div className="py-8 text-center text-muted-foreground">No containers running</div>
+        )}
+
+        {dockerData && dockerData.available && dockerData.containers.length > 0 && (
+          <div className="space-y-1">
+            <div className="grid grid-cols-[1fr_70px_100px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+              <span>Name</span>
+              <span className="text-right">CPU</span>
+              <span className="text-right">Memory</span>
+              <span className="text-right">%</span>
+            </div>
+            {dockerData.containers.map((container) => (
+              <div
+                key={container.id}
+                className="grid grid-cols-[1fr_70px_100px_80px] gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
+              >
+                <span className="truncate font-medium" title={container.name}>
+                  {container.name}
+                </span>
+                <span className="text-right tabular-nums">{container.cpuPercent.toFixed(1)}%</span>
+                <span className="text-right tabular-nums">
+                  {container.memoryMB.toFixed(0)} / {container.memoryLimit.toFixed(0)} MB
+                </span>
+                <span className="text-right tabular-nums text-muted-foreground">{container.memoryPercent.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 function MonitoringPage() {
   return (
     <div className="flex h-full flex-col overflow-hidden p-4">
@@ -341,6 +491,7 @@ function MonitoringPage() {
         <TabsList>
           <TabsTrigger value="claude">Claude Instances</TabsTrigger>
           <TabsTrigger value="system">System Metrics</TabsTrigger>
+          <TabsTrigger value="processes">Processes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="claude" className="flex-1 overflow-auto pt-4">
@@ -349,6 +500,10 @@ function MonitoringPage() {
 
         <TabsContent value="system" className="flex-1 overflow-auto pt-4">
           <SystemMetricsTab />
+        </TabsContent>
+
+        <TabsContent value="processes" className="flex-1 overflow-auto pt-4">
+          <ProcessesTab />
         </TabsContent>
       </Tabs>
     </div>
