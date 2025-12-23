@@ -6,6 +6,7 @@ import { output } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import { writePid, readPid, removePid, isProcessRunning, getPort } from '../utils/process'
 import { confirm } from '../utils/prompt'
+import { getViboraDir } from '../utils/server'
 import {
   isDtachInstalled,
   isBunInstalled,
@@ -134,6 +135,9 @@ export async function handleUpCommand(flags: Record<string, string>) {
   const ptyLibPath = join(packageRoot, 'lib', ptyLibName)
 
   // Start the bundled server
+  // Explicitly set VIBORA_DIR to ensure consistent path resolution
+  // regardless of where the CLI was invoked from
+  const viboraDir = getViboraDir()
   console.error('Starting Vibora server...')
   const serverProc = spawn('bun', [serverPath], {
     detached: true,
@@ -142,6 +146,7 @@ export async function handleUpCommand(flags: Record<string, string>) {
       ...process.env,
       NODE_ENV: 'production',
       PORT: port.toString(),
+      VIBORA_DIR: viboraDir,
       VIBORA_PACKAGE_ROOT: packageRoot,
       BUN_PTY_LIB: ptyLibPath,
     },
