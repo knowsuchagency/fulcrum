@@ -4,7 +4,8 @@
     "claude": "Claude Instances",
     "system": "System Metrics",
     "processes": "Processes",
-    "vibora": "Vibora Servers"
+    "vibora": "Vibora Servers",
+    "usage": "Usage Limits"
   },
   "claude": {
     "showAllInstances": "Show all instances",
@@ -77,5 +78,16 @@
     "killing": "Killing...",
     "empty": "No Vibora instances running",
     "error": "Failed to load Vibora instances: {{message}}"
+  },
+  "usage": {
+    "fiveHourBlock": "5-Hour Block",
+    "sevenDayRolling": "7-Day Rolling",
+    "opusWeekly": "Opus Weekly",
+    "sonnetWeekly": "Sonnet Weekly",
+    "resetsIn": "Resets in {{time}}",
+    "resetsAt": "Resets {{time}}",
+    "weekProgress": "{{percent}}% through week",
+    "unavailable": "Claude Code usage data not available. Make sure you're logged in to Claude Code.",
+    "error": "Failed to load usage data: {{message}}"
   }
 }

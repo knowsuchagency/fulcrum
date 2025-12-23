@@ -181,3 +181,27 @@ export function useKillViboraInstance() {
     },
   })
 }
+
+// Claude Code Usage Limits types and hook
+interface UsageBlock {
+  percentUsed: number
+  resetAt: string
+  isOverLimit: boolean
+}
+
+export interface ClaudeUsageResponse {
+  available: boolean
+  fiveHour: (UsageBlock & { timeRemainingMinutes: number }) | null
+  sevenDay: (UsageBlock & { weekProgressPercent: number }) | null
+  sevenDayOpus: UsageBlock | null
+  sevenDaySonnet: UsageBlock | null
+  error?: string
+}
+
+export function useClaudeUsage() {
+  return useQuery({
+    queryKey: ['monitoring', 'claude-usage'],
+    queryFn: () => fetchJSON<ClaudeUsageResponse>(`${API_BASE}/api/monitoring/claude-usage`),
+    refetchInterval: 5000, // Refresh every 5 seconds
+  })
+}
