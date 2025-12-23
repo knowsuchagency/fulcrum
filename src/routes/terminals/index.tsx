@@ -60,7 +60,7 @@ function TerminalsView() {
     }
   }, [tabs, activeTabId, isViewStateLoading, setActiveTab])
 
-  const { data: tasks = [] } = useTasks()
+  const { data: tasks = [], isLoading: isTasksLoading } = useTasks()
   const { data: repositories = [] } = useRepositories()
   const { data: worktreeBasePath } = useWorktreeBasePath()
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
@@ -136,7 +136,9 @@ function TerminalsView() {
 
   // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
   useEffect(() => {
-    if (!worktreeBasePath) return
+    // Don't run cleanup until tasks are loaded - otherwise we'd destroy valid terminals
+    // because allTaskWorktrees would be empty while tasks are still loading
+    if (!worktreeBasePath || isTasksLoading) return
 
     for (const terminal of terminals) {
       const isInWorktreesDir = terminal.cwd?.startsWith(worktreeBasePath)
@@ -146,7 +148,7 @@ function TerminalsView() {
         destroyTerminal(terminal.id)
       }
     }
-  }, [terminals, allTaskWorktrees, worktreeBasePath, destroyTerminal])
+  }, [terminals, allTaskWorktrees, worktreeBasePath, destroyTerminal, isTasksLoading])
 
   // Filter terminals for the active tab
   const visibleTerminals = useMemo(() => {
