@@ -4,7 +4,39 @@ import { getDtachService } from './dtach-service'
 import { BufferManager } from './buffer-manager'
 import { db, terminals } from '../db'
 import { eq } from 'drizzle-orm'
+import { getZAiSettings } from '../lib/settings'
 import type { TerminalInfo, TerminalStatus } from '../types'
+
+// z.ai related env vars to filter when z.ai is disabled
+const ZAI_ENV_VARS = [
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_BASE_URL',
+  'API_TIMEOUT_MS',
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+  'ANTHROPIC_DEFAULT_SONNET_MODEL',
+  'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+]
+
+// Get clean environment for terminal, filtering z.ai vars if disabled
+function getTerminalEnv(): Record<string, string> {
+  const { PORT: _PORT, ...envWithoutPort } = process.env
+  void _PORT
+
+  const zaiSettings = getZAiSettings()
+  if (zaiSettings.enabled) {
+    return envWithoutPort as Record<string, string>
+  }
+
+  // Filter out z.ai env vars when disabled
+  const filtered: Record<string, string> = {}
+  for (const [key, value] of Object.entries(envWithoutPort)) {
+    if (!ZAI_ENV_VARS.includes(key) && value !== undefined) {
+      filtered[key] = value
+    }
+  }
+  return filtered
+}
 
 export interface TerminalSessionOptions {
   id: string
@@ -83,10 +115,6 @@ export class TerminalSession {
     const dtach = getDtachService()
     const [cmd, ...args] = dtach.getCreateCommand(this.id)
 
-    // Exclude PORT from child env to avoid conflicts with dev servers
-    const { PORT: _PORT, ...envWithoutPort } = process.env
-    void _PORT // Intentionally unused
-
     try {
       // Spawn dtach which creates the session and runs the shell
       this.pty = spawn(cmd, args, {
@@ -95,10 +123,10 @@ export class TerminalSession {
         rows: this.rows,
         cwd: this.cwd,
         env: {
-          ...envWithoutPort,
+          ...getTerminalEnv(),
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
-        } as Record<string, string>,
+        },
       })
 
       this.setupPtyHandlers()
@@ -131,10 +159,6 @@ export class TerminalSession {
 
     const [cmd, ...args] = dtach.getAttachCommand(this.id)
 
-    // Exclude PORT from child env to avoid conflicts with dev servers
-    const { PORT: _PORT, ...envWithoutPort } = process.env
-    void _PORT // Intentionally unused
-
     try {
       this.pty = spawn(cmd, args, {
         name: 'xterm-256color',
@@ -142,10 +166,10 @@ export class TerminalSession {
         rows: this.rows,
         cwd: this.cwd,
         env: {
-          ...envWithoutPort,
+          ...getTerminalEnv(),
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
-        } as Record<string, string>,
+        },
       })
 
       this.setupPtyHandlers()
