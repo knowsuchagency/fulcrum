@@ -1,0 +1,1 @@
+ALTER TABLE `system_metrics` ADD `memory_cache_bytes` integer DEFAULT 0 NOT NULL;
