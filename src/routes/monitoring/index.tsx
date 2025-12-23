@@ -279,7 +279,7 @@ function SystemMetricsTab() {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => `${value}%`}
+                  tickFormatter={(value: number) => `${value}%`}
                 />
                 <ChartTooltip
                   content={<ChartTooltipContent hideLabel formatter={(value) => [`${value}% `, 'CPU']} />}
@@ -320,7 +320,7 @@ function SystemMetricsTab() {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => `${value}%`}
+                  tickFormatter={(value: number) => `${value}%`}
                 />
                 <ChartTooltip
                   content={
