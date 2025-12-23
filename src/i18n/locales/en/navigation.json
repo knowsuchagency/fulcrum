@@ -5,6 +5,7 @@
     "worktrees": "Worktrees",
     "repositories": "Repositories",
     "review": "Review",
+    "monitoring": "Monitoring",
     "settings": "Settings",
     "commandPalette": "Command Palette ({{shortcut}})"
   },

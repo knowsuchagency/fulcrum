@@ -43,6 +43,7 @@ function TerminalsView() {
     attachXterm,
     resizeTerminal,
     setupImagePaste,
+    writeToTerminal,
   } = useTerminalWS()
 
   // Track active tab via server-persisted state
@@ -334,6 +335,7 @@ function TerminalsView() {
           onTerminalResize={handleTerminalResize}
           onTerminalRename={activeTabId === ALL_TASKS_TAB_ID ? undefined : handleTerminalRename}
           setupImagePaste={setupImagePaste}
+          writeToTerminal={writeToTerminal}
           taskInfoByCwd={activeTabId === ALL_TASKS_TAB_ID ? taskInfoByCwd : undefined}
         />
       </div>

@@ -51,7 +51,7 @@ function KanbanViewContent() {
 
   const handleBulkDelete = () => {
     const ids = Array.from(selectedIds)
-    bulkDelete.mutate(ids, {
+    bulkDelete.mutate({ ids }, {
       onSuccess: () => {
         exitSelectMode()
       },

@@ -7,7 +7,9 @@
   "cleanup": {
     "button": "Clean up ({{count}})",
     "title": "Delete Completed Worktrees",
-    "description": "This will permanently delete {{count}} worktree{{plural}} and their linked tasks:",
+    "description": "This will permanently delete {{count}} worktree(s).",
+    "linkedTasksWillBeDeleted": "Their linked tasks will also be deleted.",
+    "alsoDeleteLinkedTasks": "Also delete linked tasks",
     "done": "Done",
     "canceled": "Canceled",
     "cannotUndo": "This action cannot be undone."
@@ -15,7 +17,8 @@
   "delete": {
     "title": "Delete Worktree",
     "description": "This will permanently delete the worktree directory at",
-    "linkedTask": "The linked task \"{{title}}\" will also be deleted.",
+    "linkedTaskWillBeDeleted": "The linked task \"{{title}}\" will also be deleted.",
+    "alsoDeleteLinkedTask": "Also delete linked task \"{{title}}\"",
     "cannotUndo": "This action cannot be undone.",
     "button": "Delete {{count}}"
   },

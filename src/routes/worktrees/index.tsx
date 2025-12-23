@@ -29,6 +29,7 @@ import {
   CleanIcon,
 } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { Worktree, TaskStatus } from '@/types'
 
 type StatusFilter = TaskStatus | 'ORPHANED'
@@ -79,24 +80,34 @@ function WorktreeCard({
   onDelete,
 }: {
   worktree: Worktree
-  onDelete: (worktree: Worktree) => Promise<void>
+  onDelete: (worktree: Worktree, deleteLinkedTask: boolean) => Promise<void>
 }) {
   const { t } = useTranslation('common')
   const { t: tw } = useTranslation('worktrees')
   const formatRelativeTime = useFormatRelativeTime()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteLinkedTask, setDeleteLinkedTask] = useState(false)
   const isLoadingDetails = worktree.sizeFormatted === '...' || worktree.branch === '...'
+  const hasLinkedTask = !worktree.isOrphaned && worktree.taskId
 
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      await onDelete(worktree)
+      await onDelete(worktree, deleteLinkedTask)
       setDialogOpen(false)
     } catch {
       // Keep dialog open on error so user can retry
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  // Reset checkbox when dialog closes
+  const handleOpenChange = (open: boolean) => {
+    setDialogOpen(open)
+    if (!open) {
+      setDeleteLinkedTask(false)
     }
   }
 
@@ -183,7 +194,7 @@ function WorktreeCard({
           </div>
         </div>
 
-        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialog open={dialogOpen} onOpenChange={handleOpenChange}>
           <AlertDialogTrigger
             render={
               <Button
@@ -202,14 +213,24 @@ function WorktreeCard({
               <AlertDialogDescription>
                 {tw('delete.description')}{' '}
                 <span className="font-mono">{worktree.name}</span>.
-                {!worktree.isOrphaned && (
+                {deleteLinkedTask && hasLinkedTask && (
                   <>
                     {' '}
-                    {tw('delete.linkedTask', { title: worktree.taskTitle })}
+{tw('delete.linkedTaskWillBeDeleted', { title: worktree.taskTitle })}
                   </>
                 )}{' '}
                 {tw('delete.cannotUndo')}
               </AlertDialogDescription>
+              {hasLinkedTask && (
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    checked={deleteLinkedTask}
+                    onCheckedChange={(checked) => setDeleteLinkedTask(checked === true)}
+                    disabled={isDeleting}
+                  />
+                  {tw('delete.alsoDeleteLinkedTask', { title: worktree.taskTitle })}
+                </label>
+              )}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isDeleting}>{t('buttons.cancel')}</AlertDialogCancel>
@@ -242,6 +263,7 @@ function WorktreesView() {
   const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set())
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [bulkDeleteLinkedTasks, setBulkDeleteLinkedTasks] = useState(false)
 
   const toggleStatus = (status: StatusFilter) => {
     setSelectedStatuses((prev) => {
@@ -281,6 +303,7 @@ function WorktreesView() {
         await deleteWorktree.mutateAsync({
           worktreePath: worktree.path,
           repoPath: worktree.repoPath,
+          deleteLinkedTask: bulkDeleteLinkedTasks,
         })
       }
       setBulkDeleteDialogOpen(false)
@@ -292,10 +315,18 @@ function WorktreesView() {
     }
   }
 
-  const handleDelete = async (worktree: Worktree) => {
+  const handleBulkDeleteDialogChange = (open: boolean) => {
+    setBulkDeleteDialogOpen(open)
+    if (!open) {
+      setBulkDeleteLinkedTasks(false)
+    }
+  }
+
+  const handleDelete = async (worktree: Worktree, deleteLinkedTask: boolean) => {
     await deleteWorktree.mutateAsync({
       worktreePath: worktree.path,
       repoPath: worktree.repoPath,
+      deleteLinkedTask,
     })
     refetch()
   }
@@ -324,7 +355,7 @@ function WorktreesView() {
           </div>
           <div className="flex items-center gap-2">
             {completedWorktrees.length > 0 && (
-              <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+              <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={handleBulkDeleteDialogChange}>
                 <AlertDialogTrigger
                   render={
                     <Button
@@ -341,11 +372,12 @@ function WorktreesView() {
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>{tw('cleanup.title')}</AlertDialogTitle>
-                    <AlertDialogDescription className="space-y-2">
-                      <span className="block">
-                        {tw('cleanup.description', { count: completedWorktrees.length, plural: completedWorktrees.length !== 1 ? 's' : '' })}
-                      </span>
-                      <span className="block text-sm">
+                    <AlertDialogDescription>
+                      {tw('cleanup.description', { count: completedWorktrees.length })}
+                      {bulkDeleteLinkedTasks && ` ${tw('cleanup.linkedTasksWillBeDeleted')}`}
+                    </AlertDialogDescription>
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
                         {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length > 0 && (
                           <span className="mr-3">
                             <span className="font-medium text-emerald-600">
@@ -362,11 +394,19 @@ function WorktreesView() {
                             {tw('cleanup.canceled')}
                           </span>
                         )}
-                      </span>
-                      <span className="block font-medium text-destructive">
+                      </p>
+                      <label className="flex items-center gap-2 text-sm text-foreground">
+                        <Checkbox
+                          checked={bulkDeleteLinkedTasks}
+                          onCheckedChange={(checked) => setBulkDeleteLinkedTasks(checked === true)}
+                          disabled={isBulkDeleting}
+                        />
+                        {tw('cleanup.alsoDeleteLinkedTasks')}
+                      </label>
+                      <p className="font-medium text-destructive text-xs">
                         {tw('cleanup.cannotUndo')}
-                      </span>
-                    </AlertDialogDescription>
+                      </p>
+                    </div>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel disabled={isBulkDeleting}>{t('buttons.cancel')}</AlertDialogCancel>

@@ -15,6 +15,12 @@ export interface HotkeyOptions {
   allowInInput?: boolean
 
   /**
+   * Allow the shortcut to fire even when a terminal is focused
+   * Useful for navigation shortcuts that should work globally
+   */
+  allowInTerminal?: boolean
+
+  /**
    * Dependencies array for the callback (like useCallback deps)
    */
   deps?: unknown[]
@@ -48,7 +54,7 @@ export function useHotkeys(
   options: HotkeyOptions = {}
 ): void {
   const { shortcutsEnabled } = useKeyboardContext()
-  const { ignoreContext = false, allowInInput = false, deps = [], enabled = true } = options
+  const { ignoreContext = false, allowInInput = false, allowInTerminal = false, deps = [], enabled = true } = options
 
   // Use ref to always have latest callback without re-adding listeners
   const callbackRef = useRef(callback)
@@ -58,8 +64,8 @@ export function useHotkeys(
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      // Check if shortcuts are enabled (unless ignoring context)
-      if (!ignoreContext && !shortcutsEnabled) return
+      // Check if shortcuts are enabled (unless ignoring context or allowed in terminal)
+      if (!ignoreContext && !shortcutsEnabled && !allowInTerminal) return
 
       // Check if enabled
       if (!enabled) return
@@ -83,7 +89,7 @@ export function useHotkeys(
       callbackRef.current(event)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [shortcutsEnabled, ignoreContext, allowInInput, enabled, ...shortcuts, ...deps]
+    [shortcutsEnabled, ignoreContext, allowInInput, allowInTerminal, enabled, ...shortcuts, ...deps]
   )
 
   useEffect(() => {
