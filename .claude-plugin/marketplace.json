@@ -1,0 +1,12 @@
+{
+  "name": "vibora",
+  "owner": { "name": "Vibora" },
+  "plugins": [
+    {
+      "name": "vibora",
+      "source": "./plugins/vibora",
+      "description": "Task orchestration for Claude Code",
+      "version": "0.1.0"
+    }
+  ]
+}

@@ -18,7 +18,6 @@ import { toast } from 'sonner'
 import {
   usePort,
   useDefaultGitReposDir,
-  useTaskCreationCommand,
   useHostname,
   useSshPort,
   useLinearApiKey,
@@ -56,7 +55,6 @@ function SettingsPage() {
   const { t: tc } = useTranslation('common')
   const { data: port, isLoading: portLoading } = usePort()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
-  const { data: taskCreationCommand, isLoading: taskCommandLoading } = useTaskCreationCommand()
   const { data: hostname, isLoading: hostnameLoading } = useHostname()
   const { data: sshPort, isLoading: sshPortLoading } = useSshPort()
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
@@ -74,7 +72,6 @@ function SettingsPage() {
 
   const [localPort, setLocalPort] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
-  const [localTaskCommand, setLocalTaskCommand] = useState('')
   const [localHostname, setLocalHostname] = useState('')
   const [localSshPort, setLocalSshPort] = useState('')
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
@@ -107,12 +104,11 @@ function SettingsPage() {
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
-    if (taskCreationCommand !== undefined) setLocalTaskCommand(taskCreationCommand)
     if (hostname !== undefined) setLocalHostname(hostname)
     if (sshPort !== undefined) setLocalSshPort(String(sshPort))
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
-  }, [port, defaultGitReposDir, taskCreationCommand, hostname, sshPort, linearApiKey, githubPat])
+  }, [port, defaultGitReposDir, hostname, sshPort, linearApiKey, githubPat])
 
   // Sync notification settings
   useEffect(() => {
@@ -141,7 +137,7 @@ function SettingsPage() {
   }, [zAiSettings])
 
   const isLoading =
-    portLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading
+    portLoading || reposDirLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -166,7 +162,6 @@ function SettingsPage() {
   const hasChanges =
     localPort !== String(port) ||
     localReposDir !== defaultGitReposDir ||
-    localTaskCommand !== taskCreationCommand ||
     localHostname !== hostname ||
     localSshPort !== String(sshPort) ||
     localLinearApiKey !== linearApiKey ||
@@ -193,17 +188,6 @@ function SettingsPage() {
         new Promise((resolve) => {
           updateConfig.mutate(
             { key: CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR, value: localReposDir },
-            { onSettled: resolve }
-          )
-        })
-      )
-    }
-
-    if (localTaskCommand !== taskCreationCommand) {
-      promises.push(
-        new Promise((resolve) => {
-          updateConfig.mutate(
-            { key: CONFIG_KEYS.TASK_CREATION_COMMAND, value: localTaskCommand },
             { onSettled: resolve }
           )
         })
@@ -314,15 +298,6 @@ function SettingsPage() {
     })
   }
 
-  const handleResetTaskCommand = () => {
-    resetConfig.mutate(CONFIG_KEYS.TASK_CREATION_COMMAND, {
-      onSuccess: (data) => {
-        if (data.value !== null && data.value !== undefined)
-          setLocalTaskCommand(String(data.value))
-      },
-    })
-  }
-
   const handleResetHostname = () => {
     resetConfig.mutate(CONFIG_KEYS.HOSTNAME, {
       onSuccess: (data) => {
@@ -380,69 +355,37 @@ function SettingsPage() {
 
       <div className="pixel-grid flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-5xl space-y-4">
-              {/* Server & Defaults */}
-              <SettingsSection title={t('sections.serverDefaults')}>
-                <div className="space-y-4">
-                  {/* Port */}
-                  <div className="space-y-1">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">{t('fields.port.label')}</label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={1}
-                          max={65535}
-                          value={localPort}
-                          onChange={(e) => setLocalPort(e.target.value)}
-                          placeholder="3333"
-                          disabled={isLoading}
-                          className="w-24 font-mono text-sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={handleResetPort}
-                          disabled={isLoading || resetConfig.isPending}
-                          title={tc('buttons.reset')}
-                        >
-                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                        </Button>
-                      </div>
+              {/* Server */}
+              <SettingsSection title={t('sections.server')}>
+                <div className="space-y-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">{t('fields.port.label')}</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={localPort}
+                        onChange={(e) => setLocalPort(e.target.value)}
+                        placeholder="3333"
+                        disabled={isLoading}
+                        className="w-24 font-mono text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={handleResetPort}
+                        disabled={isLoading || resetConfig.isPending}
+                        title={tc('buttons.reset')}
+                      >
+                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                      </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                      {t('fields.port.description')}
-                    </p>
                   </div>
-
-                  {/* Startup Command */}
-                  <div className="space-y-1">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">{t('fields.startupCommand.label')}</label>
-                      <div className="flex flex-1 items-center gap-2">
-                        <Input
-                          value={localTaskCommand}
-                          onChange={(e) => setLocalTaskCommand(e.target.value)}
-                          placeholder="claude --dangerously-skip-permissions"
-                          disabled={isLoading}
-                          className="flex-1 font-mono text-sm"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={handleResetTaskCommand}
-                          disabled={isLoading || resetConfig.isPending}
-                          title={tc('buttons.reset')}
-                        >
-                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                      {t('fields.startupCommand.description')}
-                    </p>
-                  </div>
+                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                    {t('fields.port.description')}
+                  </p>
                 </div>
               </SettingsSection>
 
