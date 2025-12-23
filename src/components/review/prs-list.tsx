@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useGitHubPRs, type GitHubPR, type PRFilter } from '@/hooks/use-github'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +13,8 @@ interface Props {
 }
 
 export function PRsList({ filter, viboraReposOnly, org }: Props) {
+  const { t } = useTranslation('review')
+  const { t: tc } = useTranslation('common')
   const { data: prs, isLoading, error } = useGitHubPRs(filter, viboraReposOnly, org)
 
   if (isLoading) {
@@ -30,25 +33,25 @@ export function PRsList({ filter, viboraReposOnly, org }: Props) {
     return (
       <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <HugeiconsIcon icon={Alert02Icon} size={24} />
-        <p className="text-sm">Failed to load pull requests</p>
+        <p className="text-sm">{t('prs.failedToLoad')}</p>
         <p className="text-xs">{error.message}</p>
       </div>
     )
   }
 
-  const emptyMessages: Record<PRFilter, string> = {
-    all: 'No open pull requests',
-    created: 'No pull requests created by you',
-    assigned: 'No pull requests assigned to you',
-    review_requested: 'No pull requests awaiting your review',
-    mentioned: 'No pull requests mentioning you',
+  const emptyMessageKeys: Record<PRFilter, string> = {
+    all: 'prs.empty.all',
+    created: 'prs.empty.created',
+    assigned: 'prs.empty.assigned',
+    review_requested: 'prs.empty.reviewRequested',
+    mentioned: 'prs.empty.mentioned',
   }
 
   if (!prs?.length) {
     return (
       <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <HugeiconsIcon icon={Tick02Icon} size={24} />
-        <p className="text-sm">{emptyMessages[filter]}</p>
+        <p className="text-sm">{t(emptyMessageKeys[filter])}</p>
       </div>
     )
   }
@@ -56,7 +59,7 @@ export function PRsList({ filter, viboraReposOnly, org }: Props) {
   return (
     <div className="space-y-4">
       <div className="text-xs text-muted-foreground">
-        {prs.length} result{prs.length !== 1 ? 's' : ''}
+        {tc(prs.length === 1 ? 'results.one' : 'results.other', { count: prs.length })}
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {prs.map((pr) => (
@@ -68,6 +71,7 @@ export function PRsList({ filter, viboraReposOnly, org }: Props) {
 }
 
 function PRCard({ pr }: { pr: GitHubPR }) {
+  const { t } = useTranslation('review')
   return (
     <Card className="transition-colors hover:border-border/80">
       <CardContent className="py-4">
@@ -92,7 +96,7 @@ function PRCard({ pr }: { pr: GitHubPR }) {
                   'bg-amber-400/20 text-amber-600 dark:text-amber-400'
                 )}
               >
-                Draft
+                {t('prs.draft')}
               </Badge>
             )}
           </div>

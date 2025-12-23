@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useGitHubIssues, type GitHubIssue, type IssueFilter } from '@/hooks/use-github'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export function IssuesList({ filter, viboraReposOnly, org }: Props) {
+  const { t } = useTranslation('review')
+  const { t: tc } = useTranslation('common')
   const { data: issues, isLoading, error } = useGitHubIssues(filter, viboraReposOnly, org)
 
   if (isLoading) {
@@ -29,23 +32,23 @@ export function IssuesList({ filter, viboraReposOnly, org }: Props) {
     return (
       <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <HugeiconsIcon icon={Alert02Icon} size={24} />
-        <p className="text-sm">Failed to load issues</p>
+        <p className="text-sm">{t('issues.failedToLoad')}</p>
         <p className="text-xs">{error.message}</p>
       </div>
     )
   }
 
-  const emptyMessages: Record<IssueFilter, string> = {
-    assigned: 'No issues assigned to you',
-    created: 'No issues created by you',
-    mentioned: 'No issues mentioning you',
+  const emptyMessageKeys: Record<IssueFilter, string> = {
+    assigned: 'issues.empty.assigned',
+    created: 'issues.empty.created',
+    mentioned: 'issues.empty.mentioned',
   }
 
   if (!issues?.length) {
     return (
       <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <HugeiconsIcon icon={Tick02Icon} size={24} />
-        <p className="text-sm">{emptyMessages[filter]}</p>
+        <p className="text-sm">{t(emptyMessageKeys[filter])}</p>
       </div>
     )
   }
@@ -53,7 +56,7 @@ export function IssuesList({ filter, viboraReposOnly, org }: Props) {
   return (
     <div className="space-y-4">
       <div className="text-xs text-muted-foreground">
-        {issues.length} result{issues.length !== 1 ? 's' : ''}
+        {tc(issues.length === 1 ? 'results.one' : 'results.other', { count: issues.length })}
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {issues.map((issue) => (
