@@ -822,21 +822,16 @@ async function getClaudeOAuthToken(): Promise<string | null> {
   return null
 }
 
-// Fetch usage from Anthropic or z.ai API
-async function fetchClaudeUsage(token: string, baseURL?: string): Promise<ClaudeUsageResponse> {
+// Fetch usage from Anthropic API
+async function fetchClaudeUsage(token: string): Promise<ClaudeUsageResponse> {
   try {
-    // Use z.ai API if baseURL is provided, otherwise use Anthropic
-    const apiUrl = baseURL
-      ? `${baseURL}/api/oauth/usage`
-      : 'https://api.anthropic.com/api/oauth/usage'
-
-    const response = await fetch(apiUrl, {
+    const response = await fetch('https://api.anthropic.com/api/oauth/usage', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'vibora/1.0.0',
         Authorization: `Bearer ${token}`,
-        ...(baseURL ? {} : { 'anthropic-beta': 'oauth-2025-04-20' }),
+        'anthropic-beta': 'oauth-2025-04-20',
       },
     })
 
@@ -916,17 +911,23 @@ monitoringRoutes.get('/claude-usage', async (c) => {
   // Check if z.ai is enabled
   const zaiSettings = getZAiSettings()
 
-  // Get token: z.ai API key if enabled, otherwise OAuth token
-  let token: string | null = null
-  let baseURL: string | undefined
-
+  // z.ai doesn't provide a usage API - show informative message
   if (zaiSettings.enabled && zaiSettings.apiKey) {
-    token = zaiSettings.apiKey
-    baseURL = 'https://api.z.ai/api/anthropic'
-  } else {
-    token = await getClaudeOAuthToken()
+    const response: ClaudeUsageResponse = {
+      available: false,
+      fiveHour: null,
+      sevenDay: null,
+      sevenDayOpus: null,
+      sevenDaySonnet: null,
+      error: 'Usage tracking is not available when using z.ai proxy. Check your z.ai dashboard at https://z.ai for usage statistics.',
+    }
+    cachedUsage = response
+    usageCacheTimestamp = now
+    return c.json(response)
   }
 
+  // Get OAuth token for Anthropic
+  const token = await getClaudeOAuthToken()
   if (!token) {
     const response: ClaudeUsageResponse = {
       available: false,
@@ -934,15 +935,13 @@ monitoringRoutes.get('/claude-usage', async (c) => {
       sevenDay: null,
       sevenDayOpus: null,
       sevenDaySonnet: null,
-      error: zaiSettings.enabled
-        ? 'z.ai is enabled but no API key is configured'
-        : 'No Claude Code OAuth token found',
+      error: 'No Claude Code OAuth token found',
     }
     return c.json(response)
   }
 
-  // Fetch usage from API
-  const usage = await fetchClaudeUsage(token, baseURL)
+  // Fetch usage from Anthropic API
+  const usage = await fetchClaudeUsage(token)
 
   // Cache the result
   cachedUsage = usage
