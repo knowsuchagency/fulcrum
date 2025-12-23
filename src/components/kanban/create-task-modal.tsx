@@ -40,6 +40,7 @@ import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
 import { useWorktreeBasePath, useDefaultGitReposDir } from '@/hooks/use-config'
 import { useRepositories, useCreateRepository } from '@/hooks/use-repositories'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
+import type { Repository } from '@/types'
 
 function slugify(text: string): string {
   return text
@@ -58,9 +59,10 @@ function generateBranchName(text: string): string {
 interface CreateTaskModalProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  defaultRepository?: Repository
 }
 
-export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTaskModalProps = {}) {
+export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRepository }: CreateTaskModalProps = {}) {
   const { t } = useTranslation('tasks')
   const { t: tc } = useTranslation('common')
   const [internalOpen, setInternalOpen] = useState(false)
@@ -115,6 +117,16 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
       setRepoTab('browse')
     }
   }, [repositories])
+
+  // Initialize with default repository when modal opens
+  useEffect(() => {
+    if (open && defaultRepository) {
+      setSelectedRepoId(defaultRepository.id)
+      setRepoPath(defaultRepository.path)
+      setRepoSearchQuery(defaultRepository.displayName)
+      setRepoTab('saved')
+    }
+  }, [open, defaultRepository])
 
   // Set default base branch when branches are loaded, reset when repo changes
   useEffect(() => {
