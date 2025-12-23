@@ -13,7 +13,7 @@ import { killClaudeInTerminalsForWorktree } from '../terminal/pty-instance'
  * - Database update (status, position, updatedAt)
  * - WebSocket broadcast
  * - Linear ticket sync
- * - Notifications (for IN_REVIEW, DONE)
+ * - Notifications (for IN_REVIEW only)
  * - Kill Claude processes (for DONE, CANCELED)
  */
 export async function updateTaskStatus(
@@ -57,19 +57,11 @@ export async function updateTaskStatus(
       })
     }
 
-    // Send notifications for specific status transitions
+    // Send notification when task moves to review
     if (newStatus === 'IN_REVIEW') {
       sendNotification({
         title: 'Task Ready for Review',
         message: `Task "${updated.title}" moved to review`,
-        taskId: updated.id,
-        taskTitle: updated.title,
-        type: 'task_status_change',
-      })
-    } else if (newStatus === 'DONE') {
-      sendNotification({
-        title: 'Task Completed',
-        message: `Task "${updated.title}" marked as done`,
         taskId: updated.id,
         taskTitle: updated.title,
         type: 'task_status_change',
