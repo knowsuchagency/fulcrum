@@ -4,7 +4,6 @@ import { CliError, ExitCodes } from '../utils/errors'
 import type { TaskStatus } from '@shared/types'
 
 const STATUS_MAP: Record<string, TaskStatus> = {
-  done: 'DONE',
   review: 'IN_REVIEW',
   cancel: 'CANCELED',
   'in-progress': 'IN_PROGRESS',
@@ -104,7 +103,7 @@ export async function handleCurrentTaskCommand(
   if (!newStatus) {
     throw new CliError(
       'INVALID_ACTION',
-      `Unknown action: ${action}. Valid actions: done, review, cancel, in-progress, pr, linear`,
+      `Unknown action: ${action}. Valid actions: review, cancel, in-progress, pr, linear`,
       ExitCodes.INVALID_ARGS
     )
   }

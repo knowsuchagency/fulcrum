@@ -4,7 +4,8 @@ import { output } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { TaskStatus } from '@shared/types'
 
-const VALID_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED']
+// DONE is intentionally excluded - tasks complete automatically when PRs merge
+const VALID_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW', 'CANCELED']
 
 export async function handleTasksCommand(
   action: string | undefined,
