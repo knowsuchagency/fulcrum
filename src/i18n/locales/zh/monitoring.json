@@ -1,0 +1,62 @@
+{
+  "title": "监控",
+  "tabs": {
+    "claude": "Claude 实例",
+    "system": "系统指标",
+    "processes": "进程"
+  },
+  "claude": {
+    "filter": {
+      "vibora": "仅 Vibora",
+      "all": "所有实例"
+    },
+    "instanceCount": "{{count}} 个实例运行中",
+    "totalRam": "总计 {{ram}} MB",
+    "headers": {
+      "terminal": "终端",
+      "task": "任务",
+      "ram": "内存",
+      "actions": "操作",
+      "pid": "PID",
+      "workingDirectory": "工作目录",
+      "source": "来源"
+    },
+    "noTask": "(无任务)",
+    "kill": "终止",
+    "source": {
+      "vibora": "Vibora: {{name}}",
+      "external": "外部"
+    },
+    "empty": "没有 Claude 实例运行中",
+    "emptyVibora": " (在 Vibora 终端中)",
+    "error": "加载 Claude 实例失败：{{message}}"
+  },
+  "system": {
+    "cpuUsage": "CPU 使用率",
+    "memoryUsage": "内存使用率",
+    "memoryLabels": {
+      "used": "已使用",
+      "cache": "缓存/缓冲区"
+    },
+    "diskUsage": "磁盘使用率 ({{path}})",
+    "error": "加载系统指标失败：{{message}}"
+  },
+  "processes": {
+    "topProcesses": "热门进程",
+    "sortBy": {
+      "memory": "按内存",
+      "cpu": "按 CPU"
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "名称",
+      "command": "命令",
+      "memory": "内存"
+    },
+    "empty": "未找到进程",
+    "error": "加载进程失败：{{message}}",
+    "containers": "容器",
+    "containersEmpty": "没有容器运行中",
+    "containersUnavailable": "Docker/Podman 不可用"
+  }
+}

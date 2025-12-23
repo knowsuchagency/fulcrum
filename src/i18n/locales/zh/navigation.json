@@ -5,6 +5,7 @@
     "worktrees": "工作树",
     "repositories": "仓库",
     "review": "审核",
+    "monitoring": "监控",
     "settings": "设置",
     "commandPalette": "命令面板 ({{shortcut}})"
   },

@@ -8,6 +8,7 @@ import enTasks from './locales/en/tasks.json'
 import enSettings from './locales/en/settings.json'
 import enReview from './locales/en/review.json'
 import enWorktrees from './locales/en/worktrees.json'
+import enMonitoring from './locales/en/monitoring.json'
 
 // Import Chinese translations
 import zhCommon from './locales/zh/common.json'
@@ -16,6 +17,7 @@ import zhTasks from './locales/zh/tasks.json'
 import zhSettings from './locales/zh/settings.json'
 import zhReview from './locales/zh/review.json'
 import zhWorktrees from './locales/zh/worktrees.json'
+import zhMonitoring from './locales/zh/monitoring.json'
 
 export const defaultNS = 'common'
 export const supportedLanguages = ['en', 'zh'] as const
@@ -29,6 +31,7 @@ export const resources = {
     settings: enSettings,
     review: enReview,
     worktrees: enWorktrees,
+    monitoring: enMonitoring,
   },
   zh: {
     common: zhCommon,
@@ -37,6 +40,7 @@ export const resources = {
     settings: zhSettings,
     review: zhReview,
     worktrees: zhWorktrees,
+    monitoring: zhMonitoring,
   },
 } as const
 
@@ -61,7 +65,7 @@ i18n.use(initReactI18next).init({
   lng: getInitialLanguage(),
   fallbackLng: 'en',
   defaultNS,
-  ns: ['common', 'navigation', 'tasks', 'settings', 'review', 'worktrees'],
+  ns: ['common', 'navigation', 'tasks', 'settings', 'review', 'worktrees', 'monitoring'],
   interpolation: {
     escapeValue: false, // React already escapes
   },

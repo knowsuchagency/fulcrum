@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -48,6 +49,7 @@ const chartConfig: ChartConfig = {
 }
 
 function ClaudeInstancesTab() {
+  const { t } = useTranslation('monitoring')
   const [filter, setFilter] = useState<ClaudeFilter>('vibora')
   const { data: instances, isLoading, error } = useClaudeInstances(filter)
   const killInstance = useKillClaudeInstance()
@@ -70,15 +72,15 @@ function ClaudeInstancesTab() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="vibora">Vibora only</SelectItem>
-            <SelectItem value="all">All instances</SelectItem>
+            <SelectItem value="vibora">{t('claude.filter.vibora')}</SelectItem>
+            <SelectItem value="all">{t('claude.filter.all')}</SelectItem>
           </SelectContent>
         </Select>
 
         {instances && (
           <span className="text-sm text-muted-foreground">
-            {instances.length} instance{instances.length !== 1 ? 's' : ''} running
-            {totalRam > 0 && ` · ${totalRam.toFixed(0)} MB total`}
+            {t('claude.instanceCount', { count: instances.length })}
+            {totalRam > 0 && ` · ${t('claude.totalRam', { ram: totalRam.toFixed(0) })}`}
           </span>
         )}
       </div>
@@ -91,14 +93,14 @@ function ClaudeInstancesTab() {
 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Failed to load Claude instances: {error.message}
+          {t('claude.error', { message: error.message })}
         </div>
       )}
 
       {instances && instances.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">
-          No Claude instances running
-          {filter === 'vibora' && ' in Vibora terminals'}
+          {t('claude.empty')}
+          {filter === 'vibora' && t('claude.emptyVibora')}
         </div>
       )}
 
@@ -107,19 +109,19 @@ function ClaudeInstancesTab() {
           {filter === 'vibora' ? (
             // Vibora-managed view: Terminal, Task, RAM, Actions
             <div className="grid grid-cols-[1fr_1fr_80px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span>Terminal</span>
-              <span>Task</span>
-              <span className="text-right">RAM</span>
-              <span className="text-right">Actions</span>
+              <span>{t('claude.headers.terminal')}</span>
+              <span>{t('claude.headers.task')}</span>
+              <span className="text-right">{t('claude.headers.ram')}</span>
+              <span className="text-right">{t('claude.headers.actions')}</span>
             </div>
           ) : (
             // All instances view: PID, Working Directory, RAM, Source, Actions
             <div className="grid grid-cols-[60px_1fr_80px_120px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span>PID</span>
-              <span>Working Directory</span>
-              <span className="text-right">RAM</span>
-              <span>Source</span>
-              <span className="text-right">Actions</span>
+              <span>{t('claude.headers.pid')}</span>
+              <span>{t('claude.headers.workingDirectory')}</span>
+              <span className="text-right">{t('claude.headers.ram')}</span>
+              <span>{t('claude.headers.source')}</span>
+              <span className="text-right">{t('claude.headers.actions')}</span>
             </div>
           )}
 
@@ -140,7 +142,7 @@ function ClaudeInstancesTab() {
                         {instance.taskTitle}
                       </Link>
                     ) : (
-                      '(no task)'
+                      t('claude.noTask')
                     )}
                   </span>
                   <span className="text-right tabular-nums">{instance.ramMB.toFixed(0)} MB</span>
@@ -153,7 +155,7 @@ function ClaudeInstancesTab() {
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-                      Kill
+                      {t('claude.kill')}
                     </Button>
                   </div>
                 </div>
@@ -166,9 +168,9 @@ function ClaudeInstancesTab() {
                   <span className="text-right tabular-nums">{instance.ramMB.toFixed(0)} MB</span>
                   <span className="text-xs">
                     {instance.isViboraManaged ? (
-                      <span className="text-blue-500">Vibora: {instance.terminalName}</span>
+                      <span className="text-blue-500">{t('claude.source.vibora', { name: instance.terminalName })}</span>
                     ) : (
-                      <span className="text-muted-foreground">External</span>
+                      <span className="text-muted-foreground">{t('claude.source.external')}</span>
                     )}
                   </span>
                   <div className="flex justify-end">
@@ -180,7 +182,7 @@ function ClaudeInstancesTab() {
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-                      Kill
+                      {t('claude.kill')}
                     </Button>
                   </div>
                 </div>
@@ -194,6 +196,7 @@ function ClaudeInstancesTab() {
 }
 
 function SystemMetricsTab() {
+  const { t } = useTranslation('monitoring')
   const [window, setWindow] = useState<TimeWindow>('1h')
   const { data: metrics, isLoading, error } = useSystemMetrics(window)
 
@@ -231,7 +234,7 @@ function SystemMetricsTab() {
 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Failed to load system metrics: {error.message}
+          {t('system.error', { message: error.message })}
         </div>
       )}
 
@@ -240,7 +243,7 @@ function SystemMetricsTab() {
           {/* CPU Chart */}
           <Card className="p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-medium">CPU Usage</h3>
+              <h3 className="font-medium">{t('system.cpuUsage')}</h3>
               <span className="text-sm text-muted-foreground tabular-nums">
                 {metrics.current.cpu.toFixed(1)}%
               </span>
@@ -280,9 +283,9 @@ function SystemMetricsTab() {
           {/* Memory Chart */}
           <Card className="p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-medium">Memory Usage</h3>
+              <h3 className="font-medium">{t('system.memoryUsage')}</h3>
               <span className="text-sm text-muted-foreground tabular-nums">
-                {formatBytes(metrics.current.memory.used)} used + {formatBytes(metrics.current.memory.cache)} cache
+                {formatBytes(metrics.current.memory.used)} {t('system.memoryLabels.used').toLowerCase()} + {formatBytes(metrics.current.memory.cache)} {t('system.memoryLabels.cache').toLowerCase()}
                 {' / '}{formatBytes(metrics.current.memory.total)}
               </span>
             </div>
@@ -308,7 +311,7 @@ function SystemMetricsTab() {
                     <ChartTooltipContent
                       hideLabel
                       formatter={(value, name) => {
-                        const label = name === 'memoryUsed' ? 'Used' : 'Cache / Buffers'
+                        const label = name === 'memoryUsed' ? t('system.memoryLabels.used') : t('system.memoryLabels.cache')
                         return [`${value}% `, label]
                       }}
                     />
@@ -339,7 +342,7 @@ function SystemMetricsTab() {
           {/* Disk Usage */}
           <Card className="p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-medium">Disk Usage ({metrics.current.disk.path})</h3>
+              <h3 className="font-medium">{t('system.diskUsage', { path: metrics.current.disk.path })}</h3>
               <span className="text-sm text-muted-foreground tabular-nums">
                 {metrics.current.disk.usedPercent.toFixed(1)}% ({formatBytes(metrics.current.disk.used)} /{' '}
                 {formatBytes(metrics.current.disk.total)})
@@ -359,6 +362,7 @@ function SystemMetricsTab() {
 }
 
 function ProcessesTab() {
+  const { t } = useTranslation('monitoring')
   const [sortBy, setSortBy] = useState<ProcessSortBy>('memory')
   const { data: processes, isLoading: processesLoading, error: processesError } = useTopProcesses(sortBy)
   const { data: dockerData, isLoading: dockerLoading } = useDockerStats()
@@ -368,14 +372,14 @@ function ProcessesTab() {
       {/* Top Processes */}
       <Card className="p-4">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-medium">Top Processes</h3>
+          <h3 className="font-medium">{t('processes.topProcesses')}</h3>
           <Select value={sortBy} onValueChange={(value) => setSortBy(value as ProcessSortBy)}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="memory">By Memory</SelectItem>
-              <SelectItem value="cpu">By CPU</SelectItem>
+              <SelectItem value="memory">{t('processes.sortBy.memory')}</SelectItem>
+              <SelectItem value="cpu">{t('processes.sortBy.cpu')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -388,17 +392,17 @@ function ProcessesTab() {
 
         {processesError && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-            Failed to load processes: {processesError.message}
+            {t('processes.error', { message: processesError.message })}
           </div>
         )}
 
         {processes && processes.length > 0 && (
           <div className="space-y-1">
             <div className="grid grid-cols-[60px_120px_1fr_70px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
-              <span>PID</span>
-              <span>Name</span>
-              <span>Command</span>
-              <span className="text-right">Memory</span>
+              <span>{t('processes.headers.pid')}</span>
+              <span>{t('processes.headers.name')}</span>
+              <span>{t('processes.headers.command')}</span>
+              <span className="text-right">{t('processes.headers.memory')}</span>
               <span className="text-right">%</span>
             </div>
             {processes.map((proc) => (
@@ -421,7 +425,7 @@ function ProcessesTab() {
         )}
 
         {processes && processes.length === 0 && (
-          <div className="py-8 text-center text-muted-foreground">No processes found</div>
+          <div className="py-8 text-center text-muted-foreground">{t('processes.empty')}</div>
         )}
       </Card>
 
@@ -429,7 +433,7 @@ function ProcessesTab() {
       <Card className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-medium">
-            Containers
+            {t('processes.containers')}
             {dockerData?.runtime && (
               <span className="ml-2 text-xs font-normal text-muted-foreground">({dockerData.runtime})</span>
             )}
@@ -444,20 +448,20 @@ function ProcessesTab() {
 
         {dockerData && !dockerData.available && (
           <div className="py-8 text-center text-muted-foreground">
-            Docker/Podman not available
+            {t('processes.containersUnavailable')}
           </div>
         )}
 
         {dockerData && dockerData.available && dockerData.containers.length === 0 && (
-          <div className="py-8 text-center text-muted-foreground">No containers running</div>
+          <div className="py-8 text-center text-muted-foreground">{t('processes.containersEmpty')}</div>
         )}
 
         {dockerData && dockerData.available && dockerData.containers.length > 0 && (
           <div className="space-y-1">
             <div className="grid grid-cols-[1fr_70px_100px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
-              <span>Name</span>
+              <span>{t('processes.headers.name')}</span>
               <span className="text-right">CPU</span>
-              <span className="text-right">Memory</span>
+              <span className="text-right">{t('processes.headers.memory')}</span>
               <span className="text-right">%</span>
             </div>
             {dockerData.containers.map((container) => (
@@ -483,15 +487,17 @@ function ProcessesTab() {
 }
 
 function MonitoringPage() {
+  const { t } = useTranslation('monitoring')
+
   return (
     <div className="flex h-full flex-col overflow-hidden p-4">
-      <h1 className="mb-4 text-lg font-semibold">Monitoring</h1>
+      <h1 className="mb-4 text-lg font-semibold">{t('title')}</h1>
 
       <Tabs defaultValue="claude" className="flex-1 flex flex-col min-h-0">
         <TabsList>
-          <TabsTrigger value="claude">Claude Instances</TabsTrigger>
-          <TabsTrigger value="system">System Metrics</TabsTrigger>
-          <TabsTrigger value="processes">Processes</TabsTrigger>
+          <TabsTrigger value="claude">{t('tabs.claude')}</TabsTrigger>
+          <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>
+          <TabsTrigger value="processes">{t('tabs.processes')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="claude" className="flex-1 overflow-auto pt-4">

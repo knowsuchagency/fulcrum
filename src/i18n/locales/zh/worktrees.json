@@ -7,7 +7,9 @@
   "cleanup": {
     "button": "清理 ({{count}})",
     "title": "删除已完成的工作树",
-    "description": "这将永久删除 {{count}} 个工作树及其关联的任务：",
+    "description": "这将永久删除 {{count}} 个工作树。",
+    "linkedTasksWillBeDeleted": "关联的任务也将被删除。",
+    "alsoDeleteLinkedTasks": "同时删除关联的任务",
     "done": "已完成",
     "canceled": "已取消",
     "cannotUndo": "此操作无法撤销。"
@@ -15,7 +17,8 @@
   "delete": {
     "title": "删除工作树",
     "description": "这将永久删除位于以下位置的工作树目录",
-    "linkedTask": "关联的任务 \"{{title}}\" 也将被删除。",
+    "linkedTaskWillBeDeleted": "关联的任务 \"{{title}}\" 也将被删除。",
+    "alsoDeleteLinkedTask": "同时删除关联的任务 \"{{title}}\"",
     "cannotUndo": "此操作无法撤销。",
     "button": "删除 {{count}} 个"
   },
