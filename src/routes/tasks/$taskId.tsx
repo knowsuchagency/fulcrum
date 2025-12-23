@@ -63,21 +63,9 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { TaskStatus } from '@/types'
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-
-  return isMobile
-}
+import { useIsMobile } from '@/hooks/use-is-mobile'
 
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskView,
@@ -119,6 +107,8 @@ function TaskView() {
   const aiModeDescription = navState?.description
 
   const [configModalOpen, setConfigModalOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteLinkedWorktree, setDeleteLinkedWorktree] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [syncErrorModalOpen, setSyncErrorModalOpen] = useState(false)
   const [syncSuccess, setSyncSuccess] = useState(false)
@@ -329,11 +319,21 @@ function TaskView() {
 
   const handleDelete = () => {
     if (task) {
-      deleteTask.mutate(task.id, {
-        onSuccess: () => {
-          navigate({ to: '/tasks' })
-        },
-      })
+      deleteTask.mutate(
+        { taskId: task.id, deleteLinkedWorktree },
+        {
+          onSuccess: () => {
+            navigate({ to: '/tasks' })
+          },
+        }
+      )
+    }
+  }
+
+  const handleDeleteDialogChange = (open: boolean) => {
+    setDeleteDialogOpen(open)
+    if (!open) {
+      setDeleteLinkedWorktree(false)
     }
   }
 
@@ -514,7 +514,7 @@ function TaskView() {
           <span className="text-xs text-green-600">Parent synced!</span>
         )}
 
-        <AlertDialog>
+        <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
           <AlertDialogTrigger
             render={
               <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" />
@@ -526,12 +526,23 @@ function TaskView() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Task</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete "{task.title}", close its terminal, and remove its worktree.
-                This action cannot be undone.
+                This will permanently delete "{task.title}" and close its terminal.
+                {deleteLinkedWorktree && task.worktreePath && ' The linked worktree will also be removed.'}
+                {' '}This action cannot be undone.
               </AlertDialogDescription>
+              {task.worktreePath && (
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    checked={deleteLinkedWorktree}
+                    onCheckedChange={(checked) => setDeleteLinkedWorktree(checked === true)}
+                    disabled={deleteTask.isPending}
+                  />
+                  Also delete linked worktree
+                </label>
+              )}
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleteTask.isPending}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 variant="destructive"

@@ -10,6 +10,7 @@ export interface DiffOptions {
   wrap: boolean
   ignoreWhitespace: boolean
   includeUntracked: boolean
+  collapsedFiles: string[]
 }
 
 export interface FilesViewState {

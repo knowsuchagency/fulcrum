@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
 
 export const tasks = sqliteTable('tasks', {
   id: text('id').primaryKey(),
@@ -65,9 +65,23 @@ export const repositories = sqliteTable('repositories', {
   updatedAt: text('updated_at').notNull(),
 })
 
+// System metrics for monitoring - stores historical CPU, memory, disk usage
+export const systemMetrics = sqliteTable('system_metrics', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  timestamp: integer('timestamp').notNull(), // Unix timestamp in seconds
+  cpuPercent: real('cpu_percent').notNull(),
+  memoryUsedBytes: integer('memory_used_bytes').notNull(),
+  memoryTotalBytes: integer('memory_total_bytes').notNull(),
+  memoryCacheBytes: integer('memory_cache_bytes').notNull().default(0), // Cache + Buffers
+  diskUsedBytes: integer('disk_used_bytes').notNull(),
+  diskTotalBytes: integer('disk_total_bytes').notNull(),
+})
+
 // Type inference helpers
 export type Repository = typeof repositories.$inferSelect
 export type NewRepository = typeof repositories.$inferInsert
+export type SystemMetric = typeof systemMetrics.$inferSelect
+export type NewSystemMetric = typeof systemMetrics.$inferInsert
 export type Task = typeof tasks.$inferSelect
 export type NewTask = typeof tasks.$inferInsert
 export type TerminalTab = typeof terminalTabs.$inferSelect

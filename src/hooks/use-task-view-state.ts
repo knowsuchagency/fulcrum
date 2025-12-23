@@ -19,6 +19,7 @@ const DEFAULT_VIEW_STATE: ViewState = {
     wrap: true,
     ignoreWhitespace: true,
     includeUntracked: false,
+    collapsedFiles: [],
   },
   filesViewState: {
     selectedFile: null,

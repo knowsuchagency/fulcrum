@@ -122,14 +122,23 @@ export class ViboraClient {
     })
   }
 
-  async deleteTask(id: string): Promise<{ success: true }> {
-    return this.fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+  async deleteTask(
+    id: string,
+    deleteLinkedWorktree?: boolean
+  ): Promise<{ success: true }> {
+    const url = deleteLinkedWorktree
+      ? `/api/tasks/${id}?deleteLinkedWorktree=true`
+      : `/api/tasks/${id}`
+    return this.fetch(url, { method: 'DELETE' })
   }
 
-  async bulkDeleteTasks(ids: string[]): Promise<{ success: true; deleted: number }> {
+  async bulkDeleteTasks(
+    ids: string[],
+    deleteLinkedWorktrees?: boolean
+  ): Promise<{ success: true; deleted: number }> {
     return this.fetch('/api/tasks/bulk', {
       method: 'DELETE',
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify({ ids, deleteLinkedWorktrees }),
     })
   }
 
@@ -157,11 +166,12 @@ export class ViboraClient {
 
   async deleteWorktree(
     worktreePath: string,
-    repoPath?: string
+    repoPath?: string,
+    deleteLinkedTask?: boolean
   ): Promise<{ success: true; path: string; deletedTaskId?: string }> {
     return this.fetch('/api/worktrees', {
       method: 'DELETE',
-      body: JSON.stringify({ worktreePath, repoPath }),
+      body: JSON.stringify({ worktreePath, repoPath, deleteLinkedTask }),
     })
   }
 

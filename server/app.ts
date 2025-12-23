@@ -18,6 +18,7 @@ import repositoriesRoutes from './routes/repositories'
 import linearRoutes from './routes/linear'
 import githubRoutes from './routes/github'
 import authRoutes from './routes/auth'
+import { monitoringRoutes } from './routes/monitoring'
 
 /**
  * Gets the path to the dist directory.
@@ -61,6 +62,7 @@ export function createApp() {
   app.route('/api/linear', linearRoutes)
   app.route('/api/github', githubRoutes)
   app.route('/api/auth', authRoutes)
+  app.route('/api/monitoring', monitoringRoutes)
 
   // Serve static files in production mode or bundled CLI mode
   // Note: Check VIBORA_PACKAGE_ROOT in addition to NODE_ENV because bun build

@@ -9,6 +9,7 @@ import { useTaskCreationCommand } from '@/hooks/use-config'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
+import { MobileTerminalControls } from './mobile-terminal-controls'
 
 interface TaskTerminalProps {
   taskId: string
@@ -280,6 +281,13 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     }
   }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, aiMode, description, taskName, startupScript, newTerminalIds])
 
+  // Callback for mobile terminal controls
+  const handleMobileSend = useCallback((data: string) => {
+    if (terminalId) {
+      writeToTerminal(terminalId, data)
+    }
+  }, [terminalId, writeToTerminal])
+
   if (!cwd) {
     return (
       <div className={cn('flex h-full items-center justify-center bg-[#0a0a0a] text-muted-foreground text-sm', className)}>
@@ -308,7 +316,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       )}
 
       {/* Terminal */}
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
           className={cn('h-full w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
@@ -320,6 +328,9 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           <HugeiconsIcon icon={ArrowDownDoubleIcon} size={20} strokeWidth={2} />
         </button>
       </div>
+
+      {/* Mobile Controls */}
+      <MobileTerminalControls onSend={handleMobileSend} />
     </div>
   )
 }

@@ -223,10 +223,14 @@ app.get('/', (c) => {
   })
 })
 
-// DELETE /api/worktrees - Delete a worktree and its linked task
+// DELETE /api/worktrees - Delete a worktree (optionally delete linked task)
 app.delete('/', async (c) => {
   try {
-    const body = await c.req.json<{ worktreePath: string; repoPath?: string }>()
+    const body = await c.req.json<{
+      worktreePath: string
+      repoPath?: string
+      deleteLinkedTask?: boolean
+    }>()
 
     if (!body.worktreePath) {
       return c.json({ error: 'worktreePath is required' }, 400)
@@ -256,24 +260,34 @@ app.delete('/', async (c) => {
     // Delete the worktree
     await deleteWorktree(body.worktreePath, body.repoPath || linkedTask?.repoPath)
 
-    // Delete the linked task if it exists
+    // Handle linked task based on deleteLinkedTask flag
     let deletedTaskId: string | undefined
     if (linkedTask) {
-      // Shift down tasks in the same column that were after this task
-      const columnTasks = db.select().from(tasks).where(eq(tasks.status, linkedTask.status)).all()
       const now = new Date().toISOString()
 
-      for (const t of columnTasks) {
-        if (t.position > linkedTask.position) {
-          db.update(tasks)
-            .set({ position: t.position - 1, updatedAt: now })
-            .where(eq(tasks.id, t.id))
-            .run()
-        }
-      }
+      if (body.deleteLinkedTask) {
+        // Delete the linked task
+        // Shift down tasks in the same column that were after this task
+        const columnTasks = db.select().from(tasks).where(eq(tasks.status, linkedTask.status)).all()
 
-      db.delete(tasks).where(eq(tasks.id, linkedTask.id)).run()
-      deletedTaskId = linkedTask.id
+        for (const t of columnTasks) {
+          if (t.position > linkedTask.position) {
+            db.update(tasks)
+              .set({ position: t.position - 1, updatedAt: now })
+              .where(eq(tasks.id, t.id))
+              .run()
+          }
+        }
+
+        db.delete(tasks).where(eq(tasks.id, linkedTask.id)).run()
+        deletedTaskId = linkedTask.id
+      } else {
+        // Preserve the task but clear its worktreePath
+        db.update(tasks)
+          .set({ worktreePath: null, updatedAt: now })
+          .where(eq(tasks.id, linkedTask.id))
+          .run()
+      }
     }
 
     return c.json({ success: true, path: body.worktreePath, deletedTaskId })

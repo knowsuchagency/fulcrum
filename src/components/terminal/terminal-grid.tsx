@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
   ResizablePanelGroup,
@@ -13,6 +13,8 @@ import { Cancel01Icon, PlusSignIcon, Task01Icon } from '@hugeicons/core-free-ico
 import { GitActionsButtons } from './git-actions-buttons'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
+import { useIsMobile } from '@/hooks/use-is-mobile'
+import { MobileTerminalControls } from './mobile-terminal-controls'
 
 interface TaskInfo {
   taskId: string
@@ -34,6 +36,7 @@ interface TerminalGridProps {
   onTerminalRename?: (terminalId: string, name: string) => void
   onTerminalContainerReady?: (terminalId: string, container: HTMLDivElement) => void
   setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
+  writeToTerminal?: (terminalId: string, data: string) => void
   /** Map terminal cwd to task info for navigation and display */
   taskInfoByCwd?: Map<string, TaskInfo>
 }
@@ -48,9 +51,10 @@ interface TerminalPaneProps {
   onRename?: (name: string) => void
   onContainerReady?: (container: HTMLDivElement) => void
   setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
+  onFocus?: () => void
 }
 
-function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste }: TerminalPaneProps) {
+function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus }: TerminalPaneProps) {
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
@@ -113,7 +117,7 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
         )}
       </div>
       <div className="min-h-0 min-w-0 flex-1">
-        <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} terminalId={terminal.id} setupImagePaste={setupImagePaste} />
+        <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} terminalId={terminal.id} setupImagePaste={setupImagePaste} onFocus={onFocus} />
       </div>
     </div>
   )
@@ -143,20 +147,6 @@ function getGridLayout(count: number): { rows: number; cols: number } {
   return { rows: 3, cols: 4 } // max 12
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-
-  return isMobile
-}
-
 export function TerminalGrid({
   terminals,
   onTerminalClose,
@@ -166,9 +156,13 @@ export function TerminalGrid({
   onTerminalRename,
   onTerminalContainerReady,
   setupImagePaste,
+  writeToTerminal,
   taskInfoByCwd,
 }: TerminalGridProps) {
   const isMobile = useIsMobile()
+  const [focusedTerminalId, setFocusedTerminalId] = useState<string | null>(
+    terminals.length > 0 ? terminals[0].id : null
+  )
 
   if (terminals.length === 0) {
     return <EmptyPane onAdd={onTerminalAdd} />
@@ -186,6 +180,12 @@ export function TerminalGrid({
     }
   }
 
+  const handleMobileSend = (data: string) => {
+    if (focusedTerminalId && writeToTerminal) {
+      writeToTerminal(focusedTerminalId, data)
+    }
+  }
+
   const renderTerminalPane = (terminal: TerminalInfo) => (
     <TerminalPane
       terminal={terminal}
@@ -197,17 +197,28 @@ export function TerminalGrid({
       onRename={onTerminalRename ? (name) => onTerminalRename(terminal.id, name) : undefined}
       onContainerReady={onTerminalContainerReady ? (container) => onTerminalContainerReady(terminal.id, container) : undefined}
       setupImagePaste={setupImagePaste}
+      onFocus={() => setFocusedTerminalId(terminal.id)}
     />
+  )
+
+  // Wrapper to add shared mobile controls
+  const withMobileControls = (content: React.ReactNode) => (
+    <div className="flex h-full w-full flex-col">
+      <div className="min-h-0 flex-1">{content}</div>
+      {isMobile && writeToTerminal && <MobileTerminalControls onSend={handleMobileSend} />}
+    </div>
   )
 
   // Single terminal - no resizable panels needed
   if (terminals.length === 1) {
-    return <div className="h-full w-full max-w-full min-w-0 overflow-hidden">{renderTerminalPane(terminals[0])}</div>
+    return withMobileControls(
+      <div className="h-full w-full max-w-full min-w-0 overflow-hidden">{renderTerminalPane(terminals[0])}</div>
+    )
   }
 
   // Two terminals - vertical on mobile, horizontal on desktop
   if (terminals.length === 2) {
-    return (
+    return withMobileControls(
       <ResizablePanelGroup direction={isMobile ? 'vertical' : 'horizontal'} className="h-full max-w-full">
         <ResizablePanel key={terminals[0].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[0])}
@@ -222,7 +233,7 @@ export function TerminalGrid({
 
   // Three terminals - 1 left, 2 stacked right
   if (terminals.length === 3) {
-    return (
+    return withMobileControls(
       <ResizablePanelGroup direction="horizontal" className="h-full max-w-full">
         <ResizablePanel key={terminals[0].id} defaultSize={50} minSize={15}>
           {renderTerminalPane(terminals[0])}
@@ -245,7 +256,7 @@ export function TerminalGrid({
 
   // Four+ terminals - grid layout
   // Multiple rows with nested horizontal panels
-  return (
+  return withMobileControls(
     <ResizablePanelGroup direction="vertical" className="h-full max-w-full">
       {terminalRows.map((row, rowIndex) => (
         <Fragment key={`row-${rowIndex}`}>
