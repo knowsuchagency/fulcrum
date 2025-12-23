@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useLocation } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -35,6 +35,7 @@ import {
   VisualStudioCodeIcon,
   Task01Icon,
   Settings05Icon,
+  GitCommitIcon,
 } from '@hugeicons/core-free-icons'
 import { TaskConfigModal } from '@/components/task-config-modal'
 import {
@@ -52,10 +53,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -109,51 +110,28 @@ function TaskView() {
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteLinkedWorktree, setDeleteLinkedWorktree] = useState(false)
-  const [syncError, setSyncError] = useState<string | null>(null)
-  const [syncErrorModalOpen, setSyncErrorModalOpen] = useState(false)
-  const [syncSuccess, setSyncSuccess] = useState(false)
-  const [mergeError, setMergeError] = useState<string | null>(null)
-  const [mergeErrorModalOpen, setMergeErrorModalOpen] = useState(false)
-  const [mergeSuccess, setMergeSuccess] = useState(false)
-  const [syncParentError, setSyncParentError] = useState<string | null>(null)
-  const [syncParentErrorModalOpen, setSyncParentErrorModalOpen] = useState(false)
-  const [syncParentSuccess, setSyncParentSuccess] = useState(false)
   const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
   const isMobile = useIsMobile()
 
   // Get terminal functions for sending commands
-  const { terminals, writeToTerminal } = useTerminalWS()
+  const { terminals, sendInputToTerminal } = useTerminalWS()
 
-  // Auto-clear sync success message
-  useEffect(() => {
-    if (syncSuccess) {
-      const timer = setTimeout(() => setSyncSuccess(false), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [syncSuccess])
+  // Find the terminal for this task
+  const taskTerminal = terminals.find((t) => t.cwd === task?.worktreePath)
 
-  // Auto-clear merge success message
-  useEffect(() => {
-    if (mergeSuccess) {
-      const timer = setTimeout(() => setMergeSuccess(false), 3000)
-      return () => clearTimeout(timer)
+  // Send prompt to Claude Code to resolve git issues
+  const resolveWithClaude = (prompt: string) => {
+    if (taskTerminal) {
+      sendInputToTerminal(taskTerminal.id, prompt)
+      toast.info('Sent to Claude Code')
+    } else {
+      toast.error('No terminal available')
     }
-  }, [mergeSuccess])
-
-  // Auto-clear sync parent success message
-  useEffect(() => {
-    if (syncParentSuccess) {
-      const timer = setTimeout(() => setSyncParentSuccess(false), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [syncParentSuccess])
+  }
 
   const handleSync = async () => {
     if (!task?.repoPath || !task?.worktreePath) return
-
-    setSyncError(null)
-    setSyncSuccess(false)
 
     try {
       await gitSync.mutateAsync({
@@ -161,33 +139,23 @@ function TaskView() {
         worktreePath: task.worktreePath,
         baseBranch: task.baseBranch,
       })
-      setSyncSuccess(true)
+      toast.success('Synced from main')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync failed'
-      setSyncError(errorMessage)
-      setSyncErrorModalOpen(true)
+      const branch = task.baseBranch || 'main'
+      toast.error(errorMessage, {
+        action: taskTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Rebase this worktree onto the parent repo's ${branch} branch. Error: "${errorMessage}". Steps: 1) Check for uncommitted changes - stash or commit them first, 2) git fetch origin (in parent repo at ${task.repoPath}) to ensure ${branch} is current, 3) git rebase ${branch} (in worktree), 4) Resolve any conflicts carefully - do not lose functionality or introduce regressions, 5) If stashed, git stash pop. Worktree: ${task.worktreePath}, Parent repo: ${task.repoPath}.`
+          ),
+        } : undefined,
+      })
     }
-  }
-
-  // Build a prompt for Claude Code (no newlines)
-  const buildClaudePrompt = () => {
-    if (!task || !syncError) return ''
-    const baseBranch = task.baseBranch || 'main'
-    return `Fix the git sync issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${syncError} | Steps: 1) Check git status 2) Resolve conflicts or commit/stash changes 3) Rebase onto the parent repo's ${baseBranch} branch`
-  }
-
-  // Build a prompt for Claude Code for merge errors
-  const buildMergeClaudePrompt = () => {
-    if (!task || !mergeError) return ''
-    const baseBranch = task.baseBranch || 'main'
-    return `Fix the git merge issue. Worktree: ${task.worktreePath} | Parent repo: ${task.repoPath} | Branch: ${task.branch} | Base: ${baseBranch} | Error: ${mergeError} | Steps: 1) Check git status in both worktree and parent 2) Resolve any conflicts 3) Ensure worktree changes are committed 4) Retry merge to ${baseBranch} 5) On successful merge, run: vibora tasks move ${task.id} --status done`
   }
 
   const handleMergeToMain = async () => {
     if (!task?.repoPath || !task?.worktreePath) return
-
-    setMergeError(null)
-    setMergeSuccess(false)
 
     try {
       await gitMerge.mutateAsync({
@@ -195,7 +163,7 @@ function TaskView() {
         worktreePath: task.worktreePath,
         baseBranch: task.baseBranch,
       })
-      setMergeSuccess(true)
+      toast.success('Merged to main')
       // Kill Claude if running in the task's terminals
       killClaude.mutate(task.id)
       // Mark task as done after successful merge
@@ -205,89 +173,45 @@ function TaskView() {
       })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Merge failed'
-      setMergeError(errorMessage)
-      setMergeErrorModalOpen(true)
+      const branch = task.baseBranch || 'main'
+      toast.error(errorMessage, {
+        action: taskTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Merge this worktree's branch into the parent repo's ${branch}. Error: "${errorMessage}". Steps: 1) Ensure all changes in worktree are committed, 2) In parent repo at ${task.repoPath}, checkout ${branch} and pull latest from origin, 3) Merge the worktree branch into ${branch}, 4) Resolve any conflicts carefully - do not lose functionality or introduce regressions, 5) Push ${branch} to origin. Worktree: ${task.worktreePath}, Parent repo: ${task.repoPath}.`
+          ),
+        } : undefined,
+      })
     }
   }
 
   const handleSyncParent = async () => {
     if (!task?.repoPath) return
 
-    setSyncParentError(null)
-    setSyncParentSuccess(false)
-
     try {
       await gitSyncParent.mutateAsync({
         repoPath: task.repoPath,
         baseBranch: task.baseBranch,
       })
-      setSyncParentSuccess(true)
+      toast.success('Parent synced with origin')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync parent failed'
-      setSyncParentError(errorMessage)
-      setSyncParentErrorModalOpen(true)
+      const branch = task.baseBranch || 'main'
+      toast.error(errorMessage, {
+        action: taskTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Sync the parent repo's ${branch} branch with origin. Error: "${errorMessage}". Steps: 1) git fetch origin, 2) git pull origin ${branch} --ff-only, 3) If that fails, rebase with git rebase origin/${branch}, 4) Resolve any conflicts carefully - do not lose functionality or introduce regressions, 5) Once in sync, git push origin ${branch}. Work in the parent repo at ${task.repoPath}, not the worktree.`
+          ),
+        } : undefined,
+      })
     }
   }
 
-  // Build a prompt for Claude Code for sync parent errors
-  const buildSyncParentClaudePrompt = () => {
-    if (!task || !syncParentError) return ''
-    const baseBranch = task.baseBranch || 'main'
-    return `Fix the git sync parent issue. Parent repo: ${task.repoPath} | Base branch: ${baseBranch} | Error: ${syncParentError} | Steps: 1) Check git status in parent repo 2) Resolve any local changes or divergence 3) Fetch and merge/rebase from origin/${baseBranch}`
-  }
-
-  // Find the terminal for this task
-  const taskTerminal = terminals.find((t) => t.cwd === task?.worktreePath)
-
-  // Send prompt directly (for when Claude Code is already running)
-  const handleSendPrompt = () => {
+  // Send commit prompt to Claude Code
+  const handleCommit = () => {
     if (!taskTerminal) return
-    const prompt = buildClaudePrompt()
-    writeToTerminal(taskTerminal.id, prompt + '\r')
-    setSyncErrorModalOpen(false)
-  }
-
-  // Launch Claude Code with the prompt
-  const handleLaunchClaude = () => {
-    if (!taskTerminal) return
-    const prompt = buildClaudePrompt().replace(/"/g, '\\"')
-    const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
-    writeToTerminal(taskTerminal.id, command)
-    setSyncErrorModalOpen(false)
-  }
-
-  // Send merge prompt directly (for when Claude Code is already running)
-  const handleSendMergePrompt = () => {
-    if (!taskTerminal) return
-    const prompt = buildMergeClaudePrompt()
-    writeToTerminal(taskTerminal.id, prompt + '\r')
-    setMergeErrorModalOpen(false)
-  }
-
-  // Launch Claude Code with the merge prompt
-  const handleLaunchClaudeForMerge = () => {
-    if (!taskTerminal) return
-    const prompt = buildMergeClaudePrompt().replace(/"/g, '\\"')
-    const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
-    writeToTerminal(taskTerminal.id, command)
-    setMergeErrorModalOpen(false)
-  }
-
-  // Send sync parent prompt directly (for when Claude Code is already running)
-  const handleSendSyncParentPrompt = () => {
-    if (!taskTerminal) return
-    const prompt = buildSyncParentClaudePrompt()
-    writeToTerminal(taskTerminal.id, prompt + '\r')
-    setSyncParentErrorModalOpen(false)
-  }
-
-  // Launch Claude Code with the sync parent prompt
-  const handleLaunchClaudeForSyncParent = () => {
-    if (!taskTerminal) return
-    const prompt = buildSyncParentClaudePrompt().replace(/"/g, '\\"')
-    const command = `claude -p "${prompt}" --dangerously-skip-permissions\r`
-    writeToTerminal(taskTerminal.id, command)
-    setSyncParentErrorModalOpen(false)
+    sendInputToTerminal(taskTerminal.id, 'commit')
   }
 
   const handleOpenVSCodeModal = () => {
@@ -492,6 +416,22 @@ function TaskView() {
           />
         </Button>
 
+        {/* Commit Button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleCommit}
+          disabled={!taskTerminal}
+          className="text-muted-foreground hover:text-foreground"
+          title="Commit"
+        >
+          <HugeiconsIcon
+            icon={GitCommitIcon}
+            size={16}
+            strokeWidth={2}
+          />
+        </Button>
+
         {/* VS Code Button */}
         <Button
           variant="ghost"
@@ -502,17 +442,6 @@ function TaskView() {
         >
           <HugeiconsIcon icon={VisualStudioCodeIcon} size={16} strokeWidth={2} />
         </Button>
-
-        {/* Sync Status Feedback */}
-        {syncSuccess && (
-          <span className="text-xs text-green-600">Synced!</span>
-        )}
-        {mergeSuccess && (
-          <span className="text-xs text-green-600">Merged!</span>
-        )}
-        {syncParentSuccess && (
-          <span className="text-xs text-green-600">Parent synced!</span>
-        )}
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
           <AlertDialogTrigger
@@ -722,114 +651,6 @@ function TaskView() {
               </span>
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Sync Error Modal */}
-      <Dialog open={syncErrorModalOpen} onOpenChange={setSyncErrorModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-destructive">Sync Failed</DialogTitle>
-            <DialogDescription>
-              An error occurred while syncing with upstream.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {syncError}
-          </div>
-          <DialogFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => setSyncErrorModalOpen(false)}>
-              Close
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSendPrompt}
-              disabled={!taskTerminal}
-              title="Send prompt to running Claude Code session"
-            >
-              Send Prompt
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleLaunchClaude}
-              disabled={!taskTerminal}
-              title="Launch Claude Code with -p flag"
-            >
-              Launch Claude
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Merge Error Modal */}
-      <Dialog open={mergeErrorModalOpen} onOpenChange={setMergeErrorModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-destructive">Merge Failed</DialogTitle>
-            <DialogDescription>
-              An error occurred while merging to {task?.baseBranch || 'main'}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {mergeError}
-          </div>
-          <DialogFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => setMergeErrorModalOpen(false)}>
-              Close
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSendMergePrompt}
-              disabled={!taskTerminal}
-              title="Send prompt to running Claude Code session"
-            >
-              Send Prompt
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleLaunchClaudeForMerge}
-              disabled={!taskTerminal}
-              title="Launch Claude Code with -p flag"
-            >
-              Launch Claude
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Sync Parent Error Modal */}
-      <Dialog open={syncParentErrorModalOpen} onOpenChange={setSyncParentErrorModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-destructive">Sync Parent Failed</DialogTitle>
-            <DialogDescription>
-              An error occurred while syncing the parent repository with origin.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            {syncParentError}
-          </div>
-          <DialogFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => setSyncParentErrorModalOpen(false)}>
-              Close
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSendSyncParentPrompt}
-              disabled={!taskTerminal}
-              title="Send prompt to running Claude Code session"
-            >
-              Send Prompt
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleLaunchClaudeForSyncParent}
-              disabled={!taskTerminal}
-              title="Launch Claude Code with -p flag"
-            >
-              Launch Claude
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
