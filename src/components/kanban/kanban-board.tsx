@@ -7,6 +7,7 @@ import { DragProvider, useDrag } from './drag-context'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTasks, useUpdateTaskStatus } from '@/hooks/use-tasks'
 import { cn } from '@/lib/utils'
+import { fuzzyScore } from '@/lib/fuzzy-search'
 import type { TaskStatus } from '@/types'
 
 const COLUMNS: TaskStatus[] = [
@@ -59,19 +60,39 @@ function MobileDropZone({ status }: { status: TaskStatus }) {
 
 interface KanbanBoardProps {
   repoFilter?: string | null
+  searchQuery?: string
 }
 
-function KanbanBoardInner({ repoFilter }: KanbanBoardProps) {
+function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
   const { data: allTasks = [], isLoading } = useTasks()
   const updateStatus = useUpdateTaskStatus()
   const { activeTask } = useDrag()
   const [activeTab, setActiveTab] = useState<TaskStatus>('IN_PROGRESS')
 
-  // Filter tasks by repo if filter is set
+  // Filter tasks by repo and search query
   const tasks = useMemo(() => {
-    if (!repoFilter) return allTasks
-    return allTasks.filter((t) => t.repoName === repoFilter)
-  }, [allTasks, repoFilter])
+    let filtered = allTasks
+    if (repoFilter) {
+      filtered = filtered.filter((t) => t.repoName === repoFilter)
+    }
+    if (searchQuery?.trim()) {
+      filtered = filtered
+        .map((t) => ({
+          task: t,
+          score: Math.max(
+            fuzzyScore(t.title, searchQuery),
+            fuzzyScore(t.description || '', searchQuery),
+            fuzzyScore(t.branch || '', searchQuery),
+            fuzzyScore(t.linearTicketId || '', searchQuery),
+            fuzzyScore(t.prUrl || '', searchQuery)
+          ),
+        }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(({ task }) => task)
+    }
+    return filtered
+  }, [allTasks, repoFilter, searchQuery])
 
   // Task counts for tabs
   const taskCounts = useMemo(() => {
