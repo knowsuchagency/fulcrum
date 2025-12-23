@@ -12,12 +12,9 @@
       "repository": "Repository",
       "baseBranch": "Base Branch",
       "branchName": "Branch Name",
-      "branchPlaceholder": "auto-generated-from-title",
-      "initializeVibora": "Initialize Vibora",
-      "initializeViboraDescription": "Create or update CLAUDE.local.md with CLI instructions"
+      "branchPlaceholder": "auto-generated-from-title"
     },
     "aiModes": {
-      "none": "None",
       "plan": "Plan",
       "default": "Default"
     },

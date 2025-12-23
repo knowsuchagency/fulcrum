@@ -33,7 +33,6 @@ export function useCreateTask() {
       branch: string
       worktreePath: string
       prUrl?: string | null
-      initializeVibora?: boolean
       copyFiles?: string
       startupScript?: string
     }) =>

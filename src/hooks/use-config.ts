@@ -15,7 +15,6 @@ export const CONFIG_KEYS = {
   PORT: 'port',
   WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only, derived from VIBORA_DIR
   DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
-  TASK_CREATION_COMMAND: 'task_creation_command',
   HOSTNAME: 'hostname',
   SSH_PORT: 'ssh_port',
   LINEAR_API_KEY: 'linear_api_key',
@@ -25,7 +24,6 @@ export const CONFIG_KEYS = {
 
 // Default values (client-side fallbacks)
 const DEFAULT_PORT = 3333
-const DEFAULT_TASK_CREATION_COMMAND = 'claude --dangerously-skip-permissions'
 
 export function useConfig(key: string) {
   return useQuery({
@@ -61,16 +59,6 @@ export function useDefaultGitReposDir() {
     ...query,
     // Default to empty string which will make the browser use home directory
     data: (query.data?.value as string) ?? '',
-    isDefault: query.data?.isDefault ?? true,
-  }
-}
-
-export function useTaskCreationCommand() {
-  const query = useConfig(CONFIG_KEYS.TASK_CREATION_COMMAND)
-
-  return {
-    ...query,
-    data: (query.data?.value as string) ?? DEFAULT_TASK_CREATION_COMMAND,
     isDefault: query.data?.isDefault ?? true,
   }
 }

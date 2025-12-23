@@ -12,12 +12,9 @@
       "repository": "仓库",
       "baseBranch": "基础分支",
       "branchName": "分支名称",
-      "branchPlaceholder": "自动生成分支名",
-      "initializeVibora": "初始化 Vibora",
-      "initializeViboraDescription": "创建或更新 CLAUDE.local.md 文件"
+      "branchPlaceholder": "自动生成分支名"
     },
     "aiModes": {
-      "none": "无",
       "plan": "计划",
       "default": "默认"
     },

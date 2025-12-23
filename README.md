@@ -14,18 +14,38 @@ The Vibe Engineer's Cockpit. A terminal-first tool for orchestrating AI coding a
 
 ## Quick Start
 
-Requires [Node.js](https://nodejs.org/). Run the latest vibora with a single command:
+Requires [Node.js](https://nodejs.org/) and [Claude Code](https://claude.ai/code).
+
+### Install via curl (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.sh | bash
+```
+
+This installs vibora, the Claude Code plugin, and starts the server.
+
+### Install via npm
 
 ```bash
 npx vibora@latest up
 ```
 
-This starts the Vibora server as a daemon. Open http://localhost:3333 in your browser. The `up` command will help you install any missing dependencies.
+If using npm, install the Claude Code plugin separately for automatic task status sync:
 
 ```bash
-npx vibora@latest down    # Stop the server
-npx vibora@latest status  # Check if running
+claude plugin marketplace add knowsuchagency/vibora
+claude plugin install vibora@vibora --scope user
 ```
+
+### Server Commands
+
+```bash
+vibora up       # Start server daemon
+vibora down     # Stop the server
+vibora status   # Check if running
+```
+
+Open http://localhost:3333 in your browser.
 
 ## Configuration
 
@@ -39,7 +59,6 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 |---------|---------|---------|
 | port | `PORT` | 3333 |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
-| taskCreationCommand | `VIBORA_TASK_CREATION_COMMAND` | `claude --dangerously-skip-permissions` |
 | hostname | `VIBORA_HOSTNAME` | (empty) |
 | sshPort | `VIBORA_SSH_PORT` | 22 |
 | basicAuthUsername | `VIBORA_BASIC_AUTH_USERNAME` | null |
@@ -59,6 +78,22 @@ Vibora can sync task status with Linear tickets. Configure `linearApiKey` in set
 ### Basic Auth
 
 Set `basicAuthUsername` and `basicAuthPassword` (via settings or environment variables) to require authentication. Useful when exposing Vibora over a network.
+
+### Claude Code Plugin
+
+The vibora plugin for Claude Code enables automatic task status sync:
+
+- **Task → IN_REVIEW** when Claude stops (waiting for your input)
+- **Task → IN_PROGRESS** when you respond to Claude
+
+The plugin also provides slash commands (`/review`, `/pr`, `/notify`, `/linear`, `/task-info`). The plugin is automatically installed in task worktrees when tasks are created, and Claude sessions are tied to task IDs for session continuity.
+
+To install the plugin globally:
+
+```bash
+claude plugin marketplace add knowsuchagency/vibora
+claude plugin install vibora@vibora --scope user
+```
 
 ## CLI
 

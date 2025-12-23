@@ -25,7 +25,25 @@ case "${usage_type}" in
 esac
 
 new_version="$major.$minor.$patch"
+
+# Update package.json
 jq --arg v "$new_version" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+echo "Updated package.json: $current → $new_version"
+
+# Update plugin marketplace.json
+marketplace=".claude-plugin/marketplace.json"
+if [ -f "$marketplace" ]; then
+  jq --arg v "$new_version" '.plugins[0].version = $v' "$marketplace" > "${marketplace}.tmp" && mv "${marketplace}.tmp" "$marketplace"
+  echo "Updated $marketplace"
+fi
+
+# Update plugin.json
+plugin="plugins/vibora/.claude-plugin/plugin.json"
+if [ -f "$plugin" ]; then
+  jq --arg v "$new_version" '.version = $v' "$plugin" > "${plugin}.tmp" && mv "${plugin}.tmp" "$plugin"
+  echo "Updated $plugin"
+fi
+
 echo "Bumped version: $current → $new_version"
 
 git add package.json
