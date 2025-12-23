@@ -27,7 +27,6 @@ import {
   type ClaudeInstance,
   type ProcessSortBy,
   type ViboraInstanceGroup,
-  type ClaudeUsageResponse,
 } from '@/hooks/use-monitoring'
 
 export const Route = createFileRoute('/monitoring/')({
