@@ -30,6 +30,8 @@ import {
   useTestNotificationChannel,
   useZAiSettings,
   useUpdateZAiSettings,
+  useDeveloperMode,
+  useRestartVibora,
   CONFIG_KEYS,
 } from '@/hooks/use-config'
 import { useLanguageSync } from '@/hooks/use-language-sync'
@@ -61,6 +63,8 @@ function SettingsPage() {
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
+  const { data: developerMode } = useDeveloperMode()
+  const restartVibora = useRestartVibora()
   const { savedLanguage, changeLanguage } = useLanguageSync()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
@@ -900,6 +904,47 @@ function SettingsPage() {
                   </p>
                 </div>
               </SettingsSection>
+
+              {/* Developer (only visible in developer mode) */}
+              {developerMode?.enabled && (
+                <SettingsSection title={t('sections.developer')}>
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">
+                          {t('developer.restartDescription')}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          restartVibora.mutate(undefined, {
+                            onSuccess: () => {
+                              toast.success(t('developer.restartInitiated'))
+                            },
+                            onError: (error) => {
+                              toast.error(t('developer.buildFailed'), {
+                                description: error.message,
+                              })
+                            },
+                          })
+                        }}
+                        disabled={restartVibora.isPending}
+                        className="shrink-0"
+                      >
+                        <HugeiconsIcon
+                          icon={Loading03Icon}
+                          className={`mr-2 size-4 ${restartVibora.isPending ? 'animate-spin' : ''}`}
+                        />
+                        {restartVibora.isPending
+                          ? t('developer.building')
+                          : t('developer.restartButton')}
+                      </Button>
+                    </div>
+                  </div>
+                </SettingsSection>
+              )}
 
           {/* Save Button */}
           <div className="flex items-center justify-end gap-2 pt-2">

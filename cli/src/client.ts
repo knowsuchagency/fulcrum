@@ -222,4 +222,15 @@ export class ViboraClient {
       body: JSON.stringify({ title, message }),
     })
   }
+
+  // Developer mode
+  async getDeveloperMode(): Promise<{ enabled: boolean }> {
+    return this.fetch('/api/config/developer-mode')
+  }
+
+  async restartVibora(): Promise<{ success?: boolean; message?: string; error?: string }> {
+    return this.fetch('/api/config/restart', {
+      method: 'POST',
+    })
+  }
 }

@@ -7,7 +7,8 @@
     "integrations": "Integrations",
     "zai": "z.ai",
     "notifications": "Notifications",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "developer": "Developer"
   },
   "fields": {
     "port": {
@@ -68,5 +69,13 @@
     "userKey": "User Key",
     "testSuccess": "{{channel}} test successful",
     "testFailed": "{{channel}} test failed: {{error}}"
+  },
+  "developer": {
+    "restartButton": "Restart Vibora",
+    "building": "Building...",
+    "restarting": "Restarting...",
+    "restartDescription": "Build and restart the Vibora server. If the build fails, the server will continue running.",
+    "restartInitiated": "Build succeeded. Restarting...",
+    "buildFailed": "Build failed"
   }
 }
