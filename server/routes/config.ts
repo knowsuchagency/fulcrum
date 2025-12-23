@@ -6,7 +6,12 @@ import {
   getWorktreeBasePath,
   getNotificationSettings,
   updateNotificationSettings,
+  getZAiSettings,
+  updateZAiSettings,
+  getClaudeSettings,
+  updateClaudeSettings,
   type NotificationSettings,
+  type ZAiSettings,
 } from '../lib/settings'
 import { testNotificationChannel } from '../services/notification-service'
 
@@ -54,6 +59,58 @@ app.post('/notifications/test/:channel', async (c) => {
 
   const result = await testNotificationChannel(channel)
   return c.json(result)
+})
+
+// z.ai routes must come before generic /:key routes
+
+// GET /api/config/z-ai - Get z.ai settings
+app.get('/z-ai', (c) => {
+  const settings = getZAiSettings()
+  return c.json(settings)
+})
+
+// PUT /api/config/z-ai - Update z.ai settings (also updates ~/.claude/settings.json)
+app.put('/z-ai', async (c) => {
+  try {
+    const body = await c.req.json<Partial<ZAiSettings>>()
+    const updated = updateZAiSettings(body)
+
+    // Sync to Claude Code settings
+    if (updated.enabled && updated.apiKey) {
+      // Get current Claude settings and merge env vars
+      const claudeSettings = getClaudeSettings()
+      const currentEnv = (claudeSettings.env as Record<string, string>) || {}
+      updateClaudeSettings({
+        env: {
+          ...currentEnv,
+          ANTHROPIC_AUTH_TOKEN: updated.apiKey,
+          ANTHROPIC_BASE_URL: 'https://api.z.ai/api/anthropic',
+          API_TIMEOUT_MS: '3000000',
+          // Model mappings for z.ai (configurable)
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: updated.haikuModel,
+          ANTHROPIC_DEFAULT_SONNET_MODEL: updated.sonnetModel,
+          ANTHROPIC_DEFAULT_OPUS_MODEL: updated.opusModel,
+        },
+      })
+    } else {
+      // Remove z.ai env vars when disabled (preserve other env vars)
+      const claudeSettings = getClaudeSettings()
+      if (claudeSettings.env) {
+        const env = { ...(claudeSettings.env as Record<string, string>) }
+        delete env.ANTHROPIC_AUTH_TOKEN
+        delete env.ANTHROPIC_BASE_URL
+        delete env.API_TIMEOUT_MS
+        delete env.ANTHROPIC_DEFAULT_HAIKU_MODEL
+        delete env.ANTHROPIC_DEFAULT_SONNET_MODEL
+        delete env.ANTHROPIC_DEFAULT_OPUS_MODEL
+        updateClaudeSettings({ env: Object.keys(env).length > 0 ? env : undefined })
+      }
+    }
+
+    return c.json(updated)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to update z.ai settings' }, 400)
+  }
 })
 
 // GET /api/config/:key - Get config value

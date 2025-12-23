@@ -28,6 +28,8 @@ import {
   useNotificationSettings,
   useUpdateNotificationSettings,
   useTestNotificationChannel,
+  useZAiSettings,
+  useUpdateZAiSettings,
   CONFIG_KEYS,
 } from '@/hooks/use-config'
 import { useLanguageSync } from '@/hooks/use-language-sync'
@@ -58,10 +60,12 @@ function SettingsPage() {
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
+  const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
   const { savedLanguage, changeLanguage } = useLanguageSync()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
+  const updateZAi = useUpdateZAiSettings()
   const testChannel = useTestNotificationChannel()
 
   const [localPort, setLocalPort] = useState('')
@@ -84,6 +88,13 @@ function SettingsPage() {
   const [pushoverEnabled, setPushoverEnabled] = useState(false)
   const [pushoverAppToken, setPushoverAppToken] = useState('')
   const [pushoverUserKey, setPushoverUserKey] = useState('')
+
+  // z.ai settings local state
+  const [zAiEnabled, setZAiEnabled] = useState(false)
+  const [zAiApiKey, setZAiApiKey] = useState('')
+  const [zAiHaikuModel, setZAiHaikuModel] = useState('glm-4.5-air')
+  const [zAiSonnetModel, setZAiSonnetModel] = useState('glm-4.7')
+  const [zAiOpusModel, setZAiOpusModel] = useState('glm-4.7')
 
   // Sync local form state with fetched server values
   useEffect(() => {
@@ -111,8 +122,27 @@ function SettingsPage() {
     }
   }, [notificationSettings])
 
+  // Sync z.ai settings
+  useEffect(() => {
+    if (zAiSettings) {
+      setZAiEnabled(zAiSettings.enabled)
+      setZAiApiKey(zAiSettings.apiKey ?? '')
+      setZAiHaikuModel(zAiSettings.haikuModel)
+      setZAiSonnetModel(zAiSettings.sonnetModel)
+      setZAiOpusModel(zAiSettings.opusModel)
+    }
+  }, [zAiSettings])
+
   const isLoading =
-    portLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading
+    portLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading
+
+  const hasZAiChanges = zAiSettings && (
+    zAiEnabled !== zAiSettings.enabled ||
+    zAiApiKey !== (zAiSettings.apiKey ?? '') ||
+    zAiHaikuModel !== zAiSettings.haikuModel ||
+    zAiSonnetModel !== zAiSettings.sonnetModel ||
+    zAiOpusModel !== zAiSettings.opusModel
+  )
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -134,7 +164,8 @@ function SettingsPage() {
     localSshPort !== String(sshPort) ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
-    hasNotificationChanges
+    hasNotificationChanges ||
+    hasZAiChanges
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -230,6 +261,24 @@ function SettingsPage() {
               slack: { enabled: slackEnabled, webhookUrl: slackWebhook },
               discord: { enabled: discordEnabled, webhookUrl: discordWebhook },
               pushover: { enabled: pushoverEnabled, appToken: pushoverAppToken, userKey: pushoverUserKey },
+            },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    // Save z.ai settings
+    if (hasZAiChanges) {
+      promises.push(
+        new Promise((resolve) => {
+          updateZAi.mutate(
+            {
+              enabled: zAiEnabled,
+              apiKey: zAiApiKey || null,
+              haikuModel: zAiHaikuModel,
+              sonnetModel: zAiSonnetModel,
+              opusModel: zAiOpusModel,
             },
             { onSettled: resolve }
           )
@@ -574,6 +623,95 @@ function SettingsPage() {
                   </div>
                 </SettingsSection>
               </div>
+
+              {/* z.ai */}
+              <SettingsSection title={t('sections.zai')}>
+                <div className="space-y-4">
+                  {/* Enable toggle */}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                      {t('fields.zai.enable')}
+                    </label>
+                    <Switch
+                      checked={zAiEnabled}
+                      onCheckedChange={setZAiEnabled}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  {/* Settings (shown when enabled) */}
+                  {zAiEnabled && (
+                    <>
+                      {/* API Key */}
+                      <div className="space-y-1">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.apiKey')}
+                          </label>
+                          <Input
+                            type="password"
+                            value={zAiApiKey}
+                            onChange={(e) => setZAiApiKey(e.target.value)}
+                            placeholder="zai_..."
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
+                          {t('fields.zai.description')}
+                        </p>
+                      </div>
+
+                      {/* Model Mappings */}
+                      <div className="space-y-3 border-t border-border pt-4">
+                        <p className="text-xs font-medium text-muted-foreground">{t('fields.zai.modelMappings')}</p>
+
+                        {/* Haiku Model */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.haiku')}
+                          </label>
+                          <Input
+                            value={zAiHaikuModel}
+                            onChange={(e) => setZAiHaikuModel(e.target.value)}
+                            placeholder="glm-4.5-air"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+
+                        {/* Sonnet Model */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.sonnet')}
+                          </label>
+                          <Input
+                            value={zAiSonnetModel}
+                            onChange={(e) => setZAiSonnetModel(e.target.value)}
+                            placeholder="glm-4.7"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+
+                        {/* Opus Model */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.opus')}
+                          </label>
+                          <Input
+                            value={zAiOpusModel}
+                            onChange={(e) => setZAiOpusModel(e.target.value)}
+                            placeholder="glm-4.7"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </SettingsSection>
 
               {/* Notifications */}
               <SettingsSection title={t('sections.notifications')}>

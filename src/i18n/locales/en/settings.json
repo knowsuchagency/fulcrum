@@ -5,6 +5,7 @@
     "paths": "Paths",
     "remoteAccess": "Remote Access",
     "integrations": "Integrations",
+    "zai": "z.ai",
     "notifications": "Notifications",
     "appearance": "Appearance"
   },
@@ -37,6 +38,15 @@
     "github": {
       "label": "GitHub",
       "description": "PAT for Issues & PRs"
+    },
+    "zai": {
+      "enable": "Enable",
+      "apiKey": "API Key",
+      "description": "Configures Claude Code to use z.ai proxy",
+      "modelMappings": "Model Mappings",
+      "haiku": "Haiku",
+      "sonnet": "Sonnet",
+      "opus": "Opus"
     },
     "language": {
       "label": "Language",
