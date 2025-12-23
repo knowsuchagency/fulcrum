@@ -21,7 +21,6 @@ import { testNotificationChannel, sendNotification, type NotificationPayload } f
 export const CONFIG_KEYS = {
   PORT: 'port',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
-  TASK_CREATION_COMMAND: 'taskCreationCommand',
   HOSTNAME: 'hostname',
   SSH_PORT: 'sshPort',
   LINEAR_API_KEY: 'linearApiKey',
@@ -178,8 +177,6 @@ app.get('/:key', (c) => {
     value = settings.port
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     value = settings.defaultGitReposDir
-  } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
-    value = settings.taskCreationCommand
   } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
     value = settings.hostname
   } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
@@ -222,12 +219,6 @@ app.put('/:key', async (c) => {
         return c.json({ error: 'Value must be a string' }, 400)
       }
       updateSettings({ defaultGitReposDir: body.value })
-      return c.json({ key, value: body.value })
-    } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
-      }
-      updateSettings({ taskCreationCommand: body.value })
       return c.json({ key, value: body.value })
     } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
       if (typeof body.value !== 'string') {
@@ -281,8 +272,6 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.port
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     defaultValue = defaults.defaultGitReposDir
-  } else if (key === 'task_creation_command' || key === CONFIG_KEYS.TASK_CREATION_COMMAND) {
-    defaultValue = defaults.taskCreationCommand
   } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
     defaultValue = defaults.hostname
   } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {

@@ -113,36 +113,27 @@ function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: s
   }
 }
 
-// Initialize worktree with CLAUDE.local.md for Vibora CLI integration
+// Initialize worktree with vibora Claude Code plugin
 function initializeWorktreeForVibora(worktreePath: string): void {
-  const claudeLocalPath = path.join(worktreePath, 'CLAUDE.local.md')
-  const gitignorePath = path.join(worktreePath, '.gitignore')
-
-  const templatePath = path.join(__dirname, '../templates/CLAUDE.local.template.md')
-  const viboraSection = fs.readFileSync(templatePath, 'utf-8')
-
-  // Handle CLAUDE.local.md - create or append
-  let claudeContent = ''
-  if (fs.existsSync(claudeLocalPath)) {
-    claudeContent = fs.readFileSync(claudeLocalPath, 'utf-8')
-  }
-
-  if (!claudeContent.includes('## Vibora Task Management')) {
-    // Append with proper spacing
-    const separator = claudeContent && !claudeContent.endsWith('\n') ? '\n' : ''
-    fs.writeFileSync(claudeLocalPath, claudeContent + separator + viboraSection)
-  }
-
-  // Handle .gitignore - add CLAUDE.local.md if not present
-  let gitignoreContent = ''
-  if (fs.existsSync(gitignorePath)) {
-    gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8')
-  }
-
-  const lines = gitignoreContent.split('\n')
-  if (!lines.some((line) => line.trim() === 'CLAUDE.local.md')) {
-    const separator = gitignoreContent && !gitignoreContent.endsWith('\n') ? '\n' : ''
-    fs.writeFileSync(gitignorePath, gitignoreContent + separator + 'CLAUDE.local.md\n')
+  try {
+    // Add the vibora marketplace and install the plugin
+    // The marketplace is the vibora GitHub repo itself
+    execSync('claude plugin marketplace add knowsuchagency/vibora 2>/dev/null', {
+      cwd: worktreePath,
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    })
+    execSync('claude plugin install vibora@vibora --scope local 2>/dev/null', {
+      cwd: worktreePath,
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    })
+  } catch {
+    // Claude CLI not available or plugin install failed - this is non-fatal
+    // The user can manually install: claude plugin install vibora@vibora
+    console.log(
+      'Note: Could not auto-install vibora plugin. Run "claude plugin marketplace add knowsuchagency/vibora && claude plugin install vibora@vibora" to enable hooks and slash commands.'
+    )
   }
 }
 
@@ -167,7 +158,6 @@ app.post('/', async (c) => {
   try {
     const body = await c.req.json<
       Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & {
-        initializeVibora?: boolean
         copyFiles?: string
         startupScript?: string
       }
@@ -205,10 +195,8 @@ app.post('/', async (c) => {
         return c.json({ error: `Failed to create worktree: ${result.error}` }, 500)
       }
 
-      // Initialize worktree for Vibora CLI integration (default: true)
-      if (body.initializeVibora !== false) {
-        initializeWorktreeForVibora(body.worktreePath)
-      }
+      // Initialize worktree with vibora Claude Code plugin
+      initializeWorktreeForVibora(body.worktreePath)
 
       // Copy files if patterns provided
       if (body.copyFiles) {

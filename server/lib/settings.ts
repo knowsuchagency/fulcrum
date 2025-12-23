@@ -7,7 +7,6 @@ import * as crypto from 'crypto'
 export interface Settings {
   port: number
   defaultGitReposDir: string
-  taskCreationCommand: string
   hostname: string
   sshPort: number
   basicAuthUsername: string | null
@@ -21,7 +20,6 @@ export interface Settings {
 const DEFAULT_SETTINGS: Settings = {
   port: 3333,
   defaultGitReposDir: os.homedir(),
-  taskCreationCommand: 'claude --dangerously-skip-permissions',
   hostname: '',
   sshPort: 22,
   basicAuthUsername: null,
@@ -130,7 +128,6 @@ export function getSettings(): Settings {
   const fileSettings: Settings = {
     port: parsed.port ?? DEFAULT_SETTINGS.port,
     defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
-    taskCreationCommand: parsed.taskCreationCommand ?? DEFAULT_SETTINGS.taskCreationCommand,
     hostname: parsed.hostname ?? DEFAULT_SETTINGS.hostname,
     sshPort: parsed.sshPort ?? DEFAULT_SETTINGS.sshPort,
     basicAuthUsername: parsed.basicAuthUsername ?? null,
@@ -153,7 +150,6 @@ export function getSettings(): Settings {
     defaultGitReposDir: process.env.VIBORA_GIT_REPOS_DIR
       ? expandPath(process.env.VIBORA_GIT_REPOS_DIR)
       : fileSettings.defaultGitReposDir,
-    taskCreationCommand: process.env.VIBORA_TASK_CREATION_COMMAND ?? fileSettings.taskCreationCommand,
     hostname: process.env.VIBORA_HOSTNAME ?? fileSettings.hostname,
     sshPort: !isNaN(sshPortEnv) && sshPortEnv > 0 ? sshPortEnv : fileSettings.sshPort,
     basicAuthUsername: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.basicAuthUsername,

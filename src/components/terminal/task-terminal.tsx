@@ -5,7 +5,6 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
-import { useTaskCreationCommand } from '@/hooks/use-config'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
@@ -16,12 +15,12 @@ interface TaskTerminalProps {
   taskName: string
   cwd: string | null
   className?: string
-  aiMode?: 'default' | 'plan' | 'none'
+  aiMode?: 'default' | 'plan'
   description?: string
   startupScript?: string | null
 }
 
-export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript }: TaskTerminalProps) {
+export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, description, startupScript }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -30,7 +29,6 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermReady, setXtermReady] = useState(false)
 
-  const { data: taskCreationCommand } = useTaskCreationCommand()
   const { setTerminalFocused } = useKeyboardContext()
 
   const {
@@ -251,21 +249,22 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           }, 100)
         }
 
-        // 2. Then run task creation command (e.g., claude agent)
-        let taskCommand = taskCreationCommand
-        if (aiMode === 'plan' && description) {
-          const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
-          taskCommand = `claude "${prompt}" --allow-dangerously-skip-permissions --permission-mode plan`
-        } else if (aiMode === 'default' && description) {
-          const prompt = `${taskName}: ${description}`.replace(/"/g, '\\"')
-          taskCommand = `claude "${prompt}" --dangerously-skip-permissions`
-        }
-        // else: use default taskCreationCommand (for 'none' or no description)
-        if (taskCommand) {
-          setTimeout(() => {
-            writeToTerminal(terminalId, taskCommand + '\r')
-          }, startupScript ? 300 : 100)
-        }
+        // 2. Then run Claude with the task prompt
+        const systemPrompt = 'You are working in a Vibora task worktree. ' +
+          'When you finish working and need user input, run: vibora current-task review. ' +
+          'When linking a PR: vibora current-task pr <url>. ' +
+          'For notifications: vibora notify "Title" "Message".'
+        const taskInfo = description ? `${taskName}: ${description}` : taskName
+        const prompt = taskInfo.replace(/"/g, '\\"')
+        const escapedSystemPrompt = systemPrompt.replace(/"/g, '\\"')
+
+        const taskCommand = aiMode === 'plan'
+          ? `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${taskId}" --allow-dangerously-skip-permissions --permission-mode plan`
+          : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${taskId}" --dangerously-skip-permissions`
+
+        setTimeout(() => {
+          writeToTerminal(terminalId, taskCommand + '\r')
+        }, startupScript ? 300 : 100)
       }
     }
 
@@ -279,7 +278,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, taskCreationCommand, writeToTerminal, aiMode, description, taskName, startupScript, newTerminalIds])
+  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, writeToTerminal, aiMode, description, taskName, startupScript, newTerminalIds])
 
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {
