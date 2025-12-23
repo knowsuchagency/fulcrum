@@ -23,6 +23,7 @@ export interface SystemMetric {
   timestamp: number
   cpuPercent: number
   memoryUsedPercent: number
+  memoryCachePercent: number
   diskUsedPercent: number
 }
 
@@ -31,7 +32,7 @@ export interface SystemMetricsResponse {
   dataPoints: SystemMetric[]
   current: {
     cpu: number
-    memory: { total: number; used: number; usedPercent: number }
+    memory: { total: number; used: number; cache: number; usedPercent: number; cachePercent: number }
     disk: { total: number; used: number; usedPercent: number; path: string }
   }
 }
@@ -101,4 +102,49 @@ export function formatTimeWindow(window: TimeWindow): string {
     '24h': '24 hours',
   }
   return labels[window]
+}
+
+// Top processes types and hook
+export interface TopProcess {
+  pid: number
+  name: string
+  command: string
+  cpuPercent: number
+  memoryMB: number
+  memoryPercent: number
+}
+
+export type ProcessSortBy = 'memory' | 'cpu'
+
+export function useTopProcesses(sortBy: ProcessSortBy = 'memory', limit: number = 10) {
+  return useQuery({
+    queryKey: ['monitoring', 'top-processes', sortBy, limit],
+    queryFn: () =>
+      fetchJSON<TopProcess[]>(`${API_BASE}/api/monitoring/top-processes?sort=${sortBy}&limit=${limit}`),
+    refetchInterval: 5000,
+  })
+}
+
+// Docker container stats types and hook
+export interface ContainerStats {
+  id: string
+  name: string
+  cpuPercent: number
+  memoryMB: number
+  memoryLimit: number
+  memoryPercent: number
+}
+
+export interface DockerStatsResponse {
+  containers: ContainerStats[]
+  available: boolean
+  runtime: 'docker' | 'podman' | null
+}
+
+export function useDockerStats() {
+  return useQuery({
+    queryKey: ['monitoring', 'docker-stats'],
+    queryFn: () => fetchJSON<DockerStatsResponse>(`${API_BASE}/api/monitoring/docker-stats`),
+    refetchInterval: 5000,
+  })
 }

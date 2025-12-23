@@ -309,3 +309,221 @@ monitoringRoutes.post('/claude-instances/:pid/kill-pid', (c) => {
     return c.json({ error: message }, 500)
   }
 })
+
+interface TopProcess {
+  pid: number
+  name: string
+  command: string
+  cpuPercent: number
+  memoryMB: number
+  memoryPercent: number
+}
+
+// GET /api/monitoring/top-processes
+// Returns top 10 processes sorted by memory usage
+monitoringRoutes.get('/top-processes', (c) => {
+  const sortBy = c.req.query('sort') || 'memory' // 'memory' or 'cpu'
+  const limit = parseInt(c.req.query('limit') || '10', 10)
+
+  try {
+    // Get total memory for percentage calculation
+    const memTotal = parseInt(
+      readFileSync('/proc/meminfo', 'utf-8')
+        .match(/MemTotal:\s+(\d+)/)?.[1] || '0',
+      10
+    ) * 1024 // Convert kB to bytes
+
+    const processes: TopProcess[] = []
+    const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d))
+
+    for (const pidStr of procDirs) {
+      const pid = parseInt(pidStr, 10)
+      try {
+        // Read process status for memory and name
+        const status = readFileSync(`/proc/${pid}/status`, 'utf-8')
+        const nameMatch = status.match(/Name:\s+(.+)/)
+        const rssMatch = status.match(/VmRSS:\s+(\d+)\s+kB/)
+
+        if (!nameMatch || !rssMatch) continue
+
+        const name = nameMatch[1].trim()
+        const memoryKB = parseInt(rssMatch[1], 10)
+        const memoryMB = memoryKB / 1024
+        const memoryPercent = memTotal > 0 ? (memoryKB * 1024 / memTotal) * 100 : 0
+
+        // Read cmdline for full command
+        let command = ''
+        try {
+          command = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
+            .replace(/\0/g, ' ')
+            .trim()
+            .slice(0, 200) // Limit length
+        } catch {
+          command = name
+        }
+
+        // CPU percent calculation would require tracking over time
+        // For simplicity, we set cpuPercent to 0 and rely on memory sorting primarily
+        // (statParts[13] and statParts[14] contain utime/stime but are cumulative, not rate)
+        const cpuPercent = 0
+
+        processes.push({
+          pid,
+          name,
+          command,
+          cpuPercent: Math.round(cpuPercent * 10) / 10,
+          memoryMB: Math.round(memoryMB * 10) / 10,
+          memoryPercent: Math.round(memoryPercent * 10) / 10,
+        })
+      } catch {
+        // Process may have exited or be inaccessible
+        continue
+      }
+    }
+
+    // Sort by memory (default) or cpu
+    if (sortBy === 'cpu') {
+      processes.sort((a, b) => b.cpuPercent - a.cpuPercent)
+    } else {
+      processes.sort((a, b) => b.memoryMB - a.memoryMB)
+    }
+
+    // Return top N
+    return c.json(processes.slice(0, limit))
+  } catch {
+    // Fallback to ps command if /proc parsing fails
+    try {
+      const sortFlag = sortBy === 'cpu' ? '-pcpu' : '-rss'
+      const result = execSync(
+        `ps -eo pid,comm,args,%cpu,rss --sort=${sortFlag} --no-headers | head -${limit + 1}`,
+        { encoding: 'utf-8', timeout: 5000 }
+      )
+
+      const memTotal = parseInt(
+        execSync('grep MemTotal /proc/meminfo', { encoding: 'utf-8' })
+          .match(/(\d+)/)?.[1] || '0',
+        10
+      ) * 1024
+
+      const processes: TopProcess[] = []
+      for (const line of result.trim().split('\n')) {
+        const match = line.match(/^\s*(\d+)\s+(\S+)\s+(.+?)\s+([\d.]+)\s+(\d+)\s*$/)
+        if (match) {
+          const memoryKB = parseInt(match[5], 10)
+          processes.push({
+            pid: parseInt(match[1], 10),
+            name: match[2],
+            command: match[3].trim().slice(0, 200),
+            cpuPercent: parseFloat(match[4]),
+            memoryMB: Math.round(memoryKB / 1024 * 10) / 10,
+            memoryPercent: memTotal > 0 ? Math.round(memoryKB * 1024 / memTotal * 1000) / 10 : 0,
+          })
+        }
+      }
+
+      return c.json(processes)
+    } catch (fallbackErr) {
+      const message = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
+      return c.json({ error: message }, 500)
+    }
+  }
+})
+
+interface ContainerStats {
+  id: string
+  name: string
+  cpuPercent: number
+  memoryMB: number
+  memoryLimit: number
+  memoryPercent: number
+}
+
+// GET /api/monitoring/docker-stats
+// Returns Docker container resource usage
+monitoringRoutes.get('/docker-stats', (c) => {
+  try {
+    // Try docker first, then podman
+    let result: string
+    let runtime = 'docker'
+
+    try {
+      result = execSync('docker stats --no-stream --format "{{json .}}"', {
+        encoding: 'utf-8',
+        timeout: 10000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    } catch {
+      try {
+        result = execSync('podman stats --no-stream --format "{{json .}}"', {
+          encoding: 'utf-8',
+          timeout: 10000,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
+        runtime = 'podman'
+      } catch {
+        // Neither docker nor podman available
+        return c.json({ containers: [], available: false, runtime: null })
+      }
+    }
+
+    const containers: ContainerStats[] = []
+
+    for (const line of result.trim().split('\n')) {
+      if (!line.trim()) continue
+
+      try {
+        const data = JSON.parse(line)
+
+        // Parse CPU percentage (e.g., "0.50%" -> 0.5)
+        const cpuStr = data.CPUPerc || '0%'
+        const cpuPercent = parseFloat(cpuStr.replace('%', '')) || 0
+
+        // Parse memory usage (e.g., "100MiB / 8GiB")
+        const memUsageStr = data.MemUsage || '0B / 0B'
+        const [usedStr, limitStr] = memUsageStr.split(' / ')
+
+        const parseMemory = (str: string): number => {
+          const match = str.match(/([\d.]+)\s*(B|KB|KiB|MB|MiB|GB|GiB)/i)
+          if (!match) return 0
+          const value = parseFloat(match[1])
+          const unit = match[2].toLowerCase()
+
+          switch (unit) {
+            case 'b': return value / (1024 * 1024)
+            case 'kb': case 'kib': return value / 1024
+            case 'mb': case 'mib': return value
+            case 'gb': case 'gib': return value * 1024
+            default: return value
+          }
+        }
+
+        const memoryMB = parseMemory(usedStr)
+        const memoryLimit = parseMemory(limitStr)
+
+        // Parse memory percentage
+        const memPercStr = data.MemPerc || '0%'
+        const memoryPercent = parseFloat(memPercStr.replace('%', '')) || 0
+
+        containers.push({
+          id: (data.ID || data.Id || '').slice(0, 12),
+          name: data.Name || data.Names || 'unknown',
+          cpuPercent: Math.round(cpuPercent * 10) / 10,
+          memoryMB: Math.round(memoryMB * 10) / 10,
+          memoryLimit: Math.round(memoryLimit * 10) / 10,
+          memoryPercent: Math.round(memoryPercent * 10) / 10,
+        })
+      } catch {
+        // Skip malformed JSON lines
+        continue
+      }
+    }
+
+    // Sort by memory usage descending
+    containers.sort((a, b) => b.memoryMB - a.memoryMB)
+
+    return c.json({ containers, available: true, runtime })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})

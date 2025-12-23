@@ -72,6 +72,7 @@ export const systemMetrics = sqliteTable('system_metrics', {
   cpuPercent: real('cpu_percent').notNull(),
   memoryUsedBytes: integer('memory_used_bytes').notNull(),
   memoryTotalBytes: integer('memory_total_bytes').notNull(),
+  memoryCacheBytes: integer('memory_cache_bytes').notNull().default(0), // Cache + Buffers
   diskUsedBytes: integer('disk_used_bytes').notNull(),
   diskTotalBytes: integer('disk_total_bytes').notNull(),
 })
