@@ -13,7 +13,7 @@ import {
   type NotificationSettings,
   type ZAiSettings,
 } from '../lib/settings'
-import { testNotificationChannel } from '../services/notification-service'
+import { testNotificationChannel, sendNotification, type NotificationPayload } from '../services/notification-service'
 
 // Config keys (mapped to settings keys)
 export const CONFIG_KEYS = {
@@ -59,6 +59,28 @@ app.post('/notifications/test/:channel', async (c) => {
 
   const result = await testNotificationChannel(channel)
   return c.json(result)
+})
+
+// POST /api/config/notifications/send - Send an arbitrary notification
+app.post('/notifications/send', async (c) => {
+  try {
+    const body = await c.req.json<{ title: string; message: string }>()
+
+    if (!body.title || !body.message) {
+      return c.json({ error: 'title and message are required' }, 400)
+    }
+
+    const payload: NotificationPayload = {
+      title: body.title,
+      message: body.message,
+      type: 'task_status_change', // Generic type for arbitrary notifications
+    }
+
+    const results = await sendNotification(payload)
+    return c.json({ success: true, results })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to send notification' }, 400)
+  }
 })
 
 // z.ai routes must come before generic /:key routes

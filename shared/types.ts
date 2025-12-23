@@ -169,3 +169,39 @@ export interface ConfigResponse {
   value: string | number | null
   isDefault?: boolean
 }
+
+// Notification types
+export interface SoundNotificationConfig {
+  enabled: boolean
+  soundFile?: string
+}
+
+export interface SlackNotificationConfig {
+  enabled: boolean
+  webhookUrl?: string
+}
+
+export interface DiscordNotificationConfig {
+  enabled: boolean
+  webhookUrl?: string
+}
+
+export interface PushoverNotificationConfig {
+  enabled: boolean
+  appToken?: string
+  userKey?: string
+}
+
+export interface NotificationSettings {
+  enabled: boolean
+  sound: SoundNotificationConfig
+  slack: SlackNotificationConfig
+  discord: DiscordNotificationConfig
+  pushover: PushoverNotificationConfig
+}
+
+export interface NotificationTestResult {
+  channel: string
+  success: boolean
+  error?: string
+}
