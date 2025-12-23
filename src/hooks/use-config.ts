@@ -237,6 +237,8 @@ export function useUpdateZAiSettings() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['config', 'z-ai'] })
+      // Also invalidate Claude usage since z.ai affects availability
+      queryClient.invalidateQueries({ queryKey: ['monitoring', 'claude-usage'] })
     },
   })
 }
