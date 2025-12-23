@@ -7,8 +7,8 @@ Type=simple
 WorkingDirectory=%h/projects/vibora
 Environment=VIBORA_DEVELOPER=1
 Environment=NODE_ENV=production
-# Note: Build is handled by the /api/config/restart endpoint before triggering restart
-# This ensures we only restart if build succeeds
+Environment=PATH=%h/.local/bin:%h/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin
+ExecStartPre=/bin/bash -c 'cd %h/projects/vibora && mise run build'
 ExecStartPre=/bin/bash -c 'cd %h/projects/vibora && bun run drizzle-kit push'
 ExecStart=/bin/bash -c 'cd %h/projects/vibora && bun server/index.ts'
 Restart=on-failure
