@@ -8,6 +8,8 @@ import type {
   GitStatusResponse,
   WorktreesResponse,
   ConfigResponse,
+  NotificationSettings,
+  NotificationTestResult,
 } from '@shared/types'
 
 export interface CreateTaskInput {
@@ -189,5 +191,35 @@ export class ViboraClient {
 
   async resetConfig(key: string): Promise<ConfigResponse> {
     return this.fetch(`/api/config/${key}`, { method: 'DELETE' })
+  }
+
+  // Notifications
+  async getNotifications(): Promise<NotificationSettings> {
+    return this.fetch('/api/config/notifications')
+  }
+
+  async updateNotifications(updates: Partial<NotificationSettings>): Promise<NotificationSettings> {
+    return this.fetch('/api/config/notifications', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async testNotification(
+    channel: 'sound' | 'slack' | 'discord' | 'pushover'
+  ): Promise<NotificationTestResult> {
+    return this.fetch(`/api/config/notifications/test/${channel}`, {
+      method: 'POST',
+    })
+  }
+
+  async sendNotification(
+    title: string,
+    message: string
+  ): Promise<{ success: boolean; results: NotificationTestResult[] }> {
+    return this.fetch('/api/config/notifications/send', {
+      method: 'POST',
+      body: JSON.stringify({ title, message }),
+    })
   }
 }
