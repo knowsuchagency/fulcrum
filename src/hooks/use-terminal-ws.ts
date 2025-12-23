@@ -70,6 +70,7 @@ interface UseTerminalWSReturn {
   createTerminal: (options: CreateTerminalOptions) => void
   destroyTerminal: (terminalId: string) => void
   writeToTerminal: (terminalId: string, data: string) => void
+  sendInputToTerminal: (terminalId: string, text: string) => void
   resizeTerminal: (terminalId: string, cols: number, rows: number) => void
   renameTerminal: (terminalId: string, name: string) => void
   clearTerminalBuffer: (terminalId: string) => void
@@ -354,6 +355,25 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     [send]
   )
 
+  // Send text input followed by Enter key to terminal (for CLI tools like Claude Code)
+  const sendInputToTerminal = useCallback(
+    (terminalId: string, text: string) => {
+      // Write the text first
+      send({
+        type: 'terminal:input',
+        payload: { terminalId, data: text },
+      })
+      // Then send Enter (\r) after a brief delay to ensure text is processed first
+      setTimeout(() => {
+        send({
+          type: 'terminal:input',
+          payload: { terminalId, data: '\r' },
+        })
+      }, 50)
+    },
+    [send]
+  )
+
   const resizeTerminal = useCallback(
     (terminalId: string, cols: number, rows: number) => {
       send({
@@ -529,6 +549,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     createTerminal,
     destroyTerminal,
     writeToTerminal,
+    sendInputToTerminal,
     resizeTerminal,
     renameTerminal,
     clearTerminalBuffer,

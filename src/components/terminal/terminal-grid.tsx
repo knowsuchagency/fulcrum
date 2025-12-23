@@ -37,6 +37,7 @@ interface TerminalGridProps {
   onTerminalContainerReady?: (terminalId: string, container: HTMLDivElement) => void
   setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
   writeToTerminal?: (terminalId: string, data: string) => void
+  sendInputToTerminal?: (terminalId: string, text: string) => void
   /** Map terminal cwd to task info for navigation and display */
   taskInfoByCwd?: Map<string, TaskInfo>
 }
@@ -54,7 +55,7 @@ interface TerminalPaneProps {
   onFocus?: () => void
 }
 
-function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus }: TerminalPaneProps) {
+function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
@@ -90,6 +91,8 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
                 baseBranch={taskInfo.baseBranch}
                 taskId={taskInfo.taskId}
                 isMobile={isMobile}
+                terminalId={terminal.id}
+                sendInputToTerminal={sendInputToTerminal}
               />
             </div>
           </div>
@@ -157,6 +160,7 @@ export function TerminalGrid({
   onTerminalContainerReady,
   setupImagePaste,
   writeToTerminal,
+  sendInputToTerminal,
   taskInfoByCwd,
 }: TerminalGridProps) {
   const isMobile = useIsMobile()
@@ -198,6 +202,7 @@ export function TerminalGrid({
       onContainerReady={onTerminalContainerReady ? (container) => onTerminalContainerReady(terminal.id, container) : undefined}
       setupImagePaste={setupImagePaste}
       onFocus={() => setFocusedTerminalId(terminal.id)}
+      sendInputToTerminal={sendInputToTerminal}
     />
   )
 

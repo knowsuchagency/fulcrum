@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDown03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon } from '@hugeicons/core-free-icons'
+import { ArrowDown03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon, GitCommitIcon } from '@hugeicons/core-free-icons'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,6 +20,8 @@ interface GitActionsButtonsProps {
   baseBranch: string
   taskId: string
   isMobile?: boolean
+  terminalId?: string
+  sendInputToTerminal?: (terminalId: string, text: string) => void
 }
 
 export function GitActionsButtons({
@@ -28,12 +30,23 @@ export function GitActionsButtons({
   baseBranch,
   taskId,
   isMobile,
+  terminalId,
+  sendInputToTerminal,
 }: GitActionsButtonsProps) {
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
   const gitSyncParent = useGitSyncParent()
   const updateTask = useUpdateTask()
   const killClaude = useKillClaudeInTask()
+
+  const resolveWithClaude = (prompt: string) => {
+    if (terminalId && sendInputToTerminal) {
+      sendInputToTerminal(terminalId, prompt)
+      toast.info('Sent to Claude Code')
+    } else {
+      toast.error('No terminal available')
+    }
+  }
 
   const handleSync = async () => {
     try {
@@ -45,7 +58,15 @@ export function GitActionsButtons({
       toast.success('Synced from main')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync failed'
-      toast.error(errorMessage)
+      const branch = baseBranch || 'main'
+      toast.error(errorMessage, {
+        action: terminalId && sendInputToTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Rebase this worktree onto the parent repo's ${branch} branch. Error: "${errorMessage}". Steps: 1) Check for uncommitted changes - stash or commit them first, 2) git fetch origin (in parent repo at ${repoPath}) to ensure ${branch} is current, 3) git rebase ${branch} (in worktree), 4) Resolve any conflicts carefully - do not lose functionality or introduce regressions, 5) If stashed, git stash pop. Worktree: ${worktreePath}, Parent repo: ${repoPath}.`
+          ),
+        } : undefined,
+      })
     }
   }
 
@@ -66,7 +87,15 @@ export function GitActionsButtons({
       })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Merge failed'
-      toast.error(errorMessage)
+      const branch = baseBranch || 'main'
+      toast.error(errorMessage, {
+        action: terminalId && sendInputToTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Merge this worktree's branch into the parent repo's ${branch}. Error: "${errorMessage}". Steps: 1) Ensure all changes in worktree are committed, 2) In parent repo at ${repoPath}, checkout ${branch} and pull latest from origin, 3) Merge the worktree branch into ${branch}, 4) Resolve any conflicts carefully - do not lose functionality or introduce regressions, 5) Push ${branch} to origin. Worktree: ${worktreePath}, Parent repo: ${repoPath}.`
+          ),
+        } : undefined,
+      })
     }
   }
 
@@ -79,7 +108,21 @@ export function GitActionsButtons({
       toast.success('Parent synced with origin')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync parent failed'
-      toast.error(errorMessage)
+      const branch = baseBranch || 'main'
+      toast.error(errorMessage, {
+        action: terminalId && sendInputToTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Sync the parent repo's ${branch} branch with origin. Error: "${errorMessage}". Steps: 1) git fetch origin, 2) git pull origin ${branch} --ff-only, 3) If that fails, rebase with git rebase origin/${branch}, 4) Resolve any conflicts carefully - do not lose functionality or introduce regressions, 5) Once in sync, git push origin ${branch}. Work in the parent repo at ${repoPath}, not the worktree.`
+          ),
+        } : undefined,
+      })
+    }
+  }
+
+  const handleCommit = () => {
+    if (terminalId && sendInputToTerminal) {
+      sendInputToTerminal(terminalId, 'commit')
     }
   }
 
@@ -126,6 +169,16 @@ export function GitActionsButtons({
             />
             Sync parent with origin
           </DropdownMenuItem>
+          {terminalId && sendInputToTerminal && (
+            <DropdownMenuItem onClick={handleCommit}>
+              <HugeiconsIcon
+                icon={GitCommitIcon}
+                size={12}
+                strokeWidth={2}
+              />
+              Commit
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     )
@@ -180,6 +233,22 @@ export function GitActionsButtons({
           className={gitSyncParent.isPending ? 'animate-spin' : ''}
         />
       </Button>
+
+      {terminalId && sendInputToTerminal && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={handleCommit}
+          className="h-5 w-5 text-muted-foreground hover:text-foreground"
+          title="Commit"
+        >
+          <HugeiconsIcon
+            icon={GitCommitIcon}
+            size={12}
+            strokeWidth={2}
+          />
+        </Button>
+      )}
     </>
   )
 }
