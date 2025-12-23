@@ -138,10 +138,28 @@ vibora current-task linear https://linear.app/team/issue/TEAM-123
 # Update task status when work is complete
 vibora current-task review    # Ready for review
 vibora current-task done      # Task complete
+
+# Send a notification to the user
+vibora notify "Title" "Message body"
 \`\`\`
 
 When you create a PR for this work, run \`vibora current-task pr <url>\` to link it.
 The task will automatically complete when the PR is merged.
+
+### Notifications
+
+All \`vibora current-task\` status changes automatically send notifications, so use those for status updates:
+
+\`\`\`bash
+vibora current-task review    # Notifies: "Task Ready for Review"
+vibora current-task done      # Notifies: "Task Completed"
+\`\`\`
+
+For other communications (questions, issues, or anything not a status change), use:
+
+\`\`\`bash
+vibora notify "Title" "Message body"
+\`\`\`
 `
 
   // Handle CLAUDE.local.md - create or append

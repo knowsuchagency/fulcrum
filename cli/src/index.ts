@@ -9,7 +9,8 @@ import { handleGitCommand } from './commands/git'
 import { handleWorktreesCommand } from './commands/worktrees'
 import { handleConfigCommand } from './commands/config'
 import { handleHealthCommand } from './commands/health'
-import { handleHooksCommand } from './commands/hooks'
+import { handleNotificationsCommand } from './commands/notifications'
+import { handleNotifyCommand } from './commands/notify'
 import { outputError, setPrettyOutput } from './utils/output'
 import { CliError, ExitCodes } from './utils/errors'
 
@@ -108,9 +109,14 @@ Commands:
   config get <key>          Get a config value
   config set <key> <value>  Set a config value
 
-  hooks install             Install Claude Code Stop hook
-  hooks uninstall           Remove Claude Code Stop hook
-  hooks status              Check if Stop hook is installed
+  notifications             Show notification settings
+  notifications enable      Enable notifications
+  notifications disable     Disable notifications
+  notifications test <ch>   Test a channel (sound, slack, discord, pushover)
+  notifications set <ch> <key> <value>
+                            Set a channel config (e.g., slack webhookUrl <url>)
+
+  notify <title> [message]  Send a notification to all enabled channels
 
   health                    Check server health
 
@@ -182,9 +188,14 @@ Examples:
         break
       }
 
-      case 'hooks': {
-        const [action, ...hooksRest] = rest
-        await handleHooksCommand(action, hooksRest, flags)
+      case 'notifications': {
+        const [action, ...notificationsRest] = rest
+        await handleNotificationsCommand(action, notificationsRest, flags)
+        break
+      }
+
+      case 'notify': {
+        await handleNotifyCommand(rest, flags)
         break
       }
 
