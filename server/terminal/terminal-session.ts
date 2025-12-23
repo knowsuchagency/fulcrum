@@ -66,6 +66,10 @@ export class TerminalSession {
   private onData: (data: string) => void
   private onExit: (exitCode: number) => void
 
+  // Flag to indicate we're intentionally detaching (not exiting)
+  // Prevents race condition where onExit marks terminal as exited during graceful detach
+  private isDetaching = false
+
   // Tab association
   private _tabId?: string
   private _positionInTab: number
@@ -191,6 +195,12 @@ export class TerminalSession {
 
     this.pty.onExit(({ exitCode }) => {
       this.pty = null
+
+      // If we're intentionally detaching, don't mark as exited
+      if (this.isDetaching) {
+        return
+      }
+
       const dtach = getDtachService()
 
       if (!dtach.hasSession(this.id)) {
@@ -209,8 +219,12 @@ export class TerminalSession {
     this.buffer.saveToDisk()
 
     if (this.pty) {
+      // Set flag BEFORE killing to prevent onExit from marking as exited
+      this.isDetaching = true
       this.pty.kill()
       this.pty = null
+      // Reset flag after kill completes
+      this.isDetaching = false
     }
   }
 

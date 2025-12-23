@@ -908,6 +908,11 @@ async function fetchClaudeUsage(token: string): Promise<ClaudeUsageResponse> {
 monitoringRoutes.get('/claude-usage', async (c) => {
   const now = Date.now()
 
+  // Return cached result if still fresh
+  if (cachedUsage && now - usageCacheTimestamp < USAGE_CACHE_MS) {
+    return c.json(cachedUsage)
+  }
+
   // Check if z.ai is enabled
   const zaiSettings = getZAiSettings()
 
