@@ -397,7 +397,7 @@ function TaskView() {
               <>
                 <span className="text-muted-foreground/50">•</span>
                 <a
-                  href={task.linearTicketUrl}
+                  href={linearTicket?.url ?? task.linearTicketUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
