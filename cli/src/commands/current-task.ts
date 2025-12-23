@@ -5,6 +5,7 @@ import type { TaskStatus } from '@shared/types'
 
 const STATUS_MAP: Record<string, TaskStatus> = {
   review: 'IN_REVIEW',
+  done: 'DONE',
   cancel: 'CANCELED',
   'in-progress': 'IN_PROGRESS',
 }
@@ -103,7 +104,7 @@ export async function handleCurrentTaskCommand(
   if (!newStatus) {
     throw new CliError(
       'INVALID_ACTION',
-      `Unknown action: ${action}. Valid actions: review, cancel, in-progress, pr, linear`,
+      `Unknown action: ${action}. Valid actions: in-progress, review, done, cancel, pr, linear`,
       ExitCodes.INVALID_ARGS
     )
   }

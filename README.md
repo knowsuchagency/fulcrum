@@ -2,14 +2,11 @@
 
 ![vibora](https://github.com/user-attachments/assets/fed72bab-0e66-42f3-91ac-8e024372685c)
 
-
 The Vibe Engineer's Cockpit. Vibora marries basic project management with actual software development by embedding terminals directly into the workflow.
-
-Available in English and Chinese. Works with [z.ai](https://z.ai) for Claude Code proxy integration.
 
 ## Philosophy
 
-- **Terminal-first AI agent orchestration** — Agents (Claude Code, Codex, etc.) run in terminals as-is. No abstraction layer, no wrapper APIs, no feature parity maintenance as agents evolve.
+- **Claude Code first** — Built for developers who prefer working in the terminal with CLI agents. Vibora is designed with Claude Code in mind, though it works with other CLI agents (Codex, Gemini CLI, etc.). No abstraction layer, no wrapper APIs—agents run in terminals as-is.
 - **Opinionated with few opinions** — Provides structure without dictating workflow.
 - **Git worktree isolation** — Tasks create isolated git worktrees, with architecture supporting evolution toward more general task types.
 
@@ -21,112 +18,143 @@ Requires [Node.js](https://nodejs.org/). Run the latest vibora with a single com
 npx vibora@latest up
 ```
 
-This starts the vibora server as a daemon. Open http://localhost:3333 in your browser. The `up` command will help you install any missing dependencies.
+This starts the Vibora server as a daemon. Open http://localhost:3333 in your browser. The `up` command will help you install any missing dependencies.
 
 ```bash
 npx vibora@latest down    # Stop the server
 npx vibora@latest status  # Check if running
 ```
 
-## Tech Stack
-
-- **Frontend**: React 19, TanStack Router & Query, xterm.js, Tailwind CSS, shadcn/ui (v4 with baseui support)
-- **Backend**: Hono.js on Bun, SQLite with Drizzle ORM, WebSocket for terminal I/O
-
 ## Configuration
 
-Settings are stored in `.vibora/settings.json`.
+Settings are stored in `.vibora/settings.json`. The vibora directory is resolved in this order:
+
+1. `VIBORA_DIR` environment variable (explicit override)
+2. `.vibora` in current working directory (per-worktree isolation)
+3. `~/.vibora` (default)
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
-| (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
 | port | `PORT` | 3333 |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
 | taskCreationCommand | `VIBORA_TASK_CREATION_COMMAND` | `claude --dangerously-skip-permissions` |
 | hostname | `VIBORA_HOSTNAME` | (empty) |
 | sshPort | `VIBORA_SSH_PORT` | 22 |
+| basicAuthUsername | `VIBORA_BASIC_AUTH_USERNAME` | null |
+| basicAuthPassword | `VIBORA_BASIC_AUTH_PASSWORD` | null |
 | linearApiKey | `LINEAR_API_KEY` | null |
 | githubPat | `GITHUB_PAT` | null |
+| language | — | null (auto-detect) |
 
-Notification settings (sound, Slack, Discord, Pushover) are configured via the Settings UI and stored in `settings.json`.
+Notification settings (sound, Slack, Discord, Pushover) are configured via the Settings UI or CLI and stored in `settings.json`.
 
 Precedence: environment variable → settings.json → default
 
-## Development
+### Linear Integration
 
-### Prerequisites
-
-- [mise](https://mise.jdx.dev/) for task running and tool management
-- [Bun](https://bun.sh/) (installed automatically via mise)
-
-### Development
+Vibora can sync task status with Linear tickets. Configure `linearApiKey` in settings or set the `LINEAR_API_KEY` environment variable.
 
 ```bash
-# Install tools and dependencies
-mise install
-
-# Start both frontend and backend (recommended)
-mise run dev
-
-# Or run separately:
-mise run server    # Backend (port 3333, with auto-reload)
-mise run client    # Frontend (port 5173, proxies to backend)
+# Link current task to a Linear ticket
+vibora current-task linear https://linear.app/team/issue/TEAM-123
 ```
 
-### Available Tasks
+When a task status changes in Vibora, the linked Linear ticket status is updated automatically.
 
-```bash
-mise run dev          # Start frontend and backend dev servers
-mise run server       # Start backend dev server with auto-reload
-mise run client       # Start frontend dev server
-mise run build        # Build for production
-mise run start        # Run production server
-mise run lint         # Run ESLint
-mise run preview      # Preview production build
+### Basic Auth
 
-# Database operations
-mise run db:push      # Sync schema to database
-mise run db:studio    # Open Drizzle Studio GUI
-mise run db:generate  # Generate migrations
-mise run db:migrate   # Apply migrations
-```
+Set `basicAuthUsername` and `basicAuthPassword` (via settings or environment variables) to require authentication. Useful when exposing Vibora over a network.
 
 ## CLI
 
 The CLI lets AI agents (like Claude Code) working inside task worktrees query and update task status.
 
-### Usage
+### Server Management
 
 ```bash
-# Get current task (auto-detected from worktree path)
-vibora current-task
-
-# Update task status
-vibora current-task in-progress  # Mark as IN_PROGRESS
-vibora current-task review       # Mark as IN_REVIEW
-vibora current-task done         # Mark as DONE
-vibora current-task cancel       # Mark as CANCELLED
-
-# Server management
 vibora up                        # Start server daemon
 vibora down                      # Stop server
 vibora status                    # Check server status
-
-# Task management
-vibora tasks list                # List all tasks
-vibora tasks get <id>            # Get task by ID
-
-# Git operations
-vibora git status                # Git status for current worktree
-vibora git diff                  # Git diff for current worktree
+vibora health                    # Check server health
 ```
 
-### Options
+### Current Task (auto-detected from worktree)
 
 ```bash
---port=<port>   # Server port (default: 3333)
---pretty        # Pretty-print JSON output
+vibora current-task              # Get current task info
+vibora current-task in-progress  # Mark as IN_PROGRESS
+vibora current-task review       # Mark as IN_REVIEW
+vibora current-task done         # Mark as DONE
+vibora current-task cancel       # Mark as CANCELED
+vibora current-task pr <url>     # Associate a PR with current task
+vibora current-task linear <url> # Link to a Linear ticket
 ```
+
+### Task Management
+
+```bash
+vibora tasks list                # List all tasks
+vibora tasks get <id>            # Get task by ID
+vibora tasks create              # Create a new task
+vibora tasks update <id>         # Update a task
+vibora tasks move <id>           # Move task to different status
+vibora tasks delete <id>         # Delete a task
+```
+
+### Git Operations
+
+```bash
+vibora git status                # Git status for current worktree
+vibora git diff                  # Git diff for current worktree
+vibora git branches              # List branches in a repo
+```
+
+### Worktrees
+
+```bash
+vibora worktrees list            # List all worktrees
+vibora worktrees delete          # Delete a worktree
+```
+
+### Configuration
+
+```bash
+vibora config get <key>          # Get a config value
+vibora config set <key> <value>  # Set a config value
+```
+
+### Notifications
+
+```bash
+vibora notifications             # Show notification settings
+vibora notifications enable      # Enable notifications
+vibora notifications disable     # Disable notifications
+vibora notifications test <ch>   # Test a channel (sound, slack, discord, pushover)
+vibora notifications set <ch> <key> <value>
+                                 # Set a channel config
+
+vibora notify <title> [message]  # Send a notification to all enabled channels
+```
+
+### Global Options
+
+```bash
+--port=<port>     # Server port (default: 3333)
+--url=<url>       # Override full server URL
+--pretty          # Pretty-print JSON output
+```
+
+## Internationalization
+
+Available in English and Chinese. Set the `language` setting or let it auto-detect from your browser.
+
+## z.ai Integration
+
+Works with [z.ai](https://z.ai) for Claude Code proxy integration. Configure via the Settings UI.
+
+## Development
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, architecture, and contributing guidelines.
 
 ## License
 
