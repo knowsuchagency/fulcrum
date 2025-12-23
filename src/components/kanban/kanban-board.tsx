@@ -69,13 +69,14 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
   const { activeTask } = useDrag()
   const [activeTab, setActiveTab] = useState<TaskStatus>('IN_PROGRESS')
 
-  // Filter tasks by repo and search query
+  // Filter tasks by repo and search query, sort by latest first
   const tasks = useMemo(() => {
     let filtered = allTasks
     if (repoFilter) {
       filtered = filtered.filter((t) => t.repoName === repoFilter)
     }
     if (searchQuery?.trim()) {
+      // When searching, sort by fuzzy score
       filtered = filtered
         .map((t) => ({
           task: t,
@@ -90,6 +91,11 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
         .filter(({ score }) => score > 0)
         .sort((a, b) => b.score - a.score)
         .map(({ task }) => task)
+    } else {
+      // Default sort: newest first
+      filtered = [...filtered].sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
     }
     return filtered
   }, [allTasks, repoFilter, searchQuery])
