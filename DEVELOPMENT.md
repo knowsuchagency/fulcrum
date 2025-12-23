@@ -161,11 +161,13 @@ systemctl --user enable vibora-dev
 
 ### First Start
 
-The service automatically builds Vibora on start, so just run:
+The service automatically stops any existing Vibora instance and builds before starting, so just run:
 
 ```bash
 systemctl --user start vibora-dev
 ```
+
+This is safe to run even if Vibora is already running via `mise run up` - the service will stop it first.
 
 ### Manual Operations
 
