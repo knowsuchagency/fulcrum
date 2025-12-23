@@ -161,11 +161,9 @@ systemctl --user enable vibora-dev
 
 ### First Start
 
-Before starting the service for the first time, build Vibora:
+The service automatically builds Vibora on start, so just run:
 
 ```bash
-cd ~/projects/vibora
-mise run build
 systemctl --user start vibora-dev
 ```
 
@@ -192,11 +190,12 @@ journalctl --user -u vibora-dev -f
 
 When running in developer mode, the Settings page shows a "Restart Vibora" button. Clicking it:
 
-1. **Builds first**: Runs `mise run build` in `~/projects/vibora`
+1. **Pre-flight build**: Runs `mise run build` to verify the code compiles
 2. **Fails safely**: If the build fails, the server continues running and an error is shown
 3. **Restarts on success**: If the build succeeds, triggers `systemctl --user restart vibora-dev`
+4. **Service rebuilds**: The systemd service runs the build again on start (this is fast since nothing changed)
 
-This ensures you never accidentally take down the server with a broken build.
+This two-phase approach ensures you never accidentally take down the server with a broken build.
 
 ### Restarting from the CLI
 
