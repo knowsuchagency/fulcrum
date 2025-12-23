@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
-import { readdirSync, readFileSync, readlinkSync } from 'fs'
+import { readdirSync, readFileSync, readlinkSync, existsSync } from 'fs'
 import { execSync } from 'child_process'
+import { homedir } from 'os'
+import { join } from 'path'
 import { db, tasks } from '../db'
 import { getPTYManager } from '../terminal/pty-instance'
 import { getDtachService } from '../terminal/dtach-service'
@@ -759,4 +761,177 @@ monitoringRoutes.post('/vibora-instances/:pid/kill', async (c) => {
     viboraDir: group.viboraDir,
     port: group.port,
   })
+})
+
+// Claude Code Usage Limits
+interface UsageBlock {
+  percentUsed: number
+  resetAt: string
+  isOverLimit: boolean
+}
+
+interface ClaudeUsageResponse {
+  available: boolean
+  fiveHour: (UsageBlock & { timeRemainingMinutes: number }) | null
+  sevenDay: (UsageBlock & { weekProgressPercent: number }) | null
+  sevenDayOpus: UsageBlock | null
+  sevenDaySonnet: UsageBlock | null
+  error?: string
+}
+
+// Cache for Claude usage data
+let cachedUsage: ClaudeUsageResponse | null = null
+let usageCacheTimestamp = 0
+const USAGE_CACHE_MS = 15 * 1000 // 15 seconds
+
+// Get OAuth token from Claude Code credentials
+async function getClaudeOAuthToken(): Promise<string | null> {
+  // Primary location: ~/.claude/.credentials.json
+  const primaryPath = join(homedir(), '.claude', '.credentials.json')
+  try {
+    if (existsSync(primaryPath)) {
+      const content = readFileSync(primaryPath, 'utf-8')
+      const config = JSON.parse(content)
+      if (config.claudeAiOauth && typeof config.claudeAiOauth === 'object') {
+        const token = config.claudeAiOauth.accessToken
+        if (token && typeof token === 'string' && token.startsWith('sk-ant-oat')) {
+          return token
+        }
+      }
+    }
+  } catch {
+    // File doesn't exist or is invalid
+  }
+
+  // Fallback: try secret-tool (GNOME Keyring)
+  try {
+    const result = execSync('secret-tool lookup service "Claude Code"', {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const token = result.trim()
+    if (token && token.startsWith('sk-ant-oat')) {
+      return token
+    }
+  } catch {
+    // secret-tool not available or no credential found
+  }
+
+  return null
+}
+
+// Fetch usage from Anthropic API
+async function fetchClaudeUsage(token: string): Promise<ClaudeUsageResponse> {
+  try {
+    const response = await fetch('https://api.anthropic.com/api/oauth/usage', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'vibora/1.0.0',
+        Authorization: `Bearer ${token}`,
+        'anthropic-beta': 'oauth-2025-04-20',
+      },
+    })
+
+    if (!response.ok) {
+      return { available: false, fiveHour: null, sevenDay: null, sevenDayOpus: null, sevenDaySonnet: null, error: `API returned ${response.status}` }
+    }
+
+    const data = await response.json() as {
+      five_hour?: { resets_at?: string; utilization?: number }
+      seven_day?: { resets_at?: string; utilization?: number }
+      seven_day_opus?: { resets_at?: string; utilization?: number } | null
+      seven_day_sonnet?: { resets_at?: string; utilization?: number } | null
+    }
+
+    const parseBlock = (block?: { resets_at?: string; utilization?: number }): UsageBlock | null => {
+      if (!block) return null
+      return {
+        percentUsed: block.utilization ?? 0,
+        resetAt: block.resets_at || new Date().toISOString(),
+        isOverLimit: (block.utilization ?? 0) >= 100,
+      }
+    }
+
+    const fiveHour = parseBlock(data.five_hour)
+    const sevenDay = parseBlock(data.seven_day)
+
+    // Calculate time remaining for 5-hour block
+    let fiveHourWithTime: (UsageBlock & { timeRemainingMinutes: number }) | null = null
+    if (fiveHour) {
+      const now = new Date()
+      const resetAt = new Date(fiveHour.resetAt)
+      const timeRemainingMinutes = Math.max(0, Math.round((resetAt.getTime() - now.getTime()) / (1000 * 60)))
+      fiveHourWithTime = { ...fiveHour, timeRemainingMinutes }
+    }
+
+    // Calculate week progress for 7-day limit
+    let sevenDayWithProgress: (UsageBlock & { weekProgressPercent: number }) | null = null
+    if (sevenDay) {
+      const now = new Date()
+      const resetAt = new Date(sevenDay.resetAt)
+      const periodStart = new Date(resetAt)
+      periodStart.setDate(periodStart.getDate() - 7)
+
+      let weekProgressPercent: number
+      if (now > resetAt) {
+        // We're past reset, calculate from reset as new period start
+        const newResetAt = new Date(resetAt)
+        newResetAt.setDate(newResetAt.getDate() + 7)
+        const totalMs = newResetAt.getTime() - resetAt.getTime()
+        const elapsedMs = now.getTime() - resetAt.getTime()
+        weekProgressPercent = Math.round((elapsedMs / totalMs) * 100)
+      } else {
+        const totalMs = resetAt.getTime() - periodStart.getTime()
+        const elapsedMs = now.getTime() - periodStart.getTime()
+        weekProgressPercent = Math.max(0, Math.min(100, Math.round((elapsedMs / totalMs) * 100)))
+      }
+      sevenDayWithProgress = { ...sevenDay, weekProgressPercent }
+    }
+
+    return {
+      available: true,
+      fiveHour: fiveHourWithTime,
+      sevenDay: sevenDayWithProgress,
+      sevenDayOpus: parseBlock(data.seven_day_opus ?? undefined),
+      sevenDaySonnet: parseBlock(data.seven_day_sonnet ?? undefined),
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { available: false, fiveHour: null, sevenDay: null, sevenDayOpus: null, sevenDaySonnet: null, error: message }
+  }
+}
+
+// GET /api/monitoring/claude-usage
+monitoringRoutes.get('/claude-usage', async (c) => {
+  const now = Date.now()
+
+  // Return cached data if still fresh
+  if (cachedUsage && (now - usageCacheTimestamp) < USAGE_CACHE_MS) {
+    return c.json(cachedUsage)
+  }
+
+  // Get OAuth token
+  const token = await getClaudeOAuthToken()
+  if (!token) {
+    const response: ClaudeUsageResponse = {
+      available: false,
+      fiveHour: null,
+      sevenDay: null,
+      sevenDayOpus: null,
+      sevenDaySonnet: null,
+      error: 'No Claude Code OAuth token found',
+    }
+    return c.json(response)
+  }
+
+  // Fetch usage from API
+  const usage = await fetchClaudeUsage(token)
+
+  // Cache the result
+  cachedUsage = usage
+  usageCacheTimestamp = now
+
+  return c.json(usage)
 })

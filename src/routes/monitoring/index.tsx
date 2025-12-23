@@ -19,6 +19,7 @@ import {
   useDockerStats,
   useViboraInstances,
   useKillViboraInstance,
+  useClaudeUsage,
   formatBytes,
   formatTimeWindow,
   type TimeWindow,
@@ -26,6 +27,7 @@ import {
   type ClaudeInstance,
   type ProcessSortBy,
   type ViboraInstanceGroup,
+  type ClaudeUsageResponse,
 } from '@/hooks/use-monitoring'
 
 export const Route = createFileRoute('/monitoring/')({
@@ -630,6 +632,165 @@ function ViboraInstancesTab() {
   )
 }
 
+// Helper to get color class based on usage percentage
+function getUsageColor(percent: number): string {
+  if (percent >= 90) return 'bg-red-500'
+  if (percent >= 70) return 'bg-yellow-500'
+  return 'bg-green-500'
+}
+
+// Helper to get text color class based on usage percentage
+function getUsageTextColor(percent: number): string {
+  if (percent >= 90) return 'text-red-500'
+  if (percent >= 70) return 'text-yellow-500'
+  return 'text-green-500'
+}
+
+// Helper to format time remaining
+function formatTimeRemaining(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+}
+
+// Helper to format reset date
+function formatResetDate(resetAt: string): string {
+  const date = new Date(resetAt)
+  const now = new Date()
+  const diffMs = date.getTime() - now.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } else if (diffDays === 1) {
+    return `Tomorrow ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+  }
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function ClaudeUsageLimitsTab() {
+  const { t } = useTranslation('monitoring')
+  const { data: usage, isLoading, error } = useClaudeUsage()
+
+  return (
+    <div className="space-y-4">
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <HugeiconsIcon icon={Loading03Icon} className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          {t('usage.error', { message: error.message })}
+        </div>
+      )}
+
+      {usage && !usage.available && (
+        <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-600 dark:text-yellow-400">
+          {usage.error || t('usage.unavailable')}
+        </div>
+      )}
+
+      {usage && usage.available && (
+        <div className="space-y-3">
+          {/* 5-Hour Block */}
+          {usage.fiveHour && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium">{t('usage.fiveHourBlock')}</h3>
+                <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.fiveHour.percentUsed)}`}>
+                  {usage.fiveHour.percentUsed.toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={`h-full transition-all ${getUsageColor(usage.fiveHour.percentUsed)}`}
+                  style={{ width: `${Math.min(usage.fiveHour.percentUsed, 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('usage.resetsIn', { time: formatTimeRemaining(usage.fiveHour.timeRemainingMinutes) })}
+              </p>
+            </Card>
+          )}
+
+          {/* 7-Day Rolling */}
+          {usage.sevenDay && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium">{t('usage.sevenDayRolling')}</h3>
+                <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.sevenDay.percentUsed)}`}>
+                  {usage.sevenDay.percentUsed.toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={`h-full transition-all ${getUsageColor(usage.sevenDay.percentUsed)}`}
+                  style={{ width: `${Math.min(usage.sevenDay.percentUsed, 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('usage.resetsAt', { time: formatResetDate(usage.sevenDay.resetAt) })}
+                {' · '}
+                {t('usage.weekProgress', { percent: usage.sevenDay.weekProgressPercent })}
+              </p>
+            </Card>
+          )}
+
+          {/* Model-specific limits (Opus/Sonnet) */}
+          {(usage.sevenDayOpus || usage.sevenDaySonnet) && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {usage.sevenDayOpus && (
+                <Card className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium">{t('usage.opusWeekly')}</h3>
+                    <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.sevenDayOpus.percentUsed)}`}>
+                      {usage.sevenDayOpus.percentUsed.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full transition-all ${getUsageColor(usage.sevenDayOpus.percentUsed)}`}
+                      style={{ width: `${Math.min(usage.sevenDayOpus.percentUsed, 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('usage.resetsAt', { time: formatResetDate(usage.sevenDayOpus.resetAt) })}
+                  </p>
+                </Card>
+              )}
+
+              {usage.sevenDaySonnet && (
+                <Card className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium">{t('usage.sonnetWeekly')}</h3>
+                    <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.sevenDaySonnet.percentUsed)}`}>
+                      {usage.sevenDaySonnet.percentUsed.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full transition-all ${getUsageColor(usage.sevenDaySonnet.percentUsed)}`}
+                      style={{ width: `${Math.min(usage.sevenDaySonnet.percentUsed, 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('usage.resetsAt', { time: formatResetDate(usage.sevenDaySonnet.resetAt) })}
+                  </p>
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MonitoringPage() {
   const { t } = useTranslation('monitoring')
 
@@ -644,6 +805,7 @@ function MonitoringPage() {
             <TabsTrigger value="processes">{t('tabs.processes')}</TabsTrigger>
             <TabsTrigger value="claude">{t('tabs.claude')}</TabsTrigger>
             <TabsTrigger value="vibora">{t('tabs.vibora')}</TabsTrigger>
+            <TabsTrigger value="usage">{t('tabs.usage')}</TabsTrigger>
           </TabsList>
         </div>
 
@@ -661,6 +823,10 @@ function MonitoringPage() {
 
         <TabsContent value="vibora" className="flex-1 overflow-auto pt-4">
           <ViboraInstancesTab />
+        </TabsContent>
+
+        <TabsContent value="usage" className="flex-1 overflow-auto pt-4">
+          <ClaudeUsageLimitsTab />
         </TabsContent>
       </Tabs>
     </div>
