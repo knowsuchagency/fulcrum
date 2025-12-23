@@ -40,11 +40,13 @@ import {
   CommandLineIcon,
   Copy01Icon,
   VisualStudioCodeIcon,
+  Task01Icon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { useDefaultGitReposDir, useHostname, useSshPort } from '@/hooks/use-config'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
 import type { Repository } from '@/types'
+import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
 export const Route = createFileRoute('/repositories/')({
   component: RepositoriesView,
@@ -53,9 +55,11 @@ export const Route = createFileRoute('/repositories/')({
 function RepositoryCard({
   repository,
   onDelete,
+  onStartTask,
 }: {
   repository: Repository
   onDelete: () => Promise<void>
+  onStartTask: () => void
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -67,6 +71,12 @@ function RepositoryCard({
     e.stopPropagation()
     const url = buildVSCodeUrl(repository.path, hostname, sshPort)
     window.open(url, '_blank')
+  }
+
+  const handleStartTask = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onStartTask()
   }
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -91,6 +101,7 @@ function RepositoryCard({
             <div className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate font-medium">{repository.displayName}</span>
               <div className="flex shrink-0 gap-1">
+                <div className="size-6" />
                 <div className="size-6" />
                 <div className="size-6" />
               </div>
@@ -126,6 +137,16 @@ function RepositoryCard({
       </Link>
 
       <div className="absolute right-3 top-3 flex gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleStartTask}
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+          title="Start Task"
+        >
+          <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
+        </Button>
+
         <Button
           variant="ghost"
           size="icon-sm"
@@ -326,6 +347,7 @@ function CreateRepositoryDialog() {
 function RepositoriesView() {
   const { data: repositories, isLoading, error } = useRepositories()
   const deleteRepository = useDeleteRepository()
+  const [taskModalRepo, setTaskModalRepo] = useState<Repository | null>(null)
 
   const handleDelete = async (id: string) => {
     await deleteRepository.mutateAsync(id)
@@ -377,10 +399,17 @@ function RepositoriesView() {
               key={repo.id}
               repository={repo}
               onDelete={() => handleDelete(repo.id)}
+              onStartTask={() => setTaskModalRepo(repo)}
             />
           ))}
         </div>
       </div>
+
+      <CreateTaskModal
+        open={taskModalRepo !== null}
+        onOpenChange={(open) => !open && setTaskModalRepo(null)}
+        defaultRepository={taskModalRepo ?? undefined}
+      />
     </div>
   )
 }
