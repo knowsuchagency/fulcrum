@@ -925,6 +925,25 @@ function SettingsPage() {
                           restartVibora.mutate(undefined, {
                             onSuccess: () => {
                               setIsRestarting(true)
+                              // Poll until server is back, then reload
+                              const pollForServer = async () => {
+                                const maxAttempts = 60 // 30 seconds max
+                                for (let i = 0; i < maxAttempts; i++) {
+                                  await new Promise((r) => setTimeout(r, 500))
+                                  try {
+                                    const res = await fetch('/api/config/developer-mode')
+                                    if (res.ok) {
+                                      window.location.reload()
+                                      return
+                                    }
+                                  } catch {
+                                    // Server not ready yet, keep polling
+                                  }
+                                }
+                                // Timeout - reload anyway to show current state
+                                window.location.reload()
+                              }
+                              pollForServer()
                             },
                             onError: (error) => {
                               toast.error(t('developer.buildFailed'), {
