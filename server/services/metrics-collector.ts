@@ -1,4 +1,5 @@
 import os from 'node:os'
+import fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { db } from '../db'
 import { systemMetrics } from '../db/schema'
@@ -10,6 +11,63 @@ const RETENTION_HOURS = 24
 interface CpuSnapshot {
   idle: number
   total: number
+}
+
+interface MemoryInfo {
+  total: number
+  used: number // Actual used (excluding cache/buffers)
+  cache: number // Cache + Buffers
+}
+
+// Parse /proc/meminfo for accurate memory breakdown on Linux
+// Returns memory values in bytes
+function getMemoryInfo(): MemoryInfo {
+  const total = os.totalmem()
+
+  // Try to parse /proc/meminfo for accurate Linux memory stats
+  try {
+    const meminfo = fs.readFileSync('/proc/meminfo', 'utf-8')
+    const values: Record<string, number> = {}
+
+    for (const line of meminfo.split('\n')) {
+      const match = line.match(/^(\w+):\s+(\d+)\s+kB/)
+      if (match) {
+        values[match[1]] = parseInt(match[2], 10) * 1024 // Convert kB to bytes
+      }
+    }
+
+    const memTotal = values['MemTotal'] || total
+    const memFree = values['MemFree'] || 0
+    const buffers = values['Buffers'] || 0
+    const cached = values['Cached'] || 0
+    const sReclaimable = values['SReclaimable'] || 0
+    const shmem = values['Shmem'] || 0
+
+    // Calculate cache/buffers (like Beszel/htop)
+    // Note: gopsutil adds SReclaimable to Cached, so we do the same
+    let cacheBuffers = buffers + cached + sReclaimable - shmem
+    if (cacheBuffers < 0) {
+      cacheBuffers = 0
+    }
+
+    // Used = Total - Free - Buffers - Cached - SReclaimable + Shmem
+    // This matches htop's "used" calculation
+    const used = memTotal - memFree - buffers - cached - sReclaimable + shmem
+
+    return {
+      total: memTotal,
+      used: Math.max(used, 0),
+      cache: cacheBuffers,
+    }
+  } catch {
+    // Fallback to basic Node.js API (includes cache in "used")
+    const free = os.freemem()
+    return {
+      total,
+      used: total - free,
+      cache: 0, // Can't determine on non-Linux
+    }
+  }
 }
 
 let intervalId: ReturnType<typeof setInterval> | null = null
@@ -75,17 +133,16 @@ function getDiskUsage(): { used: number; total: number } {
 function collectMetrics(): void {
   const timestamp = Math.floor(Date.now() / 1000) // Unix timestamp in seconds
   const cpuPercent = calculateCpuPercent()
-  const memoryTotal = os.totalmem()
-  const memoryFree = os.freemem()
-  const memoryUsed = memoryTotal - memoryFree
+  const memory = getMemoryInfo()
   const disk = getDiskUsage()
 
   db.insert(systemMetrics)
     .values({
       timestamp,
       cpuPercent,
-      memoryUsedBytes: memoryUsed,
-      memoryTotalBytes: memoryTotal,
+      memoryUsedBytes: memory.used,
+      memoryTotalBytes: memory.total,
+      memoryCacheBytes: memory.cache,
       diskUsedBytes: disk.used,
       diskTotalBytes: disk.total,
     })
@@ -143,6 +200,7 @@ export function getMetrics(
   timestamp: number
   cpuPercent: number
   memoryUsedPercent: number
+  memoryCachePercent: number
   diskUsedPercent: number
 }> {
   const cutoff = Math.floor(Date.now() / 1000) - windowSeconds
@@ -158,6 +216,7 @@ export function getMetrics(
     timestamp: row.timestamp,
     cpuPercent: row.cpuPercent,
     memoryUsedPercent: row.memoryTotalBytes > 0 ? (row.memoryUsedBytes / row.memoryTotalBytes) * 100 : 0,
+    memoryCachePercent: row.memoryTotalBytes > 0 ? (row.memoryCacheBytes / row.memoryTotalBytes) * 100 : 0,
     diskUsedPercent: row.diskTotalBytes > 0 ? (row.diskUsedBytes / row.diskTotalBytes) * 100 : 0,
   }))
 }
@@ -165,12 +224,10 @@ export function getMetrics(
 // Get current system metrics (latest reading)
 export function getCurrentMetrics(): {
   cpu: number
-  memory: { total: number; used: number; usedPercent: number }
+  memory: { total: number; used: number; cache: number; usedPercent: number; cachePercent: number }
   disk: { total: number; used: number; usedPercent: number; path: string }
 } {
-  const memoryTotal = os.totalmem()
-  const memoryFree = os.freemem()
-  const memoryUsed = memoryTotal - memoryFree
+  const memory = getMemoryInfo()
   const disk = getDiskUsage()
 
   // Get most recent CPU reading from database
@@ -184,9 +241,11 @@ export function getCurrentMetrics(): {
   return {
     cpu: latest.length > 0 ? latest[0].cpuPercent : 0,
     memory: {
-      total: memoryTotal,
-      used: memoryUsed,
-      usedPercent: (memoryUsed / memoryTotal) * 100,
+      total: memory.total,
+      used: memory.used,
+      cache: memory.cache,
+      usedPercent: memory.total > 0 ? (memory.used / memory.total) * 100 : 0,
+      cachePercent: memory.total > 0 ? (memory.cache / memory.total) * 100 : 0,
     },
     disk: {
       total: disk.total,
