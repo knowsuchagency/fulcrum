@@ -27,6 +27,9 @@ esac
 new_version="$major.$minor.$patch"
 jq --arg v "$new_version" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
 echo "Bumped version: $current → $new_version"
+
+git add package.json
+git commit -m "bump ${usage_type}"
 """
 
 [tasks.dev]
