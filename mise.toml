@@ -79,21 +79,6 @@ run = "bun run drizzle-kit generate"
 description = "Apply migrations"
 run = "bun run drizzle-kit migrate"
 
-[tasks.version]
-description = "Bump version in both package.json files"
-usage = '''
-arg "<bump>" help="Version bump type: major, minor, or patch"
-'''
-run = """
-set -e
-npm version ${usage_bump} --no-git-tag-version
-cd cli && npm version ${usage_bump} --no-git-tag-version
-VERSION=$(jq -r .version package.json)
-cd ..
-echo "Bumped to $VERSION"
-echo "Run: git add package.json cli/package.json && git commit -m 'Bump version to $VERSION' && git push"
-"""
-
 # CLI tasks
 [tasks."cli"]
 description = "Run CLI command"
@@ -114,6 +99,21 @@ description = "Build CLI package for npm distribution"
 depends = ["build"]
 run = """
 set -e
+
+# Generate cli/package.json from root package.json
+echo "Generating cli/package.json..." >&2
+jq '{
+  name,
+  version,
+  description,
+  license,
+  repository: {type: "git", url: "https://github.com/knowsuchagency/vibora"},
+  homepage: "https://github.com/knowsuchagency/vibora",
+  type: "module",
+  bin: {vibora: "bin/vibora.js"},
+  files: ["bin/", "server/", "lib/", "dist/", "drizzle/", "README.md", "LICENSE"],
+  engines: {bun: ">=1.0.0"}
+}' package.json > cli/package.json
 
 # Bundle server
 echo "Bundling server..." >&2
