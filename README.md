@@ -2,13 +2,15 @@
 
 ![vibora](https://github.com/user-attachments/assets/fed72bab-0e66-42f3-91ac-8e024372685c)
 
-The Vibe Engineer's Cockpit. Vibora marries basic project management with actual software development by embedding terminals directly into the workflow.
+The Vibe Engineer's Cockpit. A terminal-first tool for orchestrating AI coding agents across isolated git worktrees.
 
 ## Philosophy
 
 - **Claude Code first** — Built for developers who prefer working in the terminal with CLI agents. Vibora is designed with Claude Code in mind, though it works with other CLI agents (Codex, Gemini CLI, etc.). No abstraction layer, no wrapper APIs—agents run in terminals as-is.
 - **Opinionated with few opinions** — Provides structure without dictating workflow.
 - **Git worktree isolation** — Tasks create isolated git worktrees, with architecture supporting evolution toward more general task types.
+- **Persistent terminals** — Named terminals organized in tabs for work that doesn't fit neatly into task worktrees.
+- **Task terminals view** — See all terminal sessions across all tasks and worktrees in a single parallel view.
 
 ## Quick Start
 

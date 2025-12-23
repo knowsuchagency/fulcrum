@@ -1,11 +1,13 @@
 ## Project Overview
 
-Vibora is the Vibe Engineer's Cockpit. It marries basic project management with actual software development by embedding terminals directly into the workflow.
+Vibora is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating AI coding agents across isolated git worktrees.
 
 **Philosophy**:
 - Terminal-first AI agent orchestration. Agents (Claude Code, Codex, etc.) run in terminals as-is—no abstraction layer, no wrapper APIs, no feature parity maintenance as agents evolve.
 - Opinionated with few opinions. Provides structure without dictating workflow.
 - Currently tasks create isolated git worktrees, but the architecture supports evolution toward more general task types (multi-repo, no-repo, etc.).
+- Persistent terminals organized in tabs for work that doesn't fit neatly into task worktrees.
+- Task terminals view shows all terminal sessions across all tasks and worktrees in a single parallel view.
 
 ## Development
 
