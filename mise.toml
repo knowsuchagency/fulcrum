@@ -8,6 +8,27 @@ run = "bun install"
 description = "Install dependencies"
 run = "bun install"
 
+[tasks.bump]
+description = "Bump version (major, minor, or patch)"
+usage = 'arg "[type]" help="Version type: major, minor, or patch" default="patch"'
+run = """
+#!/usr/bin/env bash
+set -e
+current=$(jq -r '.version' package.json)
+IFS='.' read -r major minor patch <<< "$current"
+
+case "${usage_type}" in
+  major) major=$((major + 1)); minor=0; patch=0 ;;
+  minor) minor=$((minor + 1)); patch=0 ;;
+  patch) patch=$((patch + 1)) ;;
+  *) echo "Invalid type: ${usage_type}. Use major, minor, or patch" >&2; exit 1 ;;
+esac
+
+new_version="$major.$minor.$patch"
+jq --arg v "$new_version" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+echo "Bumped version: $current → $new_version"
+"""
+
 [tasks.dev]
 description = "Start frontend and backend dev servers"
 depends = ["install"]
