@@ -8,6 +8,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: npm-publish
     permissions:
       contents: write
       id-token: write  # Required for OIDC
@@ -60,8 +61,6 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         working-directory: cli
         run: npm publish --access public --provenance
-        env:
-          NPM_CONFIG_PROVENANCE: true
 
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false'
