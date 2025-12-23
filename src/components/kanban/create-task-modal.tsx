@@ -60,9 +60,10 @@ interface CreateTaskModalProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   defaultRepository?: Repository
+  showTrigger?: boolean
 }
 
-export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRepository }: CreateTaskModalProps = {}) {
+export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRepository, showTrigger = true }: CreateTaskModalProps = {}) {
   const { t } = useTranslation('tasks')
   const { t: tc } = useTranslation('common')
   const [internalOpen, setInternalOpen] = useState(false)
@@ -238,10 +239,12 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<Button size="sm" />}>
-          <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-          {t('newTask')}
-        </DialogTrigger>
+        {showTrigger && (
+          <DialogTrigger render={<Button size="sm" />}>
+            <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+            {t('newTask')}
+          </DialogTrigger>
+        )}
         <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col overflow-hidden">
           <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
             <DialogHeader className="shrink-0">

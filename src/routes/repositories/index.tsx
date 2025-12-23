@@ -409,6 +409,7 @@ function RepositoriesView() {
         open={taskModalRepo !== null}
         onOpenChange={(open) => !open && setTaskModalRepo(null)}
         defaultRepository={taskModalRepo ?? undefined}
+        showTrigger={false}
       />
     </div>
   )
