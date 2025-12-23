@@ -14,6 +14,7 @@ export interface Settings {
   basicAuthPassword: string | null
   linearApiKey: string | null
   githubPat: string | null
+  language: 'en' | 'zh' | null // null = auto-detect from browser
 }
 
 // Default settings
@@ -27,6 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
   basicAuthPassword: null,
   linearApiKey: null,
   githubPat: null,
+  language: null,
 }
 
 // Expand tilde in path and ensure absolute path
@@ -135,6 +137,7 @@ export function getSettings(): Settings {
     basicAuthPassword: parsed.basicAuthPassword ?? null,
     linearApiKey: parsed.linearApiKey ?? null,
     githubPat: parsed.githubPat ?? null,
+    language: parsed.language ?? null,
   }
 
   // Persist missing keys back to file (only file settings, not env overrides)
@@ -157,6 +160,7 @@ export function getSettings(): Settings {
     basicAuthPassword: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.basicAuthPassword,
     linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.linearApiKey,
     githubPat: process.env.GITHUB_PAT ?? fileSettings.githubPat,
+    language: fileSettings.language,
   }
 }
 
@@ -285,6 +289,114 @@ export function updateNotificationSettings(updates: Partial<NotificationSettings
   }
 
   parsed.notifications = updated
+  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
+
+  return updated
+}
+
+// ==================== Claude Code Settings ====================
+// These functions manage ~/.claude/settings.json for configuring Claude Code
+
+// Get Claude settings file path
+function getClaudeSettingsPath(): string {
+  return path.join(os.homedir(), '.claude', 'settings.json')
+}
+
+// Read Claude Code settings
+export function getClaudeSettings(): Record<string, unknown> {
+  const settingsPath = getClaudeSettingsPath()
+  if (!fs.existsSync(settingsPath)) return {}
+  try {
+    return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+  } catch {
+    return {}
+  }
+}
+
+// Update Claude Code settings (merges with existing)
+export function updateClaudeSettings(updates: Record<string, unknown>): void {
+  const settingsPath = getClaudeSettingsPath()
+  const dir = path.dirname(settingsPath)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+
+  const current = getClaudeSettings()
+  const merged = { ...current, ...updates }
+  fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
+}
+
+// ==================== z.ai Settings ====================
+// These settings control the z.ai proxy integration for Claude Code
+
+export interface ZAiSettings {
+  enabled: boolean
+  apiKey: string | null
+  haikuModel: string
+  sonnetModel: string
+  opusModel: string
+}
+
+const DEFAULT_ZAI_SETTINGS: ZAiSettings = {
+  enabled: false,
+  apiKey: null,
+  haikuModel: 'glm-4.5-air',
+  sonnetModel: 'glm-4.7',
+  opusModel: 'glm-4.7',
+}
+
+// Get z.ai settings from settings.json
+export function getZAiSettings(): ZAiSettings {
+  ensureViboraDir()
+  const settingsPath = getSettingsPath()
+
+  if (!fs.existsSync(settingsPath)) {
+    return DEFAULT_ZAI_SETTINGS
+  }
+
+  try {
+    const content = fs.readFileSync(settingsPath, 'utf-8')
+    const parsed = JSON.parse(content)
+    const zai = parsed.zai as Partial<ZAiSettings> | undefined
+
+    if (!zai) {
+      return DEFAULT_ZAI_SETTINGS
+    }
+
+    return {
+      enabled: zai.enabled ?? false,
+      apiKey: zai.apiKey ?? null,
+      haikuModel: zai.haikuModel ?? DEFAULT_ZAI_SETTINGS.haikuModel,
+      sonnetModel: zai.sonnetModel ?? DEFAULT_ZAI_SETTINGS.sonnetModel,
+      opusModel: zai.opusModel ?? DEFAULT_ZAI_SETTINGS.opusModel,
+    }
+  } catch {
+    return DEFAULT_ZAI_SETTINGS
+  }
+}
+
+// Update z.ai settings
+export function updateZAiSettings(updates: Partial<ZAiSettings>): ZAiSettings {
+  ensureViboraDir()
+  const settingsPath = getSettingsPath()
+
+  let parsed: Record<string, unknown> = {}
+  if (fs.existsSync(settingsPath)) {
+    try {
+      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+    } catch {
+      // Use empty if invalid
+    }
+  }
+
+  const current = getZAiSettings()
+  const updated: ZAiSettings = {
+    enabled: updates.enabled ?? current.enabled,
+    apiKey: updates.apiKey !== undefined ? updates.apiKey : current.apiKey,
+    haikuModel: updates.haikuModel ?? current.haikuModel,
+    sonnetModel: updates.sonnetModel ?? current.sonnetModel,
+    opusModel: updates.opusModel ?? current.opusModel,
+  }
+
+  parsed.zai = updated
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
 
   return updated

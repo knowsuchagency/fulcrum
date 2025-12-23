@@ -1,0 +1,49 @@
+{
+  "buttons": {
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "reset": "Reset to default",
+    "browse": "Browse",
+    "clearFilters": "Clear filters"
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "error": "Error",
+    "calculating": "calculating...",
+    "validating": "Validating...",
+    "creating": "Creating...",
+    "deleting": "Deleting...",
+    "loggingIn": "Logging in..."
+  },
+  "time": {
+    "justNow": "just now",
+    "minuteAgo": "1 minute ago",
+    "minutesAgo": "{{count}} minutes ago",
+    "hourAgo": "1 hour ago",
+    "hoursAgo": "{{count}} hours ago",
+    "dayAgo": "1 day ago",
+    "daysAgo": "{{count}} days ago"
+  },
+  "results": {
+    "one": "{{count}} result",
+    "other": "{{count}} results"
+  },
+  "statuses": {
+    "IN_PROGRESS": "In Progress",
+    "IN_REVIEW": "In Review",
+    "DONE": "Done",
+    "CANCELED": "Canceled",
+    "ORPHANED": "Orphaned"
+  },
+  "auth": {
+    "loginTitle": "Login to Vibora",
+    "username": "Username",
+    "password": "Password",
+    "login": "Login",
+    "loginFailed": "Login failed"
+  }
+}

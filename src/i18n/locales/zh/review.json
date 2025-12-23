@@ -1,0 +1,56 @@
+{
+  "title": "审核",
+  "tabs": {
+    "pullRequests": "拉取请求",
+    "issues": "问题"
+  },
+  "filters": {
+    "pr": {
+      "created": "我创建的",
+      "assigned": "分配给我的",
+      "reviewRequested": "待我审核",
+      "mentioned": "提及我的"
+    },
+    "issue": {
+      "assigned": "分配给我的",
+      "created": "我创建的",
+      "mentioned": "提及我的"
+    },
+    "allOrgs": "所有组织",
+    "allOrganizations": "所有组织",
+    "viboraReposOnly": "仅 Vibora 仓库"
+  },
+  "github": {
+    "tokenRequired": "需要 GitHub 令牌",
+    "tokenDescription": "要查看您的问题和拉取请求，请在设置中添加 GitHub 个人访问令牌。",
+    "requiredScopes": "所需权限：",
+    "scopes": {
+      "repo": "（用于私有仓库）",
+      "readUser": "（用于用户信息）",
+      "readOrg": "（用于组织列表）"
+    },
+    "generateToken": "生成令牌",
+    "goToSettings": "前往设置"
+  },
+  "prs": {
+    "loading": "加载中...",
+    "failedToLoad": "加载拉取请求失败",
+    "empty": {
+      "all": "没有打开的拉取请求",
+      "created": "没有您创建的拉取请求",
+      "assigned": "没有分配给您的拉取请求",
+      "reviewRequested": "没有等待您审核的拉取请求",
+      "mentioned": "没有提及您的拉取请求"
+    },
+    "draft": "草稿"
+  },
+  "issues": {
+    "loading": "加载中...",
+    "failedToLoad": "加载问题失败",
+    "empty": {
+      "assigned": "没有分配给您的问题",
+      "created": "没有您创建的问题",
+      "mentioned": "没有提及您的问题"
+    }
+  }
+}

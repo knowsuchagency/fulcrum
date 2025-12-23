@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useWorktrees, useDeleteWorktree } from '@/hooks/use-worktrees'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,14 +34,6 @@ import type { Worktree, TaskStatus } from '@/types'
 
 type StatusFilter = TaskStatus | 'ORPHANED'
 
-const STATUS_LABELS: Record<StatusFilter, string> = {
-  IN_PROGRESS: 'In Progress',
-  IN_REVIEW: 'In Review',
-  DONE: 'Done',
-  CANCELED: 'Canceled',
-  ORPHANED: 'Orphaned',
-}
-
 const STATUS_BADGE_COLORS: Record<StatusFilter, string> = {
   IN_PROGRESS: 'bg-slate-400/20 text-slate-600 dark:text-slate-400',
   IN_REVIEW: 'bg-violet-400/20 text-violet-600 dark:text-violet-400',
@@ -53,25 +46,29 @@ export const Route = createFileRoute('/worktrees/')({
   component: WorktreesView,
 })
 
-function formatRelativeTime(isoDate: string): string {
-  const date = new Date(isoDate)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSecs = Math.floor(diffMs / 1000)
-  const diffMins = Math.floor(diffSecs / 60)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
+function useFormatRelativeTime() {
+  const { t } = useTranslation('common')
 
-  if (diffDays > 0) {
-    return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`
+  return (isoDate: string): string => {
+    const date = new Date(isoDate)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffSecs = Math.floor(diffMs / 1000)
+    const diffMins = Math.floor(diffSecs / 60)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffDays > 0) {
+      return diffDays === 1 ? t('time.dayAgo') : t('time.daysAgo', { count: diffDays })
+    }
+    if (diffHours > 0) {
+      return diffHours === 1 ? t('time.hourAgo') : t('time.hoursAgo', { count: diffHours })
+    }
+    if (diffMins > 0) {
+      return diffMins === 1 ? t('time.minuteAgo') : t('time.minutesAgo', { count: diffMins })
+    }
+    return t('time.justNow')
   }
-  if (diffHours > 0) {
-    return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`
-  }
-  if (diffMins > 0) {
-    return diffMins === 1 ? '1 minute ago' : `${diffMins} minutes ago`
-  }
-  return 'just now'
 }
 
 function LoadingSkeleton({ className }: { className?: string }) {
@@ -85,6 +82,9 @@ function WorktreeCard({
   worktree: Worktree
   onDelete: (worktree: Worktree, deleteLinkedTask: boolean) => Promise<void>
 }) {
+  const { t } = useTranslation('common')
+  const { t: tw } = useTranslation('worktrees')
+  const formatRelativeTime = useFormatRelativeTime()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteLinkedTask, setDeleteLinkedTask] = useState(false)
@@ -119,11 +119,11 @@ function WorktreeCard({
             <span className="truncate font-medium">{worktree.name}</span>
             {worktree.isOrphaned ? (
               <Badge className={cn('shrink-0', STATUS_BADGE_COLORS.ORPHANED)}>
-                Orphaned
+                {t('statuses.ORPHANED')}
               </Badge>
             ) : worktree.taskStatus ? (
               <Badge className={cn('shrink-0', STATUS_BADGE_COLORS[worktree.taskStatus])}>
-                {STATUS_LABELS[worktree.taskStatus]}
+                {t(`statuses.${worktree.taskStatus}`)}
               </Badge>
             ) : null}
           </div>
@@ -209,18 +209,17 @@ function WorktreeCard({
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Worktree</AlertDialogTitle>
+              <AlertDialogTitle>{tw('delete.title')}</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete the worktree directory at{' '}
+                {tw('delete.description')}{' '}
                 <span className="font-mono">{worktree.name}</span>.
                 {deleteLinkedTask && hasLinkedTask && (
                   <>
                     {' '}
-                    The linked task <span className="font-medium">"{worktree.taskTitle}"</span>{' '}
-                    will also be deleted.
+{tw('delete.linkedTaskWillBeDeleted', { title: worktree.taskTitle })}
                   </>
                 )}{' '}
-                This action cannot be undone.
+                {tw('delete.cannotUndo')}
               </AlertDialogDescription>
               {hasLinkedTask && (
                 <label className="flex items-center gap-2 text-sm text-foreground">
@@ -229,12 +228,12 @@ function WorktreeCard({
                     onCheckedChange={(checked) => setDeleteLinkedTask(checked === true)}
                     disabled={isDeleting}
                   />
-                  Also delete linked task "{worktree.taskTitle}"
+                  {tw('delete.alsoDeleteLinkedTask', { title: worktree.taskTitle })}
                 </label>
               )}
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isDeleting}>{t('buttons.cancel')}</AlertDialogCancel>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
@@ -244,7 +243,7 @@ function WorktreeCard({
                 {isDeleting && (
                   <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
                 )}
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? t('status.deleting') : t('buttons.delete')}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -257,6 +256,8 @@ function WorktreeCard({
 const ALL_STATUSES: StatusFilter[] = ['IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED', 'ORPHANED']
 
 function WorktreesView() {
+  const { t } = useTranslation('common')
+  const { t: tw } = useTranslation('worktrees')
   const { worktrees, summary, isLoading, isLoadingDetails, error, refetch } = useWorktrees()
   const deleteWorktree = useDeleteWorktree()
   const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set())
@@ -335,17 +336,17 @@ function WorktreesView() {
       <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-sm font-medium">Worktrees</h1>
+            <h1 className="text-sm font-medium">{tw('title')}</h1>
             {(summary || worktrees.length > 0) && (
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>{summary?.total ?? worktrees.length} total</span>
+                <span>{tw('summary.total', { count: summary?.total ?? worktrees.length })}</span>
                 {(summary?.orphaned ?? worktrees.filter((w) => w.isOrphaned).length) > 0 && (
                   <span className="text-destructive">
-                    {summary?.orphaned ?? worktrees.filter((w) => w.isOrphaned).length} orphaned
+                    {tw('summary.orphaned', { count: summary?.orphaned ?? worktrees.filter((w) => w.isOrphaned).length })}
                   </span>
                 )}
                 {isLoadingDetails ? (
-                  <span className="animate-pulse">calculating...</span>
+                  <span className="animate-pulse">{t('status.calculating')}</span>
                 ) : summary ? (
                   <span>{summary.totalSizeFormatted}</span>
                 ) : null}
@@ -366,15 +367,14 @@ function WorktreesView() {
                   }
                 >
                   <HugeiconsIcon icon={CleanIcon} size={12} strokeWidth={2} />
-                  Clean up ({completedWorktrees.length})
+                  {tw('cleanup.button', { count: completedWorktrees.length })}
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Completed Worktrees</AlertDialogTitle>
+                    <AlertDialogTitle>{tw('cleanup.title')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently delete {completedWorktrees.length} worktree
-                      {completedWorktrees.length !== 1 ? 's' : ''}.
-                      {bulkDeleteLinkedTasks && ' Their linked tasks will also be deleted.'}
+                      {tw('cleanup.description', { count: completedWorktrees.length })}
+                      {bulkDeleteLinkedTasks && ` ${tw('cleanup.linkedTasksWillBeDeleted')}`}
                     </AlertDialogDescription>
                     <div className="space-y-3">
                       <p className="text-sm text-muted-foreground">
@@ -383,7 +383,7 @@ function WorktreesView() {
                             <span className="font-medium text-emerald-600">
                               {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length}
                             </span>{' '}
-                            Done
+                            {tw('cleanup.done')}
                           </span>
                         )}
                         {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length > 0 && (
@@ -391,7 +391,7 @@ function WorktreesView() {
                             <span className="font-medium text-rose-600">
                               {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length}
                             </span>{' '}
-                            Canceled
+                            {tw('cleanup.canceled')}
                           </span>
                         )}
                       </p>
@@ -401,15 +401,15 @@ function WorktreesView() {
                           onCheckedChange={(checked) => setBulkDeleteLinkedTasks(checked === true)}
                           disabled={isBulkDeleting}
                         />
-                        Also delete linked tasks
+                        {tw('cleanup.alsoDeleteLinkedTasks')}
                       </label>
                       <p className="font-medium text-destructive text-xs">
-                        This action cannot be undone.
+                        {tw('cleanup.cannotUndo')}
                       </p>
                     </div>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel disabled={isBulkDeleting}>{t('buttons.cancel')}</AlertDialogCancel>
                     <Button
                       variant="destructive"
                       onClick={handleBulkDelete}
@@ -424,7 +424,7 @@ function WorktreesView() {
                           className="animate-spin"
                         />
                       )}
-                      {isBulkDeleting ? 'Deleting...' : `Delete ${completedWorktrees.length}`}
+                      {isBulkDeleting ? t('status.deleting') : tw('delete.button', { count: completedWorktrees.length })}
                     </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -433,7 +433,7 @@ function WorktreesView() {
             {selectedStatuses.size > 0 && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-xs">
                 <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
-                Clear filters
+                {t('buttons.clearFilters')}
               </Button>
             )}
           </div>
@@ -453,7 +453,7 @@ function WorktreesView() {
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 )}
               >
-                {STATUS_LABELS[status]}
+                {t(`statuses.${status}`)}
               </button>
             )
           })}
@@ -475,7 +475,7 @@ function WorktreesView() {
         {error && (
           <div className="flex items-center gap-3 py-6 text-destructive">
             <HugeiconsIcon icon={Alert02Icon} size={20} strokeWidth={2} />
-            <span className="text-sm">Failed to load worktrees: {error.message}</span>
+            <span className="text-sm">{tw('error.failedToLoad', { message: error.message })}</span>
           </div>
         )}
 
@@ -483,8 +483,8 @@ function WorktreesView() {
           <div className="py-12 text-muted-foreground">
             <p className="text-sm">
               {selectedStatuses.size > 0
-                ? 'No worktrees match the selected filters.'
-                : 'No worktrees found. Worktrees are created when you create tasks.'}
+                ? tw('empty.noMatch')
+                : tw('empty.noWorktrees')}
             </p>
           </div>
         )}

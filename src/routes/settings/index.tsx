@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
@@ -20,8 +28,11 @@ import {
   useNotificationSettings,
   useUpdateNotificationSettings,
   useTestNotificationChannel,
+  useZAiSettings,
+  useUpdateZAiSettings,
   CONFIG_KEYS,
 } from '@/hooks/use-config'
+import { useLanguageSync } from '@/hooks/use-language-sync'
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsPage,
@@ -39,6 +50,8 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 }
 
 function SettingsPage() {
+  const { t } = useTranslation('settings')
+  const { t: tc } = useTranslation('common')
   const { data: port, isLoading: portLoading } = usePort()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const { data: taskCreationCommand, isLoading: taskCommandLoading } = useTaskCreationCommand()
@@ -47,9 +60,12 @@ function SettingsPage() {
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
+  const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
+  const { savedLanguage, changeLanguage } = useLanguageSync()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
+  const updateZAi = useUpdateZAiSettings()
   const testChannel = useTestNotificationChannel()
 
   const [localPort, setLocalPort] = useState('')
@@ -72,6 +88,13 @@ function SettingsPage() {
   const [pushoverEnabled, setPushoverEnabled] = useState(false)
   const [pushoverAppToken, setPushoverAppToken] = useState('')
   const [pushoverUserKey, setPushoverUserKey] = useState('')
+
+  // z.ai settings local state
+  const [zAiEnabled, setZAiEnabled] = useState(false)
+  const [zAiApiKey, setZAiApiKey] = useState('')
+  const [zAiHaikuModel, setZAiHaikuModel] = useState('glm-4.5-air')
+  const [zAiSonnetModel, setZAiSonnetModel] = useState('glm-4.7')
+  const [zAiOpusModel, setZAiOpusModel] = useState('glm-4.7')
 
   // Sync local form state with fetched server values
   useEffect(() => {
@@ -99,8 +122,27 @@ function SettingsPage() {
     }
   }, [notificationSettings])
 
+  // Sync z.ai settings
+  useEffect(() => {
+    if (zAiSettings) {
+      setZAiEnabled(zAiSettings.enabled)
+      setZAiApiKey(zAiSettings.apiKey ?? '')
+      setZAiHaikuModel(zAiSettings.haikuModel)
+      setZAiSonnetModel(zAiSettings.sonnetModel)
+      setZAiOpusModel(zAiSettings.opusModel)
+    }
+  }, [zAiSettings])
+
   const isLoading =
-    portLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading
+    portLoading || reposDirLoading || taskCommandLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading
+
+  const hasZAiChanges = zAiSettings && (
+    zAiEnabled !== zAiSettings.enabled ||
+    zAiApiKey !== (zAiSettings.apiKey ?? '') ||
+    zAiHaikuModel !== zAiSettings.haikuModel ||
+    zAiSonnetModel !== zAiSettings.sonnetModel ||
+    zAiOpusModel !== zAiSettings.opusModel
+  )
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -122,7 +164,8 @@ function SettingsPage() {
     localSshPort !== String(sshPort) ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
-    hasNotificationChanges
+    hasNotificationChanges ||
+    hasZAiChanges
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -225,6 +268,24 @@ function SettingsPage() {
       )
     }
 
+    // Save z.ai settings
+    if (hasZAiChanges) {
+      promises.push(
+        new Promise((resolve) => {
+          updateZAi.mutate(
+            {
+              enabled: zAiEnabled,
+              apiKey: zAiApiKey || null,
+              haikuModel: zAiHaikuModel,
+              sonnetModel: zAiSonnetModel,
+              opusModel: zAiOpusModel,
+            },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
     await Promise.all(promises)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -293,13 +354,13 @@ function SettingsPage() {
     testChannel.mutate(channel, {
       onSuccess: (result) => {
         if (result.success) {
-          toast.success(`${channel} test successful`)
+          toast.success(t('notifications.testSuccess', { channel }))
         } else {
-          toast.error(`${channel} test failed: ${result.error}`)
+          toast.error(t('notifications.testFailed', { channel, error: result.error }))
         }
       },
       onError: (error) => {
-        toast.error(`Test failed: ${error.message}`)
+        toast.error(t('notifications.testFailed', { channel, error: error.message }))
       },
     })
   }
@@ -307,18 +368,18 @@ function SettingsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
-        <h1 className="text-sm font-medium">Settings</h1>
+        <h1 className="text-sm font-medium">{t('title')}</h1>
       </div>
 
       <div className="pixel-grid flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-5xl space-y-4">
               {/* Server & Defaults */}
-              <SettingsSection title="Server & Defaults">
+              <SettingsSection title={t('sections.serverDefaults')}>
                 <div className="space-y-4">
                   {/* Port */}
                   <div className="space-y-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Port</label>
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">{t('fields.port.label')}</label>
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"
@@ -336,21 +397,21 @@ function SettingsPage() {
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           onClick={handleResetPort}
                           disabled={isLoading || resetConfig.isPending}
-                          title="Reset to default"
+                          title={tc('buttons.reset')}
                         >
                           <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                         </Button>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                      Requires restart
+                      {t('fields.port.description')}
                     </p>
                   </div>
 
                   {/* Startup Command */}
                   <div className="space-y-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">Startup Command</label>
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">{t('fields.startupCommand.label')}</label>
                       <div className="flex flex-1 items-center gap-2">
                         <Input
                           value={localTaskCommand}
@@ -365,25 +426,25 @@ function SettingsPage() {
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           onClick={handleResetTaskCommand}
                           disabled={isLoading || resetConfig.isPending}
-                          title="Reset to default"
+                          title={tc('buttons.reset')}
                         >
                           <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                         </Button>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                      Command for new task terminals
+                      {t('fields.startupCommand.description')}
                     </p>
                   </div>
                 </div>
               </SettingsSection>
 
               {/* Paths */}
-              <SettingsSection title="Paths">
+              <SettingsSection title={t('sections.paths')}>
                 <div className="space-y-1">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
-                      Git Repos Directory
+                      {t('fields.gitReposDir.label')}
                     </label>
                     <div className="flex flex-1 items-center gap-2">
                       <Input
@@ -399,7 +460,7 @@ function SettingsPage() {
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => setReposDirBrowserOpen(true)}
                         disabled={isLoading}
-                        title="Browse"
+                        title={tc('buttons.browse')}
                       >
                         <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
                       </Button>
@@ -409,14 +470,14 @@ function SettingsPage() {
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={handleResetReposDir}
                         disabled={isLoading || resetConfig.isPending}
-                        title="Reset to default"
+                        title={tc('buttons.reset')}
                       >
                         <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                       </Button>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                    Starting directory for repo picker
+                    {t('fields.gitReposDir.description')}
                   </p>
                 </div>
               </SettingsSection>
@@ -424,19 +485,19 @@ function SettingsPage() {
               {/* Remote Access + Integrations side by side */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Remote Access */}
-                <SettingsSection title="Remote Access">
+                <SettingsSection title={t('sections.remoteAccess')}>
                   <div className="space-y-4">
                     {/* Hostname */}
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
-                          Hostname
+                          {t('fields.hostname.label')}
                         </label>
                         <div className="flex flex-1 items-center gap-2">
                           <Input
                             value={localHostname}
                             onChange={(e) => setLocalHostname(e.target.value)}
-                            placeholder="e.g., citadel"
+                            placeholder={t('fields.hostname.placeholder')}
                             disabled={isLoading}
                             className="flex-1 font-mono text-sm"
                           />
@@ -446,14 +507,14 @@ function SettingsPage() {
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
                             onClick={handleResetHostname}
                             disabled={isLoading || resetConfig.isPending}
-                            title="Reset to default"
+                            title={tc('buttons.reset')}
                           >
                             <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                           </Button>
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
-                        For VS Code SSH URLs
+                        {t('fields.hostname.description')}
                       </p>
                     </div>
 
@@ -461,7 +522,7 @@ function SettingsPage() {
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
-                          SSH Port
+                          {t('fields.sshPort.label')}
                         </label>
                         <div className="flex items-center gap-2">
                           <Input
@@ -480,27 +541,27 @@ function SettingsPage() {
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
                             onClick={handleResetSshPort}
                             disabled={isLoading || resetConfig.isPending}
-                            title="Reset to default"
+                            title={tc('buttons.reset')}
                           >
                             <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                           </Button>
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
-                        Remote connection port
+                        {t('fields.sshPort.description')}
                       </p>
                     </div>
                   </div>
                 </SettingsSection>
 
                 {/* Integrations */}
-                <SettingsSection title="Integrations">
+                <SettingsSection title={t('sections.integrations')}>
                   <div className="space-y-4">
                     {/* Linear API Key */}
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
-                          Linear
+                          {t('fields.linear.label')}
                         </label>
                         <div className="flex flex-1 items-center gap-2">
                           <Input
@@ -517,14 +578,14 @@ function SettingsPage() {
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
                             onClick={handleResetLinearApiKey}
                             disabled={isLoading || resetConfig.isPending}
-                            title="Reset to default"
+                            title={tc('buttons.reset')}
                           >
                             <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                           </Button>
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
-                        API key for ticket sync
+                        {t('fields.linear.description')}
                       </p>
                     </div>
 
@@ -532,7 +593,7 @@ function SettingsPage() {
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
-                          GitHub
+                          {t('fields.github.label')}
                         </label>
                         <div className="flex flex-1 items-center gap-2">
                           <Input
@@ -549,27 +610,116 @@ function SettingsPage() {
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
                             onClick={handleResetGitHubPat}
                             disabled={isLoading || resetConfig.isPending}
-                            title="Reset to default"
+                            title={tc('buttons.reset')}
                           >
                             <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
                           </Button>
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
-                        PAT for Issues & PRs
+                        {t('fields.github.description')}
                       </p>
                     </div>
                   </div>
                 </SettingsSection>
               </div>
 
+              {/* z.ai */}
+              <SettingsSection title={t('sections.zai')}>
+                <div className="space-y-4">
+                  {/* Enable toggle */}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                      {t('fields.zai.enable')}
+                    </label>
+                    <Switch
+                      checked={zAiEnabled}
+                      onCheckedChange={setZAiEnabled}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  {/* Settings (shown when enabled) */}
+                  {zAiEnabled && (
+                    <>
+                      {/* API Key */}
+                      <div className="space-y-1">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.apiKey')}
+                          </label>
+                          <Input
+                            type="password"
+                            value={zAiApiKey}
+                            onChange={(e) => setZAiApiKey(e.target.value)}
+                            placeholder="zai_..."
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
+                          {t('fields.zai.description')}
+                        </p>
+                      </div>
+
+                      {/* Model Mappings */}
+                      <div className="space-y-3 border-t border-border pt-4">
+                        <p className="text-xs font-medium text-muted-foreground">{t('fields.zai.modelMappings')}</p>
+
+                        {/* Haiku Model */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.haiku')}
+                          </label>
+                          <Input
+                            value={zAiHaikuModel}
+                            onChange={(e) => setZAiHaikuModel(e.target.value)}
+                            placeholder="glm-4.5-air"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+
+                        {/* Sonnet Model */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.sonnet')}
+                          </label>
+                          <Input
+                            value={zAiSonnetModel}
+                            onChange={(e) => setZAiSonnetModel(e.target.value)}
+                            placeholder="glm-4.7"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+
+                        {/* Opus Model */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                            {t('fields.zai.opus')}
+                          </label>
+                          <Input
+                            value={zAiOpusModel}
+                            onChange={(e) => setZAiOpusModel(e.target.value)}
+                            placeholder="glm-4.7"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </SettingsSection>
+
               {/* Notifications */}
-              <SettingsSection title="Notifications">
+              <SettingsSection title={t('sections.notifications')}>
                 <div className="space-y-4">
                   {/* Master toggle */}
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <label className="text-sm text-muted-foreground sm:w-40 sm:shrink-0">
-                      Enable Notifications
+                      {t('notifications.enable')}
                     </label>
                     <Switch
                       checked={notificationsEnabled}
@@ -586,14 +736,14 @@ function SettingsPage() {
                         onCheckedChange={setSoundEnabled}
                         disabled={isLoading || !notificationsEnabled}
                       />
-                      <label className="text-sm text-muted-foreground">Sound (macOS only)</label>
+                      <label className="text-sm text-muted-foreground">{t('notifications.sound')}</label>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => handleTestChannel('sound')}
                         disabled={isLoading || !notificationsEnabled || !soundEnabled || testChannel.isPending}
-                        title="Test sound"
+                        title={t('notifications.sound')}
                       >
                         {testChannel.isPending ? (
                           <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
@@ -612,14 +762,14 @@ function SettingsPage() {
                         onCheckedChange={setSlackEnabled}
                         disabled={isLoading || !notificationsEnabled}
                       />
-                      <label className="text-sm text-muted-foreground">Slack</label>
+                      <label className="text-sm text-muted-foreground">{t('notifications.slack')}</label>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => handleTestChannel('slack')}
                         disabled={isLoading || !notificationsEnabled || !slackEnabled || !slackWebhook || testChannel.isPending}
-                        title="Test Slack"
+                        title={t('notifications.slack')}
                       >
                         {testChannel.isPending ? (
                           <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
@@ -648,14 +798,14 @@ function SettingsPage() {
                         onCheckedChange={setDiscordEnabled}
                         disabled={isLoading || !notificationsEnabled}
                       />
-                      <label className="text-sm text-muted-foreground">Discord</label>
+                      <label className="text-sm text-muted-foreground">{t('notifications.discord')}</label>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => handleTestChannel('discord')}
                         disabled={isLoading || !notificationsEnabled || !discordEnabled || !discordWebhook || testChannel.isPending}
-                        title="Test Discord"
+                        title={t('notifications.discord')}
                       >
                         {testChannel.isPending ? (
                           <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
@@ -684,14 +834,14 @@ function SettingsPage() {
                         onCheckedChange={setPushoverEnabled}
                         disabled={isLoading || !notificationsEnabled}
                       />
-                      <label className="text-sm text-muted-foreground">Pushover</label>
+                      <label className="text-sm text-muted-foreground">{t('notifications.pushover')}</label>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => handleTestChannel('pushover')}
                         disabled={isLoading || !notificationsEnabled || !pushoverEnabled || !pushoverAppToken || !pushoverUserKey || testChannel.isPending}
-                        title="Test Pushover"
+                        title={t('notifications.pushover')}
                       >
                         {testChannel.isPending ? (
                           <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
@@ -706,7 +856,7 @@ function SettingsPage() {
                           type="password"
                           value={pushoverAppToken}
                           onChange={(e) => setPushoverAppToken(e.target.value)}
-                          placeholder="App Token"
+                          placeholder={t('notifications.appToken')}
                           disabled={isLoading || !notificationsEnabled}
                           className="flex-1 font-mono text-sm"
                         />
@@ -714,7 +864,7 @@ function SettingsPage() {
                           type="password"
                           value={pushoverUserKey}
                           onChange={(e) => setPushoverUserKey(e.target.value)}
-                          placeholder="User Key"
+                          placeholder={t('notifications.userKey')}
                           disabled={isLoading || !notificationsEnabled}
                           className="flex-1 font-mono text-sm"
                         />
@@ -724,12 +874,39 @@ function SettingsPage() {
                 </div>
               </SettingsSection>
 
+              {/* Appearance */}
+              <SettingsSection title={t('sections.appearance')}>
+                <div className="space-y-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                      {t('fields.language.label')}
+                    </label>
+                    <Select
+                      value={savedLanguage ?? 'auto'}
+                      onValueChange={(v) => changeLanguage(v === 'auto' ? null : (v as 'en' | 'zh'))}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">{t('fields.language.options.auto')}</SelectItem>
+                        <SelectItem value="en">{t('fields.language.options.en')}</SelectItem>
+                        <SelectItem value="zh">{t('fields.language.options.zh')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                    {t('fields.language.description')}
+                  </p>
+                </div>
+              </SettingsSection>
+
           {/* Save Button */}
           <div className="flex items-center justify-end gap-2 pt-2">
             {saved && (
               <span className="flex items-center gap-1 text-xs text-emerald-500">
                 <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                Saved
+                {tc('status.saved')}
               </span>
             )}
             <Button
@@ -737,7 +914,7 @@ function SettingsPage() {
               onClick={handleSaveAll}
               disabled={!hasChanges || isLoading || updateConfig.isPending}
             >
-              Save Changes
+              {tc('buttons.save')}
             </Button>
           </div>
         </div>

@@ -1,0 +1,81 @@
+{
+  "title": "Monitoring",
+  "tabs": {
+    "claude": "Claude Instances",
+    "system": "System Metrics",
+    "processes": "Processes",
+    "vibora": "Vibora Servers"
+  },
+  "claude": {
+    "showAllInstances": "Show all instances",
+    "instanceCount": "{{count}} instance(s) running",
+    "totalRam": "{{ram}} MB total",
+    "headers": {
+      "terminal": "Terminal",
+      "task": "Task",
+      "ram": "RAM",
+      "actions": "Actions",
+      "pid": "PID",
+      "workingDirectory": "Working Dir",
+      "source": "Source"
+    },
+    "noTask": "(no task)",
+    "kill": "Kill",
+    "killing": "Killing...",
+    "source": {
+      "vibora": "Vibora: {{name}}",
+      "external": "External"
+    },
+    "empty": "No Claude instances running",
+    "emptyVibora": " in Vibora terminals",
+    "error": "Failed to load Claude instances: {{message}}"
+  },
+  "system": {
+    "cpuUsage": "CPU Usage",
+    "memoryUsage": "Memory Usage",
+    "memoryLabels": {
+      "used": "Used",
+      "cache": "Cache / Buffers"
+    },
+    "diskUsage": "Disk Usage ({{path}})",
+    "error": "Failed to load system metrics: {{message}}"
+  },
+  "processes": {
+    "topProcesses": "Top Processes",
+    "sortBy": {
+      "memory": "By Memory",
+      "cpu": "By CPU"
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "Name",
+      "command": "Command",
+      "memory": "Memory"
+    },
+    "empty": "No processes found",
+    "error": "Failed to load processes: {{message}}",
+    "containers": "Containers",
+    "containersEmpty": "No containers running",
+    "containersUnavailable": "Docker/Podman not available"
+  },
+  "vibora": {
+    "description": "Running Vibora dev servers",
+    "instanceCount": "{{count}} instance(s) running",
+    "headers": {
+      "port": "Port",
+      "mode": "Mode",
+      "directory": "Directory",
+      "ram": "RAM",
+      "actions": "Actions"
+    },
+    "mode": {
+      "dev": "Dev",
+      "prod": "Prod"
+    },
+    "vite": "Vite",
+    "kill": "Kill",
+    "killing": "Killing...",
+    "empty": "No Vibora instances running",
+    "error": "Failed to load Vibora instances: {{message}}"
+  }
+}

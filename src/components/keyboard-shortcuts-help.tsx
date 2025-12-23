@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -12,56 +13,58 @@ interface KeyboardShortcutsHelpProps {
 }
 
 interface ShortcutItem {
-  label: string
+  labelKey: string
   shortcut: string
 }
 
 interface ShortcutGroup {
-  title: string
+  titleKey: string
   items: ShortcutItem[]
 }
 
 const shortcutGroups: ShortcutGroup[] = [
   {
-    title: 'Navigation',
+    titleKey: 'navigation',
     items: [
-      { label: 'Go to Tasks', shortcut: 'meta+1' },
-      { label: 'Go to Terminals', shortcut: 'meta+2' },
-      { label: 'Go to Task Terminals', shortcut: 'meta+i' },
-      { label: 'Go to Worktrees', shortcut: 'meta+3' },
-      { label: 'Go to Repositories', shortcut: 'meta+4' },
-      { label: 'Go to Settings', shortcut: 'meta+,' },
+      { labelKey: 'goToTasks', shortcut: 'meta+1' },
+      { labelKey: 'goToTerminals', shortcut: 'meta+2' },
+      { labelKey: 'goToTaskTerminals', shortcut: 'meta+i' },
+      { labelKey: 'goToWorktrees', shortcut: 'meta+3' },
+      { labelKey: 'goToRepositories', shortcut: 'meta+4' },
+      { labelKey: 'goToSettings', shortcut: 'meta+,' },
     ],
   },
   {
-    title: 'Actions',
+    titleKey: 'actions',
     items: [
-      { label: 'Command Palette', shortcut: 'meta+k' },
-      { label: 'New Task', shortcut: 'meta+j' },
-      { label: 'Keyboard Shortcuts', shortcut: 'meta+/' },
+      { labelKey: 'commandPalette', shortcut: 'meta+k' },
+      { labelKey: 'newTask', shortcut: 'meta+j' },
+      { labelKey: 'keyboardShortcuts', shortcut: 'meta+/' },
     ],
   },
   {
-    title: 'General',
+    titleKey: 'general',
     items: [
-      { label: 'Close Modal', shortcut: 'escape' },
+      { labelKey: 'closeModal', shortcut: 'escape' },
     ],
   },
 ]
 
 export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsHelpProps) {
+  const { t } = useTranslation('navigation')
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Keyboard Shortcuts</DialogTitle>
+          <DialogTitle>{t('shortcuts.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
           {shortcutGroups.map((group) => (
-            <div key={group.title}>
+            <div key={group.titleKey}>
               <h3 className="text-xs font-medium text-muted-foreground mb-2">
-                {group.title}
+                {t(`shortcuts.groups.${group.titleKey}`)}
               </h3>
               <div className="space-y-1">
                 {group.items.map((item) => (
@@ -69,7 +72,7 @@ export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsH
                     key={item.shortcut}
                     className="flex items-center justify-between py-1.5"
                   >
-                    <span className="text-sm">{item.label}</span>
+                    <span className="text-sm">{t(`shortcuts.labels.${item.labelKey}`)}</span>
                     <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
                       {formatShortcut(item.shortcut)}
                     </kbd>

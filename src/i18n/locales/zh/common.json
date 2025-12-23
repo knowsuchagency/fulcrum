@@ -1,0 +1,49 @@
+{
+  "buttons": {
+    "save": "保存更改",
+    "cancel": "取消",
+    "delete": "删除",
+    "create": "创建",
+    "reset": "重置为默认值",
+    "browse": "浏览",
+    "clearFilters": "清除筛选"
+  },
+  "status": {
+    "loading": "加载中...",
+    "saving": "保存中...",
+    "saved": "已保存",
+    "error": "错误",
+    "calculating": "计算中...",
+    "validating": "验证中...",
+    "creating": "创建中...",
+    "deleting": "删除中...",
+    "loggingIn": "登录中..."
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minuteAgo": "1 分钟前",
+    "minutesAgo": "{{count}} 分钟前",
+    "hourAgo": "1 小时前",
+    "hoursAgo": "{{count}} 小时前",
+    "dayAgo": "1 天前",
+    "daysAgo": "{{count}} 天前"
+  },
+  "results": {
+    "one": "{{count}} 个结果",
+    "other": "{{count}} 个结果"
+  },
+  "statuses": {
+    "IN_PROGRESS": "进行中",
+    "IN_REVIEW": "审核中",
+    "DONE": "已完成",
+    "CANCELED": "已取消",
+    "ORPHANED": "孤立"
+  },
+  "auth": {
+    "loginTitle": "登录 Vibora",
+    "username": "用户名",
+    "password": "密码",
+    "login": "登录",
+    "loginFailed": "登录失败"
+  }
+}

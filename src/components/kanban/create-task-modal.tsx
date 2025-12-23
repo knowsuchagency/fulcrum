@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,8 @@ interface CreateTaskModalProps {
 }
 
 export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTaskModalProps = {}) {
+  const { t } = useTranslation('tasks')
+  const { t: tc } = useTranslation('common')
   const [internalOpen, setInternalOpen] = useState(false)
 
   // Support both controlled and uncontrolled modes
@@ -143,7 +146,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
       const result = await checkIsGitRepo(path)
 
       if (!result.isGitRepo) {
-        setRepoError('Selected folder is not a git repository')
+        setRepoError(t('createModal.errors.notGitRepo'))
         setIsValidatingRepo(false)
         return
       }
@@ -162,7 +165,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
         })
       }
     } catch (err) {
-      setRepoError(err instanceof Error ? err.message : 'Failed to validate repository')
+      setRepoError(err instanceof Error ? err.message : t('createModal.errors.validationFailed'))
     } finally {
       setIsValidatingRepo(false)
     }
@@ -225,42 +228,42 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button size="sm" />}>
           <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-          New Task
+          {t('newTask')}
         </DialogTrigger>
         <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col overflow-hidden">
           <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
             <DialogHeader className="shrink-0">
-              <DialogTitle>Create New Task</DialogTitle>
+              <DialogTitle>{t('createModal.title')}</DialogTitle>
               <DialogDescription>
-                Create a new task with a git worktree for isolated development.
+                {t('createModal.description')}
               </DialogDescription>
             </DialogHeader>
 
             <FieldGroup className="mt-4 pb-4 overflow-y-auto min-h-0 flex-1">
               <Field>
-                <FieldLabel htmlFor="title">Title</FieldLabel>
+                <FieldLabel htmlFor="title">{t('createModal.fields.title')}</FieldLabel>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="Add user authentication"
+                  placeholder={t('createModal.fields.titlePlaceholder')}
                   required
                 />
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="description">Description</FieldLabel>
+                <FieldLabel htmlFor="description">{t('createModal.fields.description')}</FieldLabel>
                 <DescriptionTextarea
                   id="description"
                   value={description}
                   onValueChange={setDescription}
-                  placeholder="Implement OAuth2 login flow..."
+                  placeholder={t('createModal.fields.descriptionPlaceholder')}
                   rows={2}
                 />
               </Field>
 
               <Field>
-                <FieldLabel>AI Mode</FieldLabel>
+                <FieldLabel>{t('createModal.fields.aiMode')}</FieldLabel>
                 <ToggleGroup
                   value={[aiMode]}
                   onValueChange={(value) => {
@@ -270,14 +273,14 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
                   className="w-full"
                   variant="outline"
                 >
-                  <ToggleGroupItem value="none" className="flex-1">None</ToggleGroupItem>
-                  <ToggleGroupItem value="plan" className="flex-1">Plan</ToggleGroupItem>
-                  <ToggleGroupItem value="default" className="flex-1">Default</ToggleGroupItem>
+                  <ToggleGroupItem value="none" className="flex-1">{t('createModal.aiModes.none')}</ToggleGroupItem>
+                  <ToggleGroupItem value="plan" className="flex-1">{t('createModal.aiModes.plan')}</ToggleGroupItem>
+                  <ToggleGroupItem value="default" className="flex-1">{t('createModal.aiModes.default')}</ToggleGroupItem>
                 </ToggleGroup>
               </Field>
 
               <Field>
-                <FieldLabel>Repository</FieldLabel>
+                <FieldLabel>{t('createModal.fields.repository')}</FieldLabel>
                 <Tabs
                   value={repoTab}
                   onValueChange={(v) => {
@@ -287,9 +290,9 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
                 >
                   <TabsList>
                     <TabsTrigger value="saved" disabled={!repositories?.length}>
-                      Saved
+                      {t('createModal.tabs.saved')}
                     </TabsTrigger>
-                    <TabsTrigger value="browse">Browse</TabsTrigger>
+                    <TabsTrigger value="browse">{t('createModal.tabs.browse')}</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="saved" className="mt-2">
@@ -317,12 +320,12 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
                       }
                     >
                       <ComboboxInput
-                        placeholder="Search repositories..."
+                        placeholder={t('createModal.searchRepositories')}
                         className="w-full"
                       />
                       <ComboboxContent>
                         <ComboboxList>
-                          <ComboboxEmpty>No repositories found</ComboboxEmpty>
+                          <ComboboxEmpty>{t('createModal.noRepositoriesFound')}</ComboboxEmpty>
                           {filteredRepositories.map((repo) => (
                             <ComboboxItem key={repo.id} value={repo.id}>
                               {repo.displayName}
@@ -348,11 +351,11 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
                         className="mr-2"
                       />
                       {isValidatingRepo ? (
-                        <span className="text-muted-foreground">Validating...</span>
+                        <span className="text-muted-foreground">{tc('status.validating')}</span>
                       ) : repoPath && !selectedRepoId ? (
                         <span className="truncate">{repoPath}</span>
                       ) : (
-                        <span className="text-muted-foreground">Select folder...</span>
+                        <span className="text-muted-foreground">{t('createModal.selectFolder')}</span>
                       )}
                     </Button>
                   </TabsContent>
@@ -370,7 +373,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="baseBranch">Base Branch</FieldLabel>
+                <FieldLabel htmlFor="baseBranch">{t('createModal.fields.baseBranch')}</FieldLabel>
                 <Select
                   value={baseBranch}
                   onValueChange={(value) => setBaseBranch(value ?? '')}
@@ -381,10 +384,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
                       {baseBranch || (
                         <span className="text-muted-foreground">
                           {!repoPath
-                            ? 'Select repository first'
+                            ? t('createModal.selectRepositoryFirst')
                             : branchesLoading
-                            ? 'Loading branches...'
-                            : 'Select branch'}
+                            ? t('createModal.loadingBranches')
+                            : t('createModal.selectBranch')}
                         </span>
                       )}
                     </SelectValue>
@@ -394,7 +397,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
                       <SelectItem key={b} value={b}>
                         {b}
                         {b === branchData.current && (
-                          <span className="text-muted-foreground ml-2">(current)</span>
+                          <span className="text-muted-foreground ml-2">{t('createModal.current')}</span>
                         )}
                       </SelectItem>
                     ))}
@@ -403,21 +406,21 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="branch">Branch Name</FieldLabel>
+                <FieldLabel htmlFor="branch">{t('createModal.fields.branchName')}</FieldLabel>
                 <Input
                   id="branch"
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
-                  placeholder={autoGeneratedBranch || 'auto-generated-from-title'}
+                  placeholder={autoGeneratedBranch || t('createModal.fields.branchPlaceholder')}
                 />
                 {displayWorktreePath && (
                   <FieldDescription>
-                    Worktree: {displayWorktreePath}
+                    {t('createModal.worktreePrefix')} {displayWorktreePath}
                   </FieldDescription>
                 )}
                 {!branch.trim() && autoGeneratedBranch && (
                   <FieldDescription>
-                    Will use "{autoGeneratedBranch}" if left empty.
+                    {t('createModal.branchAutoGenerated', { branch: autoGeneratedBranch })}
                   </FieldDescription>
                 )}
               </Field>
@@ -425,10 +428,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
               <Field className="flex flex-row items-center justify-between">
                 <div>
                   <FieldLabel htmlFor="initializeVibora" className="mb-0 cursor-pointer">
-                    Initialize Vibora
+                    {t('createModal.fields.initializeVibora')}
                   </FieldLabel>
                   <FieldDescription>
-                    Create or update CLAUDE.local.md with CLI instructions
+                    {t('createModal.fields.initializeViboraDescription')}
                   </FieldDescription>
                 </div>
                 <Switch
@@ -441,13 +444,13 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange }: CreateTa
 
             <DialogFooter className="mt-4 shrink-0">
               <DialogClose render={<Button variant="outline" type="button" />}>
-                Cancel
+                {tc('buttons.cancel')}
               </DialogClose>
               <Button
                 type="submit"
                 disabled={createTask.isPending || !title.trim() || !repoPath}
               >
-                {createTask.isPending ? 'Creating...' : 'Create Task'}
+                {createTask.isPending ? tc('status.creating') : t('createModal.createTask')}
               </Button>
             </DialogFooter>
           </form>

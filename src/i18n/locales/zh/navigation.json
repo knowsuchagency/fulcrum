@@ -1,0 +1,50 @@
+{
+  "header": {
+    "tasks": "任务",
+    "terminals": "终端",
+    "worktrees": "工作树",
+    "repositories": "仓库",
+    "review": "审核",
+    "monitoring": "监控",
+    "settings": "设置",
+    "commandPalette": "命令面板 ({{shortcut}})"
+  },
+  "commandPalette": {
+    "placeholder": "输入命令或搜索...",
+    "noResults": "未找到命令",
+    "categories": {
+      "navigation": "导航",
+      "actions": "操作"
+    },
+    "commands": {
+      "goToTasks": "前往任务",
+      "goToTerminals": "前往终端",
+      "goToTaskTerminals": "前往任务终端",
+      "goToWorktrees": "前往工作树",
+      "goToRepositories": "前往仓库",
+      "goToSettings": "前往设置",
+      "newTask": "新建任务",
+      "keyboardShortcuts": "键盘快捷键"
+    }
+  },
+  "shortcuts": {
+    "title": "键盘快捷键",
+    "groups": {
+      "navigation": "导航",
+      "actions": "操作",
+      "general": "通用"
+    },
+    "labels": {
+      "goToTasks": "前往任务",
+      "goToTerminals": "前往终端",
+      "goToTaskTerminals": "前往任务终端",
+      "goToWorktrees": "前往工作树",
+      "goToRepositories": "前往仓库",
+      "goToSettings": "前往设置",
+      "commandPalette": "命令面板",
+      "newTask": "新建任务",
+      "keyboardShortcuts": "键盘快捷键",
+      "closeModal": "关闭弹窗"
+    }
+  }
+}

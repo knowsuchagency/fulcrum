@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -9,7 +10,6 @@ import {
   type Command,
   searchCommands,
   groupCommandsByCategory,
-  categoryLabels,
 } from './command-registry'
 import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -31,6 +31,7 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, onShowShortcuts }: CommandPaletteProps) {
+  const { t } = useTranslation('navigation')
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
   const setOpen = onOpenChange ?? setInternalOpen
@@ -46,7 +47,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
     const cmds: Command[] = [
       {
         id: 'goto-tasks',
-        label: 'Go to Tasks',
+        label: t('commandPalette.commands.goToTasks'),
         shortcut: 'meta+1',
         keywords: ['kanban', 'board', 'home'],
         category: 'navigation',
@@ -58,7 +59,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
       {
         id: 'goto-terminals',
-        label: 'Go to Terminals',
+        label: t('commandPalette.commands.goToTerminals'),
         shortcut: 'meta+2',
         keywords: ['shell', 'console', 'cli'],
         category: 'navigation',
@@ -70,7 +71,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
       {
         id: 'goto-task-terminals',
-        label: 'Go to Task Terminals',
+        label: t('commandPalette.commands.goToTaskTerminals'),
         shortcut: 'meta+i',
         keywords: ['tasks', 'shell', 'console', 'cli'],
         category: 'navigation',
@@ -83,7 +84,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
       {
         id: 'goto-worktrees',
-        label: 'Go to Worktrees',
+        label: t('commandPalette.commands.goToWorktrees'),
         shortcut: 'meta+3',
         keywords: ['git', 'branches'],
         category: 'navigation',
@@ -95,7 +96,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
       {
         id: 'goto-repositories',
-        label: 'Go to Repositories',
+        label: t('commandPalette.commands.goToRepositories'),
         shortcut: 'meta+4',
         keywords: ['repos', 'git', 'projects'],
         category: 'navigation',
@@ -107,7 +108,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
       {
         id: 'goto-settings',
-        label: 'Go to Settings',
+        label: t('commandPalette.commands.goToSettings'),
         shortcut: 'meta+,',
         keywords: ['preferences', 'config', 'configuration'],
         category: 'navigation',
@@ -119,7 +120,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
       {
         id: 'new-task',
-        label: 'New Task',
+        label: t('commandPalette.commands.newTask'),
         shortcut: 'meta+j',
         keywords: ['create', 'add'],
         category: 'actions',
@@ -131,7 +132,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
       {
         id: 'show-shortcuts',
-        label: 'Keyboard Shortcuts',
+        label: t('commandPalette.commands.keyboardShortcuts'),
         shortcut: 'meta+/',
         keywords: ['help', 'hotkeys', 'keys'],
         category: 'actions',
@@ -143,7 +144,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
     ]
     return cmds
-  }, [navigate, onNewTask, onShowShortcuts, setActiveTab, setOpen])
+  }, [navigate, onNewTask, onShowShortcuts, setActiveTab, setOpen, t])
 
   // Filter commands based on query
   const filteredCommands = useMemo(
@@ -268,7 +269,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or search..."
+            placeholder={t('commandPalette.placeholder')}
             className="border-0 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0 h-12"
           />
           <kbd className="pointer-events-none ml-2 inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
@@ -279,7 +280,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         <div ref={listRef} className="max-h-80 overflow-y-auto p-2">
           {filteredCommands.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              No commands found.
+              {t('commandPalette.noResults')}
             </div>
           ) : (
             <>
@@ -290,7 +291,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
                 return (
                   <div key={category} className="mb-2 last:mb-0">
                     <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                      {categoryLabels[category]}
+                      {t(`commandPalette.categories.${category}`)}
                     </div>
                     {cmds.map((command) => {
                       const index = currentIndex++

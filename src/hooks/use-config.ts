@@ -20,6 +20,7 @@ export const CONFIG_KEYS = {
   SSH_PORT: 'ssh_port',
   LINEAR_API_KEY: 'linear_api_key',
   GITHUB_PAT: 'github_pat',
+  LANGUAGE: 'language',
 } as const
 
 // Default values (client-side fallbacks)
@@ -114,6 +115,18 @@ export function useGitHubPat() {
   }
 }
 
+export type Language = 'en' | 'zh' | null
+
+export function useLanguage() {
+  const query = useConfig(CONFIG_KEYS.LANGUAGE)
+
+  return {
+    ...query,
+    data: (query.data?.value as Language) ?? null,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
 export function useUpdateConfig() {
   const queryClient = useQueryClient()
 
@@ -194,5 +207,36 @@ export function useTestNotificationChannel() {
       fetchJSON<NotificationTestResult>(`${API_BASE}/api/config/notifications/test/${channel}`, {
         method: 'POST',
       }),
+  })
+}
+
+// z.ai settings types
+export interface ZAiSettings {
+  enabled: boolean
+  apiKey: string | null
+  haikuModel: string
+  sonnetModel: string
+  opusModel: string
+}
+
+export function useZAiSettings() {
+  return useQuery({
+    queryKey: ['config', 'z-ai'],
+    queryFn: () => fetchJSON<ZAiSettings>(`${API_BASE}/api/config/z-ai`),
+  })
+}
+
+export function useUpdateZAiSettings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (settings: Partial<ZAiSettings>) =>
+      fetchJSON<ZAiSettings>(`${API_BASE}/api/config/z-ai`, {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['config', 'z-ai'] })
+    },
   })
 }

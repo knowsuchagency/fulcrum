@@ -1,0 +1,50 @@
+{
+  "header": {
+    "tasks": "Tasks",
+    "terminals": "Terminals",
+    "worktrees": "Worktrees",
+    "repositories": "Repositories",
+    "review": "Review",
+    "monitoring": "Monitoring",
+    "settings": "Settings",
+    "commandPalette": "Command Palette ({{shortcut}})"
+  },
+  "commandPalette": {
+    "placeholder": "Type a command or search...",
+    "noResults": "No commands found.",
+    "categories": {
+      "navigation": "Navigation",
+      "actions": "Actions"
+    },
+    "commands": {
+      "goToTasks": "Go to Tasks",
+      "goToTerminals": "Go to Terminals",
+      "goToTaskTerminals": "Go to Task Terminals",
+      "goToWorktrees": "Go to Worktrees",
+      "goToRepositories": "Go to Repositories",
+      "goToSettings": "Go to Settings",
+      "newTask": "New Task",
+      "keyboardShortcuts": "Keyboard Shortcuts"
+    }
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "groups": {
+      "navigation": "Navigation",
+      "actions": "Actions",
+      "general": "General"
+    },
+    "labels": {
+      "goToTasks": "Go to Tasks",
+      "goToTerminals": "Go to Terminals",
+      "goToTaskTerminals": "Go to Task Terminals",
+      "goToWorktrees": "Go to Worktrees",
+      "goToRepositories": "Go to Repositories",
+      "goToSettings": "Go to Settings",
+      "commandPalette": "Command Palette",
+      "newTask": "New Task",
+      "keyboardShortcuts": "Keyboard Shortcuts",
+      "closeModal": "Close Modal"
+    }
+  }
+}
