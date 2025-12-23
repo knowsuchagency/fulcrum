@@ -148,3 +148,36 @@ export function useDockerStats() {
     refetchInterval: 5000,
   })
 }
+
+// Vibora instances types and hooks
+export interface ViboraInstanceGroup {
+  viboraDir: string
+  port: number
+  mode: 'development' | 'production'
+  backend: { pid: number; memoryMB: number; startedAt: number | null } | null
+  frontend: { pid: number; memoryMB: number; startedAt: number | null } | null
+  totalMemoryMB: number
+}
+
+export function useViboraInstances() {
+  return useQuery({
+    queryKey: ['monitoring', 'vibora-instances'],
+    queryFn: () => fetchJSON<ViboraInstanceGroup[]>(`${API_BASE}/api/monitoring/vibora-instances`),
+    refetchInterval: 5000,
+  })
+}
+
+export function useKillViboraInstance() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ backendPid }: { backendPid: number }) =>
+      fetchJSON<{ success: boolean; killed: number[]; viboraDir: string; port: number }>(
+        `${API_BASE}/api/monitoring/vibora-instances/${backendPid}/kill`,
+        { method: 'POST' }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['monitoring', 'vibora-instances'] })
+    },
+  })
+}
