@@ -4,7 +4,7 @@ import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { SelectionProvider, useSelection } from '@/components/kanban/selection-context'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Delete02Icon, Cancel01Icon, CheckListIcon, FilterIcon } from '@hugeicons/core-free-icons'
+import { Delete02Icon, Cancel01Icon, CheckListIcon, FilterIcon, Search01Icon } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { useBulkDeleteTasks, useTasks } from '@/hooks/use-tasks'
 
 export const Route = createFileRoute('/tasks/')({
@@ -42,6 +43,7 @@ function KanbanViewContent() {
   const bulkDelete = useBulkDeleteTasks()
   const { data: tasks = [] } = useTasks()
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Unique repo names for filtering
   const repoNames = useMemo(() => {
@@ -105,6 +107,15 @@ function KanbanViewContent() {
           <>
             <h1 className="text-sm font-medium max-sm:hidden">Tasks</h1>
             <div className="flex items-center gap-2">
+              <div className="relative">
+                <HugeiconsIcon icon={Search01Icon} size={12} strokeWidth={2} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter tasks..."
+                  className="w-40 pl-6"
+                />
+              </div>
               <Select
                 value={repoFilter ?? ''}
                 onValueChange={(v) => setRepoFilter(v || null)}
@@ -133,7 +144,7 @@ function KanbanViewContent() {
         )}
       </div>
       <div className="flex-1 overflow-hidden">
-        <KanbanBoard repoFilter={repoFilter} />
+        <KanbanBoard repoFilter={repoFilter} searchQuery={searchQuery} />
       </div>
     </div>
   )
