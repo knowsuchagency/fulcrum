@@ -100,6 +100,9 @@ function SettingsPage() {
   const [zAiSonnetModel, setZAiSonnetModel] = useState('glm-4.7')
   const [zAiOpusModel, setZAiOpusModel] = useState('glm-4.7')
 
+  // Developer mode restart state
+  const [isRestarting, setIsRestarting] = useState(false)
+
   // Sync local form state with fetched server values
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
@@ -921,7 +924,7 @@ function SettingsPage() {
                         onClick={() => {
                           restartVibora.mutate(undefined, {
                             onSuccess: () => {
-                              toast.success(t('developer.restartInitiated'))
+                              setIsRestarting(true)
                             },
                             onError: (error) => {
                               toast.error(t('developer.buildFailed'), {
@@ -930,16 +933,18 @@ function SettingsPage() {
                             },
                           })
                         }}
-                        disabled={restartVibora.isPending}
+                        disabled={restartVibora.isPending || isRestarting}
                         className="shrink-0"
                       >
                         <HugeiconsIcon
                           icon={Loading03Icon}
-                          className={`mr-2 size-4 ${restartVibora.isPending ? 'animate-spin' : ''}`}
+                          className={`mr-2 size-4 ${restartVibora.isPending || isRestarting ? 'animate-spin' : ''}`}
                         />
-                        {restartVibora.isPending
-                          ? t('developer.building')
-                          : t('developer.restartButton')}
+                        {isRestarting
+                          ? t('developer.restarting')
+                          : restartVibora.isPending
+                            ? t('developer.building')
+                            : t('developer.restartButton')}
                       </Button>
                     </div>
                   </div>
