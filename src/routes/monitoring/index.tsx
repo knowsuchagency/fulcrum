@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -15,12 +17,15 @@ import {
   useKillClaudeInstance,
   useTopProcesses,
   useDockerStats,
+  useViboraInstances,
+  useKillViboraInstance,
   formatBytes,
   formatTimeWindow,
   type TimeWindow,
   type ClaudeFilter,
   type ClaudeInstance,
   type ProcessSortBy,
+  type ViboraInstanceGroup,
 } from '@/hooks/use-monitoring'
 
 export const Route = createFileRoute('/monitoring/')({
@@ -51,31 +56,35 @@ const chartConfig: ChartConfig = {
 function ClaudeInstancesTab() {
   const { t } = useTranslation('monitoring')
   const [filter, setFilter] = useState<ClaudeFilter>('vibora')
+  const [killingPid, setKillingPid] = useState<number | null>(null)
   const { data: instances, isLoading, error } = useClaudeInstances(filter)
   const killInstance = useKillClaudeInstance()
 
   const totalRam = instances?.reduce((sum, i) => sum + i.ramMB, 0) || 0
 
   const handleKill = (instance: ClaudeInstance) => {
-    if (instance.isViboraManaged && instance.terminalId) {
-      killInstance.mutate({ terminalId: instance.terminalId })
-    } else {
-      killInstance.mutate({ pid: instance.pid })
-    }
+    setKillingPid(instance.pid)
+    const payload = instance.isViboraManaged && instance.terminalId
+      ? { terminalId: instance.terminalId }
+      : { pid: instance.pid }
+    killInstance.mutate(payload, {
+      onSettled: () => setKillingPid(null),
+    })
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Select value={filter} onValueChange={(value) => setFilter(value as ClaudeFilter)}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="vibora">{t('claude.filter.vibora')}</SelectItem>
-            <SelectItem value="all">{t('claude.filter.all')}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="show-all"
+            checked={filter === 'all'}
+            onCheckedChange={(checked) => setFilter(checked ? 'all' : 'vibora')}
+          />
+          <Label htmlFor="show-all" className="text-sm text-muted-foreground">
+            {t('claude.showAllInstances')}
+          </Label>
+        </div>
 
         {instances && (
           <span className="text-sm text-muted-foreground">
@@ -106,33 +115,22 @@ function ClaudeInstancesTab() {
 
       {instances && instances.length > 0 && (
         <div className="space-y-2">
-          {filter === 'vibora' ? (
-            // Vibora-managed view: Terminal, Task, RAM, Actions
-            <div className="grid grid-cols-[1fr_1fr_80px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span>{t('claude.headers.terminal')}</span>
-              <span>{t('claude.headers.task')}</span>
-              <span className="text-right">{t('claude.headers.ram')}</span>
-              <span className="text-right">{t('claude.headers.actions')}</span>
-            </div>
-          ) : (
-            // All instances view: PID, Working Directory, RAM, Source, Actions
-            <div className="grid grid-cols-[60px_1fr_80px_120px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span>{t('claude.headers.pid')}</span>
-              <span>{t('claude.headers.workingDirectory')}</span>
-              <span className="text-right">{t('claude.headers.ram')}</span>
-              <span>{t('claude.headers.source')}</span>
-              <span className="text-right">{t('claude.headers.actions')}</span>
-            </div>
-          )}
+          {/* Header - desktop only */}
+          <div className="hidden lg:grid grid-cols-[60px_150px_1fr_1fr_80px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <span>{t('claude.headers.pid')}</span>
+            <span>{t('claude.headers.terminal')}</span>
+            <span>{t('claude.headers.task')}</span>
+            <span>{t('claude.headers.workingDirectory')}</span>
+            <span className="text-right">{t('claude.headers.ram')}</span>
+            <span className="text-right">{t('claude.headers.actions')}</span>
+          </div>
 
           {instances.map((instance) => (
             <Card key={instance.pid} className="px-3 py-2">
-              {filter === 'vibora' ? (
-                <div className="grid grid-cols-[1fr_1fr_80px_80px] items-center gap-4">
-                  <span className="font-medium truncate">
-                    {instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}
-                  </span>
-                  <span className="text-muted-foreground truncate">
+              {/* Mobile: stacked layout */}
+              <div className="flex flex-col gap-1 lg:hidden">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium truncate">
                     {instance.taskId ? (
                       <Link
                         to="/tasks/$taskId"
@@ -142,51 +140,69 @@ function ClaudeInstancesTab() {
                         {instance.taskTitle}
                       </Link>
                     ) : (
-                      t('claude.noTask')
+                      <span className="text-muted-foreground">
+                        {instance.isViboraManaged ? instance.terminalName : t('claude.source.external')}
+                      </span>
                     )}
                   </span>
-                  <span className="text-right tabular-nums">{instance.ramMB.toFixed(0)} MB</span>
-                  <div className="flex justify-end">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="tabular-nums text-sm text-muted-foreground">{instance.ramMB.toFixed(0)} MB</span>
                     <Button
                       variant="ghost"
                       size="xs"
                       onClick={() => handleKill(instance)}
-                      disabled={killInstance.isPending}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={killingPid === instance.pid}
+                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid === instance.pid ? 'opacity-50' : ''}`}
                     >
-                      <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-                      {t('claude.kill')}
+                      <HugeiconsIcon icon={killingPid === instance.pid ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${killingPid === instance.pid ? 'animate-spin' : ''}`} />
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-[60px_1fr_80px_120px_80px] items-center gap-4">
-                  <span className="font-mono text-xs">{instance.pid}</span>
-                  <span className="text-muted-foreground truncate" title={instance.cwd}>
-                    {instance.cwd}
-                  </span>
-                  <span className="text-right tabular-nums">{instance.ramMB.toFixed(0)} MB</span>
-                  <span className="text-xs">
-                    {instance.isViboraManaged ? (
-                      <span className="text-blue-500">{t('claude.source.vibora', { name: instance.terminalName })}</span>
-                    ) : (
-                      <span className="text-muted-foreground">{t('claude.source.external')}</span>
-                    )}
-                  </span>
-                  <div className="flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => handleKill(instance)}
-                      disabled={killInstance.isPending}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                <span className="text-xs text-muted-foreground truncate" title={instance.cwd}>
+                  {instance.cwd}
+                </span>
+              </div>
+
+              {/* Desktop: grid layout */}
+              <div className="hidden lg:grid grid-cols-[60px_150px_1fr_1fr_80px_80px] items-center gap-4">
+                <span className="font-mono text-xs">{instance.pid}</span>
+                <span className="truncate text-sm">
+                  {instance.isViboraManaged ? (
+                    <span className="text-blue-500">{instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}</span>
+                  ) : (
+                    <span className="text-muted-foreground">{t('claude.source.external')}</span>
+                  )}
+                </span>
+                <span className="text-muted-foreground truncate text-sm">
+                  {instance.taskId ? (
+                    <Link
+                      to="/tasks/$taskId"
+                      params={{ taskId: instance.taskId }}
+                      className="hover:text-foreground hover:underline"
                     >
-                      <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-                      {t('claude.kill')}
-                    </Button>
-                  </div>
+                      {instance.taskTitle}
+                    </Link>
+                  ) : (
+                    t('claude.noTask')
+                  )}
+                </span>
+                <span className="text-muted-foreground truncate text-sm" title={instance.cwd}>
+                  {instance.cwd}
+                </span>
+                <span className="text-right tabular-nums text-sm">{instance.ramMB.toFixed(0)} MB</span>
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => handleKill(instance)}
+                    disabled={killingPid === instance.pid}
+                    className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid === instance.pid ? 'opacity-50' : ''}`}
+                  >
+                    <HugeiconsIcon icon={killingPid === instance.pid ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${killingPid === instance.pid ? 'animate-spin' : ''}`} />
+                    {killingPid === instance.pid ? t('claude.killing') : t('claude.kill')}
+                  </Button>
                 </div>
-              )}
+              </div>
             </Card>
           ))}
         </div>
@@ -368,10 +384,10 @@ function ProcessesTab() {
   const { data: dockerData, isLoading: dockerLoading } = useDockerStats()
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       {/* Top Processes */}
-      <Card className="p-4">
-        <div className="mb-4 flex items-center justify-between">
+      <Card className="p-4 lg:flex-1 lg:min-w-0 h-[400px] flex flex-col">
+        <div className="mb-4 flex items-center justify-between shrink-0">
           <h3 className="font-medium">{t('processes.topProcesses')}</h3>
           <Select value={sortBy} onValueChange={(value) => setSortBy(value as ProcessSortBy)}>
             <SelectTrigger className="w-32">
@@ -385,7 +401,7 @@ function ProcessesTab() {
         </div>
 
         {processesLoading && (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center flex-1">
             <HugeiconsIcon icon={Loading03Icon} className="size-6 animate-spin text-muted-foreground" />
           </div>
         )}
@@ -397,41 +413,43 @@ function ProcessesTab() {
         )}
 
         {processes && processes.length > 0 && (
-          <div className="space-y-1">
-            <div className="grid grid-cols-[60px_120px_1fr_70px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
-              <span>{t('processes.headers.pid')}</span>
-              <span>{t('processes.headers.name')}</span>
-              <span>{t('processes.headers.command')}</span>
-              <span className="text-right">{t('processes.headers.memory')}</span>
-              <span className="text-right">%</span>
-            </div>
-            {processes.map((proc) => (
-              <div
-                key={proc.pid}
-                className="grid grid-cols-[60px_120px_1fr_70px_80px] gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
-              >
-                <span className="font-mono text-xs text-muted-foreground">{proc.pid}</span>
-                <span className="truncate font-medium" title={proc.name}>
-                  {proc.name}
-                </span>
-                <span className="truncate text-muted-foreground text-xs" title={proc.command}>
-                  {proc.command}
-                </span>
-                <span className="text-right tabular-nums">{proc.memoryMB.toFixed(0)} MB</span>
-                <span className="text-right tabular-nums text-muted-foreground">{proc.memoryPercent.toFixed(1)}%</span>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-1">
+              <div className="grid grid-cols-[60px_120px_1fr_70px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                <span>{t('processes.headers.pid')}</span>
+                <span>{t('processes.headers.name')}</span>
+                <span>{t('processes.headers.command')}</span>
+                <span className="text-right">{t('processes.headers.memory')}</span>
+                <span className="text-right">%</span>
               </div>
-            ))}
+              {processes.map((proc) => (
+                <div
+                  key={proc.pid}
+                  className="grid grid-cols-[60px_120px_1fr_70px_80px] gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
+                >
+                  <span className="font-mono text-xs text-muted-foreground">{proc.pid}</span>
+                  <span className="truncate font-medium" title={proc.name}>
+                    {proc.name}
+                  </span>
+                  <span className="truncate text-muted-foreground text-xs" title={proc.command}>
+                    {proc.command}
+                  </span>
+                  <span className="text-right tabular-nums">{proc.memoryMB.toFixed(0)} MB</span>
+                  <span className="text-right tabular-nums text-muted-foreground">{proc.memoryPercent.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {processes && processes.length === 0 && (
-          <div className="py-8 text-center text-muted-foreground">{t('processes.empty')}</div>
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">{t('processes.empty')}</div>
         )}
       </Card>
 
       {/* Docker Containers */}
-      <Card className="p-4">
-        <div className="mb-4 flex items-center justify-between">
+      <Card className="p-4 lg:flex-1 lg:min-w-0 h-[400px] flex flex-col">
+        <div className="mb-4 flex items-center justify-between shrink-0">
           <h3 className="font-medium">
             {t('processes.containers')}
             {dockerData?.runtime && (
@@ -441,47 +459,173 @@ function ProcessesTab() {
         </div>
 
         {dockerLoading && (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center flex-1">
             <HugeiconsIcon icon={Loading03Icon} className="size-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
         {dockerData && !dockerData.available && (
-          <div className="py-8 text-center text-muted-foreground">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
             {t('processes.containersUnavailable')}
           </div>
         )}
 
         {dockerData && dockerData.available && dockerData.containers.length === 0 && (
-          <div className="py-8 text-center text-muted-foreground">{t('processes.containersEmpty')}</div>
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">{t('processes.containersEmpty')}</div>
         )}
 
         {dockerData && dockerData.available && dockerData.containers.length > 0 && (
-          <div className="space-y-1">
-            <div className="grid grid-cols-[1fr_70px_100px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
-              <span>{t('processes.headers.name')}</span>
-              <span className="text-right">CPU</span>
-              <span className="text-right">{t('processes.headers.memory')}</span>
-              <span className="text-right">%</span>
-            </div>
-            {dockerData.containers.map((container) => (
-              <div
-                key={container.id}
-                className="grid grid-cols-[1fr_70px_100px_80px] gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
-              >
-                <span className="truncate font-medium" title={container.name}>
-                  {container.name}
-                </span>
-                <span className="text-right tabular-nums">{container.cpuPercent.toFixed(1)}%</span>
-                <span className="text-right tabular-nums">
-                  {container.memoryMB.toFixed(0)} / {container.memoryLimit.toFixed(0)} MB
-                </span>
-                <span className="text-right tabular-nums text-muted-foreground">{container.memoryPercent.toFixed(1)}%</span>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-1">
+              <div className="grid grid-cols-[1fr_70px_100px_80px] gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                <span>{t('processes.headers.name')}</span>
+                <span className="text-right">CPU</span>
+                <span className="text-right">{t('processes.headers.memory')}</span>
+                <span className="text-right">%</span>
               </div>
-            ))}
+              {dockerData.containers.map((container) => (
+                <div
+                  key={container.id}
+                  className="grid grid-cols-[1fr_70px_100px_80px] gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
+                >
+                  <span className="truncate font-medium" title={container.name}>
+                    {container.name}
+                  </span>
+                  <span className="text-right tabular-nums">{container.cpuPercent.toFixed(1)}%</span>
+                  <span className="text-right tabular-nums">
+                    {container.memoryMB.toFixed(0)} / {container.memoryLimit.toFixed(0)} MB
+                  </span>
+                  <span className="text-right tabular-nums text-muted-foreground">{container.memoryPercent.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </Card>
+    </div>
+  )
+}
+
+function ViboraInstancesTab() {
+  const { t } = useTranslation('monitoring')
+  const [killingPid, setKillingPid] = useState<number | null>(null)
+  const { data: instances, isLoading, error } = useViboraInstances()
+  const killInstance = useKillViboraInstance()
+
+  const handleKill = (group: ViboraInstanceGroup) => {
+    if (!group.backend) return
+    setKillingPid(group.backend.pid)
+    killInstance.mutate(
+      { backendPid: group.backend.pid },
+      { onSettled: () => setKillingPid(null) }
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">
+          {t('vibora.description')}
+        </span>
+        {instances && instances.length > 0 && (
+          <span className="text-sm text-muted-foreground">
+            {t('vibora.instanceCount', { count: instances.length })}
+          </span>
+        )}
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <HugeiconsIcon icon={Loading03Icon} className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          {t('vibora.error', { message: error.message })}
+        </div>
+      )}
+
+      {instances && instances.length === 0 && (
+        <div className="py-12 text-center text-muted-foreground">
+          {t('vibora.empty')}
+        </div>
+      )}
+
+      {instances && instances.length > 0 && (
+        <div className="space-y-2">
+          {/* Header - desktop only */}
+          <div className="hidden lg:grid grid-cols-[80px_100px_1fr_100px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <span>{t('vibora.headers.port')}</span>
+            <span>{t('vibora.headers.mode')}</span>
+            <span>{t('vibora.headers.directory')}</span>
+            <span className="text-right">{t('vibora.headers.ram')}</span>
+            <span className="text-right">{t('vibora.headers.actions')}</span>
+          </div>
+
+          {instances.map((group) => {
+            const isKilling = killingPid === group.backend?.pid
+            return (
+              <Card key={group.backend?.pid || group.port} className="px-3 py-2">
+                {/* Mobile: stacked layout */}
+                <div className="flex flex-col gap-1 lg:hidden">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      <span className="font-mono">:{group.port}</span>
+                      <span className={`ml-2 text-xs ${group.mode === 'development' ? 'text-yellow-500' : 'text-green-500'}`}>
+                        {group.mode === 'development' ? t('vibora.mode.dev') : t('vibora.mode.prod')}
+                        {group.frontend && ` + ${t('vibora.vite')}`}
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="tabular-nums text-sm text-muted-foreground">{group.totalMemoryMB.toFixed(0)} MB</span>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => handleKill(group)}
+                        disabled={isKilling || !group.backend}
+                        className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isKilling ? 'opacity-50' : ''}`}
+                      >
+                        <HugeiconsIcon icon={isKilling ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${isKilling ? 'animate-spin' : ''}`} />
+                      </Button>
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground truncate" title={group.viboraDir}>
+                    {group.viboraDir}
+                  </span>
+                </div>
+
+                {/* Desktop: grid layout */}
+                <div className="hidden lg:grid grid-cols-[80px_100px_1fr_100px_80px] items-center gap-4">
+                  <span className="font-mono text-sm">{group.port}</span>
+                  <span className={`text-xs ${group.mode === 'development' ? 'text-yellow-500' : 'text-green-500'}`}>
+                    {group.mode === 'development' ? t('vibora.mode.dev') : t('vibora.mode.prod')}
+                    {group.frontend && ` + ${t('vibora.vite')}`}
+                  </span>
+                  <span className="text-muted-foreground truncate text-sm" title={group.viboraDir}>
+                    {group.viboraDir}
+                  </span>
+                  <span className="text-right tabular-nums text-sm">
+                    {group.totalMemoryMB.toFixed(0)} MB
+                  </span>
+                  <div className="flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => handleKill(group)}
+                      disabled={isKilling || !group.backend}
+                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isKilling ? 'opacity-50' : ''}`}
+                    >
+                      <HugeiconsIcon icon={isKilling ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${isKilling ? 'animate-spin' : ''}`} />
+                      {isKilling ? t('vibora.killing') : t('vibora.kill')}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -493,16 +637,15 @@ function MonitoringPage() {
     <div className="flex h-full flex-col overflow-hidden p-4">
       <h1 className="mb-4 text-lg font-semibold">{t('title')}</h1>
 
-      <Tabs defaultValue="claude" className="flex-1 flex flex-col min-h-0">
-        <TabsList>
-          <TabsTrigger value="claude">{t('tabs.claude')}</TabsTrigger>
-          <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>
-          <TabsTrigger value="processes">{t('tabs.processes')}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="claude" className="flex-1 overflow-auto pt-4">
-          <ClaudeInstancesTab />
-        </TabsContent>
+      <Tabs defaultValue="system" className="flex-1 flex flex-col min-h-0">
+        <div className="overflow-x-auto shrink-0">
+          <TabsList className="inline-flex w-auto">
+            <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>
+            <TabsTrigger value="processes">{t('tabs.processes')}</TabsTrigger>
+            <TabsTrigger value="claude">{t('tabs.claude')}</TabsTrigger>
+            <TabsTrigger value="vibora">{t('tabs.vibora')}</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="system" className="flex-1 overflow-auto pt-4">
           <SystemMetricsTab />
@@ -510,6 +653,14 @@ function MonitoringPage() {
 
         <TabsContent value="processes" className="flex-1 overflow-auto pt-4">
           <ProcessesTab />
+        </TabsContent>
+
+        <TabsContent value="claude" className="flex-1 overflow-auto pt-4">
+          <ClaudeInstancesTab />
+        </TabsContent>
+
+        <TabsContent value="vibora" className="flex-1 overflow-auto pt-4">
+          <ViboraInstancesTab />
         </TabsContent>
       </Tabs>
     </div>

@@ -3,13 +3,11 @@
   "tabs": {
     "claude": "Claude 实例",
     "system": "系统指标",
-    "processes": "进程"
+    "processes": "进程",
+    "vibora": "Vibora 服务器"
   },
   "claude": {
-    "filter": {
-      "vibora": "仅 Vibora",
-      "all": "所有实例"
-    },
+    "showAllInstances": "显示所有实例",
     "instanceCount": "{{count}} 个实例运行中",
     "totalRam": "总计 {{ram}} MB",
     "headers": {
@@ -23,6 +21,7 @@
     },
     "noTask": "(无任务)",
     "kill": "终止",
+    "killing": "终止中...",
     "source": {
       "vibora": "Vibora: {{name}}",
       "external": "外部"
@@ -58,5 +57,25 @@
     "containers": "容器",
     "containersEmpty": "没有容器运行中",
     "containersUnavailable": "Docker/Podman 不可用"
+  },
+  "vibora": {
+    "description": "运行中的 Vibora 开发服务器",
+    "instanceCount": "{{count}} 个实例运行中",
+    "headers": {
+      "port": "端口",
+      "mode": "模式",
+      "directory": "目录",
+      "ram": "内存",
+      "actions": "操作"
+    },
+    "mode": {
+      "dev": "开发",
+      "prod": "生产"
+    },
+    "vite": "Vite",
+    "kill": "终止",
+    "killing": "终止中...",
+    "empty": "没有 Vibora 实例运行中",
+    "error": "加载 Vibora 实例失败：{{message}}"
   }
 }
