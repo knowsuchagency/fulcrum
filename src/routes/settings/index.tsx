@@ -922,31 +922,42 @@ function SettingsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          // Save current server start time to detect actual restart
+                          const originalStartTime = developerMode?.startedAt
+                          setIsRestarting(true)
                           restartVibora.mutate(undefined, {
                             onSuccess: () => {
-                              setIsRestarting(true)
-                              // Poll until server is back, then reload
+                              // Poll until server restarts (new startedAt) or timeout
                               const pollForServer = async () => {
-                                const maxAttempts = 60 // 30 seconds max
+                                const maxAttempts = 120 // 60 seconds max (build can take a while)
                                 for (let i = 0; i < maxAttempts; i++) {
                                   await new Promise((r) => setTimeout(r, 500))
                                   try {
                                     const res = await fetch('/api/config/developer-mode')
                                     if (res.ok) {
-                                      window.location.reload()
-                                      return
+                                      const data = await res.json()
+                                      // Only reload if server actually restarted (new start time)
+                                      if (data.startedAt !== originalStartTime) {
+                                        window.location.reload()
+                                        return
+                                      }
+                                      // Same start time means build failed, old instance still running
                                     }
                                   } catch {
                                     // Server not ready yet, keep polling
                                   }
                                 }
-                                // Timeout - reload anyway to show current state
-                                window.location.reload()
+                                // Timeout - build likely failed, show error
+                                setIsRestarting(false)
+                                toast.error(t('developer.restartFailed'), {
+                                  description: t('developer.checkLogs'),
+                                })
                               }
                               pollForServer()
                             },
                             onError: (error) => {
-                              toast.error(t('developer.buildFailed'), {
+                              setIsRestarting(false)
+                              toast.error(t('developer.restartFailed'), {
                                 description: error.message,
                               })
                             },
@@ -959,11 +970,7 @@ function SettingsPage() {
                           icon={Loading03Icon}
                           className={`mr-2 size-4 ${restartVibora.isPending || isRestarting ? 'animate-spin' : ''}`}
                         />
-                        {isRestarting
-                          ? t('developer.restarting')
-                          : restartVibora.isPending
-                            ? t('developer.building')
-                            : t('developer.restartButton')}
+                        {isRestarting ? t('developer.restarting') : t('developer.restartButton')}
                       </Button>
                     </div>
                   </div>

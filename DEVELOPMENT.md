@@ -161,13 +161,23 @@ systemctl --user enable vibora-dev
 
 ### First Start
 
-The service automatically stops any existing Vibora instance and builds before starting, so just run:
+The service builds before stopping the old instance, so if the build fails, the old instance keeps running:
 
 ```bash
 systemctl --user start vibora-dev
 ```
 
-This is safe to run even if Vibora is already running via `mise run up` - the service will stop it first.
+This is safe to run even if Vibora is already running via `mise run up`.
+
+### How Restart Works
+
+The systemd service runs these steps in order:
+1. `mise run build` - If this fails, the service stops here and the old instance keeps running
+2. `bun run drizzle-kit push` - Run any pending migrations
+3. `mise run down` - Stop the old instance (only after build succeeds)
+4. `bun server/index.ts` - Start the new instance
+
+This ensures you never end up with no Vibora running due to a build failure.
 
 ### Manual Operations
 
@@ -178,7 +188,7 @@ systemctl --user start vibora-dev
 # Stop the server
 systemctl --user stop vibora-dev
 
-# Restart the server
+# Restart (rebuild and restart)
 systemctl --user restart vibora-dev
 
 # Check status
@@ -192,10 +202,10 @@ journalctl --user -u vibora-dev -f
 
 When running in developer mode, the Settings page shows a "Restart Vibora" button. Clicking it:
 
-1. **Pre-flight build**: Runs `mise run build` to verify the code compiles
-2. **Fails safely**: If the build fails, the server continues running and an error is shown
-3. **Restarts on success**: If the build succeeds, triggers `systemctl --user restart vibora-dev`
-4. **Service rebuilds**: The systemd service runs the build again on start (this is fast since nothing changed)
+1. **Triggers systemctl restart**: The button triggers `systemctl --user restart vibora-dev`
+2. **Build runs first**: Systemd builds the project before stopping the old instance
+3. **Fails safely**: If build fails, old instance keeps running (check logs with `journalctl`)
+4. **Auto-reloads**: The page polls for the new server and reloads when it's back
 
 This two-phase approach ensures you never accidentally take down the server with a broken build.
 

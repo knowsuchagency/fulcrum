@@ -72,10 +72,9 @@
   },
   "developer": {
     "restartButton": "Restart Vibora",
-    "building": "Building...",
     "restarting": "Restarting...",
-    "restartDescription": "Build and restart the Vibora server. If the build fails, the server will continue running.",
-    "restartInitiated": "Build succeeded. Restarting...",
-    "buildFailed": "Build failed"
+    "restartDescription": "Rebuild and restart the Vibora server. If the build fails, the server will continue running.",
+    "restartFailed": "Restart failed",
+    "checkLogs": "Build may have failed. Check journalctl --user -u vibora-dev for details."
   }
 }

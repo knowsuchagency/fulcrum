@@ -246,6 +246,7 @@ export function useUpdateZAiSettings() {
 // Developer mode types and hooks
 interface DeveloperModeResponse {
   enabled: boolean
+  startedAt: number
 }
 
 interface RestartResponse {

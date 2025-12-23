@@ -8,9 +8,9 @@ WorkingDirectory=%h/projects/vibora
 Environment=VIBORA_DEVELOPER=1
 Environment=NODE_ENV=production
 Environment=PATH=%h/.local/bin:%h/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin
-ExecStartPre=/bin/bash -c 'cd %h/projects/vibora && mise run down || true'
 ExecStartPre=/bin/bash -c 'cd %h/projects/vibora && mise run build'
 ExecStartPre=/bin/bash -c 'cd %h/projects/vibora && bun run drizzle-kit push'
+ExecStartPre=/bin/bash -c 'cd %h/projects/vibora && mise run down || true'
 ExecStart=/bin/bash -c 'cd %h/projects/vibora && bun server/index.ts'
 Restart=on-failure
 RestartSec=5

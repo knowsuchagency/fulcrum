@@ -20,14 +20,14 @@ export async function handleDevCommand(
         )
       }
 
-      output({ status: 'building', message: 'Building Vibora...' })
+      output({ status: 'restarting', message: 'Triggering restart (build + restart via systemd)...' })
       const result = await client.restartVibora()
 
       if (result.error) {
-        throw new CliError('BUILD_FAILED', result.error, ExitCodes.OPERATION_FAILED)
+        throw new CliError('RESTART_FAILED', result.error, ExitCodes.OPERATION_FAILED)
       }
 
-      output({ status: 'restarting', message: result.message || 'Restart initiated' })
+      output({ status: 'initiated', message: 'Restart initiated. If build fails, old instance keeps running.' })
       break
     }
 

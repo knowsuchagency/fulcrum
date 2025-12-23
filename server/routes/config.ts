@@ -14,11 +14,7 @@ import {
   type NotificationSettings,
   type ZAiSettings,
 } from '../lib/settings'
-import { spawn, exec } from 'child_process'
-import { promisify } from 'util'
-import * as os from 'os'
-
-const execAsync = promisify(exec)
+import { spawn } from 'child_process'
 import { testNotificationChannel, sendNotification, type NotificationPayload } from '../services/notification-service'
 
 // Config keys (mapped to settings keys)
@@ -144,35 +140,30 @@ app.put('/z-ai', async (c) => {
 // Developer mode routes
 
 // GET /api/config/developer-mode - Check if developer mode is enabled
+// Track when the server started for restart detection
+const serverStartTime = Date.now()
+
 app.get('/developer-mode', (c) => {
-  return c.json({ enabled: isDeveloperMode() })
+  return c.json({ enabled: isDeveloperMode(), startedAt: serverStartTime })
 })
 
 // POST /api/config/restart - Restart Vibora via systemd (developer mode only)
-// Two-phase: build first, only restart if build succeeds
-app.post('/restart', async (c) => {
+// Systemd service handles build -> if build fails, old instance stays running
+app.post('/restart', (c) => {
   if (!isDeveloperMode()) {
     return c.json({ error: 'Restart only available in developer mode' }, 403)
   }
 
-  try {
-    // Phase 1: Build - if this fails, don't restart
-    const projectPath = `${os.homedir()}/projects/vibora`
-    await execAsync('mise run build', { cwd: projectPath })
+  // Trigger systemctl restart - it will build first, then stop old instance, then start
+  // If build fails, the service fails to start and old instance keeps running
+  setTimeout(() => {
+    spawn('systemctl', ['--user', 'restart', 'vibora-dev'], {
+      detached: true,
+      stdio: 'ignore',
+    }).unref()
+  }, 100)
 
-    // Phase 2: Build succeeded, now restart
-    setTimeout(() => {
-      spawn('systemctl', ['--user', 'restart', 'vibora-dev'], {
-        detached: true,
-        stdio: 'ignore',
-      }).unref()
-    }, 100)
-
-    return c.json({ success: true, message: 'Build succeeded, restart initiated' })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return c.json({ error: `Build failed: ${message}` }, 500)
-  }
+  return c.json({ success: true, message: 'Restart initiated' })
 })
 
 // GET /api/config/:key - Get config value
