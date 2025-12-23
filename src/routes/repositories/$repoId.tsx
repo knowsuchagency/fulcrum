@@ -23,9 +23,11 @@ import {
   Loading03Icon,
   Alert02Icon,
   VisualStudioCodeIcon,
+  Task01Icon,
 } from '@hugeicons/core-free-icons'
 import { useHostname, useSshPort } from '@/hooks/use-config'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
+import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
 export const Route = createFileRoute('/repositories/$repoId')({
   component: RepositoryDetailView,
@@ -44,6 +46,7 @@ function RepositoryDetailView() {
   const [startupScript, setStartupScript] = useState('')
   const [copyFiles, setCopyFiles] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
+  const [taskModalOpen, setTaskModalOpen] = useState(false)
 
   // Initialize form state when repository loads
   useEffect(() => {
@@ -136,6 +139,16 @@ function RepositoryDetailView() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setTaskModalOpen(true)}
+            className="text-muted-foreground hover:text-foreground"
+            title="Start Task"
+          >
+            <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
+          </Button>
+
           <Button
             variant="ghost"
             size="icon-sm"
@@ -233,6 +246,12 @@ function RepositoryDetailView() {
           </FieldGroup>
         </div>
       </div>
+
+      <CreateTaskModal
+        open={taskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        defaultRepository={repository}
+      />
     </div>
   )
 }
