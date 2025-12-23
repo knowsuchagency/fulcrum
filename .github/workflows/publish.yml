@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write  # Required for OIDC
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,9 +59,9 @@ jobs:
       - name: Publish to npm
         if: steps.check_tag.outputs.exists == 'false'
         working-directory: cli
-        run: npm publish --access public
+        run: npm publish --access public --provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false'
