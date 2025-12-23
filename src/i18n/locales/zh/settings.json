@@ -5,6 +5,7 @@
     "paths": "路径",
     "remoteAccess": "远程访问",
     "integrations": "集成",
+    "zai": "z.ai",
     "notifications": "通知",
     "appearance": "外观"
   },
@@ -37,6 +38,15 @@
     "github": {
       "label": "GitHub",
       "description": "用于 Issues 和 PR 的个人访问令牌"
+    },
+    "zai": {
+      "enable": "启用",
+      "apiKey": "API 密钥",
+      "description": "配置 Claude Code 使用 z.ai 代理",
+      "modelMappings": "模型映射",
+      "haiku": "Haiku",
+      "sonnet": "Sonnet",
+      "opus": "Opus"
     },
     "language": {
       "label": "语言",

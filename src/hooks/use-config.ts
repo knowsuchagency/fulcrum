@@ -209,3 +209,34 @@ export function useTestNotificationChannel() {
       }),
   })
 }
+
+// z.ai settings types
+export interface ZAiSettings {
+  enabled: boolean
+  apiKey: string | null
+  haikuModel: string
+  sonnetModel: string
+  opusModel: string
+}
+
+export function useZAiSettings() {
+  return useQuery({
+    queryKey: ['config', 'z-ai'],
+    queryFn: () => fetchJSON<ZAiSettings>(`${API_BASE}/api/config/z-ai`),
+  })
+}
+
+export function useUpdateZAiSettings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (settings: Partial<ZAiSettings>) =>
+      fetchJSON<ZAiSettings>(`${API_BASE}/api/config/z-ai`, {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['config', 'z-ai'] })
+    },
+  })
+}
