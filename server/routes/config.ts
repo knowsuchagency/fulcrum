@@ -147,22 +147,22 @@ app.get('/developer-mode', (c) => {
 })
 
 // POST /api/config/restart - Restart Vibora via systemd (developer mode only)
-// Systemd service handles build -> if build fails, old instance stays running
+// Build first, then restart only if build succeeds
 app.post('/restart', (c) => {
   if (!isDeveloperMode()) {
     return c.json({ error: 'Restart only available in developer mode' }, 403)
   }
 
-  // Trigger systemctl restart - it will build first, then stop old instance, then start
-  // If build fails, the service fails to start and old instance keeps running
+  // Build first in the background, then restart only if successful
+  // This prevents stopping the old instance if build fails
   setTimeout(() => {
-    spawn('systemctl', ['--user', 'restart', 'vibora-dev'], {
+    spawn('bash', ['-c', 'cd ~/projects/vibora && mise run build && systemctl --user restart vibora-dev'], {
       detached: true,
       stdio: 'ignore',
     }).unref()
   }, 100)
 
-  return c.json({ success: true, message: 'Restart initiated' })
+  return c.json({ success: true, message: 'Restart initiated (building first)' })
 })
 
 // GET /api/config/:key - Get config value
