@@ -603,8 +603,8 @@ function findViboraInstances(): ViboraInstanceGroup[] {
         // We check the first part of cmdline to avoid shell wrappers that mention bun
         const cmdParts = cmdline.trim().split(/\s+/)
         const isBunProcess = cmdParts[0]?.includes('bun') ?? false
-        const isDevBackend = isBunProcess && cmdline.includes('server/index.ts')
-        const isProdBackend = isBunProcess && !!env.VIBORA_PACKAGE_ROOT
+        const isDevBackend = isBunProcess && cmdline.includes('server/index.ts') && env.NODE_ENV !== 'production'
+        const isProdBackend = isBunProcess && (!!env.VIBORA_PACKAGE_ROOT || (cmdline.includes('server/index.ts') && env.NODE_ENV === 'production'))
 
         if (isDevBackend || isProdBackend) {
           const port = parseInt(env.PORT || '3333', 10)
