@@ -7,8 +7,6 @@ import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/eleme
 import { attachClosestEdge, extractClosestEdge, type Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { useSelection } from './selection-context'
 import { useDrag } from './drag-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
@@ -22,9 +20,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, isDragPreview }: TaskCardProps) {
-  const { selectMode, isSelected, toggle } = useSelection()
   const { setActiveTask } = useDrag()
-  const selected = isSelected(task.id)
   const navigate = useNavigate()
 
   const ref = useRef<HTMLDivElement>(null)
@@ -38,7 +34,7 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
 
   useEffect(() => {
     const el = ref.current
-    if (!el || selectMode || isDragPreview) return
+    if (!el || isDragPreview) return
 
     return combine(
       draggable({
@@ -102,19 +98,13 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
         },
       })
     )
-  }, [task, selectMode, isDragPreview, setActiveTask])
+  }, [task, isDragPreview, setActiveTask])
 
   const handlePointerDown = () => {
     hasDragged.current = false
   }
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (selectMode) {
-      e.preventDefault()
-      toggle(task.id)
-      return
-    }
-
+  const handleClick = () => {
     // Only navigate if we didn't drag
     if (!hasDragged.current) {
       navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
@@ -128,10 +118,8 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
       onPointerDown={handlePointerDown}
       onClick={handleClick}
       className={cn(
-        'transition-shadow hover:shadow-md relative',
-        selectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
-        isDragging && 'opacity-50',
-        selected && 'ring-2 ring-primary'
+        'transition-shadow hover:shadow-md relative cursor-grab active:cursor-grabbing',
+        isDragging && 'opacity-50'
       )}
     >
       {/* Drop indicator line */}
@@ -145,24 +133,11 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
         />
       )}
 
-      {/* Checkbox in top-right - only in select mode */}
-      {selectMode && (
-        <div
-          className="absolute right-2 top-2 z-10 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation()
-            toggle(task.id)
-          }}
-        >
-          <Checkbox checked={selected} className="cursor-pointer pointer-events-none" />
-        </div>
-      )}
-
-      <CardHeader className={cn('p-3 pb-1 flex flex-row items-start justify-between gap-2', selectMode && 'pr-8')}>
+      <CardHeader className="p-3 pb-1 flex flex-row items-start justify-between gap-2">
         <CardTitle className="text-sm font-medium leading-tight flex-1">
           {task.title}
         </CardTitle>
-        {!selectMode && !isDragPreview && (
+        {!isDragPreview && (
           <button
             type="button"
             className="shrink-0 p-0.5 -m-0.5 rounded hover:bg-muted transition-colors cursor-pointer"
