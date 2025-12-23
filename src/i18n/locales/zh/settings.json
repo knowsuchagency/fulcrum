@@ -1,0 +1,62 @@
+{
+  "title": "设置",
+  "sections": {
+    "serverDefaults": "服务器与默认设置",
+    "paths": "路径",
+    "remoteAccess": "远程访问",
+    "integrations": "集成",
+    "notifications": "通知",
+    "appearance": "外观"
+  },
+  "fields": {
+    "port": {
+      "label": "端口",
+      "description": "需要重启"
+    },
+    "startupCommand": {
+      "label": "启动命令",
+      "description": "新任务终端的命令"
+    },
+    "gitReposDir": {
+      "label": "Git 仓库目录",
+      "description": "仓库选择器的起始目录"
+    },
+    "hostname": {
+      "label": "主机名",
+      "description": "用于 VS Code SSH 地址",
+      "placeholder": "例如：citadel"
+    },
+    "sshPort": {
+      "label": "SSH 端口",
+      "description": "远程连接端口"
+    },
+    "linear": {
+      "label": "Linear",
+      "description": "用于工单同步的 API 密钥"
+    },
+    "github": {
+      "label": "GitHub",
+      "description": "用于 Issues 和 PR 的个人访问令牌"
+    },
+    "language": {
+      "label": "语言",
+      "description": "界面语言",
+      "options": {
+        "auto": "自动检测",
+        "en": "English",
+        "zh": "简体中文"
+      }
+    }
+  },
+  "notifications": {
+    "enable": "启用通知",
+    "sound": "声音（仅限 macOS）",
+    "slack": "Slack",
+    "discord": "Discord",
+    "pushover": "Pushover",
+    "appToken": "应用令牌",
+    "userKey": "用户密钥",
+    "testSuccess": "{{channel}} 测试成功",
+    "testFailed": "{{channel}} 测试失败：{{error}}"
+  }
+}

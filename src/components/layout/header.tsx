@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -19,6 +20,7 @@ interface HeaderProps {
 }
 
 export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
+  const { t } = useTranslation('navigation')
   const { location } = useRouterState()
   const pathname = location.pathname
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
@@ -48,7 +50,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              <span className="max-sm:hidden">Tasks</span>
+              <span className="max-sm:hidden">{t('header.tasks')}</span>
             </Button>
           </Link>
           <Link to="/terminals">
@@ -63,7 +65,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              <span className="max-sm:hidden">Terminals</span>
+              <span className="max-sm:hidden">{t('header.terminals')}</span>
             </Button>
           </Link>
           <Link to="/worktrees">
@@ -78,7 +80,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              <span className="max-sm:hidden">Worktrees</span>
+              <span className="max-sm:hidden">{t('header.worktrees')}</span>
             </Button>
           </Link>
           <Link to="/repositories">
@@ -93,7 +95,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              <span className="max-sm:hidden">Repositories</span>
+              <span className="max-sm:hidden">{t('header.repositories')}</span>
             </Button>
           </Link>
           <Link to="/review">
@@ -108,7 +110,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                 strokeWidth={2}
                 data-slot="icon"
               />
-              <span className="max-sm:hidden">Review</span>
+              <span className="max-sm:hidden">{t('header.review')}</span>
             </Button>
           </Link>
         </nav>
@@ -120,7 +122,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
           variant="ghost"
           size="icon-sm"
           onClick={onOpenCommandPalette}
-          title="Command Palette (⌘K)"
+          title={t('header.commandPalette', { shortcut: '⌘K' })}
         >
           <HugeiconsIcon icon={BrowserIcon} size={16} strokeWidth={2} />
         </Button>

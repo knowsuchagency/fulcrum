@@ -20,6 +20,7 @@ export const CONFIG_KEYS = {
   SSH_PORT: 'ssh_port',
   LINEAR_API_KEY: 'linear_api_key',
   GITHUB_PAT: 'github_pat',
+  LANGUAGE: 'language',
 } as const
 
 // Default values (client-side fallbacks)
@@ -110,6 +111,18 @@ export function useGitHubPat() {
   return {
     ...query,
     data: (query.data?.value as string) ?? '',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export type Language = 'en' | 'zh' | null
+
+export function useLanguage() {
+  const query = useConfig(CONFIG_KEYS.LANGUAGE)
+
+  return {
+    ...query,
+    data: (query.data?.value as Language) ?? null,
     isDefault: query.data?.isDefault ?? true,
   }
 }

@@ -14,6 +14,7 @@ export interface Settings {
   basicAuthPassword: string | null
   linearApiKey: string | null
   githubPat: string | null
+  language: 'en' | 'zh' | null // null = auto-detect from browser
 }
 
 // Default settings
@@ -27,6 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
   basicAuthPassword: null,
   linearApiKey: null,
   githubPat: null,
+  language: null,
 }
 
 // Expand tilde in path and ensure absolute path
@@ -135,6 +137,7 @@ export function getSettings(): Settings {
     basicAuthPassword: parsed.basicAuthPassword ?? null,
     linearApiKey: parsed.linearApiKey ?? null,
     githubPat: parsed.githubPat ?? null,
+    language: parsed.language ?? null,
   }
 
   // Persist missing keys back to file (only file settings, not env overrides)
@@ -157,6 +160,7 @@ export function getSettings(): Settings {
     basicAuthPassword: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.basicAuthPassword,
     linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.linearApiKey,
     githubPat: process.env.GITHUB_PAT ?? fileSettings.githubPat,
+    language: fileSettings.language,
   }
 }
 

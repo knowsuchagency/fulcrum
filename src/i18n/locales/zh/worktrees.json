@@ -1,0 +1,29 @@
+{
+  "title": "工作树",
+  "summary": {
+    "total": "共 {{count}} 个",
+    "orphaned": "{{count}} 个孤立"
+  },
+  "cleanup": {
+    "button": "清理 ({{count}})",
+    "title": "删除已完成的工作树",
+    "description": "这将永久删除 {{count}} 个工作树及其关联的任务：",
+    "done": "已完成",
+    "canceled": "已取消",
+    "cannotUndo": "此操作无法撤销。"
+  },
+  "delete": {
+    "title": "删除工作树",
+    "description": "这将永久删除位于以下位置的工作树目录",
+    "linkedTask": "关联的任务 \"{{title}}\" 也将被删除。",
+    "cannotUndo": "此操作无法撤销。",
+    "button": "删除 {{count}} 个"
+  },
+  "empty": {
+    "noMatch": "没有匹配所选筛选条件的工作树。",
+    "noWorktrees": "未找到工作树。工作树在创建任务时自动生成。"
+  },
+  "error": {
+    "failedToLoad": "加载工作树失败：{{message}}"
+  }
+}

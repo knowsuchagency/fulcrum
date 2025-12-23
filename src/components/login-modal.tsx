@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
 
 export function LoginModal() {
+  const { t } = useTranslation('common')
   const { showLoginModal, login } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -21,12 +23,12 @@ export function LoginModal() {
       try {
         await login(username, password)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Login failed')
+        setError(err instanceof Error ? err.message : t('auth.loginFailed'))
       } finally {
         setIsLoading(false)
       }
     },
-    [username, password, login]
+    [username, password, login, t]
   )
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -40,12 +42,12 @@ export function LoginModal() {
     <Dialog open={showLoginModal}>
       <DialogContent showCloseButton={false} className="sm:max-w-sm" onKeyDown={handleKeyDown}>
         <DialogHeader>
-          <DialogTitle>Login to Vibora</DialogTitle>
+          <DialogTitle>{t('auth.loginTitle')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <FieldGroup className="mt-4">
             <Field>
-              <FieldLabel htmlFor="login-username">Username</FieldLabel>
+              <FieldLabel htmlFor="login-username">{t('auth.username')}</FieldLabel>
               <Input
                 id="login-username"
                 type="text"
@@ -57,7 +59,7 @@ export function LoginModal() {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="login-password">Password</FieldLabel>
+              <FieldLabel htmlFor="login-password">{t('auth.password')}</FieldLabel>
               <Input
                 id="login-password"
                 type="password"
@@ -71,7 +73,7 @@ export function LoginModal() {
           </FieldGroup>
           <DialogFooter className="mt-4">
             <Button type="submit" disabled={isLoading || !username || !password}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? t('status.loggingIn') : t('auth.login')}
             </Button>
           </DialogFooter>
         </form>

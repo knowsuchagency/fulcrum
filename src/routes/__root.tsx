@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Outlet, createRootRoute } from '@tanstack/react-router'
 import { Header } from '@/components/layout/header'
 import { useTaskSync } from '@/hooks/use-task-sync'
+import { useLanguageSync } from '@/hooks/use-language-sync'
 import { KeyboardProvider } from '@/contexts/keyboard-context'
 import { CommandPalette } from '@/components/command-palette/command-palette'
 import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help'
@@ -13,6 +14,11 @@ export const Route = createRootRoute({
 
 function TaskSync() {
   useTaskSync()
+  return null
+}
+
+function LanguageSync() {
+  useLanguageSync()
   return null
 }
 
@@ -41,6 +47,7 @@ function RootLayout() {
     <KeyboardProvider>
       <div className="flex h-screen flex-col overflow-x-hidden bg-background text-foreground">
         <TaskSync />
+        <LanguageSync />
         <Header onNewTaskRef={handleNewTaskRef} onOpenCommandPalette={handleOpenCommandPalette} />
         <main className="isolate flex-1 overflow-hidden">
           <Outlet />

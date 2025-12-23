@@ -19,6 +19,7 @@ export const CONFIG_KEYS = {
   SSH_PORT: 'sshPort',
   LINEAR_API_KEY: 'linearApiKey',
   GITHUB_PAT: 'githubPat',
+  LANGUAGE: 'language',
 } as const
 
 const app = new Hono()
@@ -77,6 +78,8 @@ app.get('/:key', (c) => {
     value = settings.linearApiKey
   } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
     value = settings.githubPat
+  } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
+    return c.json({ key, value: settings.language, isDefault: settings.language === null })
   } else if (key === 'worktree_base_path') {
     // Read-only: derived from VIBORA_DIR
     return c.json({ key, value: getWorktreeBasePath(), isDefault: true })
@@ -141,6 +144,13 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ githubPat: body.value || null })
       return c.json({ key, value: body.value })
+    } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
+      const langValue = body.value === '' || body.value === null ? null : body.value
+      if (langValue !== null && langValue !== 'en' && langValue !== 'zh') {
+        return c.json({ error: 'Language must be "en", "zh", or null' }, 400)
+      }
+      updateSettings({ language: langValue as 'en' | 'zh' | null })
+      return c.json({ key, value: langValue })
     } else {
       return c.json({ error: `Unknown or read-only config key: ${key}` }, 400)
     }
@@ -171,6 +181,8 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.linearApiKey
   } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
     defaultValue = defaults.githubPat
+  } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
+    defaultValue = defaults.language
   }
 
   return c.json({ key, value: defaultValue, isDefault: true })

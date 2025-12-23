@@ -1,0 +1,29 @@
+{
+  "title": "Worktrees",
+  "summary": {
+    "total": "{{count}} total",
+    "orphaned": "{{count}} orphaned"
+  },
+  "cleanup": {
+    "button": "Clean up ({{count}})",
+    "title": "Delete Completed Worktrees",
+    "description": "This will permanently delete {{count}} worktree{{plural}} and their linked tasks:",
+    "done": "Done",
+    "canceled": "Canceled",
+    "cannotUndo": "This action cannot be undone."
+  },
+  "delete": {
+    "title": "Delete Worktree",
+    "description": "This will permanently delete the worktree directory at",
+    "linkedTask": "The linked task \"{{title}}\" will also be deleted.",
+    "cannotUndo": "This action cannot be undone.",
+    "button": "Delete {{count}}"
+  },
+  "empty": {
+    "noMatch": "No worktrees match the selected filters.",
+    "noWorktrees": "No worktrees found. Worktrees are created when you create tasks."
+  },
+  "error": {
+    "failedToLoad": "Failed to load worktrees: {{message}}"
+  }
+}

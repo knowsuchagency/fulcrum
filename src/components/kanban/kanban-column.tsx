@@ -1,16 +1,10 @@
 import { useRef, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { TaskCard } from './task-card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { Task, TaskStatus } from '@/types'
 import { cn } from '@/lib/utils'
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  IN_PROGRESS: 'In Progress',
-  IN_REVIEW: 'In Review',
-  DONE: 'Done',
-  CANCELED: 'Canceled',
-}
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'border-t-slate-400',
@@ -26,6 +20,7 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
+  const { t } = useTranslation('common')
   const ref = useRef<HTMLDivElement>(null)
   const [isOver, setIsOver] = useState(false)
 
@@ -57,7 +52,7 @@ export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
     >
       {!isMobile && (
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <h3 className="text-sm font-medium">{STATUS_LABELS[status]}</h3>
+          <h3 className="text-sm font-medium">{t(`statuses.${status}`)}</h3>
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium">
             {tasks.length}
           </span>

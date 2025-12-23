@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
 import { AuthProvider } from './contexts/auth-context'
 import { LoginModal } from './components/login-modal'
+import './i18n' // Initialize i18n before rendering
 import './index.css'
 
 const queryClient = new QueryClient({

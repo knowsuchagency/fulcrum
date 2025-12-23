@@ -1,0 +1,51 @@
+{
+  "title": "Review",
+  "tabs": {
+    "pullRequests": "Pull Requests",
+    "issues": "Issues"
+  },
+  "filters": {
+    "pr": {
+      "created": "Created by me",
+      "assigned": "Assigned to me",
+      "reviewRequested": "Review requests",
+      "mentioned": "Mentioned"
+    },
+    "issue": {
+      "assigned": "Assigned to me",
+      "created": "Created by me",
+      "mentioned": "Mentioned"
+    },
+    "allOrgs": "All Orgs",
+    "allOrganizations": "All Organizations",
+    "viboraReposOnly": "Vibora repos only"
+  },
+  "github": {
+    "tokenRequired": "GitHub Token Required",
+    "tokenDescription": "To view your issues and pull requests, add a GitHub Personal Access Token in Settings.",
+    "requiredScopes": "Required scopes:",
+    "generateToken": "Generate Token",
+    "goToSettings": "Go to Settings"
+  },
+  "prs": {
+    "loading": "Loading...",
+    "failedToLoad": "Failed to load pull requests",
+    "empty": {
+      "all": "No open pull requests",
+      "created": "No pull requests created by you",
+      "assigned": "No pull requests assigned to you",
+      "reviewRequested": "No pull requests awaiting your review",
+      "mentioned": "No pull requests mentioning you"
+    },
+    "draft": "Draft"
+  },
+  "issues": {
+    "loading": "Loading...",
+    "failedToLoad": "Failed to load issues",
+    "empty": {
+      "assigned": "No issues assigned to you",
+      "created": "No issues created by you",
+      "mentioned": "No issues mentioning you"
+    }
+  }
+}

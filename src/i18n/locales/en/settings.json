@@ -1,0 +1,62 @@
+{
+  "title": "Settings",
+  "sections": {
+    "serverDefaults": "Server & Defaults",
+    "paths": "Paths",
+    "remoteAccess": "Remote Access",
+    "integrations": "Integrations",
+    "notifications": "Notifications",
+    "appearance": "Appearance"
+  },
+  "fields": {
+    "port": {
+      "label": "Port",
+      "description": "Requires restart"
+    },
+    "startupCommand": {
+      "label": "Startup Command",
+      "description": "Command for new task terminals"
+    },
+    "gitReposDir": {
+      "label": "Git Repos Directory",
+      "description": "Starting directory for repo picker"
+    },
+    "hostname": {
+      "label": "Hostname",
+      "description": "For VS Code SSH URLs",
+      "placeholder": "e.g., citadel"
+    },
+    "sshPort": {
+      "label": "SSH Port",
+      "description": "Remote connection port"
+    },
+    "linear": {
+      "label": "Linear",
+      "description": "API key for ticket sync"
+    },
+    "github": {
+      "label": "GitHub",
+      "description": "PAT for Issues & PRs"
+    },
+    "language": {
+      "label": "Language",
+      "description": "Interface language",
+      "options": {
+        "auto": "Auto-detect",
+        "en": "English",
+        "zh": "Chinese (Simplified)"
+      }
+    }
+  },
+  "notifications": {
+    "enable": "Enable Notifications",
+    "sound": "Sound (macOS only)",
+    "slack": "Slack",
+    "discord": "Discord",
+    "pushover": "Pushover",
+    "appToken": "App Token",
+    "userKey": "User Key",
+    "testSuccess": "{{channel}} test successful",
+    "testFailed": "{{channel}} test failed: {{error}}"
+  }
+}
