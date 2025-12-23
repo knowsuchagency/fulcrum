@@ -5,36 +5,33 @@
 
 The Vibe Engineer's Cockpit. Vibora marries basic project management with actual software development by embedding terminals directly into the workflow.
 
+Available in English and Chinese. Works with [z.ai](https://z.ai) for Claude Code proxy integration.
+
 ## Philosophy
 
 - **Terminal-first AI agent orchestration** — Agents (Claude Code, Codex, etc.) run in terminals as-is. No abstraction layer, no wrapper APIs, no feature parity maintenance as agents evolve.
 - **Opinionated with few opinions** — Provides structure without dictating workflow.
 - **Git worktree isolation** — Tasks create isolated git worktrees, with architecture supporting evolution toward more general task types.
 
-## Requirements
+## Quick Start
 
-- [Bun](https://bun.sh/) — JavaScript runtime
-- [dtach](https://github.com/crigler/dtach) — Terminal session persistence
+Requires [Node.js](https://nodejs.org/). Run the latest vibora with a single command:
+
+```bash
+npx vibora@latest up
+```
+
+This starts the vibora server as a daemon. Open http://localhost:3333 in your browser. The `up` command will help you install any missing dependencies.
+
+```bash
+npx vibora@latest down    # Stop the server
+npx vibora@latest status  # Check if running
+```
 
 ## Tech Stack
 
 - **Frontend**: React 19, TanStack Router & Query, xterm.js, Tailwind CSS, shadcn/ui (v4 with baseui support)
 - **Backend**: Hono.js on Bun, SQLite with Drizzle ORM, WebSocket for terminal I/O
-
-## Quick Start
-
-Run the latest vibora with a single command:
-
-```bash
-bunx vibora@latest up
-```
-
-This starts the vibora server as a daemon. Open http://localhost:3333 in your browser.
-
-```bash
-bunx vibora@latest down    # Stop the server
-bunx vibora@latest status  # Check if running
-```
 
 ## Configuration
 
