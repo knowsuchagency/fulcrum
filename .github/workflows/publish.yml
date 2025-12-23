@@ -60,7 +60,7 @@ jobs:
       - name: Publish to npm
         if: steps.check_tag.outputs.exists == 'false'
         working-directory: cli
-        run: npm publish --access public --provenance
+        run: npm publish --access public
 
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false'
