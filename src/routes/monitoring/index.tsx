@@ -28,6 +28,7 @@ import {
   type ProcessSortBy,
   type ViboraInstanceGroup,
 } from '@/hooks/use-monitoring'
+import { useDeveloperMode } from '@/hooks/use-config'
 
 export const Route = createFileRoute('/monitoring/')({
   component: MonitoringPage,
@@ -792,6 +793,7 @@ function ClaudeUsageLimitsTab() {
 
 function MonitoringPage() {
   const { t } = useTranslation('monitoring')
+  const { data: developerMode } = useDeveloperMode()
 
   return (
     <div className="flex h-full flex-col overflow-hidden p-4">
@@ -803,7 +805,9 @@ function MonitoringPage() {
             <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>
             <TabsTrigger value="processes">{t('tabs.processes')}</TabsTrigger>
             <TabsTrigger value="claude">{t('tabs.claude')}</TabsTrigger>
-            <TabsTrigger value="vibora">{t('tabs.vibora')}</TabsTrigger>
+            {developerMode?.enabled && (
+              <TabsTrigger value="vibora">{t('tabs.vibora')}</TabsTrigger>
+            )}
             <TabsTrigger value="usage">{t('tabs.usage')}</TabsTrigger>
           </TabsList>
         </div>
@@ -820,9 +824,11 @@ function MonitoringPage() {
           <ClaudeInstancesTab />
         </TabsContent>
 
-        <TabsContent value="vibora" className="flex-1 overflow-auto pt-4">
-          <ViboraInstancesTab />
-        </TabsContent>
+        {developerMode?.enabled && (
+          <TabsContent value="vibora" className="flex-1 overflow-auto pt-4">
+            <ViboraInstancesTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="usage" className="flex-1 overflow-auto pt-4">
           <ClaudeUsageLimitsTab />

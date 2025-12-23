@@ -7,7 +7,8 @@
     "integrations": "集成",
     "zai": "z.ai",
     "notifications": "通知",
-    "appearance": "外观"
+    "appearance": "外观",
+    "developer": "开发者"
   },
   "fields": {
     "port": {
@@ -68,5 +69,13 @@
     "userKey": "用户密钥",
     "testSuccess": "{{channel}} 测试成功",
     "testFailed": "{{channel}} 测试失败：{{error}}"
+  },
+  "developer": {
+    "restartButton": "重启 Vibora",
+    "building": "构建中...",
+    "restarting": "重启中...",
+    "restartDescription": "构建并重启 Vibora 服务器。如果构建失败，服务器将继续运行。",
+    "restartInitiated": "构建成功，正在重启...",
+    "buildFailed": "构建失败"
   }
 }

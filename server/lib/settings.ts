@@ -169,6 +169,11 @@ export function getSetting<K extends keyof Settings>(key: K): Settings[K] {
   return getSettings()[key]
 }
 
+// Check if developer mode is enabled (VIBORA_DEVELOPER env var)
+export function isDeveloperMode(): boolean {
+  return process.env.VIBORA_DEVELOPER === '1' || process.env.VIBORA_DEVELOPER === 'true'
+}
+
 // Get session secret derived from password (for signing session cookies)
 // Returns null if auth is not configured
 export function getSessionSecret(): string | null {

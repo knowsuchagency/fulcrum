@@ -242,3 +242,31 @@ export function useUpdateZAiSettings() {
     },
   })
 }
+
+// Developer mode types and hooks
+interface DeveloperModeResponse {
+  enabled: boolean
+}
+
+interface RestartResponse {
+  success?: boolean
+  message?: string
+  error?: string
+}
+
+export function useDeveloperMode() {
+  return useQuery({
+    queryKey: ['config', 'developer-mode'],
+    queryFn: () => fetchJSON<DeveloperModeResponse>(`${API_BASE}/api/config/developer-mode`),
+    staleTime: Infinity, // Developer mode won't change during runtime
+  })
+}
+
+export function useRestartVibora() {
+  return useMutation({
+    mutationFn: () =>
+      fetchJSON<RestartResponse>(`${API_BASE}/api/config/restart`, {
+        method: 'POST',
+      }),
+  })
+}

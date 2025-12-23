@@ -123,3 +123,99 @@ The `@vibora/cli` package provides a global CLI for running Vibora as a daemon. 
 mise run cli:build    # Bundle server, copy frontend, generate migrations
 mise run cli:publish  # Publish to npm (runs cli:build first)
 ```
+
+## Developer Mode
+
+Developer mode enables additional features useful for Vibora development:
+
+- **Restart Button**: A "Restart Vibora" button appears in Settings that builds and restarts the server
+- **Vibora Instances Tab**: Shows running Vibora instances in the Monitoring page
+
+### Enabling Developer Mode
+
+Set the `VIBORA_DEVELOPER` environment variable:
+
+```bash
+VIBORA_DEVELOPER=1 bun server/index.ts
+```
+
+Or use the systemd service (see below).
+
+## Systemd User Service
+
+For remote development scenarios (SSH + Tailscale), Vibora can be run as a systemd user service. This allows restarting the server from within Vibora itself.
+
+### Installation
+
+```bash
+# Copy the service file
+mkdir -p ~/.config/systemd/user
+cp vibora-dev.service ~/.config/systemd/user/
+
+# Reload systemd
+systemctl --user daemon-reload
+
+# Enable the service to start on login
+systemctl --user enable vibora-dev
+```
+
+### First Start
+
+Before starting the service for the first time, build Vibora:
+
+```bash
+cd ~/projects/vibora
+mise run build
+systemctl --user start vibora-dev
+```
+
+### Manual Operations
+
+```bash
+# Start the server
+systemctl --user start vibora-dev
+
+# Stop the server
+systemctl --user stop vibora-dev
+
+# Restart the server
+systemctl --user restart vibora-dev
+
+# Check status
+systemctl --user status vibora-dev
+
+# View logs
+journalctl --user -u vibora-dev -f
+```
+
+### Restarting from the UI
+
+When running in developer mode, the Settings page shows a "Restart Vibora" button. Clicking it:
+
+1. **Builds first**: Runs `mise run build` in `~/projects/vibora`
+2. **Fails safely**: If the build fails, the server continues running and an error is shown
+3. **Restarts on success**: If the build succeeds, triggers `systemctl --user restart vibora-dev`
+
+This ensures you never accidentally take down the server with a broken build.
+
+### Restarting from the CLI
+
+You can also trigger a restart from the command line:
+
+```bash
+# Check if developer mode is enabled
+vibora dev status
+
+# Build and restart (only works in developer mode)
+vibora dev restart
+```
+
+The CLI provides the same two-phase safety as the UI button.
+
+### Linger for Persistent Services
+
+To keep the service running even when not logged in:
+
+```bash
+loginctl enable-linger $USER
+```

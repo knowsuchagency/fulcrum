@@ -11,6 +11,7 @@ import { handleConfigCommand } from './commands/config'
 import { handleHealthCommand } from './commands/health'
 import { handleNotificationsCommand } from './commands/notifications'
 import { handleNotifyCommand } from './commands/notify'
+import { handleDevCommand } from './commands/dev'
 import { outputError, setPrettyOutput } from './utils/output'
 import { CliError, ExitCodes } from './utils/errors'
 
@@ -120,6 +121,9 @@ Commands:
 
   health                    Check server health
 
+  dev restart               Build and restart Vibora (developer mode)
+  dev status                Check if developer mode is enabled
+
 Global Options:
   --port=<port>     Server port (default: 3333)
   --url=<url>       Override full server URL
@@ -196,6 +200,12 @@ Examples:
 
       case 'notify': {
         await handleNotifyCommand(rest, flags)
+        break
+      }
+
+      case 'dev': {
+        const [action] = rest
+        await handleDevCommand(action, flags)
         break
       }
 
