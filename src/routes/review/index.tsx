@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Select,
@@ -26,6 +27,7 @@ export const Route = createFileRoute('/review/')({
 })
 
 function ReviewPage() {
+  const { t } = useTranslation('review')
   const [activeTab, setActiveTab] = useState<'prs' | 'issues'>('prs')
   const [prFilter, setPrFilter] = useState<PRFilter>('review_requested')
   const [issueFilter, setIssueFilter] = useState<IssueFilter>('assigned')
@@ -39,23 +41,23 @@ function ReviewPage() {
     return (
       <div className="flex h-full flex-col">
         <div className="flex shrink-0 items-center border-b border-border px-4 py-2">
-          <h1 className="text-sm font-medium">Review</h1>
+          <h1 className="text-sm font-medium">{t('title')}</h1>
         </div>
         <div className="flex flex-1 items-center justify-center p-8">
           <div className="max-w-md space-y-4 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <HugeiconsIcon icon={Key01Icon} size={24} className="text-muted-foreground" />
             </div>
-            <h2 className="text-lg font-medium">GitHub Token Required</h2>
+            <h2 className="text-lg font-medium">{t('github.tokenRequired')}</h2>
             <p className="text-sm text-muted-foreground">
-              To view your issues and pull requests, add a GitHub Personal Access Token in Settings.
+              {t('github.tokenDescription')}
             </p>
             <div className="rounded-lg border border-border bg-muted/50 p-4 text-left">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Required scopes:</p>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">{t('github.requiredScopes')}</p>
               <ul className="space-y-1 text-xs text-muted-foreground">
-                <li>• <code className="rounded bg-muted px-1">repo</code> (for private repositories)</li>
-                <li>• <code className="rounded bg-muted px-1">read:user</code> (for user info)</li>
-                <li>• <code className="rounded bg-muted px-1">read:org</code> (for organization list)</li>
+                <li>• <code className="rounded bg-muted px-1">repo</code> {t('github.scopes.repo')}</li>
+                <li>• <code className="rounded bg-muted px-1">read:user</code> {t('github.scopes.readUser')}</li>
+                <li>• <code className="rounded bg-muted px-1">read:org</code> {t('github.scopes.readOrg')}</li>
               </ul>
             </div>
             <div className="flex flex-col gap-2">
@@ -66,11 +68,11 @@ function ReviewPage() {
               >
                 <Button variant="outline" size="sm" className="w-full">
                   <HugeiconsIcon icon={LinkSquare02Icon} size={14} data-slot="icon" />
-                  Generate Token
+                  {t('github.generateToken')}
                 </Button>
               </a>
               <Link to="/settings">
-                <Button size="sm" className="w-full">Go to Settings</Button>
+                <Button size="sm" className="w-full">{t('github.goToSettings')}</Button>
               </Link>
             </div>
           </div>
@@ -83,7 +85,7 @@ function ReviewPage() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 max-sm:px-2">
         <div className="flex items-center gap-4 max-sm:gap-2">
-          <h1 className="text-sm font-medium max-sm:hidden">Review</h1>
+          <h1 className="text-sm font-medium max-sm:hidden">{t('title')}</h1>
         </div>
 
         <div className="flex items-center gap-4 max-sm:gap-2">
@@ -94,10 +96,10 @@ function ReviewPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="created">Created by me</SelectItem>
-                <SelectItem value="assigned">Assigned to me</SelectItem>
-                <SelectItem value="review_requested">Review requests</SelectItem>
-                <SelectItem value="mentioned">Mentioned</SelectItem>
+                <SelectItem value="created">{t('filters.pr.created')}</SelectItem>
+                <SelectItem value="assigned">{t('filters.pr.assigned')}</SelectItem>
+                <SelectItem value="review_requested">{t('filters.pr.reviewRequested')}</SelectItem>
+                <SelectItem value="mentioned">{t('filters.pr.mentioned')}</SelectItem>
               </SelectContent>
             </Select>
           ) : (
@@ -106,9 +108,9 @@ function ReviewPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="assigned">Assigned to me</SelectItem>
-                <SelectItem value="created">Created by me</SelectItem>
-                <SelectItem value="mentioned">Mentioned</SelectItem>
+                <SelectItem value="assigned">{t('filters.issue.assigned')}</SelectItem>
+                <SelectItem value="created">{t('filters.issue.created')}</SelectItem>
+                <SelectItem value="mentioned">{t('filters.issue.mentioned')}</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -117,11 +119,11 @@ function ReviewPage() {
           <Select value={selectedOrg} onValueChange={(v) => setSelectedOrg(v || '')}>
             <SelectTrigger size="sm" className="max-sm:w-auto">
               <SelectValue>
-                {selectedOrg || 'All Orgs'}
+                {selectedOrg || t('filters.allOrgs')}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Organizations</SelectItem>
+              <SelectItem value="">{t('filters.allOrganizations')}</SelectItem>
               {orgs.map((org) => (
                 <SelectItem key={org.login} value={org.login}>
                   {org.login}
@@ -131,13 +133,13 @@ function ReviewPage() {
           </Select>
 
           {/* Repo scope toggle */}
-          <label className="flex cursor-pointer items-center gap-2 text-xs" title="Vibora repos only">
+          <label className="flex cursor-pointer items-center gap-2 text-xs" title={t('filters.viboraReposOnly')}>
             <Switch
               checked={viboraReposOnly}
               onCheckedChange={setViboraReposOnly}
               disabled={!!selectedOrg}
             />
-            <span className="text-muted-foreground max-sm:hidden">Vibora repos only</span>
+            <span className="text-muted-foreground max-sm:hidden">{t('filters.viboraReposOnly')}</span>
           </label>
         </div>
       </div>
@@ -149,8 +151,8 @@ function ReviewPage() {
       >
         <div className="shrink-0 border-b border-border px-4">
           <TabsList variant="line">
-            <TabsTrigger value="prs">Pull Requests</TabsTrigger>
-            <TabsTrigger value="issues">Issues</TabsTrigger>
+            <TabsTrigger value="prs">{t('tabs.pullRequests')}</TabsTrigger>
+            <TabsTrigger value="issues">{t('tabs.issues')}</TabsTrigger>
           </TabsList>
         </div>
 

@@ -24,6 +24,11 @@
     "tokenRequired": "GitHub Token Required",
     "tokenDescription": "To view your issues and pull requests, add a GitHub Personal Access Token in Settings.",
     "requiredScopes": "Required scopes:",
+    "scopes": {
+      "repo": "(for private repositories)",
+      "readUser": "(for user info)",
+      "readOrg": "(for organization list)"
+    },
     "generateToken": "Generate Token",
     "goToSettings": "Go to Settings"
   },
