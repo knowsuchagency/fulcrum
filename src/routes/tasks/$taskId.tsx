@@ -103,8 +103,8 @@ function TaskView() {
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
 
   // Read AI mode state from navigation (only set when coming from task creation)
-  const navState = location.state as { aiMode?: 'default' | 'plan' | 'none'; description?: string } | undefined
-  const aiMode = navState?.aiMode && navState?.description ? navState.aiMode : undefined
+  const navState = location.state as { aiMode?: 'default' | 'plan'; description?: string } | undefined
+  const aiMode = navState?.aiMode
   const aiModeDescription = navState?.description
 
   const [configModalOpen, setConfigModalOpen] = useState(false)
