@@ -527,3 +527,236 @@ monitoringRoutes.get('/docker-stats', (c) => {
     return c.json({ error: message }, 500)
   }
 })
+
+// Types for Vibora instances
+interface ViboraInstanceGroup {
+  viboraDir: string
+  port: number
+  mode: 'development' | 'production'
+  backend: { pid: number; memoryMB: number; startedAt: number | null } | null
+  frontend: { pid: number; memoryMB: number; startedAt: number | null } | null
+  totalMemoryMB: number
+}
+
+// Get process environment variables
+function getProcessEnv(pid: number): Record<string, string> {
+  try {
+    const environ = readFileSync(`/proc/${pid}/environ`, 'utf-8')
+    const env: Record<string, string> = {}
+    for (const entry of environ.split('\0')) {
+      const idx = entry.indexOf('=')
+      if (idx > 0) {
+        env[entry.slice(0, idx)] = entry.slice(idx + 1)
+      }
+    }
+    return env
+  } catch {
+    return {}
+  }
+}
+
+// Get parent PID
+function getParentPid(pid: number): number | null {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf-8')
+    const match = stat.match(/^\d+ \([^)]+\) \S+ (\d+)/)
+    return match ? parseInt(match[1], 10) : null
+  } catch {
+    return null
+  }
+}
+
+// Find all Vibora instances (backends and frontends)
+function findViboraInstances(): ViboraInstanceGroup[] {
+  const backends: Array<{
+    pid: number
+    port: number
+    viboraDir: string
+    mode: 'development' | 'production'
+    memoryMB: number
+    startedAt: number | null
+    parentPid: number | null
+  }> = []
+
+  const frontends: Array<{
+    pid: number
+    port: number
+    memoryMB: number
+    startedAt: number | null
+    parentPid: number | null
+    backendPort: number | null
+  }> = []
+
+  try {
+    const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d))
+
+    for (const pidStr of procDirs) {
+      const pid = parseInt(pidStr, 10)
+      try {
+        const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8').replace(/\0/g, ' ')
+        const env = getProcessEnv(pid)
+        const parentPid = getParentPid(pid)
+
+        // Check for Vibora backend
+        // Dev: process starts with "bun" and has "server/index.ts" in args
+        // Prod: process starts with "bun" and has VIBORA_PACKAGE_ROOT env var
+        // We check the first part of cmdline to avoid shell wrappers that mention bun
+        const cmdParts = cmdline.trim().split(/\s+/)
+        const isBunProcess = cmdParts[0]?.includes('bun') ?? false
+        const isDevBackend = isBunProcess && cmdline.includes('server/index.ts')
+        const isProdBackend = isBunProcess && !!env.VIBORA_PACKAGE_ROOT
+
+        if (isDevBackend || isProdBackend) {
+          const port = parseInt(env.PORT || '3333', 10)
+          const cwd = getProcessCwd(pid)
+          // Resolve viboraDir - if relative, combine with cwd; if absolute or starts with ~, use as-is
+          let viboraDir = env.VIBORA_DIR || (isDevBackend ? '~/.vibora/dev' : '~/.vibora')
+          if (viboraDir.startsWith('.') && cwd !== '(unknown)') {
+            // Relative path - show the cwd for clarity
+            viboraDir = cwd
+          }
+          const mode = isDevBackend ? 'development' : 'production'
+
+          backends.push({
+            pid,
+            port,
+            viboraDir,
+            mode,
+            memoryMB: getProcessMemoryMB(pid),
+            startedAt: getProcessStartTime(pid),
+            parentPid,
+          })
+        }
+
+        // Check for Vite frontend (potential Vibora dev frontend)
+        // Look for node vite processes with VITE_BACKEND_PORT set (not shell wrappers)
+        const isNodeProcess = cmdParts[0]?.includes('node') ?? false
+        if (isNodeProcess && cmdline.includes('vite') && env.VITE_BACKEND_PORT) {
+          const backendPort = parseInt(env.VITE_BACKEND_PORT, 10)
+          // Try to find the port Vite is listening on from the cmdline or default
+          const port = 5173 // Vite default, could be different if ports are in use
+
+          frontends.push({
+            pid,
+            port,
+            memoryMB: getProcessMemoryMB(pid),
+            startedAt: getProcessStartTime(pid),
+            parentPid,
+            backendPort,
+          })
+        }
+      } catch {
+        // Process may have exited, skip
+      }
+    }
+  } catch {
+    // /proc not available
+  }
+
+  // Group backends with their frontends
+  const groups: ViboraInstanceGroup[] = []
+
+  for (const backend of backends) {
+    // Find associated frontend: same parent (concurrently) or matching VITE_BACKEND_PORT
+    const associatedFrontend = frontends.find(
+      (f) =>
+        f.backendPort === backend.port ||
+        (f.parentPid && f.parentPid === backend.parentPid)
+    )
+
+    groups.push({
+      viboraDir: backend.viboraDir,
+      port: backend.port,
+      mode: backend.mode,
+      backend: {
+        pid: backend.pid,
+        memoryMB: backend.memoryMB,
+        startedAt: backend.startedAt,
+      },
+      frontend: associatedFrontend
+        ? {
+            pid: associatedFrontend.pid,
+            memoryMB: associatedFrontend.memoryMB,
+            startedAt: associatedFrontend.startedAt,
+          }
+        : null,
+      totalMemoryMB: backend.memoryMB + (associatedFrontend?.memoryMB || 0),
+    })
+
+    // Remove matched frontend from consideration
+    if (associatedFrontend) {
+      const idx = frontends.indexOf(associatedFrontend)
+      if (idx >= 0) frontends.splice(idx, 1)
+    }
+  }
+
+  // Sort by port
+  groups.sort((a, b) => a.port - b.port)
+
+  return groups
+}
+
+// GET /api/monitoring/vibora-instances
+monitoringRoutes.get('/vibora-instances', (c) => {
+  const groups = findViboraInstances()
+  return c.json(groups)
+})
+
+// POST /api/monitoring/vibora-instances/:pid/kill
+// Kill a Vibora instance group (backend + frontend if present)
+monitoringRoutes.post('/vibora-instances/:pid/kill', async (c) => {
+  const pidStr = c.req.param('pid')
+  const backendPid = parseInt(pidStr, 10)
+
+  if (isNaN(backendPid)) {
+    return c.json({ error: 'Invalid PID' }, 400)
+  }
+
+  // Find this instance group
+  const groups = findViboraInstances()
+  const group = groups.find((g) => g.backend?.pid === backendPid)
+
+  if (!group) {
+    return c.json({ error: 'Vibora instance not found' }, 404)
+  }
+
+  const killedPids: number[] = []
+
+  // Kill frontend first (if present), then backend
+  const pidsToKill = [
+    group.frontend?.pid,
+    group.backend?.pid,
+  ].filter((p): p is number => p !== null && p !== undefined)
+
+  for (const pid of pidsToKill) {
+    try {
+      // Send SIGTERM first
+      process.kill(pid, 'SIGTERM')
+      killedPids.push(pid)
+    } catch {
+      // Process may already be gone
+    }
+  }
+
+  // Wait briefly for graceful shutdown
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
+  // Force kill any remaining processes
+  for (const pid of pidsToKill) {
+    try {
+      // Check if still running
+      process.kill(pid, 0)
+      // Still running, force kill
+      process.kill(pid, 'SIGKILL')
+    } catch {
+      // Process already gone
+    }
+  }
+
+  return c.json({
+    success: true,
+    killed: killedPids,
+    viboraDir: group.viboraDir,
+    port: group.port,
+  })
+})
