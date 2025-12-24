@@ -264,22 +264,32 @@ function setZoom(level) {
 
   // Reload iframe with new zoom parameter, preserving current path
   const frame = document.getElementById('vibora-frame');
+  console.log('[Vibora] setZoom - frame:', frame);
+  console.log('[Vibora] setZoom - frame.src:', frame?.src);
+  console.log('[Vibora] setZoom - serverUrl:', serverUrl);
+
   if (frame && frame.src) {
     try {
       const url = new URL(frame.src);
+      console.log('[Vibora] setZoom - parsed URL:', url.toString());
+      console.log('[Vibora] setZoom - pathname:', url.pathname);
       if (currentZoom !== 1.0) {
         url.searchParams.set('zoom', currentZoom.toString());
       } else {
         url.searchParams.delete('zoom');
       }
+      console.log('[Vibora] setZoom - new URL:', url.toString());
       frame.src = url.toString();
     } catch (e) {
+      console.log('[Vibora] setZoom - URL parse error:', e);
       // Fallback to base URL if parsing fails
       if (serverUrl) {
         const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
         frame.src = serverUrl + zoomParam;
       }
     }
+  } else {
+    console.log('[Vibora] setZoom - no frame or frame.src');
   }
 }
 
