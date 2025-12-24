@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useCallback, useRef, useEffect } from 'react'
 
+// Module-level flag to ensure visibility tracking only runs once globally
+let visibilityInitialized = false
+
 interface FocusedTerminalsMap {
   [tabId: string]: string
 }
@@ -64,6 +67,10 @@ export function useTerminalViewState() {
     },
   })
 
+  // Stable ref for mutation to avoid recreating updateViewState
+  const updateMutationRef = useRef(updateMutation)
+  updateMutationRef.current = updateMutation
+
   // Optimistic update with debounced persistence
   const updateViewState = useCallback(
     (updates: PendingUpdates) => {
@@ -78,33 +85,33 @@ export function useTerminalViewState() {
             : undefined,
       }
 
-      // Build new view state
+      // Use setQueryData with callback to access current state without depending on viewState
       const merged = pendingUpdatesRef.current
-      const newViewState: TerminalViewState = {
-        activeTabId: merged.activeTabId !== undefined ? merged.activeTabId : viewState.activeTabId,
-        focusedTerminals: {
-          ...viewState.focusedTerminals,
-          ...merged.focusedTerminals,
-        },
-        currentView: merged.currentView !== undefined ? merged.currentView : viewState.currentView,
-        currentTaskId: merged.currentTaskId !== undefined ? merged.currentTaskId : viewState.currentTaskId,
-        isTabVisible: merged.isTabVisible !== undefined ? merged.isTabVisible : viewState.isTabVisible,
-        viewUpdatedAt: merged.viewUpdatedAt !== undefined ? merged.viewUpdatedAt : viewState.viewUpdatedAt,
-      }
-
-      // Immediate optimistic update
-      queryClient.setQueryData(['terminal-view-state'], newViewState)
+      queryClient.setQueryData(['terminal-view-state'], (current: TerminalViewState | undefined) => {
+        const currentState = current ?? DEFAULT_VIEW_STATE
+        return {
+          activeTabId: merged.activeTabId !== undefined ? merged.activeTabId : currentState.activeTabId,
+          focusedTerminals: {
+            ...currentState.focusedTerminals,
+            ...merged.focusedTerminals,
+          },
+          currentView: merged.currentView !== undefined ? merged.currentView : currentState.currentView,
+          currentTaskId: merged.currentTaskId !== undefined ? merged.currentTaskId : currentState.currentTaskId,
+          isTabVisible: merged.isTabVisible !== undefined ? merged.isTabVisible : currentState.isTabVisible,
+          viewUpdatedAt: merged.viewUpdatedAt !== undefined ? merged.viewUpdatedAt : currentState.viewUpdatedAt,
+        }
+      })
 
       // Debounced backend persistence
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current)
       }
       debounceTimerRef.current = setTimeout(() => {
-        updateMutation.mutate(pendingUpdatesRef.current)
+        updateMutationRef.current.mutate(pendingUpdatesRef.current)
         pendingUpdatesRef.current = {}
       }, 500)
     },
-    [queryClient, viewState, updateMutation]
+    [queryClient]
   )
 
   const setActiveTab = useCallback(
@@ -117,15 +124,18 @@ export function useTerminalViewState() {
   const setFocusedTerminal = useCallback(
     (tabId: string, terminalId: string | null) => {
       if (terminalId === null) {
-        // Remove the entry for this tab
-        const { [tabId]: _unused, ...rest } = viewState.focusedTerminals
-        void _unused
-        updateViewState({ focusedTerminals: rest })
+        // Remove the entry for this tab - use queryClient to get current state
+        const current = queryClient.getQueryData<TerminalViewState>(['terminal-view-state'])
+        if (current) {
+          const { [tabId]: _unused, ...rest } = current.focusedTerminals
+          void _unused
+          updateViewState({ focusedTerminals: rest })
+        }
       } else {
         updateViewState({ focusedTerminals: { [tabId]: terminalId } })
       }
     },
-    [updateViewState, viewState.focusedTerminals]
+    [queryClient, updateViewState]
   )
 
   const getFocusedTerminal = useCallback(
@@ -136,7 +146,17 @@ export function useTerminalViewState() {
   )
 
   // Track document visibility for notification suppression
+  // Use a module-level flag to ensure this only runs once globally
+  const hasInitializedVisibilityRef = useRef(false)
   useEffect(() => {
+    // Skip if already initialized by another hook instance
+    if (visibilityInitialized) {
+      hasInitializedVisibilityRef.current = false
+      return
+    }
+    visibilityInitialized = true
+    hasInitializedVisibilityRef.current = true
+
     const handleVisibilityChange = () => {
       updateViewState({
         isTabVisible: document.visibilityState === 'visible',
@@ -146,7 +166,13 @@ export function useTerminalViewState() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     // Send initial state
     handleVisibilityChange()
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      // Only reset flag if this instance initialized it
+      if (hasInitializedVisibilityRef.current) {
+        visibilityInitialized = false
+      }
+    }
   }, [updateViewState])
 
   // Update view tracking (for route changes)
