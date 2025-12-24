@@ -43,6 +43,15 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     writeToTerminal,
   } = useTerminalWS()
 
+  // Store callbacks in refs to avoid effect re-runs when they change
+  const attachXtermRef = useRef(attachXterm)
+  const setupImagePasteRef = useRef(setupImagePaste)
+  const writeToTerminalRef = useRef(writeToTerminal)
+
+  useEffect(() => { attachXtermRef.current = attachXterm }, [attachXterm])
+  useEffect(() => { setupImagePasteRef.current = setupImagePaste }, [setupImagePaste])
+  useEffect(() => { writeToTerminalRef.current = writeToTerminal }, [writeToTerminal])
+
   // Get the current terminal's status
   const currentTerminal = terminalId ? terminals.find((t) => t.id === terminalId) : null
   const terminalStatus = currentTerminal?.status
@@ -225,6 +234,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   }, [terminals, cwd, terminalId])
 
   // Attach xterm to terminal once we have both
+  // Use refs for callbacks to avoid effect re-runs when callbacks change identity
   useEffect(() => {
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
@@ -234,6 +244,14 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       newTerminalIds.delete(terminalId)
     }
 
+    // Capture current values for use in callbacks
+    const currentTerminalId = terminalId
+    const currentStartupScript = startupScript
+    const currentAiMode = aiMode
+    const currentDescription = description
+    const currentTaskName = taskName
+    const currentTaskId = taskId
+
     // Callback when terminal is fully attached (buffer received from server)
     const onAttached = () => {
       // Trigger a resize after attaching
@@ -242,10 +260,10 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
       if (isNewTerminal) {
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
-        if (startupScript) {
+        if (currentStartupScript) {
           setTimeout(() => {
             // Write the script as-is - newlines act as Enter presses in terminals
-            writeToTerminal(terminalId, startupScript + '\r')
+            writeToTerminalRef.current(currentTerminalId, currentStartupScript + '\r')
           }, 100)
         }
 
@@ -254,23 +272,23 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
           'When you finish working and need user input, run: vibora current-task review. ' +
           'When linking a PR: vibora current-task pr <url>. ' +
           'For notifications: vibora notify "Title" "Message".'
-        const taskInfo = description ? `${taskName}: ${description}` : taskName
+        const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
         const prompt = taskInfo.replace(/"/g, '\\"')
         const escapedSystemPrompt = systemPrompt.replace(/"/g, '\\"')
 
-        const taskCommand = aiMode === 'plan'
-          ? `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${taskId}" --allow-dangerously-skip-permissions --permission-mode plan`
-          : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${taskId}" --dangerously-skip-permissions`
+        const taskCommand = currentAiMode === 'plan'
+          ? `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTaskId}" --allow-dangerously-skip-permissions --permission-mode plan`
+          : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTaskId}" --dangerously-skip-permissions`
 
         setTimeout(() => {
-          writeToTerminal(terminalId, taskCommand + '\r')
-        }, startupScript ? 300 : 100)
+          writeToTerminalRef.current(currentTerminalId, taskCommand + '\r')
+        }, currentStartupScript ? 300 : 100)
       }
     }
 
-    const cleanup = attachXterm(terminalId, termRef.current, { onAttached })
+    const cleanup = attachXtermRef.current(terminalId, termRef.current, { onAttached })
     // Set up image paste handler
-    const cleanupPaste = setupImagePaste(containerRef.current, terminalId)
+    const cleanupPaste = setupImagePasteRef.current(containerRef.current, terminalId)
     attachedRef.current = true
 
     return () => {
@@ -278,14 +296,14 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, attachXterm, setupImagePaste, cwd, doFit, writeToTerminal, aiMode, description, taskName, startupScript, newTerminalIds])
+  }, [terminalId, doFit, newTerminalIds, startupScript, aiMode, description, taskName, taskId])
 
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {
     if (terminalId) {
-      writeToTerminal(terminalId, data)
+      writeToTerminalRef.current(terminalId, data)
     }
-  }, [terminalId, writeToTerminal])
+  }, [terminalId])
 
   if (!cwd) {
     return (

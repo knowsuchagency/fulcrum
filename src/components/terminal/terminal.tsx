@@ -26,6 +26,8 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
   const fitAddonRef = useRef<FitAddon | null>(null)
   const onResizeRef = useRef(onResize)
   const onFocusRef = useRef(onFocus)
+  const onReadyRef = useRef(onReady)
+  const onContainerReadyRef = useRef(onContainerReady)
   const { setTerminalFocused } = useKeyboardContext()
 
   // Keep refs updated
@@ -36,6 +38,14 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
   useEffect(() => {
     onFocusRef.current = onFocus
   }, [onFocus])
+
+  useEffect(() => {
+    onReadyRef.current = onReady
+  }, [onReady])
+
+  useEffect(() => {
+    onContainerReadyRef.current = onContainerReady
+  }, [onContainerReady])
 
   const doFit = useCallback(() => {
     if (!fitAddonRef.current || !termRef.current) return
@@ -91,9 +101,9 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
     // Initial fit after container is sized, with delayed refit to catch layout stabilization
     requestAnimationFrame(() => {
       doFit()
-      onReady?.(term)
+      onReadyRef.current?.(term)
       if (containerRef.current) {
-        onContainerReady?.(containerRef.current)
+        onContainerReadyRef.current?.(containerRef.current)
       }
     })
 
@@ -166,7 +176,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       termRef.current = null
       fitAddonRef.current = null
     }
-  }, [doFit, onReady, onContainerReady, setTerminalFocused])
+  }, [doFit, setTerminalFocused])
 
   // Set up image paste when terminalId is available
   useEffect(() => {
