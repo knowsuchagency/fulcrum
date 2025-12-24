@@ -48,8 +48,8 @@ fi
 cp "$NL_BINARY" "$APP_BUNDLE/Contents/MacOS/Vibora"
 chmod +x "$APP_BUNDLE/Contents/MacOS/Vibora"
 
-# Copy resources.neu bundle
-cp "$DESKTOP_DIR/dist/vibora-desktop/resources.neu" "$APP_BUNDLE/Contents/Resources/"
+# Copy resources.neu bundle (must be next to binary, not in Resources)
+cp "$DESKTOP_DIR/dist/vibora-desktop/resources.neu" "$APP_BUNDLE/Contents/MacOS/"
 
 # Create Info.plist
 cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
@@ -127,13 +127,9 @@ fi
 cat > "$APP_BUNDLE/Contents/MacOS/vibora-launcher" << 'LAUNCHER'
 #!/bin/bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
-RESOURCES="$DIR/../Resources"
 
-# Set Neutralino paths
-export NL_PATH="$RESOURCES"
-
-# Launch the app
-cd "$RESOURCES"
+# Launch from MacOS dir where resources.neu is located
+cd "$DIR"
 exec "$DIR/Vibora" "$@"
 LAUNCHER
 chmod +x "$APP_BUNDLE/Contents/MacOS/vibora-launcher"
