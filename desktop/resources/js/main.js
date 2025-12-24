@@ -366,7 +366,7 @@ async function init() {
     // Initialize Neutralino
     Neutralino.init();
     console.log('[Vibora] Neutralino initialized');
-    console.log('[Vibora] OS:', NL_OS, 'User:', NL_USER);
+    console.log('[Vibora] OS:', NL_OS);
 
     // Set up event listeners
     Neutralino.events.on('windowClose', shutdown);
