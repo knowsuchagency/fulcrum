@@ -58,6 +58,14 @@ export function useTaskSync() {
               toast.info(title, { description })
               break
           }
+
+          // Post to parent window for desktop native notifications
+          if (window.parent !== window) {
+            window.parent.postMessage(
+              { type: 'vibora:notification', title, message: description, notificationType },
+              '*'
+            )
+          }
         }
       } catch {
         // Ignore parse errors

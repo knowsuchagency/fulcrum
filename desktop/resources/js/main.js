@@ -423,7 +423,7 @@ async function init() {
       console.log('[Vibora] Extension connected:', evt.detail);
     });
 
-    // Listen for route changes from iframe (postMessage from Vibora frontend)
+    // Listen for messages from iframe (postMessage from Vibora frontend)
     window.addEventListener('message', (event) => {
       if (event.data?.type === 'vibora:route') {
         currentRoute = {
@@ -431,6 +431,12 @@ async function init() {
           search: event.data.search || ''
         };
         console.log('[Vibora] Route updated:', currentRoute.pathname);
+      } else if (event.data?.type === 'vibora:notification') {
+        // Show native system notification
+        const { title, message } = event.data;
+        Neutralino.os.showNotification(title, message || '').catch((err) => {
+          console.error('[Vibora] Failed to show notification:', err);
+        });
       }
     });
 
