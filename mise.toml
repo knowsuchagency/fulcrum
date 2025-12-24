@@ -364,6 +364,7 @@ rm -f "$PID_FILE"
 
 [tasks.restart]
 description = "Restart vibora-dev systemd service with migrations"
+depends = ["build"]
 run = """
 set -e
 
