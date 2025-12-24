@@ -25,9 +25,11 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
+  const weCreatedTerminalRef = useRef(false)
   const attachedRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermReady, setXtermReady] = useState(false)
+  const [xtermOpened, setXtermOpened] = useState(false)
 
   const { setTerminalFocused } = useKeyboardContext()
 
@@ -100,7 +102,12 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     termRef.current = term
     fitAddonRef.current = fitAddon
 
-    // Initial fit after container is sized
+    // Mark xterm as opened synchronously - this gates terminal creation
+    // We can get cols/rows immediately after open(), no need to wait for rAF
+    setXtermOpened(true)
+
+    // Initial fit after container is sized - this is for visual display only
+    // WebKit can delay rAF during navigation, so we don't gate creation on this
     requestAnimationFrame(() => {
       fitAddon.fit()
       setXtermReady(true)
@@ -132,6 +139,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
+      setXtermOpened(false)
       setXtermReady(false)
     }
   }, [setTerminalFocused])
@@ -200,8 +208,9 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
 
   // Find existing terminal or create new one
   // Wait for terminalsLoaded to ensure we have accurate knowledge of existing terminals
+  // Use xtermOpened (not xtermReady) to avoid WebKit rAF timing issues during navigation
   useEffect(() => {
-    if (!connected || !cwd || !xtermReady || !terminalsLoaded) return
+    if (!connected || !cwd || !xtermOpened || !terminalsLoaded) return
 
     // Look for an existing terminal with matching cwd
     const existingTerminal = terminals.find((t) => t.cwd === cwd)
@@ -213,6 +222,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
+      weCreatedTerminalRef.current = true  // Track that THIS component created the terminal
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -221,7 +231,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
         cwd,
       })
     }
-  }, [connected, cwd, xtermReady, terminalsLoaded, terminals, taskName, createTerminal])
+  }, [connected, cwd, xtermOpened, terminalsLoaded, terminals, taskName, createTerminal])
 
   // Update terminalId when terminal appears in list
    
@@ -238,11 +248,14 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   useEffect(() => {
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
-    const isNewTerminal = newTerminalIds.has(terminalId)
-    // Remove from set immediately so startup commands don't run again on re-mount
-    if (isNewTerminal) {
-      newTerminalIds.delete(terminalId)
-    }
+    // Use our local ref to determine if we created this terminal
+    // This is more reliable than newTerminalIds which is per-hook-instance
+    // and can get out of sync when multiple useTerminalWS() hooks exist
+    const isNewTerminal = weCreatedTerminalRef.current
+    // Reset immediately so startup commands don't run again on re-mount
+    weCreatedTerminalRef.current = false
+    // Also clean up the hook's newTerminalIds for consistency
+    newTerminalIds.delete(terminalId)
 
     // Capture current values for use in callbacks
     const currentTerminalId = terminalId
