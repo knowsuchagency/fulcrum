@@ -17,6 +17,9 @@ if (zoom !== 1 && zoom >= 0.5 && zoom <= 2.0) {
   document.documentElement.style.fontSize = `${16 * zoom}px`
 }
 
+// Export zoom level for components that need pixel-based scaling (e.g., xterm.js)
+export const desktopZoom = zoom >= 0.5 && zoom <= 2.0 ? zoom : 1
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
