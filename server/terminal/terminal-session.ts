@@ -130,6 +130,9 @@ export class TerminalSession {
           ...getTerminalEnv(),
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
+          // Signal remote context for starship/shell prompts to show full info
+          SSH_TTY: '/dev/pts/vibora',
+          SSH_CONNECTION: '127.0.0.1 0 127.0.0.1 22',
         },
       })
 

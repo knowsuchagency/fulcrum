@@ -116,8 +116,8 @@ export class DtachService {
     const shell = process.env.SHELL || '/bin/bash'
     // -n: don't attach after creating
     // -z: disable suspend key
-    // -l: login shell (sources .profile which sources .bashrc for starship/etc)
-    return ['dtach', '-n', socketPath, '-z', shell, '-l']
+    // -li: login + interactive shell (sources .profile -> .bashrc for starship/etc)
+    return ['dtach', '-n', socketPath, '-z', shell, '-li']
   }
 
   // Get command to attach to an existing session
