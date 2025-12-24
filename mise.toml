@@ -98,7 +98,10 @@ run = "vite --host"
 
 [tasks.build]
 description = "Build for production"
-run = "bunx tsc -b && bunx vite build"
+run = """
+rm -rf dist
+bunx tsc -b --force && bunx vite build
+"""
 
 [tasks.start]
 description = "Run production server"
