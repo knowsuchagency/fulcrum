@@ -1,0 +1,191 @@
+# Vibora Desktop App
+
+This directory contains the configuration and scripts for building Vibora as a standalone desktop application using [Neutralinojs](https://neutralino.js.org/).
+
+## Architecture
+
+The desktop app is a lightweight client that connects to a Vibora server running either locally or remotely (e.g., via Tailscale):
+
+```
+┌─────────────────────────────────────────────┐
+│           Neutralino Window (~2MB)          │
+│  ┌───────────────────────────────────────┐  │
+│  │           System WebView              │  │
+│  │                                       │  │
+│  │    ┌─────────────────────────────┐    │  │
+│  │    │   Vibora App (iframe)       │    │  │
+│  │    │   Loaded from server        │    │  │
+│  │    └─────────────────────────────┘    │  │
+│  │              ↕ HTTP/WS                │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+              │
+              │ Network (local or Tailscale)
+              ↓
+┌─────────────────────────────────────────────┐
+│    Vibora Server (local or remote)          │
+│    - Hono.js REST API                       │
+│    - WebSocket for terminals                │
+│    - SQLite database                        │
+│    - PTY management                         │
+└─────────────────────────────────────────────┘
+```
+
+## Connection Flow
+
+When the desktop app starts:
+
+1. **Try localhost first**: Checks if a Vibora server is running on `localhost:3333`
+2. **Try saved remote host**: If localhost fails, tries the previously configured remote hostname
+3. **Prompt for remote host**: If no server is found, prompts the user to enter a remote hostname and port
+
+Settings are saved to `~/.vibora/desktop-settings.json`:
+
+```json
+{
+  "remoteHost": "my-server.tailnet.ts.net",
+  "remotePort": 3333,
+  "lastConnectedHost": "my-server.tailnet.ts.net"
+}
+```
+
+## Building
+
+### Prerequisites
+
+- Node.js (for npm/Neutralino CLI)
+- On Linux: GTK WebKit2 (usually pre-installed)
+- On macOS: Xcode Command Line Tools (for code signing)
+
+### Quick Build
+
+```bash
+# Build for current platform
+mise run desktop:build
+
+# Run in development mode
+mise run desktop:run
+```
+
+### Build Commands
+
+| Command | Description |
+|---------|-------------|
+| `mise run desktop:setup` | Install Neutralino CLI and download binaries |
+| `mise run desktop:build` | Build desktop app for current platform |
+| `mise run desktop:run` | Run desktop app in development mode |
+| `mise run desktop:clean` | Clean build artifacts |
+
+### Packaging
+
+```bash
+# Package for current platform (AppImage on Linux, DMG on macOS)
+mise run desktop:package
+
+# Package specifically for Linux
+mise run desktop:package-appimage        # x64
+mise run desktop:package-appimage arm64  # ARM64
+
+# Package specifically for macOS
+mise run desktop:package-dmg             # Current arch
+mise run desktop:package-dmg arm64       # ARM64
+mise run desktop:package-dmg x64         # Intel
+```
+
+## Platform Support
+
+| Platform | Architecture | Status |
+|----------|-------------|--------|
+| Linux | x64 | Supported |
+| Linux | ARM64 | Supported |
+| macOS | x64 (Intel) | Supported |
+| macOS | ARM64 (Apple Silicon) | Supported |
+| Windows | x64 | Supported |
+
+## Directory Structure
+
+```
+desktop/
+├── neutralino.config.json   # Neutralino configuration
+├── resources/               # Frontend resources
+│   ├── index.html          # Bootstrap/connection page
+│   ├── js/
+│   │   └── main.js         # Connection logic & settings management
+│   └── icons/
+│       └── icon.png        # App icon
+├── scripts/
+│   ├── package-appimage.sh # Linux AppImage packaging
+│   └── package-dmg.sh      # macOS DMG packaging
+├── bin/                    # Neutralino binaries (generated)
+└── dist/                   # Build output (generated)
+```
+
+## Remote Server Setup
+
+To use the desktop app with a remote Vibora server:
+
+1. **Start Vibora on your remote machine**:
+   ```bash
+   vibora up
+   # or
+   mise run up
+   ```
+
+2. **Ensure the server is accessible**:
+   - Via Tailscale: Use your machine's Tailscale hostname (e.g., `my-server.tailnet.ts.net`)
+   - Via direct IP: Ensure port 3333 (or your configured port) is accessible
+
+3. **Launch the desktop app** and enter your remote hostname when prompted
+
+## Development
+
+### Connection Logic
+
+The desktop app (`resources/js/main.js`) implements:
+
+1. **Settings persistence**: Saves/loads connection settings from `~/.vibora/desktop-settings.json`
+2. **Auto-connect flow**: localhost → saved remote → prompt user
+3. **Health checks**: Validates server availability before connecting
+4. **Error handling**: Shows user-friendly errors with retry options
+
+### Lifecycle
+
+1. Neutralino starts and initializes
+2. App checks for local server on localhost:3333
+3. If not found, checks for saved remote host
+4. If no saved host, prompts user for remote hostname
+5. On successful connection, loads Vibora in an iframe
+6. Settings are persisted for next launch
+
+## Known Limitations
+
+1. **iframe restrictions**: Some browser features may be limited in the iframe context
+2. **CORS**: Remote servers must be accessible from the desktop app's origin
+3. **Code signing**: macOS requires code signing and notarization for distribution outside the App Store
+
+## Troubleshooting
+
+### Cannot connect to remote server
+
+- Verify the server is running: `curl http://hostname:port/health`
+- Check Tailscale connection: `tailscale status`
+- Ensure no firewall is blocking the port
+
+### WebView issues on Linux
+
+Ensure GTK WebKit2 is installed:
+```bash
+# Debian/Ubuntu
+sudo apt install libwebkit2gtk-4.0-dev
+
+# Fedora
+sudo dnf install webkit2gtk3-devel
+```
+
+### Settings not saving
+
+Check that `~/.vibora/` directory exists and is writable:
+```bash
+mkdir -p ~/.vibora
+chmod 755 ~/.vibora
+```

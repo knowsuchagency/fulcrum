@@ -290,3 +290,103 @@ systemctl --user restart vibora-dev
 echo "Done. Checking status..." >&2
 systemctl --user status vibora-dev --no-pager
 """
+
+# Desktop app tasks (client-only, connects to local or remote Vibora server)
+[tasks."desktop:setup"]
+description = "Install Neutralinojs CLI and dependencies"
+run = """
+set -e
+
+# Check if neu CLI is installed
+if ! command -v neu &> /dev/null; then
+  echo "Installing Neutralinojs CLI..." >&2
+  npm install -g @neutralinojs/neu
+fi
+
+# Download Neutralino binaries to desktop/
+cd desktop
+if [ ! -f "bin/neutralino-linux_x64" ]; then
+  echo "Downloading Neutralino binaries..." >&2
+  neu update
+fi
+
+echo "Neutralinojs setup complete"
+"""
+
+[tasks."desktop:build"]
+description = "Build desktop client app for current platform"
+depends = ["desktop:setup"]
+run = """
+set -e
+
+cd desktop
+
+echo "Building Neutralino app..." >&2
+neu build
+
+echo ""
+echo "Desktop app built successfully!"
+echo "Binaries are in: desktop/dist/"
+echo ""
+echo "The app will connect to a Vibora server running locally or remotely."
+"""
+
+[tasks."desktop:run"]
+description = "Run desktop app in development mode"
+depends = ["desktop:setup"]
+run = """
+cd desktop
+neu run
+"""
+
+[tasks."desktop:clean"]
+description = "Clean desktop build artifacts"
+run = """
+rm -rf desktop/dist
+rm -rf desktop/bin
+echo "Desktop build artifacts cleaned"
+"""
+
+[tasks."desktop:package-appimage"]
+description = "Package desktop app as AppImage (Linux)"
+depends = ["desktop:build"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default="x64"'
+run = """
+./desktop/scripts/package-appimage.sh "${usage_arch}"
+"""
+
+[tasks."desktop:package-dmg"]
+description = "Package desktop app as DMG (macOS)"
+depends = ["desktop:build"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
+run = """
+./desktop/scripts/package-dmg.sh "${usage_arch}"
+"""
+
+[tasks."desktop:package"]
+description = "Package desktop app for current platform"
+depends = ["desktop:build"]
+run = """
+set -e
+
+case "$(uname -s)" in
+  Linux*)
+    if [ "$(uname -m)" = "aarch64" ]; then
+      ./desktop/scripts/package-appimage.sh arm64
+    else
+      ./desktop/scripts/package-appimage.sh x64
+    fi
+    ;;
+  Darwin*)
+    if [ "$(uname -m)" = "arm64" ]; then
+      ./desktop/scripts/package-dmg.sh arm64
+    else
+      ./desktop/scripts/package-dmg.sh x64
+    fi
+    ;;
+  *)
+    echo "Packaging not supported on this platform"
+    exit 1
+    ;;
+esac
+"""

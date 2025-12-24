@@ -1,0 +1,9 @@
+# Neutralino build outputs
+bin/
+dist/
+
+# Downloaded tools
+scripts/appimagetool
+
+# macOS
+.DS_Store
