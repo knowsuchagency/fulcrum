@@ -362,7 +362,7 @@ async function shutdown() {
 /**
  * Set zoom level
  */
-async function setZoom(level) {
+function setZoom(level) {
   currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
   const frame = document.getElementById('vibora-frame');
   if (frame) {
@@ -371,8 +371,18 @@ async function setZoom(level) {
     frame.style.width = `${100 / currentZoom}%`;
     frame.style.height = `${100 / currentZoom}%`;
   }
+  // Update zoom level display
+  const zoomLevel = document.getElementById('zoom-level');
+  if (zoomLevel) {
+    zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
+  }
   console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
 }
+
+// Global zoom functions for button onclick handlers
+window.zoomIn = () => setZoom(currentZoom + 0.1);
+window.zoomOut = () => setZoom(currentZoom - 0.1);
+window.zoomReset = () => setZoom(1.0);
 
 /**
  * Handle keyboard shortcuts
