@@ -48,8 +48,8 @@ fi
 cp "$NL_BINARY" "$APP_BUNDLE/Contents/MacOS/Vibora"
 chmod +x "$APP_BUNDLE/Contents/MacOS/Vibora"
 
-# Copy resources
-cp -r "$DESKTOP_DIR/dist/vibora-desktop/resources" "$APP_BUNDLE/Contents/Resources/"
+# Copy resources.neu bundle
+cp "$DESKTOP_DIR/dist/vibora-desktop/resources.neu" "$APP_BUNDLE/Contents/Resources/"
 
 # Create Info.plist
 cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
