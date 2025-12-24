@@ -262,11 +262,24 @@ function setZoom(level) {
   }
   console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
 
-  // Reload iframe with new zoom parameter
+  // Reload iframe with new zoom parameter, preserving current path
   const frame = document.getElementById('vibora-frame');
-  if (frame && serverUrl) {
-    const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
-    frame.src = serverUrl + zoomParam;
+  if (frame && frame.src) {
+    try {
+      const url = new URL(frame.src);
+      if (currentZoom !== 1.0) {
+        url.searchParams.set('zoom', currentZoom.toString());
+      } else {
+        url.searchParams.delete('zoom');
+      }
+      frame.src = url.toString();
+    } catch (e) {
+      // Fallback to base URL if parsing fails
+      if (serverUrl) {
+        const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
+        frame.src = serverUrl + zoomParam;
+      }
+    }
   }
 }
 
