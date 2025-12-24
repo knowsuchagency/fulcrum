@@ -19,7 +19,6 @@ const MAX_HEALTH_RETRIES = 10;
 let serverUrl = null;
 let isShuttingDown = false;
 let desktopSettings = null;
-let currentZoom = 1.0;
 
 /**
  * Get the path to settings file
@@ -249,24 +248,17 @@ async function waitForServerReady(baseUrl) {
 }
 
 /**
- * Load the Vibora app in the iframe
+ * Load the Vibora app by navigating directly to it
  */
 async function loadViboraApp(url) {
   setStatus('Loading Vibora...', url);
   serverUrl = url;
 
-  // Use iframe to embed the app
-  const frame = document.getElementById('vibora-frame');
-  frame.src = url;
+  console.log('[Vibora] Navigating to', url);
 
-  frame.onload = () => {
-    document.body.classList.add('loaded');
-    console.log('[Vibora] App loaded successfully from', url);
-  };
-
-  frame.onerror = () => {
-    showError('Load Failed', 'Could not load Vibora interface.');
-  };
+  // Navigate directly to the Vibora app
+  // This gives us native webview zoom (Cmd+/-) but we lose Neutralino APIs
+  window.location.href = url;
 }
 
 /**
@@ -360,54 +352,6 @@ async function shutdown() {
 }
 
 /**
- * Set zoom level
- */
-function setZoom(level) {
-  currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
-  const frame = document.getElementById('vibora-frame');
-  if (frame) {
-    frame.style.transform = `scale(${currentZoom})`;
-    frame.style.transformOrigin = 'top left';
-    frame.style.width = `${100 / currentZoom}%`;
-    frame.style.height = `${100 / currentZoom}%`;
-  }
-  // Update zoom level display
-  const zoomLevel = document.getElementById('zoom-level');
-  if (zoomLevel) {
-    zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
-  }
-  console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
-}
-
-// Global zoom functions for button onclick handlers
-window.zoomIn = () => setZoom(currentZoom + 0.1);
-window.zoomOut = () => setZoom(currentZoom - 0.1);
-window.zoomReset = () => setZoom(1.0);
-
-/**
- * Handle keyboard shortcuts
- */
-function setupKeyboardShortcuts() {
-  document.addEventListener('keydown', (e) => {
-    const isMac = NL_OS === 'Darwin';
-    const modifier = isMac ? e.metaKey : e.ctrlKey;
-
-    if (modifier) {
-      if (e.key === '=' || e.key === '+') {
-        e.preventDefault();
-        setZoom(currentZoom + 0.1);
-      } else if (e.key === '-') {
-        e.preventDefault();
-        setZoom(currentZoom - 0.1);
-      } else if (e.key === '0') {
-        e.preventDefault();
-        setZoom(1.0);
-      }
-    }
-  });
-}
-
-/**
  * Initialize the application
  */
 async function init() {
@@ -416,9 +360,6 @@ async function init() {
     Neutralino.init();
     console.log('[Vibora] Neutralino initialized');
     console.log('[Vibora] OS:', NL_OS);
-
-    // Set up keyboard shortcuts for zoom
-    setupKeyboardShortcuts();
 
     // Set up event listeners
     Neutralino.events.on('windowClose', shutdown);
