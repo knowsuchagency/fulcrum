@@ -9,6 +9,8 @@ import { getDtachService } from '../terminal/dtach-service'
 import { getMetrics, getCurrentMetrics } from '../services/metrics-collector'
 import { getZAiSettings } from '../lib/settings'
 
+const isMacOS = process.platform === 'darwin'
+
 interface ClaudeInstance {
   pid: number
   cwd: string
@@ -79,18 +81,34 @@ function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
 
 // Get process working directory
 function getProcessCwd(pid: number): string {
-  try {
-    return readlinkSync(`/proc/${pid}/cwd`)
-  } catch {
+  // Linux: use /proc filesystem
+  if (!isMacOS) {
     try {
-      const result = execSync(`lsof -p ${pid} -d cwd -Fn 2>/dev/null | grep ^n | cut -c2-`, {
-        encoding: 'utf-8',
-      })
-      return result.trim() || '(unknown)'
+      return readlinkSync(`/proc/${pid}/cwd`)
     } catch {
-      return '(unknown)'
+      // Fall through to lsof fallback
     }
   }
+
+  // macOS and fallback: use lsof
+  try {
+    // -a = AND conditions, -p = process, -d cwd = file descriptor type cwd
+    // -F n = output format with field names (n = name)
+    const result = execSync(`lsof -a -p ${pid} -d cwd -F n 2>/dev/null`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+    })
+    // Output format: "p1234\nn/path/to/dir\n" - find line starting with 'n'
+    for (const line of result.split('\n')) {
+      if (line.startsWith('n') && line.length > 1) {
+        return line.substring(1)
+      }
+    }
+  } catch {
+    // lsof failed or not available
+  }
+
+  return '(unknown)'
 }
 
 // Get process memory in MB (RSS)
@@ -111,28 +129,57 @@ function getProcessMemoryMB(pid: number): number {
 
 // Get process start time
 function getProcessStartTime(pid: number): number | null {
-  try {
-    const stat = readFileSync(`/proc/${pid}/stat`, 'utf-8')
-    // Field 22 is starttime in clock ticks since boot
-    const fields = stat.split(' ')
-    const starttime = parseInt(fields[21], 10)
+  // Linux: use /proc filesystem
+  if (!isMacOS) {
+    try {
+      const stat = readFileSync(`/proc/${pid}/stat`, 'utf-8')
+      // Field 22 is starttime in clock ticks since boot
+      const fields = stat.split(' ')
+      const starttime = parseInt(fields[21], 10)
 
-    // Get system uptime and boot time to calculate actual start time
-    const uptime = parseFloat(readFileSync('/proc/uptime', 'utf-8').split(' ')[0])
-    const clockTicks = 100 // Usually 100 on Linux (sysconf(_SC_CLK_TCK))
-    const bootTime = Math.floor(Date.now() / 1000) - uptime
+      // Get system uptime and boot time to calculate actual start time
+      const uptime = parseFloat(readFileSync('/proc/uptime', 'utf-8').split(' ')[0])
+      const clockTicks = 100 // Usually 100 on Linux (sysconf(_SC_CLK_TCK))
+      const bootTime = Math.floor(Date.now() / 1000) - uptime
 
-    return Math.floor(bootTime + starttime / clockTicks)
-  } catch {
-    return null
+      return Math.floor(bootTime + starttime / clockTicks)
+    } catch {
+      // Fall through to ps fallback
+    }
   }
+
+  // macOS and fallback: use ps -o lstart=
+  try {
+    // ps -o lstart= returns: "Mon Dec 24 10:30:00 2024"
+    const result = execSync(`ps -o lstart= -p ${pid}`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+    }).trim()
+    if (result) {
+      const date = new Date(result)
+      if (!isNaN(date.getTime())) {
+        return Math.floor(date.getTime() / 1000)
+      }
+    }
+  } catch {
+    // ps failed or process doesn't exist
+  }
+
+  return null
 }
 
 // Get all descendant PIDs of a process
 function getDescendantPids(pid: number): number[] {
   const descendants: number[] = []
   try {
-    const result = execSync(`ps --ppid ${pid} -o pid= 2>/dev/null || true`, { encoding: 'utf-8' })
+    let result: string
+    if (isMacOS) {
+      // macOS: ps doesn't support --ppid, use pgrep instead
+      result = execSync(`pgrep -P ${pid} 2>/dev/null || true`, { encoding: 'utf-8' })
+    } else {
+      // Linux: use ps --ppid
+      result = execSync(`ps --ppid ${pid} -o pid= 2>/dev/null || true`, { encoding: 'utf-8' })
+    }
     for (const line of result.trim().split('\n')) {
       const childPid = parseInt(line.trim(), 10)
       if (!isNaN(childPid)) {
@@ -168,25 +215,52 @@ monitoringRoutes.get('/claude-instances', (c) => {
       const socketPath = dtachService.getSocketPath(terminal.id)
       try {
         // Find processes using this socket
-        const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d))
-        for (const pidStr of procDirs) {
-          const pid = parseInt(pidStr, 10)
+        const foundPids: number[] = []
+
+        if (isMacOS) {
+          // macOS: use ps to get all processes with their command lines
           try {
-            const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-            if (cmdline.includes(socketPath)) {
-              // This is a dtach process for this terminal
-              // Get all descendants
-              const descendants = getDescendantPids(pid)
-              for (const descendantPid of [...descendants, pid]) {
-                viboraManagedPids.set(descendantPid, {
-                  terminalId: terminal.id,
-                  terminalName: terminal.name,
-                  cwd: terminal.cwd,
-                })
+            const psResult = execSync('ps -Axo pid,args', {
+              encoding: 'utf-8',
+              timeout: 5000,
+              stdio: ['pipe', 'pipe', 'pipe'],
+            })
+            for (const line of psResult.split('\n').slice(1)) { // Skip header
+              if (line.includes(socketPath)) {
+                const match = line.match(/^\s*(\d+)/)
+                if (match) {
+                  foundPids.push(parseInt(match[1], 10))
+                }
               }
             }
           } catch {
-            // Skip
+            // Ignore ps errors
+          }
+        } else {
+          // Linux: use /proc filesystem
+          const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d))
+          for (const pidStr of procDirs) {
+            const pid = parseInt(pidStr, 10)
+            try {
+              const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
+              if (cmdline.includes(socketPath)) {
+                foundPids.push(pid)
+              }
+            } catch {
+              // Skip
+            }
+          }
+        }
+
+        // For each found dtach process, add it and all descendants
+        for (const pid of foundPids) {
+          const descendants = getDescendantPids(pid)
+          for (const descendantPid of [...descendants, pid]) {
+            viboraManagedPids.set(descendantPid, {
+              terminalId: terminal.id,
+              terminalName: terminal.name,
+              cwd: terminal.cwd,
+            })
           }
         }
       } catch {
@@ -322,6 +396,30 @@ interface TopProcess {
   memoryPercent: number
 }
 
+// Get total system memory in bytes
+function getTotalMemory(): number {
+  if (isMacOS) {
+    try {
+      const result = execSync('sysctl -n hw.memsize', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      return parseInt(result.trim(), 10) || 0
+    } catch {
+      return 0
+    }
+  }
+  // Linux: read from /proc/meminfo
+  try {
+    const meminfo = readFileSync('/proc/meminfo', 'utf-8')
+    const match = meminfo.match(/MemTotal:\s+(\d+)/)
+    return match ? parseInt(match[1], 10) * 1024 : 0 // Convert kB to bytes
+  } catch {
+    return 0
+  }
+}
+
 // GET /api/monitoring/top-processes
 // Returns top 10 processes sorted by memory usage
 monitoringRoutes.get('/top-processes', (c) => {
@@ -329,59 +427,58 @@ monitoringRoutes.get('/top-processes', (c) => {
   const limit = parseInt(c.req.query('limit') || '10', 10)
 
   try {
-    // Get total memory for percentage calculation
-    const memTotal = parseInt(
-      readFileSync('/proc/meminfo', 'utf-8')
-        .match(/MemTotal:\s+(\d+)/)?.[1] || '0',
-      10
-    ) * 1024 // Convert kB to bytes
+    const memTotal = getTotalMemory()
 
+    // Use ps command for both platforms (more reliable and portable)
+    // Format: PID, command name, %CPU, RSS (in KB), full command args
+    let psResult: string
+    if (isMacOS) {
+      // macOS ps: -A for all, -x for processes without tty, -o for columns
+      // macOS doesn't support --no-headers, so we skip the first line manually
+      psResult = execSync('ps -Axo pid,comm,%cpu,rss,args', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    } else {
+      // Linux ps with GNU options
+      psResult = execSync('ps -eo pid,comm,%cpu,rss,args --no-headers', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    }
+
+    const lines = psResult.trim().split('\n')
     const processes: TopProcess[] = []
-    const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d))
 
-    for (const pidStr of procDirs) {
-      const pid = parseInt(pidStr, 10)
-      try {
-        // Read process status for memory and name
-        const status = readFileSync(`/proc/${pid}/status`, 'utf-8')
-        const nameMatch = status.match(/Name:\s+(.+)/)
-        const rssMatch = status.match(/VmRSS:\s+(\d+)\s+kB/)
+    // Skip header line on macOS
+    const startIndex = isMacOS ? 1 : 0
 
-        if (!nameMatch || !rssMatch) continue
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i]
+      // Parse: PID COMM %CPU RSS ARGS
+      // Format: "  123 node             1.2 12345 /usr/bin/node script.js"
+      const match = line.match(/^\s*(\d+)\s+(\S+)\s+([\d.]+)\s+(\d+)\s+(.*)$/)
+      if (!match) continue
 
-        const name = nameMatch[1].trim()
-        const memoryKB = parseInt(rssMatch[1], 10)
-        const memoryMB = memoryKB / 1024
-        const memoryPercent = memTotal > 0 ? (memoryKB * 1024 / memTotal) * 100 : 0
+      const pid = parseInt(match[1], 10)
+      const name = match[2]
+      const cpuPercent = parseFloat(match[3])
+      const memoryKB = parseInt(match[4], 10)
+      const command = match[5].trim().slice(0, 200)
 
-        // Read cmdline for full command
-        let command = ''
-        try {
-          command = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-            .replace(/\0/g, ' ')
-            .trim()
-            .slice(0, 200) // Limit length
-        } catch {
-          command = name
-        }
+      const memoryMB = memoryKB / 1024
+      const memoryPercent = memTotal > 0 ? (memoryKB * 1024 / memTotal) * 100 : 0
 
-        // CPU percent calculation would require tracking over time
-        // For simplicity, we set cpuPercent to 0 and rely on memory sorting primarily
-        // (statParts[13] and statParts[14] contain utime/stime but are cumulative, not rate)
-        const cpuPercent = 0
-
-        processes.push({
-          pid,
-          name,
-          command,
-          cpuPercent: Math.round(cpuPercent * 10) / 10,
-          memoryMB: Math.round(memoryMB * 10) / 10,
-          memoryPercent: Math.round(memoryPercent * 10) / 10,
-        })
-      } catch {
-        // Process may have exited or be inaccessible
-        continue
-      }
+      processes.push({
+        pid,
+        name,
+        command: command || name,
+        cpuPercent: Math.round(cpuPercent * 10) / 10,
+        memoryMB: Math.round(memoryMB * 10) / 10,
+        memoryPercent: Math.round(memoryPercent * 10) / 10,
+      })
     }
 
     // Sort by memory (default) or cpu
@@ -393,42 +490,9 @@ monitoringRoutes.get('/top-processes', (c) => {
 
     // Return top N
     return c.json(processes.slice(0, limit))
-  } catch {
-    // Fallback to ps command if /proc parsing fails
-    try {
-      const sortFlag = sortBy === 'cpu' ? '-pcpu' : '-rss'
-      const result = execSync(
-        `ps -eo pid,comm,args,%cpu,rss --sort=${sortFlag} --no-headers | head -${limit + 1}`,
-        { encoding: 'utf-8', timeout: 5000 }
-      )
-
-      const memTotal = parseInt(
-        execSync('grep MemTotal /proc/meminfo', { encoding: 'utf-8' })
-          .match(/(\d+)/)?.[1] || '0',
-        10
-      ) * 1024
-
-      const processes: TopProcess[] = []
-      for (const line of result.trim().split('\n')) {
-        const match = line.match(/^\s*(\d+)\s+(\S+)\s+(.+?)\s+([\d.]+)\s+(\d+)\s*$/)
-        if (match) {
-          const memoryKB = parseInt(match[5], 10)
-          processes.push({
-            pid: parseInt(match[1], 10),
-            name: match[2],
-            command: match[3].trim().slice(0, 200),
-            cpuPercent: parseFloat(match[4]),
-            memoryMB: Math.round(memoryKB / 1024 * 10) / 10,
-            memoryPercent: memTotal > 0 ? Math.round(memoryKB * 1024 / memTotal * 1000) / 10 : 0,
-          })
-        }
-      }
-
-      return c.json(processes)
-    } catch (fallbackErr) {
-      const message = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
-      return c.json({ error: message }, 500)
-    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
   }
 })
 
@@ -804,19 +868,40 @@ async function getClaudeOAuthToken(): Promise<string | null> {
     // File doesn't exist or is invalid
   }
 
-  // Fallback: try secret-tool (GNOME Keyring)
-  try {
-    const result = execSync('secret-tool lookup service "Claude Code"', {
-      encoding: 'utf-8',
-      timeout: 5000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
-    const token = result.trim()
-    if (token && token.startsWith('sk-ant-oat')) {
-      return token
+  // macOS: Use Keychain with service name "Claude Code-credentials"
+  if (isMacOS) {
+    try {
+      const result = execSync('security find-generic-password -s "Claude Code-credentials" -w', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      // Keychain stores JSON: {"claudeAiOauth":{"accessToken":"sk-ant-oat-..."}}
+      const config = JSON.parse(result.trim())
+      const token = config.claudeAiOauth?.accessToken
+      if (token && typeof token === 'string' && token.startsWith('sk-ant-oat')) {
+        return token
+      }
+    } catch {
+      // Keychain entry not found or invalid JSON
     }
-  } catch {
-    // secret-tool not available or no credential found
+  }
+
+  // Linux: try secret-tool (GNOME Keyring)
+  if (!isMacOS) {
+    try {
+      const result = execSync('secret-tool lookup service "Claude Code"', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      const token = result.trim()
+      if (token && token.startsWith('sk-ant-oat')) {
+        return token
+      }
+    } catch {
+      // secret-tool not available or no credential found
+    }
   }
 
   return null
