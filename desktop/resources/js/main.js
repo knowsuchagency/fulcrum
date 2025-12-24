@@ -249,16 +249,15 @@ async function waitForServerReady(baseUrl) {
 }
 
 /**
- * Set zoom level
+ * Set zoom level using CSS zoom property
+ * CSS zoom re-renders content at new size (sharp) vs transform: scale() which stretches pixels (blurry)
  */
 function setZoom(level) {
   currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
   const frame = document.getElementById('vibora-frame');
   if (frame) {
-    frame.style.transform = `scale(${currentZoom})`;
-    frame.style.transformOrigin = 'top left';
-    frame.style.width = `${100 / currentZoom}%`;
-    frame.style.height = `${100 / currentZoom}%`;
+    // Use CSS zoom for sharper rendering (supported in WebKit/Blink)
+    frame.style.zoom = currentZoom;
   }
   // Update zoom level display
   const zoomLevel = document.getElementById('zoom-level');
