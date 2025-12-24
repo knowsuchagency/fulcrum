@@ -1,5 +1,5 @@
 import { db, type Task } from '../db'
-import { tasks } from '../db/schema'
+import { tasks, terminalViewState } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { broadcast } from '../websocket/terminal-ws'
 import { updateLinearTicketStatus } from './linear'
@@ -57,20 +57,28 @@ export async function updateTaskStatus(
       })
     }
 
-    // Send notification when task moves to review (debounced to avoid spam from rapid status changes)
+    // Send notification when task moves to review (suppressed if user is actively viewing)
     if (newStatus === 'IN_REVIEW') {
-      const DEBOUNCE_MS = 30 * 60 * 1000 // 30 minutes
-      const nowMs = Date.now()
-      const lastNotified = existing.lastReviewNotifiedAt
-        ? new Date(existing.lastReviewNotifiedAt).getTime()
-        : 0
+      const STALE_MS = 5 * 60 * 1000 // 5 minutes
 
-      if (nowMs - lastNotified > DEBOUNCE_MS) {
-        db.update(tasks)
-          .set({ lastReviewNotifiedAt: new Date().toISOString() })
-          .where(eq(tasks.id, taskId))
-          .run()
+      // Check if user is actively viewing with visible tab
+      const viewState = db
+        .select()
+        .from(terminalViewState)
+        .where(eq(terminalViewState.id, 'singleton'))
+        .get()
 
+      const viewIsRecent =
+        viewState?.viewUpdatedAt &&
+        Date.now() - new Date(viewState.viewUpdatedAt).getTime() < STALE_MS
+      const tabIsVisible = viewState?.isTabVisible === true
+      const isViewingThisTask = viewState?.currentTaskId === taskId
+      const isViewingAllTasks =
+        viewState?.currentView === 'terminals' && viewState?.activeTabId === 'all-tasks'
+
+      const shouldSuppress = viewIsRecent && tabIsVisible && (isViewingThisTask || isViewingAllTasks)
+
+      if (!shouldSuppress) {
         sendNotification({
           title: 'Task Ready for Review',
           message: `Task "${updated.title}" moved to review`,
@@ -79,14 +87,6 @@ export async function updateTaskStatus(
           type: 'task_status_change',
         })
       }
-    }
-
-    // Clear notification debounce on terminal states (allows fresh notification if reopened)
-    if (newStatus === 'DONE' || newStatus === 'CANCELED') {
-      db.update(tasks)
-        .set({ lastReviewNotifiedAt: null })
-        .where(eq(tasks.id, taskId))
-        .run()
     }
 
     // Kill Claude processes for terminal statuses
