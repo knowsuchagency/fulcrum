@@ -19,6 +19,7 @@ const MAX_HEALTH_RETRIES = 10;
 let serverUrl = null;
 let isShuttingDown = false;
 let desktopSettings = null;
+let currentZoom = 1.0;
 
 /**
  * Get the path to settings file
@@ -359,6 +360,44 @@ async function shutdown() {
 }
 
 /**
+ * Set zoom level
+ */
+async function setZoom(level) {
+  currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
+  const frame = document.getElementById('vibora-frame');
+  if (frame) {
+    frame.style.transform = `scale(${currentZoom})`;
+    frame.style.transformOrigin = 'top left';
+    frame.style.width = `${100 / currentZoom}%`;
+    frame.style.height = `${100 / currentZoom}%`;
+  }
+  console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
+}
+
+/**
+ * Handle keyboard shortcuts
+ */
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    const isMac = NL_OS === 'Darwin';
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+    if (modifier) {
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        setZoom(currentZoom + 0.1);
+      } else if (e.key === '-') {
+        e.preventDefault();
+        setZoom(currentZoom - 0.1);
+      } else if (e.key === '0') {
+        e.preventDefault();
+        setZoom(1.0);
+      }
+    }
+  });
+}
+
+/**
  * Initialize the application
  */
 async function init() {
@@ -367,6 +406,9 @@ async function init() {
     Neutralino.init();
     console.log('[Vibora] Neutralino initialized');
     console.log('[Vibora] OS:', NL_OS);
+
+    // Set up keyboard shortcuts for zoom
+    setupKeyboardShortcuts();
 
     // Set up event listeners
     Neutralino.events.on('windowClose', shutdown);
