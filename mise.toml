@@ -46,7 +46,7 @@ fi
 
 echo "Bumped version: $current → $new_version"
 
-git add package.json
+git add package.json "$marketplace" "$plugin"
 git commit -m "bump ${usage_type}"
 """
 
