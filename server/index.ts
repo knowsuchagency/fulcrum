@@ -10,6 +10,7 @@ import {
 import { getSetting } from './lib/settings'
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
+import { log } from './lib/logger'
 
 const PORT = getSetting('port')
 
@@ -57,10 +58,12 @@ const server = serve(
     hostname: '0.0.0.0',
   },
   (info) => {
-    console.log(`Vibora server running on port ${info.port}`)
-    console.log(`  Health check: http://localhost:${info.port}/health`)
-    console.log(`  API:          http://localhost:${info.port}/api/tasks`)
-    console.log(`  WebSocket:    ws://localhost:${info.port}/ws/terminal`)
+    log.server.info('Vibora server running', {
+      port: info.port,
+      healthCheck: `http://localhost:${info.port}/health`,
+      api: `http://localhost:${info.port}/api/tasks`,
+      webSocket: `ws://localhost:${info.port}/ws/terminal`,
+    })
   }
 )
 
@@ -75,7 +78,7 @@ startMetricsCollector()
 
 // Graceful shutdown - detach PTYs but keep tmux sessions running for persistence
 process.on('SIGINT', () => {
-  console.log('\nShutting down (terminals will persist)...')
+  log.server.info('Shutting down (terminals will persist)')
   stopPRMonitor()
   stopMetricsCollector()
   ptyManager.detachAll()
@@ -84,7 +87,7 @@ process.on('SIGINT', () => {
 })
 
 process.on('SIGTERM', () => {
-  console.log('\nShutting down (terminals will persist)...')
+  log.server.info('Shutting down (terminals will persist)')
   stopPRMonitor()
   stopMetricsCollector()
   ptyManager.detachAll()

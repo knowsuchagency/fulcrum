@@ -12,6 +12,7 @@ import {
 } from '../terminal/pty-instance'
 import { broadcast } from '../websocket/terminal-ws'
 import { updateTaskStatus } from '../services/task-status'
+import { log } from '../lib/logger'
 
 // Helper to create git worktree
 function createGitWorktree(
@@ -107,7 +108,7 @@ function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: s
         fs.copyFileSync(srcPath, destPath)
       }
     } catch (err) {
-      console.error(`Failed to copy files matching pattern "${pattern}":`, err)
+      log.api.error('Failed to copy files matching pattern', { pattern, error: String(err) })
       // Continue with other patterns
     }
   }
@@ -176,7 +177,7 @@ app.post('/', async (c) => {
         try {
           copyFilesToWorktree(body.repoPath, body.worktreePath, body.copyFiles)
         } catch (err) {
-          console.error('Failed to copy files:', err)
+          log.api.error('Failed to copy files', { error: String(err) })
           // Non-fatal: continue with task creation
         }
       }

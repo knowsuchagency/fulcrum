@@ -3,6 +3,7 @@ import { db } from '../db'
 import { tasks } from '../db/schema'
 import { isNotNull, and, notInArray } from 'drizzle-orm'
 import { updateTaskStatus } from './task-status'
+import { log } from '../lib/logger'
 
 const POLL_INTERVAL = 60_000 // 60 seconds
 
@@ -25,7 +26,7 @@ function parsePrUrl(
 function checkPrStatus(prUrl: string): PRStatus | null {
   const parsed = parsePrUrl(prUrl)
   if (!parsed) {
-    console.warn(`Invalid PR URL format: ${prUrl}`)
+    log.pr.warn('Invalid PR URL format', { prUrl })
     return null
   }
 
@@ -41,7 +42,7 @@ function checkPrStatus(prUrl: string): PRStatus | null {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`Failed to check PR ${prUrl}: ${message}`)
+    log.pr.error('Failed to check PR', { prUrl, error: message })
     return null
   }
 }
@@ -70,7 +71,7 @@ async function pollPRs(): Promise<void> {
     // The status change will trigger a notification via updateTaskStatus
     if (status.state === 'MERGED' || status.mergedAt) {
       await updateTaskStatus(task.id, 'DONE')
-      console.log(`Task "${task.title}" marked as DONE (PR merged)`)
+      log.pr.info('Task marked as DONE (PR merged)', { taskId: task.id, taskTitle: task.title })
     }
   }
 }
@@ -80,14 +81,14 @@ let intervalId: ReturnType<typeof setInterval> | null = null
 export function startPRMonitor(): void {
   if (intervalId) return // Already running
 
-  console.log('PR Monitor started (60s interval)')
+  log.pr.info('PR Monitor started (60s interval)')
 
   // Run immediately on start
-  pollPRs().catch(console.error)
+  pollPRs().catch((err) => log.pr.error('Poll failed', { error: String(err) }))
 
   // Then poll every 60 seconds
   intervalId = setInterval(() => {
-    pollPRs().catch(console.error)
+    pollPRs().catch((err) => log.pr.error('Poll failed', { error: String(err) }))
   }, POLL_INTERVAL)
 }
 
@@ -95,6 +96,6 @@ export function stopPRMonitor(): void {
   if (intervalId) {
     clearInterval(intervalId)
     intervalId = null
-    console.log('PR Monitor stopped')
+    log.pr.info('PR Monitor stopped')
   }
 }

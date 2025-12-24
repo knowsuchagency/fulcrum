@@ -64,10 +64,28 @@ export function createApp() {
   app.route('/api/auth', authRoutes)
   app.route('/api/monitoring', monitoringRoutes)
 
-  // Debug endpoint for frontend to send logs to server
+  // Logging endpoint for frontend to send batched logs to server
+  app.post('/api/logs', async (c) => {
+    const { entries } = await c.req.json<{ entries: Array<{ ts: string; lvl: string; src: string; msg: string; ctx?: Record<string, unknown> }> }>()
+    for (const entry of entries) {
+      // Output as JSON line (same format as backend logger)
+      console.log(JSON.stringify(entry))
+    }
+    return c.json({ ok: true })
+  })
+
+  // Legacy debug endpoint (for backwards compatibility during migration)
   app.post('/api/debug', async (c) => {
     const body = await c.req.json()
-    console.log('[Frontend]', body.message, body.data ? JSON.stringify(body.data) : '')
+    // Convert old format to new JSONL format
+    const entry = {
+      ts: new Date().toISOString(),
+      lvl: 'debug',
+      src: 'Frontend/Legacy',
+      msg: body.message,
+      ...(body.data ? { ctx: body.data } : {}),
+    }
+    console.log(JSON.stringify(entry))
     return c.json({ ok: true })
   })
 

@@ -10,19 +10,7 @@ import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
-
-// Debug logging gated behind env var
-const DEBUG_ENABLED = import.meta.env.VITE_VIBORA_DEBUG === '1'
-
-function debugLog(message: string, data?: unknown) {
-  if (!DEBUG_ENABLED) return
-  console.log(message, data)
-  fetch('/api/debug', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, data }),
-  }).catch(() => {})
-}
+import { log } from '@/lib/logger'
 
 interface TaskTerminalProps {
   taskId: string
@@ -50,7 +38,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   // Reset all terminal tracking refs when cwd changes (navigating to different task)
   // This MUST run before terminal creation logic to ensure refs are clean
   useEffect(() => {
-    debugLog('[TaskTerminal] cwd changed, resetting refs', { cwd })
+    log.taskTerminal.debug('cwd changed, resetting refs', { cwd })
     createdTerminalRef.current = false
     createdByMeRef.current = false
     attachedRef.current = false
@@ -269,7 +257,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   // Attach xterm to terminal once we have both
   // Use refs for callbacks to avoid effect re-runs when callbacks change identity
   useEffect(() => {
-    debugLog('[TaskTerminal] attach effect', {
+    log.taskTerminal.debug('attach effect', {
       terminalId,
       hasTermRef: !!termRef.current,
       hasContainerRef: !!containerRef.current,
@@ -278,7 +266,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
 
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
-    debugLog('[TaskTerminal] attach effect PASSED guards, calling attachXterm', { terminalId })
+    log.taskTerminal.debug('attach effect passed guards, calling attachXterm', { terminalId })
 
     // Capture current values for use in callbacks
     const currentTerminalId = terminalId
@@ -296,7 +284,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       // SYNCHRONOUS guard: Check and set atomically to prevent race conditions
       // This must happen BEFORE any async operations
       if (startupRanForRef.current === currentTerminalId) {
-        debugLog('[TaskTerminal] onAttached: startup already ran, returning', { currentTerminalId })
+        log.taskTerminal.debug('onAttached: startup already ran, returning', { terminalId: currentTerminalId })
         return
       }
 
@@ -313,15 +301,15 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
         startupRanForRef.current = currentTerminalId
       }
 
-      debugLog('[TaskTerminal] onAttached checking isNewTerminal', {
-        currentTerminalId,
+      log.taskTerminal.debug('onAttached checking isNewTerminal', {
+        terminalId: currentTerminalId,
         isNewTerminal,
         startupRanFor: startupRanForRef.current,
       })
 
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
       if (isNewTerminal) {
-        debugLog('[TaskTerminal] onAttached: RUNNING STARTUP COMMANDS', { currentTerminalId })
+        log.taskTerminal.info('onAttached: running startup commands', { terminalId: currentTerminalId })
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
         if (currentStartupScript) {
           setTimeout(() => {
@@ -344,8 +332,8 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
           : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTaskId}" --dangerously-skip-permissions`
 
         setTimeout(() => {
-          debugLog('[TaskTerminal] WRITING CLAUDE COMMAND TO TERMINAL', {
-            currentTerminalId,
+          log.taskTerminal.debug('writing claude command to terminal', {
+            terminalId: currentTerminalId,
             taskCommand: taskCommand.substring(0, 50) + '...',
           })
           writeToTerminalRef.current(currentTerminalId, taskCommand + '\r')
@@ -358,10 +346,10 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     const cleanupPaste = setupImagePasteRef.current(containerRef.current, terminalId)
     attachedRef.current = true
 
-    debugLog('[TaskTerminal] attachedRef set to TRUE', { terminalId })
+    log.taskTerminal.debug('attachedRef set to true', { terminalId })
 
     return () => {
-      debugLog('[TaskTerminal] CLEANUP running, setting attachedRef to FALSE', { terminalId })
+      log.taskTerminal.debug('cleanup running, setting attachedRef to false', { terminalId })
       cleanup()
       cleanupPaste()
       attachedRef.current = false

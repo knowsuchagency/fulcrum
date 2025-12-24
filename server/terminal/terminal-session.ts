@@ -6,6 +6,7 @@ import { db, terminals } from '../db'
 import { eq } from 'drizzle-orm'
 import { getZAiSettings } from '../lib/settings'
 import type { TerminalInfo, TerminalStatus } from '../types'
+import { log } from '../lib/logger'
 
 // z.ai related env vars to filter when z.ai is disabled
 const ZAI_ENV_VARS = [
@@ -138,7 +139,7 @@ export class TerminalSession {
 
       this.setupPtyHandlers()
     } catch (err) {
-      console.error(`[TerminalSession] Failed to start dtach session:`, err)
+      log.terminal.error('Failed to start dtach session', { terminalId: this.id, error: String(err) })
       this.status = 'error'
       this.updateDb({ status: 'error' })
       this.onExit(1)
@@ -153,7 +154,7 @@ export class TerminalSession {
 
     // Verify socket still exists
     if (!dtach.hasSession(this.id)) {
-      console.error(`[TerminalSession] dtach socket not found for ${this.id}`)
+      log.terminal.error('dtach socket not found', { terminalId: this.id })
       this.status = 'exited'
       this.exitCode = 1
       this.updateDb({ status: 'exited', exitCode: 1 })
@@ -181,7 +182,7 @@ export class TerminalSession {
 
       this.setupPtyHandlers()
     } catch (err) {
-      console.error(`[TerminalSession] Failed to attach to dtach:`, err)
+      log.terminal.error('Failed to attach to dtach', { terminalId: this.id, error: String(err) })
       this.status = 'error'
       this.updateDb({ status: 'error' })
       this.onExit(1)

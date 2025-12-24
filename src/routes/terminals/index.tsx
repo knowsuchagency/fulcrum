@@ -21,6 +21,7 @@ import { useWorktreeBasePath } from '@/hooks/use-config'
 import { cn } from '@/lib/utils'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import type { TerminalTab, TaskStatus } from '@/types'
+import { log } from '@/lib/logger'
 
 const ALL_TASKS_TAB_ID = 'all-tasks'
 const ACTIVE_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW']
@@ -192,14 +193,14 @@ function TerminalsView() {
   const handleTerminalAdd = useCallback(() => {
     // Prevent duplicate creations from double-clicks or React Strict Mode
     if (pendingTerminalCreateRef.current) {
-      console.log('[Terminals] handleTerminalAdd: skipping, creation pending')
+      log.terminal.debug('Skipping terminal creation, already pending')
       return
     }
     pendingTerminalCreateRef.current = true
 
     terminalCountRef.current++
     const terminalName = `Terminal ${terminalCountRef.current}`
-    console.log('[Terminals] handleTerminalAdd: creating', terminalName)
+    log.terminal.debug('Creating terminal', { name: terminalName })
 
     // Calculate position for new terminal (append to end)
     const terminalsInTab = terminals.filter((t) => t.tabId === activeTabId)
@@ -268,13 +269,13 @@ function TerminalsView() {
   const handleTabCreate = useCallback(() => {
     // Prevent duplicate creations from double-clicks or React Strict Mode
     if (pendingTabCreateRef.current) {
-      console.log('[Terminals] handleTabCreate: skipping, creation pending')
+      log.terminal.debug('Skipping tab creation, already pending')
       return
     }
     pendingTabCreateRef.current = true
 
     const tabName = `Tab ${tabs.length + 1}`
-    console.log('[Terminals] handleTabCreate: creating', tabName)
+    log.terminal.debug('Creating tab', { name: tabName })
     createTab(tabName)
 
     // Reset pending flag after a short delay to allow the creation to complete

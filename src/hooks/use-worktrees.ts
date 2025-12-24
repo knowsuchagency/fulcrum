@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchJSON } from '@/lib/api'
 import type { Worktree, WorktreeBasic, WorktreeDetails, WorktreesSummary } from '@/types'
+import { log } from '@/lib/logger'
 
 const API_BASE = ''
 
@@ -89,7 +90,7 @@ export function useWorktrees(): UseWorktreesReturn {
 
     eventSource.addEventListener('worktree:error', (e) => {
       const { path: errorPath } = JSON.parse(e.data)
-      console.error(`Error loading worktree details for ${errorPath}`)
+      log.viewer.error('Error loading worktree details', { path: errorPath })
       pendingDetailsRef.current--
       if (pendingDetailsRef.current <= 0) {
         setIsLoadingDetails(false)

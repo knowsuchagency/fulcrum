@@ -104,6 +104,13 @@ rm -rf dist
 bunx tsc -b --force && bunx vite build
 """
 
+[tasks."build:debug"]
+description = "Build for production with debug logging enabled"
+run = """
+rm -rf dist
+bunx tsc -b --force && VITE_VIBORA_DEBUG=1 bunx vite build
+"""
+
 [tasks.start]
 description = "Run production server"
 depends = ["build"]
@@ -394,7 +401,7 @@ echo "Neutralinojs setup complete"
 
 [tasks."desktop:build"]
 description = "Build desktop client app for current platform"
-depends = ["desktop:setup"]
+depends = ["desktop:setup", "desktop:bundle"]
 run = """
 set -e
 
@@ -482,6 +489,78 @@ cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
 echo "Desktop bundle created at $BUNDLE_DIR (standalone executable, no Bun required)"
 """
 
+[tasks."desktop:bundle:debug"]
+description = "Bundle server and plugin for desktop app with debug logging"
+depends = ["build:debug"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
+run = """
+set -e
+
+BUNDLE_DIR="desktop/bundle"
+rm -rf "$BUNDLE_DIR"
+mkdir -p "$BUNDLE_DIR/server" "$BUNDLE_DIR/lib" "$BUNDLE_DIR/drizzle" "$BUNDLE_DIR/dist" "$BUNDLE_DIR/plugin"
+
+# Determine architecture and target
+ARCH="${usage_arch}"
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    arm64|aarch64) ARCH="arm64" ;;
+    *) ARCH="x64" ;;
+  esac
+fi
+
+# Determine target for bun compile
+case "$(uname -s)" in
+  Darwin*) TARGET="bun-darwin-${ARCH}" ;;
+  Linux*) TARGET="bun-linux-${ARCH}" ;;
+  *) echo "Unsupported platform" >&2; exit 1 ;;
+esac
+
+# Compile server as standalone executable (includes Bun runtime)
+echo "Compiling server for ${TARGET} (DEBUG)..." >&2
+bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/vibora-server"
+chmod +x "$BUNDLE_DIR/server/vibora-server"
+
+# Copy native PTY libraries
+echo "Copying native PTY libraries..." >&2
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/rust_pty.dll "$BUNDLE_DIR/lib/" 2>/dev/null || true
+
+# Generate and copy migrations
+echo "Generating migrations..." >&2
+bunx drizzle-kit generate
+cp -r drizzle/* "$BUNDLE_DIR/drizzle/"
+
+# Copy frontend build (with debug logging)
+echo "Copying frontend build (DEBUG)..." >&2
+cp -r dist/* "$BUNDLE_DIR/dist/"
+
+# Copy Claude plugin (including hidden .claude-plugin directory)
+echo "Copying Claude plugin..." >&2
+cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
+
+echo "Desktop DEBUG bundle created at $BUNDLE_DIR"
+"""
+
+[tasks."desktop:build:debug"]
+description = "Build desktop client app with debug logging"
+depends = ["desktop:setup", "desktop:bundle:debug"]
+run = """
+set -e
+
+cd desktop
+
+echo "Building Neutralino app (DEBUG)..." >&2
+neu build
+
+echo ""
+echo "Desktop DEBUG app built successfully!"
+echo "Binaries are in: desktop/dist/"
+"""
+
 [tasks."desktop:clean"]
 description = "Clean desktop build artifacts"
 run = """
@@ -493,7 +572,7 @@ echo "Desktop build artifacts cleaned"
 
 [tasks."desktop:package-appimage"]
 description = "Package desktop app as AppImage (Linux)"
-depends = ["desktop:build", "desktop:bundle"]
+depends = ["desktop:build"]
 usage = 'arg "[arch]" help="Architecture: x64 or arm64" default="x64"'
 run = """
 ./desktop/scripts/package-appimage.sh "${usage_arch}"
@@ -501,7 +580,15 @@ run = """
 
 [tasks."desktop:package-dmg"]
 description = "Package desktop app as DMG (macOS)"
-depends = ["desktop:build", "desktop:bundle"]
+depends = ["desktop:build"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
+run = """
+./desktop/scripts/package-dmg.sh "${usage_arch}"
+"""
+
+[tasks."desktop:package-dmg:debug"]
+description = "Package desktop app as DMG with debug logging (macOS)"
+depends = ["desktop:build:debug"]
 usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
 run = """
 ./desktop/scripts/package-dmg.sh "${usage_arch}"
@@ -567,7 +654,7 @@ cat desktop/dist/manifest.json
 
 [tasks."desktop:release"]
 description = "Build all desktop packages for current platform"
-depends = ["check:version", "desktop:build", "desktop:bundle"]
+depends = ["check:version", "desktop:build"]
 run = """
 set -e
 case "$(uname -s)" in

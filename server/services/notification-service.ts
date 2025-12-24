@@ -8,6 +8,7 @@ import {
   type PushoverNotificationConfig,
 } from '../lib/settings'
 import { broadcast } from '../websocket/terminal-ws'
+import { log } from '../lib/logger'
 
 export interface NotificationPayload {
   title: string
@@ -236,7 +237,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<No
   // Log failures
   for (const result of results) {
     if (!result.success) {
-      console.warn(`Notification failed [${result.channel}]: ${result.error}`)
+      log.notification.warn('Notification failed', { channel: result.channel, error: result.error })
     }
   }
 

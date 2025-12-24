@@ -21,6 +21,7 @@ import {
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { WebSocket } from 'ws'
+import { log } from './lib/logger'
 
 // Neutralinojs extension connectivity info
 interface NeutralinoConfig {
@@ -42,7 +43,7 @@ async function readNeutralinoConfig(): Promise<NeutralinoConfig | null> {
     let data = ''
     const timeout = setTimeout(() => {
       // If no stdin data after 2 seconds, assume standalone mode
-      console.log('[Desktop] No Neutralino config received, running in standalone mode')
+      log.desktop.info('No Neutralino config received, running in standalone mode')
       resolve(null)
     }, 2000)
 
@@ -83,22 +84,22 @@ async function readNeutralinoConfig(): Promise<NeutralinoConfig | null> {
 function connectToNeutralino(config: NeutralinoConfig): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const wsUrl = `ws://localhost:${config.nlPort}?extensionId=${config.nlExtensionId}&connectToken=${config.nlConnectToken}`
-    console.log(`[Desktop] Connecting to Neutralino at ws://localhost:${config.nlPort}`)
+    log.desktop.info('Connecting to Neutralino', { port: config.nlPort })
 
     const ws = new WebSocket(wsUrl)
 
     ws.on('open', () => {
-      console.log('[Desktop] Connected to Neutralino')
+      log.desktop.info('Connected to Neutralino')
       resolve(ws)
     })
 
     ws.on('error', (err) => {
-      console.error('[Desktop] WebSocket error:', err)
+      log.desktop.error('WebSocket error', { error: String(err) })
       reject(err)
     })
 
     ws.on('close', () => {
-      console.log('[Desktop] Neutralino connection closed')
+      log.desktop.info('Neutralino connection closed')
       if (!isShuttingDown) {
         gracefulShutdown()
       }
@@ -108,7 +109,7 @@ function connectToNeutralino(config: NeutralinoConfig): Promise<WebSocket> {
       try {
         const msg = JSON.parse(data.toString())
         if (msg.event === 'shutdown') {
-          console.log('[Desktop] Received shutdown signal')
+          log.desktop.info('Received shutdown signal')
           gracefulShutdown()
         }
       } catch {
@@ -173,7 +174,7 @@ function gracefulShutdown() {
   if (isShuttingDown) return
   isShuttingDown = true
 
-  console.log('\n[Desktop] Shutting down (terminals will persist)...')
+  log.desktop.info('Shutting down (terminals will persist)')
 
   stopPRMonitor()
   stopMetricsCollector()
@@ -198,7 +199,7 @@ function gracefulShutdown() {
  * Main entry point
  */
 async function main() {
-  console.log('[Desktop] Starting Vibora server in desktop mode...')
+  log.desktop.info('Starting Vibora server in desktop mode')
 
   // Read Neutralino config from stdin
   const nlConfig = await readNeutralinoConfig()
@@ -206,7 +207,7 @@ async function main() {
   // Find an available port (prefer 3333, but find another if taken)
   const preferredPort = parseInt(process.env.PORT || '3333', 10)
   const PORT = await findAvailablePort(preferredPort)
-  console.log(`[Desktop] Using port ${PORT}`)
+  log.desktop.info('Using port', { port: PORT })
 
   // Initialize PTY manager with broadcast callbacks
   ptyManager = initPTYManager({
@@ -252,7 +253,7 @@ async function main() {
       hostname: '127.0.0.1', // Bind to localhost only for desktop app
     },
     async (info) => {
-      console.log(`[Desktop] Vibora server running on port ${info.port}`)
+      log.desktop.info('Vibora server running', { port: info.port })
 
       // If running as Neutralino extension, connect and broadcast ready
       if (nlConfig) {
@@ -263,14 +264,14 @@ async function main() {
 
           // Broadcast that server is ready
           broadcastToNeutralino('serverReady', { port: info.port })
-          console.log('[Desktop] Broadcasted serverReady event to Neutralino')
+          log.desktop.info('Broadcasted serverReady event to Neutralino')
         } catch (err) {
-          console.error('[Desktop] Failed to connect to Neutralino:', err)
+          log.desktop.error('Failed to connect to Neutralino', { error: String(err) })
           broadcastToNeutralino('serverError', { message: 'Failed to connect to Neutralino' })
         }
       } else {
         // Standalone mode - just print URL
-        console.log(`[Desktop] Open http://localhost:${info.port} in your browser`)
+        log.desktop.info('Open in browser', { url: `http://localhost:${info.port}` })
       }
     }
   )
@@ -288,6 +289,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[Desktop] Fatal error:', err)
+  log.desktop.error('Fatal error', { error: String(err) })
   process.exit(1)
 })

@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process'
 import { db } from '../db'
 import { systemMetrics } from '../db/schema'
 import { lt } from 'drizzle-orm'
+import { log } from '../lib/logger'
 
 const COLLECT_INTERVAL = 5_000 // 5 seconds
 const RETENTION_HOURS = 24
@@ -81,7 +82,7 @@ function getMemoryInfoMacOS(): MemoryInfo {
       cache: Math.max(cache, 0),
     }
   } catch (err) {
-    console.error('Failed to get macOS memory info:', err)
+    log.metrics.error('Failed to get macOS memory info', { error: String(err) })
     // Fallback to basic Node.js API
     const total = os.totalmem()
     const free = os.freemem()
@@ -219,7 +220,7 @@ function getDiskUsage(): { used: number; total: number } {
       }
     }
   } catch (err) {
-    console.error('Failed to get disk usage:', err)
+    log.metrics.error('Failed to get disk usage', { error: String(err) })
   }
 
   return { used: 0, total: 0 }
@@ -249,14 +250,14 @@ function pruneOldMetrics(): void {
   const result = db.delete(systemMetrics).where(lt(systemMetrics.timestamp, cutoff)).run()
 
   if (result.changes > 0) {
-    console.log(`[MetricsCollector] Pruned ${result.changes} old metrics records`)
+    log.metrics.debug('Pruned old metrics records', { count: result.changes })
   }
 }
 
 export function startMetricsCollector(): void {
   if (intervalId) return // Already running
 
-  console.log(`Metrics collector started (${COLLECT_INTERVAL / 1000}s interval)`)
+  log.metrics.info('Metrics collector started', { intervalSeconds: COLLECT_INTERVAL / 1000 })
 
   // Initialize CPU baseline
   previousCpu = getCpuSnapshot()
@@ -284,7 +285,7 @@ export function stopMetricsCollector(): void {
   if (intervalId) {
     clearInterval(intervalId)
     intervalId = null
-    console.log('Metrics collector stopped')
+    log.metrics.info('Metrics collector stopped')
   }
 }
 
