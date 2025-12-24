@@ -18,7 +18,6 @@ export const tasks = sqliteTable('tasks', {
   startupScript: text('startup_script'), // Command to run after worktree creation
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
-  lastReviewNotifiedAt: text('last_review_notified_at'), // Debounce IN_REVIEW notifications
 })
 
 // Terminal tabs - first-class entities that can exist without terminals
@@ -50,7 +49,12 @@ export const terminals = sqliteTable('terminals', {
 export const terminalViewState = sqliteTable('terminal_view_state', {
   id: text('id').primaryKey().default('singleton'),
   activeTabId: text('active_tab_id'),
-  focusedTerminals: text('focused_terminals'),  // JSON: { [tabId]: terminalId }
+  focusedTerminals: text('focused_terminals'), // JSON: { [tabId]: terminalId }
+  // View tracking for notification suppression
+  currentView: text('current_view'), // 'task-detail' | 'terminals' | 'other'
+  currentTaskId: text('current_task_id'), // Task ID if on task detail view
+  isTabVisible: integer('is_tab_visible', { mode: 'boolean' }), // document.visibilityState
+  viewUpdatedAt: text('view_updated_at'), // Timestamp to detect stale state
   updatedAt: text('updated_at').notNull(),
 })
 

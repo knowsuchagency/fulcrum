@@ -275,3 +275,18 @@ else
 fi
 rm -f "$PID_FILE"
 """
+
+[tasks.restart]
+description = "Restart vibora-dev systemd service with migrations"
+run = """
+set -e
+
+echo "Syncing database schema..." >&2
+bun run drizzle-kit push
+
+echo "Restarting vibora-dev..." >&2
+systemctl --user restart vibora-dev
+
+echo "Done. Checking status..." >&2
+systemctl --user status vibora-dev --no-pager
+"""
