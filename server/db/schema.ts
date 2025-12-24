@@ -18,6 +18,7 @@ export const tasks = sqliteTable('tasks', {
   startupScript: text('startup_script'), // Command to run after worktree creation
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+  lastReviewNotifiedAt: text('last_review_notified_at'), // Debounce IN_REVIEW notifications
 })
 
 // Terminal tabs - first-class entities that can exist without terminals
