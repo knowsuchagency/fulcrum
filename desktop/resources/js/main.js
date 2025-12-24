@@ -264,32 +264,40 @@ function setZoom(level) {
 
   // Reload iframe with new zoom parameter, preserving current path
   const frame = document.getElementById('vibora-frame');
-  console.log('[Vibora] setZoom - frame:', frame);
-  console.log('[Vibora] setZoom - frame.src:', frame?.src);
-  console.log('[Vibora] setZoom - serverUrl:', serverUrl);
 
-  if (frame && frame.src) {
+  if (frame) {
+    // Try to get the actual current URL from the iframe's contentWindow
+    // This works if same-origin, and captures client-side routing changes
+    let currentUrl = null;
     try {
-      const url = new URL(frame.src);
-      console.log('[Vibora] setZoom - parsed URL:', url.toString());
-      console.log('[Vibora] setZoom - pathname:', url.pathname);
+      currentUrl = frame.contentWindow?.location?.href;
+      Neutralino.debug.log(`[Vibora] Current iframe URL from contentWindow: ${currentUrl}`);
+    } catch (e) {
+      Neutralino.debug.log(`[Vibora] Cannot access contentWindow (cross-origin): ${e}`);
+    }
+
+    // Fall back to frame.src if contentWindow access failed
+    if (!currentUrl) {
+      currentUrl = frame.src;
+      Neutralino.debug.log(`[Vibora] Using frame.src: ${currentUrl}`);
+    }
+
+    try {
+      const url = new URL(currentUrl);
       if (currentZoom !== 1.0) {
         url.searchParams.set('zoom', currentZoom.toString());
       } else {
         url.searchParams.delete('zoom');
       }
-      console.log('[Vibora] setZoom - new URL:', url.toString());
+      Neutralino.debug.log(`[Vibora] Reloading to: ${url.toString()}`);
       frame.src = url.toString();
     } catch (e) {
-      console.log('[Vibora] setZoom - URL parse error:', e);
-      // Fallback to base URL if parsing fails
+      Neutralino.debug.log(`[Vibora] URL parse error, using base: ${e}`);
       if (serverUrl) {
         const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
         frame.src = serverUrl + zoomParam;
       }
     }
-  } else {
-    console.log('[Vibora] setZoom - no frame or frame.src');
   }
 }
 
