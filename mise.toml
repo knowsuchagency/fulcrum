@@ -78,7 +78,7 @@ run = """
 export PORT="${usage_port}"
 export VITE_BACKEND_PORT="${usage_port}"
 export VIBORA_DIR="${VIBORA_DIR:-${usage_dir}}"
-export VITE_VIBORA_DEBUG="1"
+export DEBUG="1"
 if [ -n "${usage_db}" ]; then
   export VIBORA_DATABASE_PATH="${usage_db}"
 fi
@@ -95,7 +95,7 @@ bun --watch server/index.ts
 
 [tasks.client]
 description = "Start frontend dev server"
-run = "VITE_VIBORA_DEBUG=\"${VITE_VIBORA_DEBUG:-}\" vite --host"
+run = "DEBUG=\"${DEBUG:-}\" vite --host"
 
 [tasks.build]
 description = "Build for production"
@@ -108,7 +108,7 @@ bunx tsc -b --force && bunx vite build
 description = "Build for production with debug logging enabled"
 run = """
 rm -rf dist
-bunx tsc -b --force && VITE_VIBORA_DEBUG=1 bunx vite build
+bunx tsc -b --force && DEBUG=1 bunx vite build
 """
 
 [tasks.start]

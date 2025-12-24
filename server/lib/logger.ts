@@ -1,7 +1,7 @@
 // Centralized logging for Vibora backend
-// Outputs JSON lines to stdout (and optionally to file)
+// Outputs JSON lines to stdout and vibora.log file
 
-import { appendFileSync, existsSync, mkdirSync } from 'fs'
+import { appendFileSync } from 'fs'
 import { join } from 'path'
 import { type LogEntry, type LogLevel, type Logger, LOG_LEVELS, formatLogEntry } from '../../shared/logger'
 import { getViboraDir, ensureViboraDir } from './settings'
@@ -15,38 +15,52 @@ function getMinLevel(): LogLevel {
   return 'info'
 }
 
-// Get log file path
-function getLogFilePath(): string {
-  return join(getViboraDir(), 'vibora.log')
+// Cached log file path (initialized lazily)
+let logFilePath: string | null = null
+
+function getLogFile(): string | null {
+  if (logFilePath !== null) {
+    return logFilePath || null
+  }
+
+  try {
+    ensureViboraDir()
+    logFilePath = join(getViboraDir(), 'vibora.log')
+    return logFilePath
+  } catch {
+    logFilePath = '' // Mark as failed
+    return null
+  }
+}
+
+/**
+ * Core logging function - writes a log entry to stdout and vibora.log
+ * Used by both the Logger class and /api/logs endpoint
+ */
+export function writeEntry(entry: LogEntry): void {
+  const line = formatLogEntry(entry)
+
+  // Write to stdout (captured by daemon/nohup)
+  console.log(line)
+
+  // Write to log file
+  const logFile = getLogFile()
+  if (logFile) {
+    try {
+      appendFileSync(logFile, line + '\n')
+    } catch {
+      // Ignore file write errors
+    }
+  }
 }
 
 class ServerLogger implements Logger {
   private component: string
   private minLevel: LogLevel
-  private logFile: string | null = null
 
   constructor(component: string, minLevel?: LogLevel) {
     this.component = component
     this.minLevel = minLevel ?? getMinLevel()
-
-    // Initialize log file path (lazy - only when we first log)
-    this.logFile = null
-  }
-
-  private ensureLogFile(): string | null {
-    if (this.logFile !== null) {
-      return this.logFile
-    }
-
-    try {
-      ensureViboraDir()
-      this.logFile = getLogFilePath()
-      return this.logFile
-    } catch {
-      // Can't create log file, will only log to stdout
-      this.logFile = ''
-      return null
-    }
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -56,28 +70,13 @@ class ServerLogger implements Logger {
   private log(level: LogLevel, msg: string, ctx?: Record<string, unknown>): void {
     if (!this.shouldLog(level)) return
 
-    const entry: LogEntry = {
+    writeEntry({
       ts: new Date().toISOString(),
       lvl: level,
       src: this.component,
       msg,
       ...(ctx && Object.keys(ctx).length > 0 ? { ctx } : {}),
-    }
-
-    const line = formatLogEntry(entry)
-
-    // Write to stdout (captured by daemon/nohup)
-    console.log(line)
-
-    // Also write to log file if available
-    const logFile = this.ensureLogFile()
-    if (logFile) {
-      try {
-        appendFileSync(logFile, line + '\n')
-      } catch {
-        // Ignore file write errors
-      }
-    }
+    })
   }
 
   debug(msg: string, ctx?: Record<string, unknown>): void {

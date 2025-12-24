@@ -19,6 +19,8 @@ import linearRoutes from './routes/linear'
 import githubRoutes from './routes/github'
 import authRoutes from './routes/auth'
 import { monitoringRoutes } from './routes/monitoring'
+import { writeEntry } from './lib/logger'
+import type { LogEntry } from '../shared/logger'
 
 /**
  * Gets the path to the dist directory.
@@ -66,10 +68,9 @@ export function createApp() {
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {
-    const { entries } = await c.req.json<{ entries: Array<{ ts: string; lvl: string; src: string; msg: string; ctx?: Record<string, unknown> }> }>()
+    const { entries } = await c.req.json<{ entries: LogEntry[] }>()
     for (const entry of entries) {
-      // Output as JSON line (same format as backend logger)
-      console.log(JSON.stringify(entry))
+      writeEntry(entry)
     }
     return c.json({ ok: true })
   })

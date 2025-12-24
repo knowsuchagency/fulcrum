@@ -180,7 +180,7 @@ Each log entry is a single JSON line:
 |----------|---------|-------------|
 | `LOG_LEVEL` | `info` | Backend minimum log level |
 | `VITE_LOG_LEVEL` | `info` | Frontend minimum log level |
-| `VITE_VIBORA_DEBUG` | `0` | Enable frontend logging to server |
+| `DEBUG` | `0` | Enable frontend debug logging (console + server) |
 
 ### Using the Logger
 

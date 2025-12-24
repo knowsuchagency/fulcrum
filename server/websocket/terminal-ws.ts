@@ -25,14 +25,30 @@ export function broadcast(message: ServerMessage): void {
 
 export function broadcastToTerminal(terminalId: string, message: ServerMessage): void {
   const json = JSON.stringify(message)
+  let sentCount = 0
+  const attachedClients: string[] = []
+
   for (const [ws, data] of clients.entries()) {
     if (data.attachedTerminals.has(terminalId)) {
+      attachedClients.push(data.id)
       try {
         ws.send(json)
+        sentCount++
       } catch {
         // Client might be disconnected
       }
     }
+  }
+
+  // Log for terminal:output messages to trace the broadcast
+  if (message.type === 'terminal:output') {
+    log.ws.info('broadcastToTerminal', {
+      terminalId,
+      totalClients: clients.size,
+      attachedClients: attachedClients.length,
+      sentCount,
+      dataLen: (message.payload as { data?: string }).data?.length ?? 0,
+    })
   }
 }
 
@@ -103,8 +119,18 @@ export const terminalWebSocketHandlers: WSEvents = {
           }
 
           const terminal = ptyManager.create({ name, cols, rows, cwd, tabId, positionInTab })
-          log.ws.info('terminal:create created new', { terminalId: terminal.id, name, cwd })
+          log.ws.info('terminal:create created new', {
+            terminalId: terminal.id,
+            name,
+            cwd,
+            clientId: clientData.id,
+          })
           clientData.attachedTerminals.add(terminal.id)
+          log.ws.info('terminal:create added to attachedTerminals', {
+            terminalId: terminal.id,
+            clientId: clientData.id,
+            totalAttached: clientData.attachedTerminals.size,
+          })
           broadcast({
             type: 'terminal:created',
             payload: { terminal, isNew: true },
@@ -133,7 +159,12 @@ export const terminalWebSocketHandlers: WSEvents = {
           // Ensure terminal is attached to dtach (connects PTY if not already)
           ptyManager.attach(terminalId)
           const buffer = ptyManager.getBuffer(terminalId)
-          log.ws.debug('terminal:attach', { terminalId, bufferLength: buffer?.length ?? null })
+          log.ws.info('terminal:attach adding to attachedTerminals', {
+            terminalId,
+            bufferLength: buffer?.length ?? null,
+            clientId: clientData.id,
+            priorAttached: Array.from(clientData.attachedTerminals),
+          })
           if (buffer !== null) {
             clientData.attachedTerminals.add(terminalId)
             sendTo(ws, {

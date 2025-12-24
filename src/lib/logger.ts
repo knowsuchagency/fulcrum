@@ -10,8 +10,9 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   error: 3,
 }
 
-// Check if logging to server is enabled
-const DEBUG_ENABLED = import.meta.env.VITE_VIBORA_DEBUG === '1'
+// Check if logging to server is enabled (set via DEBUG=1 or VITE_VIBORA_DEBUG=1 at build time)
+// __VIBORA_DEBUG__ is replaced at build time by Vite's define config
+const DEBUG_ENABLED = __VIBORA_DEBUG__
 const IS_DEV = import.meta.env.DEV
 
 // Get minimum log level from environment
@@ -96,8 +97,8 @@ class FrontendLogger implements Logger {
       ...(ctx && Object.keys(ctx).length > 0 ? { ctx } : {}),
     }
 
-    // Always log to console in development
-    if (IS_DEV) {
+    // Log to console in development or when debug mode is enabled
+    if (IS_DEV || DEBUG_ENABLED) {
       const consoleMethod = level === 'debug' ? 'log' : level
       console[consoleMethod](`[${entry.src}]`, msg, ctx ?? '')
     }

@@ -115,8 +115,16 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   const wasConnectedRef = useRef(false)
 
   const send = useCallback((message: object) => {
+    const msgType = (message as { type?: string }).type
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      log.ws.debug('send', { type: msgType })
       wsRef.current.send(JSON.stringify(message))
+    } else {
+      // Log dropped messages - this helps diagnose timing issues
+      log.ws.warn('send dropped (WebSocket not open)', {
+        type: msgType,
+        readyState: wsRef.current?.readyState ?? 'no socket',
+      })
     }
   }, [])
 
@@ -159,23 +167,25 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
         case 'terminal:output': {
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
-          log.ws.debug('terminal:output received', {
+          log.ws.info('terminal:output', {
             terminalId: message.payload.terminalId,
             hasXterm: !!xterm,
             dataLen: message.payload.data.length,
           })
           if (xterm) {
             xterm.write(message.payload.data)
+          } else {
+            log.ws.warn('terminal:output but no xterm', { terminalId: message.payload.terminalId })
           }
           break
         }
 
         case 'terminal:attached': {
-          log.ws.debug('terminal:attached received', {
+          log.ws.info('terminal:attached received', {
             terminalId: message.payload.terminalId,
             hasXterm: xtermMapRef.current.has(message.payload.terminalId),
+            bufferLength: message.payload.buffer?.length ?? 0,
             hasCallback: onAttachedCallbacksRef.current.has(message.payload.terminalId),
-            callbackKeys: Array.from(onAttachedCallbacksRef.current.keys()),
           })
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
           if (xterm) {
@@ -183,17 +193,27 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
             // This prevents corrupted escape sequences from persisting
             xterm.reset()
             if (message.payload.buffer) {
+              log.ws.info('writing buffer to xterm', {
+                terminalId: message.payload.terminalId,
+                bufferLength: message.payload.buffer.length,
+              })
               xterm.write(message.payload.buffer)
             }
+          } else {
+            log.ws.warn('terminal:attached but no xterm in map', {
+              terminalId: message.payload.terminalId,
+            })
           }
           // Call onAttached callback if registered
           const callback = onAttachedCallbacksRef.current.get(message.payload.terminalId)
           if (callback) {
-            log.ws.debug('calling onAttached callback')
+            log.ws.info('calling onAttached callback', { terminalId: message.payload.terminalId })
             onAttachedCallbacksRef.current.delete(message.payload.terminalId)
             callback()
           } else {
-            log.ws.debug('no callback found for terminal')
+            log.ws.warn('terminal:attached but no callback registered', {
+              terminalId: message.payload.terminalId,
+            })
           }
           break
         }
@@ -546,6 +566,10 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
       }
 
       // Request attachment to get buffer
+      log.ws.info('attachXterm: sending terminal:attach', {
+        terminalId,
+        wsState: wsRef.current?.readyState,
+      })
       send({
         type: 'terminal:attach',
         payload: { terminalId },

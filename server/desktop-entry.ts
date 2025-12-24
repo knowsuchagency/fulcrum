@@ -212,6 +212,7 @@ async function main() {
   // Initialize PTY manager with broadcast callbacks
   ptyManager = initPTYManager({
     onData: (terminalId, data) => {
+      log.desktop.info('PTY onData', { terminalId, dataLen: data.length })
       broadcastToTerminal(terminalId, {
         type: 'terminal:output',
         payload: { terminalId, data },
