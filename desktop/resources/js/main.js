@@ -249,10 +249,9 @@ async function waitForServerReady(baseUrl) {
 }
 
 /**
- * Set zoom level using CSS zoom property
- * CSS zoom re-renders content at new size (sharp) vs transform: scale() which stretches pixels (blurry)
+ * Set zoom level and persist to settings
  */
-function setZoom(level) {
+async function setZoom(level, persist = true) {
   currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
   const frame = document.getElementById('vibora-frame');
   if (frame) {
@@ -265,6 +264,14 @@ function setZoom(level) {
     zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
   }
   console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
+
+  // Persist to settings
+  if (persist && desktopSettings) {
+    await saveSettings({
+      ...desktopSettings,
+      desktopZoom: currentZoom
+    });
+  }
 }
 
 // Global zoom functions for button onclick handlers
@@ -288,6 +295,12 @@ async function loadViboraApp(url) {
   frame.onload = () => {
     document.body.classList.add('loaded');
     console.log('[Vibora] App loaded successfully from', url);
+
+    // Apply saved zoom level from settings (don't re-persist)
+    const savedZoom = desktopSettings?.desktopZoom || 1.0;
+    if (savedZoom !== 1.0) {
+      setZoom(savedZoom, false);
+    }
   };
 
   frame.onerror = () => {
