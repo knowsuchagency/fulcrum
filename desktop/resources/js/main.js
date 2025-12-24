@@ -14,6 +14,7 @@ const SERVER_EXTENSION_ID = 'io.vibora.server';
 const DEFAULT_PORT = 3333;
 const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
 const MAX_HEALTH_RETRIES = 10;
+const DEV_PORT = 5173;
 
 // State
 let serverUrl = null;
@@ -21,6 +22,7 @@ let isShuttingDown = false;
 let desktopSettings = null;
 let currentZoom = 1.0;
 let currentRoute = { pathname: '/', search: '' }; // Track current SPA route from iframe
+let isDevMode = false;
 
 /**
  * Get the path to settings file
@@ -318,12 +320,12 @@ async function tryConnect() {
   // Load settings
   await loadSettings();
 
-  // Use 'port' from settings (same as server config)
-  const localPort = desktopSettings.port || DEFAULT_PORT;
+  // Use dev port if in dev mode, otherwise use 'port' from settings
+  const localPort = isDevMode ? DEV_PORT : (desktopSettings.port || DEFAULT_PORT);
   const localUrl = `http://localhost:${localPort}`;
 
   // Step 1: Try localhost first
-  setStatus('Checking local server...', `localhost:${localPort}`);
+  setStatus('Checking local server...', `localhost:${localPort}${isDevMode ? ' (dev)' : ''}`);
   console.log('[Vibora] Trying localhost...');
 
   if (await checkServerHealth(localUrl)) {
@@ -410,6 +412,12 @@ async function init() {
     Neutralino.init();
     console.log('[Vibora] Neutralino initialized');
     console.log('[Vibora] OS:', NL_OS);
+
+    // Check for --dev flag in command line args
+    isDevMode = typeof NL_ARGS !== 'undefined' && NL_ARGS.includes('--dev');
+    if (isDevMode) {
+      console.log('[Vibora] Running in development mode (port 5173)');
+    }
 
     // Set up event listeners
     Neutralino.events.on('windowClose', shutdown);

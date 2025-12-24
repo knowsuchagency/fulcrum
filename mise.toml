@@ -339,6 +339,14 @@ cd desktop
 neu run
 """
 
+[tasks."desktop:dev"]
+description = "Run desktop app pointing to dev server (port 5173)"
+depends = ["desktop:setup"]
+run = """
+cd desktop
+neu run -- --dev
+"""
+
 [tasks."desktop:clean"]
 description = "Clean desktop build artifacts"
 run = """
