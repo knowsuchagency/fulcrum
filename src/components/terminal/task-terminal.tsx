@@ -40,10 +40,23 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
+  // Track if THIS component instance created the terminal (for startup command decision)
+  const createdByMeRef = useRef(false)
   // Track which terminal we've run startup commands for (prevents re-running on effect re-runs)
   const startupRanForRef = useRef<string | null>(null)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermOpened, setXtermOpened] = useState(false)
+
+  // Reset all terminal tracking refs when cwd changes (navigating to different task)
+  // This MUST run before terminal creation logic to ensure refs are clean
+  useEffect(() => {
+    debugLog('[TaskTerminal] cwd changed, resetting refs', { cwd })
+    createdTerminalRef.current = false
+    createdByMeRef.current = false
+    attachedRef.current = false
+    startupRanForRef.current = null
+    setTerminalId(null)
+  }, [cwd])
 
   const { setTerminalFocused } = useKeyboardContext()
 
@@ -51,7 +64,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     terminals,
     terminalsLoaded,
     connected,
-    newTerminalIds,
     createTerminal,
     attachXterm,
     resizeTerminal,
@@ -233,6 +245,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
+      createdByMeRef.current = true  // Mark that THIS component created the terminal
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -287,11 +300,12 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
         return
       }
 
-      // Use the server's isNew flag to determine if this terminal was just created
-      const isNewTerminal = newTerminalIds.has(currentTerminalId)
+      // Use createdByMeRef to determine if THIS component created the terminal
+      // This avoids cross-instance issues with multiple useTerminalWS hooks
+      const isNewTerminal = createdByMeRef.current
 
-      // Clean up the Set entry BEFORE logging (synchronous)
-      newTerminalIds.delete(currentTerminalId)
+      // Clear the flag BEFORE any async operations (synchronous)
+      createdByMeRef.current = false
 
       // Mark that we've run startup for this terminal IMMEDIATELY (before async operations)
       // This prevents duplicate execution from React Strict Mode or effect re-runs
@@ -352,7 +366,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, doFit, newTerminalIds, startupScript, aiMode, description, taskName, taskId])
+  }, [terminalId, doFit, startupScript, aiMode, description, taskName, taskId])
 
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {

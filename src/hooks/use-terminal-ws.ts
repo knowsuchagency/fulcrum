@@ -150,7 +150,16 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
             isNew: message.payload.isNew,
             cwd: message.payload.terminal.cwd,
           })
-          setTerminals((prev) => [...prev, message.payload.terminal])
+          // Deduplicate: only add if not already present (prevents duplicates from multiple WS clients)
+          setTerminals((prev) => {
+            if (prev.some((t) => t.id === message.payload.terminal.id)) {
+              debugLog('[useTerminalWS] terminal:created SKIPPED (already exists)', {
+                id: message.payload.terminal.id,
+              })
+              return prev
+            }
+            return [...prev, message.payload.terminal]
+          })
           if (message.payload.isNew) {
             newTerminalIdsRef.current.add(message.payload.terminal.id)
             debugLog('[useTerminalWS] added to newTerminalIds', {
@@ -163,6 +172,11 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
         case 'terminal:output': {
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
+          debugLog('[useTerminalWS] terminal:output received', {
+            terminalId: message.payload.terminalId,
+            hasXterm: !!xterm,
+            dataLen: message.payload.data.length,
+          })
           if (xterm) {
             xterm.write(message.payload.data)
           }
@@ -255,7 +269,20 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           break
 
         case 'tab:created':
-          setTabs((prev) => [...prev, message.payload.tab].sort((a, b) => a.position - b.position))
+          debugLog('[useTerminalWS] tab:created received', {
+            id: message.payload.tab.id,
+            name: message.payload.tab.name,
+          })
+          // Deduplicate: only add if not already present (prevents duplicates from multiple WS clients)
+          setTabs((prev) => {
+            if (prev.some((t) => t.id === message.payload.tab.id)) {
+              debugLog('[useTerminalWS] tab:created SKIPPED (already exists)', {
+                id: message.payload.tab.id,
+              })
+              return prev
+            }
+            return [...prev, message.payload.tab].sort((a, b) => a.position - b.position)
+          })
           break
 
         case 'tab:renamed':
@@ -386,6 +413,11 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
   const writeToTerminal = useCallback(
     (terminalId: string, data: string) => {
+      debugLog('[useTerminalWS] writeToTerminal called', {
+        terminalId,
+        dataLen: data.length,
+        wsReadyState: wsRef.current?.readyState,
+      })
       send({
         type: 'terminal:input',
         payload: { terminalId, data },

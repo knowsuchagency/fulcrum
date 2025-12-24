@@ -84,7 +84,7 @@ export const terminalWebSocketHandlers: WSEvents = {
         // Terminal messages
         case 'terminal:create': {
           const { name, cols, rows, cwd, tabId, positionInTab } = message.payload
-          console.log('[WS] terminal:create request', { name, cwd })
+          console.log('[WS] terminal:create request', { name, cwd, tabId, clientId: clientData.id })
 
           // Prevent duplicate terminals for same cwd
           if (cwd) {
@@ -117,6 +117,7 @@ export const terminalWebSocketHandlers: WSEvents = {
         }
 
         case 'terminal:input': {
+          console.log('[WS] terminal:input', { terminalId: message.payload.terminalId, dataLen: message.payload.data.length })
           ptyManager.write(message.payload.terminalId, message.payload.data)
           break
         }
@@ -199,7 +200,9 @@ export const terminalWebSocketHandlers: WSEvents = {
         // Tab messages
         case 'tab:create': {
           const { name, position } = message.payload
+          console.log('[WS] tab:create request', { name, position, clientId: clientData.id })
           const tab = tabManager.create({ name, position })
+          console.log('[WS] tab:create created', { id: tab.id, name: tab.name })
           broadcast({
             type: 'tab:created',
             payload: { tab },
