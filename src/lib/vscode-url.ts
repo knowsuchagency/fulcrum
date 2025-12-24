@@ -2,22 +2,22 @@
  * Build a VS Code URL to open a folder
  *
  * @param path - The absolute path to the folder
- * @param hostname - The remote machine hostname (empty for local)
+ * @param remoteHost - The remote machine hostname (empty for local)
  * @param sshPort - The SSH port (default 22)
  * @returns A VS Code protocol URL
  */
 export function buildVSCodeUrl(
   path: string,
-  hostname: string,
+  remoteHost: string,
   sshPort: number
 ): string {
-  if (!hostname) {
+  if (!remoteHost) {
     // Local: vscode://file/path
     return `vscode://file${path}`
   }
 
-  // Remote: vscode://vscode-remote/ssh-remote+hostname/path
-  // With non-standard port: ssh-remote+hostname:port
-  const hostPart = sshPort !== 22 ? `${hostname}:${sshPort}` : hostname
+  // Remote: vscode://vscode-remote/ssh-remote+host/path
+  // With non-standard port: ssh-remote+host:port
+  const hostPart = sshPort !== 22 ? `${remoteHost}:${sshPort}` : remoteHost
   return `vscode://vscode-remote/ssh-remote+${hostPart}${path}`
 }

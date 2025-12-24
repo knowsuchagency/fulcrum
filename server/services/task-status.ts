@@ -5,6 +5,7 @@ import { broadcast } from '../websocket/terminal-ws'
 import { updateLinearTicketStatus } from './linear'
 import { sendNotification } from './notification-service'
 import { killClaudeInTerminalsForWorktree } from '../terminal/pty-instance'
+import { log } from '../lib/logger'
 
 /**
  * Centralized function to update task status.
@@ -53,7 +54,10 @@ export async function updateTaskStatus(
     // Sync to Linear if linked
     if (existing.linearTicketId) {
       updateLinearTicketStatus(existing.linearTicketId, newStatus).catch((err) => {
-        console.error(`Failed to update Linear ticket ${existing.linearTicketId}:`, err)
+        log.api.error('Failed to update Linear ticket', {
+          linearTicketId: existing.linearTicketId,
+          error: String(err),
+        })
       })
     }
 
@@ -94,7 +98,10 @@ export async function updateTaskStatus(
       try {
         killClaudeInTerminalsForWorktree(updated.worktreePath)
       } catch (err) {
-        console.error(`Failed to kill Claude in worktree ${updated.worktreePath}:`, err)
+        log.api.error('Failed to kill Claude in worktree', {
+          worktreePath: updated.worktreePath,
+          error: String(err),
+        })
       }
     }
   }

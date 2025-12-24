@@ -21,7 +21,7 @@ import { testNotificationChannel, sendNotification, type NotificationPayload } f
 export const CONFIG_KEYS = {
   PORT: 'port',
   DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
-  HOSTNAME: 'hostname',
+  REMOTE_HOST: 'remoteHost',
   SSH_PORT: 'sshPort',
   LINEAR_API_KEY: 'linearApiKey',
   GITHUB_PAT: 'githubPat',
@@ -179,8 +179,9 @@ app.get('/:key', (c) => {
     value = settings.port
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     value = settings.defaultGitReposDir
-  } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
-    value = settings.hostname
+  } else if (key === 'remote_host' || key === 'remoteHost' || key === CONFIG_KEYS.REMOTE_HOST || key === 'hostname') {
+    // 'hostname' accepted for backward compatibility
+    value = settings.remoteHost
   } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
     value = settings.sshPort
   } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
@@ -227,11 +228,12 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ defaultGitReposDir: body.value })
       return c.json({ key, value: body.value })
-    } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
+    } else if (key === 'remote_host' || key === 'remoteHost' || key === CONFIG_KEYS.REMOTE_HOST || key === 'hostname') {
+      // 'hostname' accepted for backward compatibility
       if (typeof body.value !== 'string') {
         return c.json({ error: 'Value must be a string' }, 400)
       }
-      updateSettings({ hostname: body.value })
+      updateSettings({ remoteHost: body.value })
       return c.json({ key, value: body.value })
     } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
       const sshPort = typeof body.value === 'number' ? body.value : parseInt(body.value, 10)
@@ -292,8 +294,9 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.port
   } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
     defaultValue = defaults.defaultGitReposDir
-  } else if (key === 'hostname' || key === CONFIG_KEYS.HOSTNAME) {
-    defaultValue = defaults.hostname
+  } else if (key === 'remote_host' || key === 'remoteHost' || key === CONFIG_KEYS.REMOTE_HOST || key === 'hostname') {
+    // 'hostname' accepted for backward compatibility
+    defaultValue = defaults.remoteHost
   } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
     defaultValue = defaults.sshPort
   } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {

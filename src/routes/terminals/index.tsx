@@ -21,6 +21,7 @@ import { useWorktreeBasePath } from '@/hooks/use-config'
 import { cn } from '@/lib/utils'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import type { TerminalTab, TaskStatus } from '@/types'
+import { log } from '@/lib/logger'
 
 const ALL_TASKS_TAB_ID = 'all-tasks'
 const ACTIVE_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW']
@@ -145,6 +146,9 @@ function TerminalsView() {
 
   const cleanupFnsRef = useRef<Map<string, () => void>>(new Map())
   const terminalCountRef = useRef(0)
+  // Guard against duplicate creations from React Strict Mode or double-click
+  const pendingTerminalCreateRef = useRef(false)
+  const pendingTabCreateRef = useRef(false)
 
   // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
   useEffect(() => {
@@ -187,17 +191,32 @@ function TerminalsView() {
   }, [activeTabId, terminals, activeTaskWorktrees, repoFilter, tasks])
 
   const handleTerminalAdd = useCallback(() => {
+    // Prevent duplicate creations from double-clicks or React Strict Mode
+    if (pendingTerminalCreateRef.current) {
+      log.terminal.debug('Skipping terminal creation, already pending')
+      return
+    }
+    pendingTerminalCreateRef.current = true
+
     terminalCountRef.current++
+    const terminalName = `Terminal ${terminalCountRef.current}`
+    log.terminal.debug('Creating terminal', { name: terminalName })
+
     // Calculate position for new terminal (append to end)
     const terminalsInTab = terminals.filter((t) => t.tabId === activeTabId)
     const positionInTab = terminalsInTab.length
     createTerminal({
-      name: `Terminal ${terminalCountRef.current}`,
+      name: terminalName,
       cols: 80,
       rows: 24,
       tabId: activeTabId ?? undefined,
       positionInTab,
     })
+
+    // Reset pending flag after a short delay to allow the creation to complete
+    setTimeout(() => {
+      pendingTerminalCreateRef.current = false
+    }, 500)
   }, [createTerminal, activeTabId, terminals])
 
   // Task-related terminals should not be in regular tabs - remove them if they are
@@ -248,8 +267,21 @@ function TerminalsView() {
   )
 
   const handleTabCreate = useCallback(() => {
-    const tabCount = tabs.length
-    createTab(`Tab ${tabCount + 1}`)
+    // Prevent duplicate creations from double-clicks or React Strict Mode
+    if (pendingTabCreateRef.current) {
+      log.terminal.debug('Skipping tab creation, already pending')
+      return
+    }
+    pendingTabCreateRef.current = true
+
+    const tabName = `Tab ${tabs.length + 1}`
+    log.terminal.debug('Creating tab', { name: tabName })
+    createTab(tabName)
+
+    // Reset pending flag after a short delay to allow the creation to complete
+    setTimeout(() => {
+      pendingTabCreateRef.current = false
+    }, 500)
   }, [createTab, tabs.length])
 
   const handleTabDelete = useCallback(

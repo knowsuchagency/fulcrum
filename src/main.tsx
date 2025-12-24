@@ -9,6 +9,17 @@ import { LoginModal } from './components/login-modal'
 import './i18n' // Initialize i18n before rendering
 import './index.css'
 
+// Apply zoom from query parameter (for desktop app)
+// This sets the root font-size so all rem-based UI scales natively
+const urlParams = new URLSearchParams(window.location.search)
+const zoom = parseFloat(urlParams.get('zoom') || '1')
+if (zoom !== 1 && zoom >= 0.5 && zoom <= 2.0) {
+  document.documentElement.style.fontSize = `${16 * zoom}px`
+}
+
+// Export zoom level for components that need pixel-based scaling (e.g., xterm.js)
+export const desktopZoom = zoom >= 0.5 && zoom <= 2.0 ? zoom : 1
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

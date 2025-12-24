@@ -4,6 +4,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import * as path from 'path'
 import { getViboraDir } from '../lib/settings'
+import { log } from '../lib/logger'
 
 // 1MB total buffer size limit
 const MAX_BUFFER_BYTES = 1_000_000
@@ -74,7 +75,7 @@ export class BufferManager {
       }
       writeFileSync(filePath, JSON.stringify(fileData), 'utf-8')
     } catch (err) {
-      console.error(`[BufferManager] Failed to save buffer for ${this.terminalId}:`, err)
+      log.buffer.error('Failed to save buffer', { terminalId: this.terminalId, error: String(err) })
     }
   }
 
@@ -103,12 +104,12 @@ export class BufferManager {
 
         this.chunks = [{ data: content, timestamp: Date.now() }]
         this.totalBytes = content.length
-        console.log(`[BufferManager] Loaded ${this.totalBytes} bytes for ${this.terminalId}`)
+        log.buffer.debug('Loaded buffer', { terminalId: this.terminalId, bytes: this.totalBytes })
       } else {
-        console.log(`[BufferManager] No buffer file for ${this.terminalId}`)
+        log.buffer.debug('No buffer file', { terminalId: this.terminalId })
       }
     } catch (err) {
-      console.error(`[BufferManager] Failed to load buffer for ${this.terminalId}:`, err)
+      log.buffer.error('Failed to load buffer', { terminalId: this.terminalId, error: String(err) })
     }
   }
 

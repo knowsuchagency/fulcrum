@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import {
   usePort,
   useDefaultGitReposDir,
-  useHostname,
+  useRemoteHost,
   useSshPort,
   useLinearApiKey,
   useGitHubPat,
@@ -57,7 +57,7 @@ function SettingsPage() {
   const { t: tc } = useTranslation('common')
   const { data: port, isLoading: portLoading } = usePort()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
-  const { data: hostname, isLoading: hostnameLoading } = useHostname()
+  const { data: remoteHost, isLoading: remoteHostLoading } = useRemoteHost()
   const { data: sshPort, isLoading: sshPortLoading } = useSshPort()
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
@@ -76,7 +76,7 @@ function SettingsPage() {
 
   const [localPort, setLocalPort] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
-  const [localHostname, setLocalHostname] = useState('')
+  const [localRemoteHost, setLocalRemoteHost] = useState('')
   const [localSshPort, setLocalSshPort] = useState('')
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
   const [localGitHubPat, setLocalGitHubPat] = useState('')
@@ -110,14 +110,14 @@ function SettingsPage() {
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
-    if (hostname !== undefined) setLocalHostname(hostname)
+    if (remoteHost !== undefined) setLocalRemoteHost(remoteHost)
     if (sshPort !== undefined) setLocalSshPort(String(sshPort))
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
     // For username, sync directly. For password, the server returns masked value - only update if empty (not yet loaded)
     if (basicAuthUsername !== undefined) setLocalBasicAuthUsername(basicAuthUsername)
     // Don't sync password from server since it's masked - user must re-enter to change
-  }, [port, defaultGitReposDir, hostname, sshPort, linearApiKey, githubPat, basicAuthUsername])
+  }, [port, defaultGitReposDir, remoteHost, sshPort, linearApiKey, githubPat, basicAuthUsername])
 
   // Sync notification settings
   useEffect(() => {
@@ -146,7 +146,7 @@ function SettingsPage() {
   }, [zAiSettings])
 
   const isLoading =
-    portLoading || reposDirLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
+    portLoading || reposDirLoading || remoteHostLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -176,7 +176,7 @@ function SettingsPage() {
   const hasChanges =
     localPort !== String(port) ||
     localReposDir !== defaultGitReposDir ||
-    localHostname !== hostname ||
+    localRemoteHost !== remoteHost ||
     localSshPort !== String(sshPort) ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
@@ -209,11 +209,11 @@ function SettingsPage() {
       )
     }
 
-    if (localHostname !== hostname) {
+    if (localRemoteHost !== remoteHost) {
       promises.push(
         new Promise((resolve) => {
           updateConfig.mutate(
-            { key: CONFIG_KEYS.HOSTNAME, value: localHostname },
+            { key: CONFIG_KEYS.REMOTE_HOST, value: localRemoteHost },
             { onSettled: resolve }
           )
         })
@@ -338,11 +338,11 @@ function SettingsPage() {
     })
   }
 
-  const handleResetHostname = () => {
-    resetConfig.mutate(CONFIG_KEYS.HOSTNAME, {
+  const handleResetRemoteHost = () => {
+    resetConfig.mutate(CONFIG_KEYS.REMOTE_HOST, {
       onSuccess: (data) => {
         if (data.value !== null && data.value !== undefined)
-          setLocalHostname(String(data.value))
+          setLocalRemoteHost(String(data.value))
       },
     })
   }
@@ -559,17 +559,17 @@ function SettingsPage() {
                 {/* Remote Access */}
                 <SettingsSection title={t('sections.remoteAccess')}>
                   <div className="space-y-4">
-                    {/* Hostname */}
+                    {/* Remote Host */}
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
-                          {t('fields.hostname.label')}
+                          {t('fields.remoteHost.label')}
                         </label>
                         <div className="flex flex-1 items-center gap-2">
                           <Input
-                            value={localHostname}
-                            onChange={(e) => setLocalHostname(e.target.value)}
-                            placeholder={t('fields.hostname.placeholder')}
+                            value={localRemoteHost}
+                            onChange={(e) => setLocalRemoteHost(e.target.value)}
+                            placeholder={t('fields.remoteHost.placeholder')}
                             disabled={isLoading}
                             className="flex-1 font-mono text-sm"
                           />
@@ -577,7 +577,7 @@ function SettingsPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={handleResetHostname}
+                            onClick={handleResetRemoteHost}
                             disabled={isLoading || resetConfig.isPending}
                             title={tc('buttons.reset')}
                           >
@@ -586,7 +586,7 @@ function SettingsPage() {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
-                        {t('fields.hostname.description')}
+                        {t('fields.remoteHost.description')}
                       </p>
                     </div>
 

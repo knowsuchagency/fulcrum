@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest'
 import { getSetting } from '../lib/settings'
+import { log } from '../lib/logger'
 
 export interface GitHubIssue {
   id: number
@@ -100,7 +101,7 @@ export async function fetchUserOrgs(): Promise<GitHubOrg[]> {
       avatarUrl: org.avatar_url,
     }))
   } catch (err) {
-    console.error('Failed to fetch GitHub orgs:', err)
+    log.github.error('Failed to fetch GitHub orgs', { error: String(err) })
     return []
   }
 }
@@ -166,7 +167,7 @@ export async function fetchUserIssues(
         }
       })
   } catch (err) {
-    console.error('Failed to fetch GitHub issues:', err)
+    log.github.error('Failed to fetch GitHub issues', { error: String(err) })
     return []
   }
 }
@@ -287,7 +288,7 @@ export async function fetchUserPRs(
 
     return results
   } catch (err) {
-    console.error('Failed to fetch GitHub PRs:', err)
+    log.github.error('Failed to fetch GitHub PRs', { error: String(err) })
     return []
   }
 }

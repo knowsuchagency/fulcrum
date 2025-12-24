@@ -24,10 +24,10 @@
       "label": "Git Repos Directory",
       "description": "Starting directory for repo picker"
     },
-    "hostname": {
-      "label": "Hostname",
-      "description": "For VS Code SSH URLs",
-      "placeholder": "e.g., citadel"
+    "remoteHost": {
+      "label": "Remote Host",
+      "description": "For VS Code SSH URLs and desktop app remote connection",
+      "placeholder": "e.g., my-server.tailnet.ts.net"
     },
     "sshPort": {
       "label": "SSH Port",

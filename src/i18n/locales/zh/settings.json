@@ -24,10 +24,10 @@
       "label": "Git 仓库目录",
       "description": "仓库选择器的起始目录"
     },
-    "hostname": {
-      "label": "主机名",
-      "description": "用于 VS Code SSH 地址",
-      "placeholder": "例如：citadel"
+    "remoteHost": {
+      "label": "远程主机",
+      "description": "用于 VS Code SSH 地址和桌面应用远程连接",
+      "placeholder": "例如：my-server.tailnet.ts.net"
     },
     "sshPort": {
       "label": "SSH 端口",

@@ -4,6 +4,7 @@ import { db, terminals } from '../db'
 import { eq, ne } from 'drizzle-orm'
 import * as os from 'os'
 import type { TerminalInfo } from '../types'
+import { log } from '../lib/logger'
 
 export interface PTYManagerCallbacks {
   onData: (terminalId: string, data: string) => void
@@ -22,7 +23,7 @@ export class PTYManager {
   restoreFromDatabase(): void {
     // Check if dtach is available
     if (!DtachService.isAvailable()) {
-      console.error('[PTYManager] dtach is not installed. Terminal persistence disabled.')
+      log.pty.error('dtach is not installed, terminal persistence disabled')
       return
     }
 
@@ -49,20 +50,18 @@ export class PTYManager {
           onExit: (exitCode) => this.callbacks.onExit(record.id, exitCode),
         })
         this.sessions.set(record.id, session)
-        console.log(`[PTYManager] Restored terminal ${record.id} (${record.name})`)
+        log.pty.info('Restored terminal', { terminalId: record.id, name: record.name })
       } else {
         // Session is gone - mark as exited
         db.update(terminals)
           .set({ status: 'exited', updatedAt: new Date().toISOString() })
           .where(eq(terminals.id, record.id))
           .run()
-        console.log(
-          `[PTYManager] Terminal ${record.id} dtach socket not found, marked as exited`
-        )
+        log.pty.warn('Terminal dtach socket not found, marked as exited', { terminalId: record.id })
       }
     }
 
-    console.log(`[PTYManager] Restored ${this.sessions.size} terminals`)
+    log.pty.info('Restored terminals', { count: this.sessions.size })
   }
 
   create(options: {

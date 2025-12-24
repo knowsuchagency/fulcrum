@@ -6,6 +6,7 @@ import { db, terminals } from '../db'
 import { eq } from 'drizzle-orm'
 import { getZAiSettings } from '../lib/settings'
 import type { TerminalInfo, TerminalStatus } from '../types'
+import { log } from '../lib/logger'
 
 // z.ai related env vars to filter when z.ai is disabled
 const ZAI_ENV_VARS = [
@@ -114,14 +115,16 @@ export class TerminalSession {
     this.updateDb({ tabId, positionInTab: this._positionInTab })
   }
 
-  // Create a new dtach session and attach to it
+  // Create a new dtach session (but don't attach yet - that happens in attach())
   start(): void {
     const dtach = getDtachService()
     const [cmd, ...args] = dtach.getCreateCommand(this.id)
 
     try {
-      // Spawn dtach which creates the session and runs the shell
-      this.pty = spawn(cmd, args, {
+      // Spawn dtach -n which creates the session and exits immediately
+      // We don't track this as this.pty because it exits right away
+      // The actual attachment happens in attach() which spawns dtach -a
+      const creationPty = spawn(cmd, args, {
         name: 'xterm-256color',
         cols: this.cols,
         rows: this.rows,
@@ -136,9 +139,17 @@ export class TerminalSession {
         },
       })
 
-      this.setupPtyHandlers()
+      // Don't set this.pty or call setupPtyHandlers() here
+      // The dtach -n process exits immediately after creating the socket
+      // The real PTY connection happens in attach()
+      log.terminal.info('dtach session created', { terminalId: this.id })
+
+      // Clean up the creation PTY when it exits (which should be immediately)
+      creationPty.onExit(() => {
+        log.terminal.debug('dtach -n process exited', { terminalId: this.id })
+      })
     } catch (err) {
-      console.error(`[TerminalSession] Failed to start dtach session:`, err)
+      log.terminal.error('Failed to start dtach session', { terminalId: this.id, error: String(err) })
       this.status = 'error'
       this.updateDb({ status: 'error' })
       this.onExit(1)
@@ -153,7 +164,7 @@ export class TerminalSession {
 
     // Verify socket still exists
     if (!dtach.hasSession(this.id)) {
-      console.error(`[TerminalSession] dtach socket not found for ${this.id}`)
+      log.terminal.error('dtach socket not found', { terminalId: this.id })
       this.status = 'exited'
       this.exitCode = 1
       this.updateDb({ status: 'exited', exitCode: 1 })
@@ -181,7 +192,7 @@ export class TerminalSession {
 
       this.setupPtyHandlers()
     } catch (err) {
-      console.error(`[TerminalSession] Failed to attach to dtach:`, err)
+      log.terminal.error('Failed to attach to dtach', { terminalId: this.id, error: String(err) })
       this.status = 'error'
       this.updateDb({ status: 'error' })
       this.onExit(1)
@@ -191,7 +202,10 @@ export class TerminalSession {
   private setupPtyHandlers(): void {
     if (!this.pty) return
 
+    log.terminal.info('setupPtyHandlers: registering onData handler', { terminalId: this.id })
+
     this.pty.onData((data) => {
+      log.terminal.info('pty.onData fired', { terminalId: this.id, dataLen: data.length })
       this.buffer.append(data)
       this.onData(data)
     })
