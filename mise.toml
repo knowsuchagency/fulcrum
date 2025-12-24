@@ -347,11 +347,50 @@ cd desktop
 neu run -- --dev
 """
 
+[tasks."desktop:bundle"]
+description = "Bundle server and plugin for desktop app"
+depends = ["build"]
+run = """
+set -e
+
+BUNDLE_DIR="desktop/bundle"
+rm -rf "$BUNDLE_DIR"
+mkdir -p "$BUNDLE_DIR/server" "$BUNDLE_DIR/lib" "$BUNDLE_DIR/drizzle" "$BUNDLE_DIR/dist" "$BUNDLE_DIR/plugin"
+
+# Bundle server
+echo "Bundling server..." >&2
+bun build server/index.ts --target=bun --outfile="$BUNDLE_DIR/server/index.js"
+
+# Copy native PTY libraries
+echo "Copying native PTY libraries..." >&2
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/rust_pty.dll "$BUNDLE_DIR/lib/" 2>/dev/null || true
+
+# Generate and copy migrations
+echo "Generating migrations..." >&2
+bunx drizzle-kit generate
+cp -r drizzle/* "$BUNDLE_DIR/drizzle/"
+
+# Copy frontend build
+echo "Copying frontend build..." >&2
+cp -r dist/* "$BUNDLE_DIR/dist/"
+
+# Copy Claude plugin (including hidden .claude-plugin directory)
+echo "Copying Claude plugin..." >&2
+cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
+
+echo "Desktop bundle created at $BUNDLE_DIR"
+"""
+
 [tasks."desktop:clean"]
 description = "Clean desktop build artifacts"
 run = """
 rm -rf desktop/dist
 rm -rf desktop/bin
+rm -rf desktop/bundle
 echo "Desktop build artifacts cleaned"
 """
 
@@ -365,7 +404,7 @@ run = """
 
 [tasks."desktop:package-dmg"]
 description = "Package desktop app as DMG (macOS)"
-depends = ["desktop:build"]
+depends = ["desktop:build", "desktop:bundle"]
 usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
 run = """
 ./desktop/scripts/package-dmg.sh "${usage_arch}"

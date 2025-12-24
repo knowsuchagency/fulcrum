@@ -26,6 +26,14 @@ BUNDLE_ID="io.vibora.desktop"
 
 echo "Packaging Vibora ${VERSION} DMG for macOS ${ARCH}..."
 
+# Check for server bundle
+BUNDLE_DIR="$DESKTOP_DIR/bundle"
+if [ ! -d "$BUNDLE_DIR/server" ]; then
+  echo "Error: Server bundle not found at $BUNDLE_DIR"
+  echo "Run 'mise run desktop:bundle' first"
+  exit 1
+fi
+
 # Create .app bundle structure
 APP_BUNDLE="$DESKTOP_DIR/dist/Vibora.app"
 rm -rf "$APP_BUNDLE"
@@ -50,6 +58,10 @@ chmod +x "$APP_BUNDLE/Contents/MacOS/Vibora"
 
 # Copy resources.neu bundle (must be next to binary, not in Resources)
 cp "$DESKTOP_DIR/dist/vibora-desktop/resources.neu" "$APP_BUNDLE/Contents/MacOS/"
+
+# Copy server bundle to Resources
+echo "Copying server bundle..."
+cp -r "$BUNDLE_DIR" "$APP_BUNDLE/Contents/Resources/bundle"
 
 # Create Info.plist
 cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
@@ -123,15 +135,9 @@ elif [ -f "$ICON_PNG" ]; then
   fi
 fi
 
-# Create launcher script that sets up environment
-cat > "$APP_BUNDLE/Contents/MacOS/vibora-launcher" << 'LAUNCHER'
-#!/bin/bash
-DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# Launch from MacOS dir where resources.neu is located
-cd "$DIR"
-exec "$DIR/Vibora" "$@"
-LAUNCHER
+# Copy launcher script
+echo "Installing launcher script..."
+cp "$SCRIPT_DIR/vibora-launcher.sh" "$APP_BUNDLE/Contents/MacOS/vibora-launcher"
 chmod +x "$APP_BUNDLE/Contents/MacOS/vibora-launcher"
 
 # Create DMG
