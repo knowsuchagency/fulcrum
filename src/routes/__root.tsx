@@ -46,6 +46,23 @@ function ViewTracking() {
   return null
 }
 
+// Post route changes to parent window (for desktop app)
+function DesktopBridge() {
+  const location = useRouterState({ select: (s) => s.location })
+
+  useEffect(() => {
+    // Only post if we're in an iframe (desktop app)
+    if (window.parent !== window) {
+      window.parent.postMessage(
+        { type: 'vibora:route', pathname: location.pathname, search: location.search },
+        '*'
+      )
+    }
+  }, [location.pathname, location.search])
+
+  return null
+}
+
 function RootLayout() {
   const [openNewTask, setOpenNewTask] = useState<(() => void) | null>(null)
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
@@ -73,6 +90,7 @@ function RootLayout() {
         <TaskSync />
         <LanguageSync />
         <ViewTracking />
+        <DesktopBridge />
         <Header onNewTaskRef={handleNewTaskRef} onOpenCommandPalette={handleOpenCommandPalette} />
         <main className="isolate flex-1 overflow-hidden">
           <Outlet />

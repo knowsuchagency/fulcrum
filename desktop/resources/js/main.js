@@ -20,6 +20,7 @@ let serverUrl = null;
 let isShuttingDown = false;
 let desktopSettings = null;
 let currentZoom = 1.0;
+let currentRoute = { pathname: '/', search: '' }; // Track current SPA route from iframe
 
 /**
  * Get the path to settings file
@@ -262,14 +263,22 @@ function setZoom(level) {
   }
   console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
 
-  // Reload iframe with new zoom parameter
-  // Note: We can't preserve the current SPA route because the iframe is cross-origin
-  // (Neutralino runs on 127.0.0.1:random, iframe is localhost:3333)
-  // A future enhancement could use postMessage to communicate the route
+  // Reload iframe with new zoom parameter, preserving current SPA route
+  // Route is tracked via postMessage from the Vibora frontend
   const frame = document.getElementById('vibora-frame');
   if (frame && serverUrl) {
-    const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
-    frame.src = serverUrl + zoomParam;
+    const url = new URL(serverUrl);
+    url.pathname = currentRoute.pathname;
+    if (currentZoom !== 1.0) {
+      url.searchParams.set('zoom', currentZoom.toString());
+    }
+    // Preserve any other search params from the route (but not zoom - we set that)
+    const routeParams = new URLSearchParams(currentRoute.search);
+    routeParams.delete('zoom'); // Don't double-add zoom
+    for (const [key, value] of routeParams) {
+      url.searchParams.set(key, value);
+    }
+    frame.src = url.toString();
   }
 }
 
@@ -412,6 +421,17 @@ async function init() {
 
     Neutralino.events.on('extClientConnect', (evt) => {
       console.log('[Vibora] Extension connected:', evt.detail);
+    });
+
+    // Listen for route changes from iframe (postMessage from Vibora frontend)
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'vibora:route') {
+        currentRoute = {
+          pathname: event.data.pathname || '/',
+          search: event.data.search || ''
+        };
+        console.log('[Vibora] Route updated:', currentRoute.pathname);
+      }
     });
 
     // Start connection flow
