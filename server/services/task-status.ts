@@ -57,15 +57,36 @@ export async function updateTaskStatus(
       })
     }
 
-    // Send notification when task moves to review
+    // Send notification when task moves to review (debounced to avoid spam from rapid status changes)
     if (newStatus === 'IN_REVIEW') {
-      sendNotification({
-        title: 'Task Ready for Review',
-        message: `Task "${updated.title}" moved to review`,
-        taskId: updated.id,
-        taskTitle: updated.title,
-        type: 'task_status_change',
-      })
+      const DEBOUNCE_MS = 30 * 60 * 1000 // 30 minutes
+      const nowMs = Date.now()
+      const lastNotified = existing.lastReviewNotifiedAt
+        ? new Date(existing.lastReviewNotifiedAt).getTime()
+        : 0
+
+      if (nowMs - lastNotified > DEBOUNCE_MS) {
+        db.update(tasks)
+          .set({ lastReviewNotifiedAt: new Date().toISOString() })
+          .where(eq(tasks.id, taskId))
+          .run()
+
+        sendNotification({
+          title: 'Task Ready for Review',
+          message: `Task "${updated.title}" moved to review`,
+          taskId: updated.id,
+          taskTitle: updated.title,
+          type: 'task_status_change',
+        })
+      }
+    }
+
+    // Clear notification debounce on terminal states (allows fresh notification if reopened)
+    if (newStatus === 'DONE' || newStatus === 'CANCELED') {
+      db.update(tasks)
+        .set({ lastReviewNotifiedAt: null })
+        .where(eq(tasks.id, taskId))
+        .run()
     }
 
     // Kill Claude processes for terminal statuses
