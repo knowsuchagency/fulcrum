@@ -3,6 +3,7 @@
   "sections": {
     "serverDefaults": "服务器与默认设置",
     "paths": "路径",
+    "authentication": "身份验证",
     "remoteAccess": "远程访问",
     "integrations": "集成",
     "zai": "z.ai",
@@ -39,6 +40,14 @@
     "github": {
       "label": "GitHub",
       "description": "用于 Issues 和 PR 的个人访问令牌"
+    },
+    "auth": {
+      "username": "用户名",
+      "password": "密码",
+      "usernamePlaceholder": "留空以禁用",
+      "passwordPlaceholder": "留空以禁用",
+      "passwordSet": "输入新密码以更改",
+      "description": "同时设置用户名和密码以启用基本身份验证。留空以禁用。"
     },
     "zai": {
       "enable": "启用",
