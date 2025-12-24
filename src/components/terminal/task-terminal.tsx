@@ -203,13 +203,13 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     }
   }, [doFit])
 
-  // Capture initial terminal IDs when terminals first load
-  // This lets us determine if a terminal is "new" (created by this component)
-  useEffect(() => {
-    if (terminalsLoaded && initialTerminalIdsRef.current === null) {
-      initialTerminalIdsRef.current = new Set(terminals.map(t => t.id))
-    }
-  }, [terminalsLoaded, terminals])
+  // Capture initial terminal IDs synchronously during render (not in effect!)
+  // This runs BEFORE any effects, ensuring we capture IDs before createTerminal runs.
+  // Using useEffect caused a race condition where the terminal could be created
+  // and added to the list before the capture effect ran.
+  if (terminalsLoaded && initialTerminalIdsRef.current === null) {
+    initialTerminalIdsRef.current = new Set(terminals.map(t => t.id))
+  }
 
   // Find existing terminal or create new one
   // Wait for terminalsLoaded to ensure we have accurate knowledge of existing terminals
