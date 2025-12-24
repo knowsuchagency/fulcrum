@@ -19,6 +19,7 @@ const MAX_HEALTH_RETRIES = 10;
 let serverUrl = null;
 let isShuttingDown = false;
 let desktopSettings = null;
+let currentZoom = 1.0;
 
 /**
  * Get the path to settings file
@@ -248,17 +249,51 @@ async function waitForServerReady(baseUrl) {
 }
 
 /**
- * Load the Vibora app by navigating directly to it
+ * Set zoom level
+ */
+function setZoom(level) {
+  currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
+  const frame = document.getElementById('vibora-frame');
+  if (frame) {
+    frame.style.transform = `scale(${currentZoom})`;
+    frame.style.transformOrigin = 'top left';
+    frame.style.width = `${100 / currentZoom}%`;
+    frame.style.height = `${100 / currentZoom}%`;
+  }
+  // Update zoom level display
+  const zoomLevel = document.getElementById('zoom-level');
+  if (zoomLevel) {
+    zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
+  }
+  console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
+}
+
+// Global zoom functions for button onclick handlers
+window.zoomIn = () => setZoom(currentZoom + 0.1);
+window.zoomOut = () => setZoom(currentZoom - 0.1);
+window.zoomReset = () => setZoom(1.0);
+
+/**
+ * Load the Vibora app in an iframe
  */
 async function loadViboraApp(url) {
   setStatus('Loading Vibora...', url);
   serverUrl = url;
 
-  console.log('[Vibora] Navigating to', url);
+  console.log('[Vibora] Loading app from', url);
 
-  // Navigate directly to the Vibora app
-  // This gives us native webview zoom (Cmd+/-) but we lose Neutralino APIs
-  window.location.href = url;
+  // Use iframe to embed the app
+  const frame = document.getElementById('vibora-frame');
+  frame.src = url;
+
+  frame.onload = () => {
+    document.body.classList.add('loaded');
+    console.log('[Vibora] App loaded successfully from', url);
+  };
+
+  frame.onerror = () => {
+    showError('Load Failed', 'Could not load Vibora interface.');
+  };
 }
 
 /**
