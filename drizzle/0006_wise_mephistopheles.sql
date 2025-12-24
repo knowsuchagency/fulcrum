@@ -1,0 +1,1 @@
+ALTER TABLE `tasks` ADD `last_review_notified_at` text;
