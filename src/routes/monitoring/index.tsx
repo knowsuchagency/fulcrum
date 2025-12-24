@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
-import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { Area, AreaChart, XAxis, YAxis, CartesianGrid, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, Loading03Icon } from '@hugeicons/core-free-icons'
 import {
@@ -632,13 +632,6 @@ function ViboraInstancesTab() {
   )
 }
 
-// Helper to get color class based on usage percentage
-function getUsageColor(percent: number): string {
-  if (percent >= 90) return 'bg-red-500'
-  if (percent >= 70) return 'bg-yellow-500'
-  return 'bg-green-500'
-}
-
 // Helper to get text color class based on usage percentage
 function getUsageTextColor(percent: number): string {
   if (percent >= 90) return 'text-red-500'
@@ -671,9 +664,74 @@ function formatResetDate(resetAt: string): string {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+// Radial gauge component for usage visualization
+function UsageGauge({
+  percent,
+  label,
+  subtitle,
+  color,
+}: {
+  percent: number
+  label: string
+  subtitle: string
+  color: string
+}) {
+  const data = [{ value: Math.min(percent, 100), fill: color }]
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-4">
+        <div className="relative size-24 shrink-0">
+          <RadialBarChart
+            width={96}
+            height={96}
+            cx={48}
+            cy={48}
+            innerRadius={32}
+            outerRadius={44}
+            barSize={10}
+            data={data}
+            startAngle={90}
+            endAngle={-270}
+          >
+            <PolarAngleAxis
+              type="number"
+              domain={[0, 100]}
+              angleAxisId={0}
+              tick={false}
+            />
+            <RadialBar
+              background={{ fill: 'hsl(var(--muted))' }}
+              dataKey="value"
+              cornerRadius={5}
+              angleAxisId={0}
+            />
+          </RadialBarChart>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className={`text-lg font-semibold tabular-nums ${getUsageTextColor(percent)}`}>
+              {percent.toFixed(0)}%
+            </span>
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-medium truncate">{label}</h3>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 function ClaudeUsageLimitsTab() {
   const { t } = useTranslation('monitoring')
   const { data: usage, isLoading, error } = useClaudeUsage()
+
+  // Get color based on usage level
+  const getGaugeColor = (percent: number): string => {
+    if (percent >= 90) return '#ef4444' // red-500
+    if (percent >= 70) return '#eab308' // yellow-500
+    return '#22c55e' // green-500
+  }
 
   return (
     <div className="space-y-4">
@@ -697,91 +755,48 @@ function ClaudeUsageLimitsTab() {
 
       {usage && usage.available && (
         <div className="space-y-3">
-          {/* 5-Hour Block */}
-          {usage.fiveHour && (
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium">{t('usage.fiveHourBlock')}</h3>
-                <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.fiveHour.percentUsed)}`}>
-                  {usage.fiveHour.percentUsed.toFixed(1)}%
-                </span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={`h-full transition-all ${getUsageColor(usage.fiveHour.percentUsed)}`}
-                  style={{ width: `${Math.min(usage.fiveHour.percentUsed, 100)}%` }}
-                />
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {t('usage.resetsIn', { time: formatTimeRemaining(usage.fiveHour.timeRemainingMinutes) })}
-              </p>
-            </Card>
-          )}
+          {/* Main usage gauges */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {/* 5-Hour Block */}
+            {usage.fiveHour && (
+              <UsageGauge
+                percent={usage.fiveHour.percentUsed}
+                label={t('usage.fiveHourBlock')}
+                subtitle={t('usage.resetsIn', { time: formatTimeRemaining(usage.fiveHour.timeRemainingMinutes) })}
+                color={getGaugeColor(usage.fiveHour.percentUsed)}
+              />
+            )}
 
-          {/* 7-Day Rolling */}
-          {usage.sevenDay && (
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium">{t('usage.sevenDayRolling')}</h3>
-                <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.sevenDay.percentUsed)}`}>
-                  {usage.sevenDay.percentUsed.toFixed(1)}%
-                </span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={`h-full transition-all ${getUsageColor(usage.sevenDay.percentUsed)}`}
-                  style={{ width: `${Math.min(usage.sevenDay.percentUsed, 100)}%` }}
-                />
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {t('usage.resetsAt', { time: formatResetDate(usage.sevenDay.resetAt) })}
-                {' · '}
-                {t('usage.weekProgress', { percent: usage.sevenDay.weekProgressPercent })}
-              </p>
-            </Card>
-          )}
+            {/* 7-Day Rolling */}
+            {usage.sevenDay && (
+              <UsageGauge
+                percent={usage.sevenDay.percentUsed}
+                label={t('usage.sevenDayRolling')}
+                subtitle={`${t('usage.resetsAt', { time: formatResetDate(usage.sevenDay.resetAt) })} · ${t('usage.weekProgress', { percent: usage.sevenDay.weekProgressPercent })}`}
+                color={getGaugeColor(usage.sevenDay.percentUsed)}
+              />
+            )}
+          </div>
 
           {/* Model-specific limits (Opus/Sonnet) */}
           {(usage.sevenDayOpus || usage.sevenDaySonnet) && (
             <div className="grid gap-3 sm:grid-cols-2">
               {usage.sevenDayOpus && (
-                <Card className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium">{t('usage.opusWeekly')}</h3>
-                    <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.sevenDayOpus.percentUsed)}`}>
-                      {usage.sevenDayOpus.percentUsed.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={`h-full transition-all ${getUsageColor(usage.sevenDayOpus.percentUsed)}`}
-                      style={{ width: `${Math.min(usage.sevenDayOpus.percentUsed, 100)}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {t('usage.resetsAt', { time: formatResetDate(usage.sevenDayOpus.resetAt) })}
-                  </p>
-                </Card>
+                <UsageGauge
+                  percent={usage.sevenDayOpus.percentUsed}
+                  label={t('usage.opusWeekly')}
+                  subtitle={t('usage.resetsAt', { time: formatResetDate(usage.sevenDayOpus.resetAt) })}
+                  color={getGaugeColor(usage.sevenDayOpus.percentUsed)}
+                />
               )}
 
               {usage.sevenDaySonnet && (
-                <Card className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium">{t('usage.sonnetWeekly')}</h3>
-                    <span className={`text-sm font-medium tabular-nums ${getUsageTextColor(usage.sevenDaySonnet.percentUsed)}`}>
-                      {usage.sevenDaySonnet.percentUsed.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={`h-full transition-all ${getUsageColor(usage.sevenDaySonnet.percentUsed)}`}
-                      style={{ width: `${Math.min(usage.sevenDaySonnet.percentUsed, 100)}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {t('usage.resetsAt', { time: formatResetDate(usage.sevenDaySonnet.resetAt) })}
-                  </p>
-                </Card>
+                <UsageGauge
+                  percent={usage.sevenDaySonnet.percentUsed}
+                  label={t('usage.sonnetWeekly')}
+                  subtitle={t('usage.resetsAt', { time: formatResetDate(usage.sevenDaySonnet.resetAt) })}
+                  color={getGaugeColor(usage.sevenDaySonnet.percentUsed)}
+                />
               )}
             </div>
           )}
