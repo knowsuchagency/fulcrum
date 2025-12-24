@@ -39,10 +39,11 @@ When the desktop app starts:
 2. **Try saved remote host**: If localhost fails, tries the previously configured remote hostname
 3. **Prompt for remote host**: If no server is found, prompts the user to enter a remote hostname and port
 
-Settings are saved to `~/.vibora/desktop-settings.json`:
+Desktop-specific settings are saved to the standard `~/.vibora/settings.json` alongside other Vibora settings:
 
 ```json
 {
+  "port": 3333,
   "remoteHost": "my-server.tailnet.ts.net",
   "remotePort": 3333,
   "lastConnectedHost": "my-server.tailnet.ts.net"
@@ -143,7 +144,7 @@ To use the desktop app with a remote Vibora server:
 
 The desktop app (`resources/js/main.js`) implements:
 
-1. **Settings persistence**: Saves/loads connection settings from `~/.vibora/desktop-settings.json`
+1. **Settings persistence**: Saves/loads connection settings from `~/.vibora/settings.json`
 2. **Auto-connect flow**: localhost → saved remote → prompt user
 3. **Health checks**: Validates server availability before connecting
 4. **Error handling**: Shows user-friendly errors with retry options
