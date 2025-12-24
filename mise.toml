@@ -425,6 +425,7 @@ neu run -- --dev
 [tasks."desktop:bundle"]
 description = "Bundle server and plugin for desktop app"
 depends = ["build"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
 run = """
 set -e
 
@@ -432,9 +433,26 @@ BUNDLE_DIR="desktop/bundle"
 rm -rf "$BUNDLE_DIR"
 mkdir -p "$BUNDLE_DIR/server" "$BUNDLE_DIR/lib" "$BUNDLE_DIR/drizzle" "$BUNDLE_DIR/dist" "$BUNDLE_DIR/plugin"
 
-# Bundle server
-echo "Bundling server..." >&2
-bun build server/index.ts --target=bun --outfile="$BUNDLE_DIR/server/index.js"
+# Determine architecture and target
+ARCH="${usage_arch}"
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    arm64|aarch64) ARCH="arm64" ;;
+    *) ARCH="x64" ;;
+  esac
+fi
+
+# Determine target for bun compile
+case "$(uname -s)" in
+  Darwin*) TARGET="bun-darwin-${ARCH}" ;;
+  Linux*) TARGET="bun-linux-${ARCH}" ;;
+  *) echo "Unsupported platform" >&2; exit 1 ;;
+esac
+
+# Compile server as standalone executable (includes Bun runtime)
+echo "Compiling server for ${TARGET}..." >&2
+bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/vibora-server"
+chmod +x "$BUNDLE_DIR/server/vibora-server"
 
 # Copy native PTY libraries
 echo "Copying native PTY libraries..." >&2
@@ -457,7 +475,7 @@ cp -r dist/* "$BUNDLE_DIR/dist/"
 echo "Copying Claude plugin..." >&2
 cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
 
-echo "Desktop bundle created at $BUNDLE_DIR"
+echo "Desktop bundle created at $BUNDLE_DIR (standalone executable, no Bun required)"
 """
 
 [tasks."desktop:clean"]

@@ -72,8 +72,14 @@ Desktop-specific settings are saved to `~/.vibora/settings.json`:
 ### Prerequisites
 
 - Node.js (for npm/Neutralino CLI)
-- On Linux: GTK WebKit2 (usually pre-installed)
-- On macOS: Xcode Command Line Tools (for code signing)
+- On Linux: GTK WebKit2 (usually pre-installed), dtach (for terminal persistence)
+- On macOS: Xcode Command Line Tools (for code signing), dtach (for terminal persistence)
+
+### Runtime Dependencies
+
+The desktop app bundles the Vibora server as a standalone executable (no Bun required). The only runtime dependency is:
+
+- **dtach** - for terminal persistence (brew install dtach on macOS, apt install dtach on Linux)
 
 ### Quick Build
 

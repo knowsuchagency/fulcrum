@@ -1,8 +1,12 @@
 #!/bin/bash
 # Vibora Desktop Launcher
-# Checks dependencies, starts server, installs plugin, launches UI
+# Starts server, installs plugin, launches UI
 
 set -e
+
+# macOS GUI apps don't inherit user's shell PATH
+# Add common paths where homebrew and other tools are installed
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Get the directory where the app is installed
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -26,21 +30,6 @@ error_dialog() {
 
 info_dialog() {
   osascript -e "display dialog \"$1\" buttons {\"OK\"} default button \"OK\" with title \"Vibora\"" 2>/dev/null || echo "$1" >&2
-}
-
-# Check for Bun
-check_bun() {
-  if ! command -v bun &> /dev/null; then
-    log "Bun not found"
-    error_dialog "Bun is required but not installed.
-
-Install it with:
-  brew install oven-sh/bun/bun
-
-Or visit: https://bun.sh"
-    exit 1
-  fi
-  log "Bun found: $(which bun)"
 }
 
 # Check for dtach
@@ -103,11 +92,11 @@ stop_existing_server() {
 
 # Start the server
 start_server() {
-  SERVER_JS="$BUNDLE_DIR/server/index.js"
+  SERVER_BIN="$BUNDLE_DIR/server/vibora-server"
 
-  if [ ! -f "$SERVER_JS" ]; then
-    log "Server bundle not found at $SERVER_JS"
-    error_dialog "Server bundle not found. The app may be corrupted."
+  if [ ! -f "$SERVER_BIN" ]; then
+    log "Server executable not found at $SERVER_BIN"
+    error_dialog "Server executable not found. The app may be corrupted."
     exit 1
   fi
 
@@ -121,13 +110,13 @@ start_server() {
 
   log "Starting server on port $PORT..."
 
-  # Start server in background
+  # Start server in background (standalone executable - no bun required)
   NODE_ENV=production \
   PORT="$PORT" \
   VIBORA_DIR="$VIBORA_DIR" \
   VIBORA_PACKAGE_ROOT="$BUNDLE_DIR" \
   BUN_PTY_LIB="$PTY_LIB" \
-  bun "$SERVER_JS" >> "$LOG_FILE" 2>&1 &
+  "$SERVER_BIN" >> "$LOG_FILE" 2>&1 &
 
   SERVER_PID=$!
   echo "$SERVER_PID" > "$PID_FILE"
@@ -167,7 +156,6 @@ log "APP_DIR: $APP_DIR"
 log "BUNDLE_DIR: $BUNDLE_DIR"
 log "VIBORA_DIR: $VIBORA_DIR"
 
-check_bun
 check_dtach
 install_plugin
 stop_existing_server
