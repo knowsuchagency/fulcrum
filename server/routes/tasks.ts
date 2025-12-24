@@ -113,30 +113,6 @@ function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: s
   }
 }
 
-// Initialize worktree with vibora Claude Code plugin
-function initializeWorktreeForVibora(worktreePath: string): void {
-  try {
-    // Add the vibora marketplace and install the plugin
-    // The marketplace is the vibora GitHub repo itself
-    execSync('claude plugin marketplace add knowsuchagency/vibora 2>/dev/null', {
-      cwd: worktreePath,
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    })
-    execSync('claude plugin install vibora@vibora --scope local 2>/dev/null', {
-      cwd: worktreePath,
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    })
-  } catch {
-    // Claude CLI not available or plugin install failed - this is non-fatal
-    // The user can manually install: claude plugin install vibora@vibora
-    console.log(
-      'Note: Could not auto-install vibora plugin. Run "claude plugin marketplace add knowsuchagency/vibora && claude plugin install vibora@vibora" to enable hooks and slash commands.'
-    )
-  }
-}
-
 const app = new Hono()
 
 // Helper to parse viewState JSON from database
@@ -194,9 +170,6 @@ app.post('/', async (c) => {
       if (!result.success) {
         return c.json({ error: `Failed to create worktree: ${result.error}` }, 500)
       }
-
-      // Initialize worktree with vibora Claude Code plugin
-      initializeWorktreeForVibora(body.worktreePath)
 
       // Copy files if patterns provided
       if (body.copyFiles) {
