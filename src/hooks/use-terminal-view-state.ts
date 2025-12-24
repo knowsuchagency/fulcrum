@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 
 interface FocusedTerminalsMap {
   [tabId: string]: string
@@ -8,16 +8,29 @@ interface FocusedTerminalsMap {
 interface TerminalViewState {
   activeTabId: string | null
   focusedTerminals: FocusedTerminalsMap
+  // View tracking for notification suppression
+  currentView: string | null
+  currentTaskId: string | null
+  isTabVisible: boolean | null
+  viewUpdatedAt: string | null
 }
 
 interface PendingUpdates {
   activeTabId?: string | null
   focusedTerminals?: FocusedTerminalsMap
+  currentView?: string | null
+  currentTaskId?: string | null
+  isTabVisible?: boolean | null
+  viewUpdatedAt?: string | null
 }
 
 const DEFAULT_VIEW_STATE: TerminalViewState = {
   activeTabId: null,
   focusedTerminals: {},
+  currentView: null,
+  currentTaskId: null,
+  isTabVisible: null,
+  viewUpdatedAt: null,
 }
 
 export function useTerminalViewState() {
@@ -73,6 +86,10 @@ export function useTerminalViewState() {
           ...viewState.focusedTerminals,
           ...merged.focusedTerminals,
         },
+        currentView: merged.currentView !== undefined ? merged.currentView : viewState.currentView,
+        currentTaskId: merged.currentTaskId !== undefined ? merged.currentTaskId : viewState.currentTaskId,
+        isTabVisible: merged.isTabVisible !== undefined ? merged.isTabVisible : viewState.isTabVisible,
+        viewUpdatedAt: merged.viewUpdatedAt !== undefined ? merged.viewUpdatedAt : viewState.viewUpdatedAt,
       }
 
       // Immediate optimistic update
@@ -118,6 +135,32 @@ export function useTerminalViewState() {
     [viewState.focusedTerminals]
   )
 
+  // Track document visibility for notification suppression
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      updateViewState({
+        isTabVisible: document.visibilityState === 'visible',
+        viewUpdatedAt: new Date().toISOString(),
+      })
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    // Send initial state
+    handleVisibilityChange()
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [updateViewState])
+
+  // Update view tracking (for route changes)
+  const updateViewTracking = useCallback(
+    (currentView: string, currentTaskId: string | null) => {
+      updateViewState({
+        currentView,
+        currentTaskId,
+        viewUpdatedAt: new Date().toISOString(),
+      })
+    },
+    [updateViewState]
+  )
+
   return {
     viewState,
     isLoading,
@@ -125,5 +168,6 @@ export function useTerminalViewState() {
     setActiveTab,
     getFocusedTerminal,
     setFocusedTerminal,
+    updateViewTracking,
   }
 }
