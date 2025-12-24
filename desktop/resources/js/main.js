@@ -23,13 +23,11 @@ let desktopSettings = null;
 /**
  * Get the path to settings file
  */
-function getSettingsPath() {
-  // Use the standard Vibora settings file
-  const home = NL_OS === 'Darwin'
-    ? `/Users/${NL_USER}`
-    : NL_OS === 'Windows'
-      ? `C:\\Users\\${NL_USER}`
-      : `/home/${NL_USER}`;
+async function getSettingsPath() {
+  // Get home directory from environment
+  const home = NL_OS === 'Windows'
+    ? await Neutralino.os.getEnv('USERPROFILE')
+    : await Neutralino.os.getEnv('HOME');
   return `${home}/.vibora/settings.json`;
 }
 
@@ -38,7 +36,7 @@ function getSettingsPath() {
  */
 async function loadSettings() {
   try {
-    const settingsPath = getSettingsPath();
+    const settingsPath = await getSettingsPath();
     const content = await Neutralino.filesystem.readFile(settingsPath);
     desktopSettings = JSON.parse(content);
     console.log('[Vibora] Loaded settings:', desktopSettings);
@@ -56,7 +54,7 @@ async function loadSettings() {
  */
 async function saveSettings(settings) {
   try {
-    const settingsPath = getSettingsPath();
+    const settingsPath = await getSettingsPath();
 
     // Ensure .vibora directory exists
     const viboraDir = settingsPath.substring(0, settingsPath.lastIndexOf('/'));
