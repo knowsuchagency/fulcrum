@@ -26,8 +26,8 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
-  const weCreatedTerminalRef = useRef(false)
   const attachedRef = useRef(false)
+  const initialTerminalIdsRef = useRef<Set<string> | null>(null)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermOpened, setXtermOpened] = useState(false)
 
@@ -203,6 +203,14 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     }
   }, [doFit])
 
+  // Capture initial terminal IDs when terminals first load
+  // This lets us determine if a terminal is "new" (created by this component)
+  useEffect(() => {
+    if (terminalsLoaded && initialTerminalIdsRef.current === null) {
+      initialTerminalIdsRef.current = new Set(terminals.map(t => t.id))
+    }
+  }, [terminalsLoaded, terminals])
+
   // Find existing terminal or create new one
   // Wait for terminalsLoaded to ensure we have accurate knowledge of existing terminals
   // Use xtermOpened (not xtermReady) to avoid WebKit rAF timing issues during navigation
@@ -219,7 +227,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
-      weCreatedTerminalRef.current = true  // Track that THIS component created the terminal
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -245,13 +252,12 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   useEffect(() => {
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
-    // Use our local ref to determine if we created this terminal
-    // This is more reliable than newTerminalIds which is per-hook-instance
-    // and can get out of sync when multiple useTerminalWS() hooks exist
-    const isNewTerminal = weCreatedTerminalRef.current
-    // Reset immediately so startup commands don't run again on re-mount
-    weCreatedTerminalRef.current = false
-    // Also clean up the hook's newTerminalIds for consistency
+    // Determine if this is a newly created terminal by checking if it existed
+    // when we first loaded the terminals list. This is more reliable than
+    // tracking creation with refs which can get out of sync in WebKit.
+    const isNewTerminal = initialTerminalIdsRef.current !== null &&
+                          !initialTerminalIdsRef.current.has(terminalId)
+    // Clean up the hook's newTerminalIds for consistency
     newTerminalIds.delete(terminalId)
 
     // Capture current values for use in callbacks
