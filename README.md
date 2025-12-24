@@ -232,3 +232,5 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, architecture, and co
 ## License
 
 [PolyForm Shield 1.0.0](LICENSE)
+
+**In plain English:** You can use Vibora for any purpose—personal or commercial. KNOWSUCHAGENCY CORP has no claim over the software you build using Vibora. What's prohibited is reselling or redistributing Vibora itself for profit. The software is provided as-is with no warranty.
