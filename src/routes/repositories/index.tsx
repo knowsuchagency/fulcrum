@@ -40,7 +40,6 @@ import {
   CommandLineIcon,
   Copy01Icon,
   VisualStudioCodeIcon,
-  Task01Icon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { useDefaultGitReposDir, useHostname, useSshPort } from '@/hooks/use-config'
@@ -97,14 +96,9 @@ function RepositoryCard({
     <div className="relative h-full">
       <Link to="/repositories/$repoId" params={{ repoId: repository.id }} className="block h-full">
         <Card className="h-full transition-colors hover:border-border/80 cursor-pointer">
-          <CardContent className="flex flex-col gap-2 py-4">
+          <CardContent className="flex h-full flex-col gap-2 py-4">
             <div className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate font-medium">{repository.displayName}</span>
-              <div className="flex shrink-0 gap-1">
-                <div className="size-6" />
-                <div className="size-6" />
-                <div className="size-6" />
-              </div>
             </div>
 
             <div className="space-y-1 text-xs text-muted-foreground">
@@ -132,21 +126,23 @@ function RepositoryCard({
                 </div>
               )}
             </div>
+
+            <div className="mt-auto flex justify-end pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStartTask}
+                className="border-primary text-muted-foreground hover:text-foreground"
+              >
+                <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+                New Task
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </Link>
 
       <div className="absolute right-3 top-3 flex gap-1">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleStartTask}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-          title="Start Task"
-        >
-          <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
-        </Button>
-
         <Button
           variant="ghost"
           size="icon-sm"
