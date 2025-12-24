@@ -29,7 +29,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   const weCreatedTerminalRef = useRef(false)
   const attachedRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
-  const [xtermReady, setXtermReady] = useState(false)
   const [xtermOpened, setXtermOpened] = useState(false)
 
   const { setTerminalFocused } = useKeyboardContext()
@@ -107,11 +106,9 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     // We can get cols/rows immediately after open(), no need to wait for rAF
     setXtermOpened(true)
 
-    // Initial fit after container is sized - this is for visual display only
-    // WebKit can delay rAF during navigation, so we don't gate creation on this
+    // Initial fit after container is sized
     requestAnimationFrame(() => {
       fitAddon.fit()
-      setXtermReady(true)
     })
 
     // Schedule additional fit to catch async layout (ResizablePanel timing)
@@ -141,7 +138,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       termRef.current = null
       fitAddonRef.current = null
       setXtermOpened(false)
-      setXtermReady(false)
     }
   }, [setTerminalFocused])
 
