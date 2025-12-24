@@ -25,7 +25,7 @@ import {
   VisualStudioCodeIcon,
   PlusSignIcon,
 } from '@hugeicons/core-free-icons'
-import { useHostname, useSshPort } from '@/hooks/use-config'
+import { useRemoteHost, useSshPort } from '@/hooks/use-config'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
@@ -39,7 +39,7 @@ function RepositoryDetailView() {
   const { data: repository, isLoading, error } = useRepository(repoId)
   const updateRepository = useUpdateRepository()
   const deleteRepository = useDeleteRepository()
-  const { data: hostname } = useHostname()
+  const { data: remoteHost } = useRemoteHost()
   const { data: sshPort } = useSshPort()
 
   const [displayName, setDisplayName] = useState('')
@@ -90,7 +90,7 @@ function RepositoryDetailView() {
 
   const handleOpenVSCode = () => {
     if (!repository) return
-    const url = buildVSCodeUrl(repository.path, hostname, sshPort)
+    const url = buildVSCodeUrl(repository.path, remoteHost, sshPort)
     window.open(url, '_blank')
   }
 

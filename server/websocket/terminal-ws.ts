@@ -2,6 +2,7 @@ import type { WSContext, WSEvents } from 'hono/ws'
 import type { ClientMessage, ServerMessage } from '../types'
 import { getPTYManager } from '../terminal/pty-instance'
 import { getTabManager } from '../terminal/tab-manager'
+import { log } from '../lib/logger'
 
 interface ClientData {
   id: string
@@ -24,14 +25,30 @@ export function broadcast(message: ServerMessage): void {
 
 export function broadcastToTerminal(terminalId: string, message: ServerMessage): void {
   const json = JSON.stringify(message)
+  let sentCount = 0
+  const attachedClients: string[] = []
+
   for (const [ws, data] of clients.entries()) {
     if (data.attachedTerminals.has(terminalId)) {
+      attachedClients.push(data.id)
       try {
         ws.send(json)
+        sentCount++
       } catch {
         // Client might be disconnected
       }
     }
+  }
+
+  // Log for terminal:output messages to trace the broadcast
+  if (message.type === 'terminal:output') {
+    log.ws.info('broadcastToTerminal', {
+      terminalId,
+      totalClients: clients.size,
+      attachedClients: attachedClients.length,
+      sentCount,
+      dataLen: (message.payload as { data?: string }).data?.length ?? 0,
+    })
   }
 }
 
@@ -50,7 +67,7 @@ export const terminalWebSocketHandlers: WSEvents = {
       attachedTerminals: new Set(),
     }
     clients.set(ws, clientData)
-    console.log(`Client connected (${clients.size} total)`)
+    log.ws.info('Client connected', { totalClients: clients.size })
 
     // Send list of existing terminals and tabs
     const ptyManager = getPTYManager()
@@ -84,12 +101,14 @@ export const terminalWebSocketHandlers: WSEvents = {
         // Terminal messages
         case 'terminal:create': {
           const { name, cols, rows, cwd, tabId, positionInTab } = message.payload
+          log.ws.debug('terminal:create request', { name, cwd, tabId, clientId: clientData.id })
 
           // Prevent duplicate terminals for same cwd
           if (cwd) {
             const existing = ptyManager.listTerminals().find((t) => t.cwd === cwd)
             if (existing) {
               // Return existing terminal instead of creating duplicate
+              log.ws.debug('terminal:create returning existing', { terminalId: existing.id, isNew: false })
               clientData.attachedTerminals.add(existing.id)
               sendTo(ws, {
                 type: 'terminal:created',
@@ -100,7 +119,18 @@ export const terminalWebSocketHandlers: WSEvents = {
           }
 
           const terminal = ptyManager.create({ name, cols, rows, cwd, tabId, positionInTab })
+          log.ws.info('terminal:create created new', {
+            terminalId: terminal.id,
+            name,
+            cwd,
+            clientId: clientData.id,
+          })
           clientData.attachedTerminals.add(terminal.id)
+          log.ws.info('terminal:create added to attachedTerminals', {
+            terminalId: terminal.id,
+            clientId: clientData.id,
+            totalAttached: clientData.attachedTerminals.size,
+          })
           broadcast({
             type: 'terminal:created',
             payload: { terminal, isNew: true },
@@ -114,6 +144,7 @@ export const terminalWebSocketHandlers: WSEvents = {
         }
 
         case 'terminal:input': {
+          log.ws.debug('terminal:input', { terminalId: message.payload.terminalId, dataLen: message.payload.data.length })
           ptyManager.write(message.payload.terminalId, message.payload.data)
           break
         }
@@ -128,7 +159,12 @@ export const terminalWebSocketHandlers: WSEvents = {
           // Ensure terminal is attached to dtach (connects PTY if not already)
           ptyManager.attach(terminalId)
           const buffer = ptyManager.getBuffer(terminalId)
-          console.log(`[WS] terminal:attach ${terminalId} buffer length: ${buffer?.length ?? 'null'}`)
+          log.ws.info('terminal:attach adding to attachedTerminals', {
+            terminalId,
+            bufferLength: buffer?.length ?? null,
+            clientId: clientData.id,
+            priorAttached: Array.from(clientData.attachedTerminals),
+          })
           if (buffer !== null) {
             clientData.attachedTerminals.add(terminalId)
             sendTo(ws, {
@@ -196,7 +232,9 @@ export const terminalWebSocketHandlers: WSEvents = {
         // Tab messages
         case 'tab:create': {
           const { name, position } = message.payload
+          log.ws.debug('tab:create request', { name, position, clientId: clientData.id })
           const tab = tabManager.create({ name, position })
+          log.ws.info('tab:create created', { tabId: tab.id, name: tab.name })
           broadcast({
             type: 'tab:created',
             payload: { tab },
@@ -249,17 +287,17 @@ export const terminalWebSocketHandlers: WSEvents = {
         }
       }
     } catch (error) {
-      console.error('Failed to handle message:', error)
+      log.ws.error('Failed to handle message', { error: String(error) })
     }
   },
 
   onClose(evt, ws) {
     clients.delete(ws)
-    console.log(`Client disconnected (${clients.size} remaining)`)
+    log.ws.info('Client disconnected', { remainingClients: clients.size })
   },
 
   onError(evt, ws) {
-    console.error('WebSocket error:', evt)
+    log.ws.error('WebSocket error', { error: String(evt) })
     clients.delete(ws)
   },
 }

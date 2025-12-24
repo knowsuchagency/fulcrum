@@ -4,11 +4,13 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
+import { desktopZoom } from '@/main'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
+import { log } from '@/lib/logger'
 
 interface TaskTerminalProps {
   taskId: string
@@ -25,11 +27,24 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
-  const weCreatedTerminalRef = useRef(false)
   const attachedRef = useRef(false)
+  // Track if THIS component instance created the terminal (for startup command decision)
+  const createdByMeRef = useRef(false)
+  // Track which terminal we've run startup commands for (prevents re-running on effect re-runs)
+  const startupRanForRef = useRef<string | null>(null)
   const [terminalId, setTerminalId] = useState<string | null>(null)
-  const [xtermReady, setXtermReady] = useState(false)
   const [xtermOpened, setXtermOpened] = useState(false)
+
+  // Reset all terminal tracking refs when cwd changes (navigating to different task)
+  // This MUST run before terminal creation logic to ensure refs are clean
+  useEffect(() => {
+    log.taskTerminal.debug('cwd changed, resetting refs', { cwd })
+    createdTerminalRef.current = false
+    createdByMeRef.current = false
+    attachedRef.current = false
+    startupRanForRef.current = null
+    setTerminalId(null)
+  }, [cwd])
 
   const { setTerminalFocused } = useKeyboardContext()
 
@@ -37,7 +52,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     terminals,
     terminalsLoaded,
     connected,
-    newTerminalIds,
     createTerminal,
     attachXterm,
     resizeTerminal,
@@ -64,7 +78,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
 
     const term = new XTerm({
       cursorBlink: true,
-      fontSize: 13,
+      fontSize: Math.round(13 * desktopZoom),
       fontFamily: 'JetBrains Mono Variable, Menlo, Monaco, monospace',
       lineHeight: 1.2,
       theme: {
@@ -106,11 +120,9 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     // We can get cols/rows immediately after open(), no need to wait for rAF
     setXtermOpened(true)
 
-    // Initial fit after container is sized - this is for visual display only
-    // WebKit can delay rAF during navigation, so we don't gate creation on this
+    // Initial fit after container is sized
     requestAnimationFrame(() => {
       fitAddon.fit()
-      setXtermReady(true)
     })
 
     // Schedule additional fit to catch async layout (ResizablePanel timing)
@@ -140,7 +152,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       termRef.current = null
       fitAddonRef.current = null
       setXtermOpened(false)
-      setXtermReady(false)
     }
   }, [setTerminalFocused])
 
@@ -222,7 +233,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
-      weCreatedTerminalRef.current = true  // Track that THIS component created the terminal
+      createdByMeRef.current = true  // Mark that THIS component created the terminal
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -246,16 +257,16 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   // Attach xterm to terminal once we have both
   // Use refs for callbacks to avoid effect re-runs when callbacks change identity
   useEffect(() => {
+    log.taskTerminal.debug('attach effect', {
+      terminalId,
+      hasTermRef: !!termRef.current,
+      hasContainerRef: !!containerRef.current,
+      attachedRef: attachedRef.current,
+    })
+
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
-    // Use our local ref to determine if we created this terminal
-    // This is more reliable than newTerminalIds which is per-hook-instance
-    // and can get out of sync when multiple useTerminalWS() hooks exist
-    const isNewTerminal = weCreatedTerminalRef.current
-    // Reset immediately so startup commands don't run again on re-mount
-    weCreatedTerminalRef.current = false
-    // Also clean up the hook's newTerminalIds for consistency
-    newTerminalIds.delete(terminalId)
+    log.taskTerminal.debug('attach effect passed guards, calling attachXterm', { terminalId })
 
     // Capture current values for use in callbacks
     const currentTerminalId = terminalId
@@ -270,8 +281,35 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       // Trigger a resize after attaching
       requestAnimationFrame(doFit)
 
+      // SYNCHRONOUS guard: Check and set atomically to prevent race conditions
+      // This must happen BEFORE any async operations
+      if (startupRanForRef.current === currentTerminalId) {
+        log.taskTerminal.debug('onAttached: startup already ran, returning', { terminalId: currentTerminalId })
+        return
+      }
+
+      // Use createdByMeRef to determine if THIS component created the terminal
+      // This avoids cross-instance issues with multiple useTerminalWS hooks
+      const isNewTerminal = createdByMeRef.current
+
+      // Clear the flag BEFORE any async operations (synchronous)
+      createdByMeRef.current = false
+
+      // Mark that we've run startup for this terminal IMMEDIATELY (before async operations)
+      // This prevents duplicate execution from React Strict Mode or effect re-runs
+      if (isNewTerminal) {
+        startupRanForRef.current = currentTerminalId
+      }
+
+      log.taskTerminal.debug('onAttached checking isNewTerminal', {
+        terminalId: currentTerminalId,
+        isNewTerminal,
+        startupRanFor: startupRanForRef.current,
+      })
+
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
       if (isNewTerminal) {
+        log.taskTerminal.info('onAttached: running startup commands', { terminalId: currentTerminalId })
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
         if (currentStartupScript) {
           setTimeout(() => {
@@ -294,6 +332,10 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
           : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTaskId}" --dangerously-skip-permissions`
 
         setTimeout(() => {
+          log.taskTerminal.debug('writing claude command to terminal', {
+            terminalId: currentTerminalId,
+            taskCommand: taskCommand.substring(0, 50) + '...',
+          })
           writeToTerminalRef.current(currentTerminalId, taskCommand + '\r')
         }, currentStartupScript ? 300 : 100)
       }
@@ -304,12 +346,15 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     const cleanupPaste = setupImagePasteRef.current(containerRef.current, terminalId)
     attachedRef.current = true
 
+    log.taskTerminal.debug('attachedRef set to true', { terminalId })
+
     return () => {
+      log.taskTerminal.debug('cleanup running, setting attachedRef to false', { terminalId })
       cleanup()
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, doFit, newTerminalIds, startupScript, aiMode, description, taskName, taskId])
+  }, [terminalId, doFit, startupScript, aiMode, description, taskName, taskId])
 
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {

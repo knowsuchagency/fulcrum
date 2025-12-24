@@ -146,6 +146,84 @@ When a task status changes in Vibora, the linked Linear ticket status is updated
 - `DONE` → "Done"
 - `CANCELED` → "Canceled"
 
+## Logging
+
+Vibora uses a centralized JSON Lines (JSONL) logging system optimized for AI analysis and debugging.
+
+### Log Format
+
+Each log entry is a single JSON line:
+```json
+{"ts":"2024-12-24T15:30:00.123Z","lvl":"info","src":"PTYManager","msg":"Restored terminal","ctx":{"terminalId":"abc-123","name":"Terminal 1"}}
+```
+
+### Log Locations
+
+| Platform | Location |
+|----------|----------|
+| Development | stdout (terminal) |
+| Production daemon | `~/.vibora/server.log` (stdout) + `~/.vibora/vibora.log` |
+| Desktop app | `~/.vibora/vibora.log` |
+
+### Log Levels
+
+| Level | Use Case |
+|-------|----------|
+| `debug` | Detailed diagnostics (message payloads, state changes) |
+| `info` | Normal operations (terminal created, server started) |
+| `warn` | Recoverable issues (retry, fallback used) |
+| `error` | Failures needing attention |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_LEVEL` | `info` | Backend minimum log level |
+| `VITE_LOG_LEVEL` | `info` | Frontend minimum log level |
+| `DEBUG` | `0` | Enable frontend debug logging (console + server) |
+
+### Using the Logger
+
+**Backend** (`server/lib/logger.ts`):
+```typescript
+import { log } from '../lib/logger'
+
+log.pty.info('Restored terminal', { terminalId: id, name })
+log.ws.error('Connection failed', { error: String(err) })
+```
+
+**Frontend** (`src/lib/logger.ts`):
+```typescript
+import { log } from '@/lib/logger'
+
+log.taskTerminal.debug('cwd changed', { cwd })
+log.ws.info('terminal:created', { terminalId, isNew: true })
+```
+
+### Searching Logs
+
+```bash
+# Find all errors
+grep '"lvl":"error"' ~/.vibora/vibora.log
+
+# Find logs for specific terminal
+grep '"terminalId":"abc-123"' ~/.vibora/vibora.log
+
+# Find PTYManager issues
+grep '"src":"PTYManager"' ~/.vibora/vibora.log
+
+# Pretty print with jq
+cat ~/.vibora/vibora.log | jq 'select(.lvl == "error")'
+```
+
+### Debug Build
+
+Build with debug logging enabled:
+```bash
+mise run desktop:package-dmg:debug  # DMG with debug logging
+mise run build:debug                # Web build with debug logging
+```
+
 ### Development vs Production
 
 The `mise run dev` command defaults to `~/.vibora/dev` (port 3222) to keep development data separate from production:

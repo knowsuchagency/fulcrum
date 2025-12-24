@@ -3,6 +3,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { uploadImage } from '@/lib/upload'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { log } from '@/lib/logger'
 
 interface DescriptionTextareaProps
   extends Omit<React.ComponentProps<'textarea'>, 'onChange' | 'value'> {
@@ -65,7 +66,7 @@ export function DescriptionTextarea({
           }
         } catch (error) {
           toast.error('Failed to upload image')
-          console.error('Upload error:', error)
+          log.kanban.error('Upload error', { error: String(error) })
         } finally {
           setIsUploading(false)
         }

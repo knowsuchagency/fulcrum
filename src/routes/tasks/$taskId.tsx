@@ -13,7 +13,7 @@ import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
-import { useHostname, useSshPort } from '@/hooks/use-config'
+import { useRemoteHost, useSshPort } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
@@ -98,7 +98,7 @@ function TaskView() {
   const gitMerge = useGitMergeToMain()
   const gitSyncParent = useGitSyncParent()
   const killClaude = useKillClaudeInTask()
-  const { data: hostname } = useHostname()
+  const { data: remoteHost } = useRemoteHost()
   const { data: sshPort } = useSshPort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
 
@@ -220,14 +220,14 @@ function TaskView() {
 
   const handleOpenVSCodeWorktree = () => {
     if (!task?.worktreePath) return
-    const url = buildVSCodeUrl(task.worktreePath, hostname, sshPort)
+    const url = buildVSCodeUrl(task.worktreePath, remoteHost, sshPort)
     window.open(url, '_blank')
     setVscodeModalOpen(false)
   }
 
   const handleOpenVSCodeRepo = () => {
     if (!task?.repoPath) return
-    const url = buildVSCodeUrl(task.repoPath, hostname, sshPort)
+    const url = buildVSCodeUrl(task.repoPath, remoteHost, sshPort)
     window.open(url, '_blank')
     setVscodeModalOpen(false)
   }

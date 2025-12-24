@@ -19,6 +19,8 @@ import linearRoutes from './routes/linear'
 import githubRoutes from './routes/github'
 import authRoutes from './routes/auth'
 import { monitoringRoutes } from './routes/monitoring'
+import { writeEntry } from './lib/logger'
+import type { LogEntry } from '../shared/logger'
 
 /**
  * Gets the path to the dist directory.
@@ -63,6 +65,30 @@ export function createApp() {
   app.route('/api/github', githubRoutes)
   app.route('/api/auth', authRoutes)
   app.route('/api/monitoring', monitoringRoutes)
+
+  // Logging endpoint for frontend to send batched logs to server
+  app.post('/api/logs', async (c) => {
+    const { entries } = await c.req.json<{ entries: LogEntry[] }>()
+    for (const entry of entries) {
+      writeEntry(entry)
+    }
+    return c.json({ ok: true })
+  })
+
+  // Legacy debug endpoint (for backwards compatibility during migration)
+  app.post('/api/debug', async (c) => {
+    const body = await c.req.json()
+    // Convert old format to new JSONL format
+    const entry = {
+      ts: new Date().toISOString(),
+      lvl: 'debug',
+      src: 'Frontend/Legacy',
+      msg: body.message,
+      ...(body.data ? { ctx: body.data } : {}),
+    }
+    console.log(JSON.stringify(entry))
+    return c.json({ ok: true })
+  })
 
   // Serve static files in production mode or bundled CLI mode
   // Note: Check VIBORA_PACKAGE_ROOT in addition to NODE_ENV because bun build

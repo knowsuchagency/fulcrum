@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { uploadImage } from '@/lib/upload'
+import { log } from '@/lib/logger'
 
 // Types matching server/types.ts
 export type TerminalStatus = 'running' | 'exited' | 'error'
@@ -114,8 +115,16 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
   const wasConnectedRef = useRef(false)
 
   const send = useCallback((message: object) => {
+    const msgType = (message as { type?: string }).type
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      log.ws.debug('send', { type: msgType })
       wsRef.current.send(JSON.stringify(message))
+    } else {
+      // Log dropped messages - this helps diagnose timing issues
+      log.ws.warn('send dropped (WebSocket not open)', {
+        type: msgType,
+        readyState: wsRef.current?.readyState ?? 'no socket',
+      })
     }
   }, [])
 
@@ -131,35 +140,80 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           break
 
         case 'terminal:created':
-          setTerminals((prev) => [...prev, message.payload.terminal])
+          log.ws.debug('terminal:created received', {
+            terminalId: message.payload.terminal.id,
+            isNew: message.payload.isNew,
+            cwd: message.payload.terminal.cwd,
+          })
+          // Deduplicate: only add if not already present (prevents duplicates from multiple WS clients)
+          setTerminals((prev) => {
+            if (prev.some((t) => t.id === message.payload.terminal.id)) {
+              log.ws.debug('terminal:created skipped (already exists)', {
+                terminalId: message.payload.terminal.id,
+              })
+              return prev
+            }
+            return [...prev, message.payload.terminal]
+          })
           if (message.payload.isNew) {
             newTerminalIdsRef.current.add(message.payload.terminal.id)
+            log.ws.debug('added to newTerminalIds', {
+              terminalId: message.payload.terminal.id,
+              newSize: newTerminalIdsRef.current.size,
+              contents: Array.from(newTerminalIdsRef.current),
+            })
           }
           break
 
         case 'terminal:output': {
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
+          log.ws.info('terminal:output', {
+            terminalId: message.payload.terminalId,
+            hasXterm: !!xterm,
+            dataLen: message.payload.data.length,
+          })
           if (xterm) {
             xterm.write(message.payload.data)
+          } else {
+            log.ws.warn('terminal:output but no xterm', { terminalId: message.payload.terminalId })
           }
           break
         }
 
         case 'terminal:attached': {
+          log.ws.info('terminal:attached received', {
+            terminalId: message.payload.terminalId,
+            hasXterm: xtermMapRef.current.has(message.payload.terminalId),
+            bufferLength: message.payload.buffer?.length ?? 0,
+            hasCallback: onAttachedCallbacksRef.current.has(message.payload.terminalId),
+          })
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
           if (xterm) {
             // Reset terminal to clean state before replaying buffer
             // This prevents corrupted escape sequences from persisting
             xterm.reset()
             if (message.payload.buffer) {
+              log.ws.info('writing buffer to xterm', {
+                terminalId: message.payload.terminalId,
+                bufferLength: message.payload.buffer.length,
+              })
               xterm.write(message.payload.buffer)
             }
+          } else {
+            log.ws.warn('terminal:attached but no xterm in map', {
+              terminalId: message.payload.terminalId,
+            })
           }
           // Call onAttached callback if registered
           const callback = onAttachedCallbacksRef.current.get(message.payload.terminalId)
           if (callback) {
+            log.ws.info('calling onAttached callback', { terminalId: message.payload.terminalId })
             onAttachedCallbacksRef.current.delete(message.payload.terminalId)
             callback()
+          } else {
+            log.ws.warn('terminal:attached but no callback registered', {
+              terminalId: message.payload.terminalId,
+            })
           }
           break
         }
@@ -184,7 +238,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           break
 
         case 'terminal:error':
-          console.error('Terminal error:', message.payload.error)
+          log.ws.error('Terminal error', { error: message.payload.error })
           break
 
         case 'terminal:renamed':
@@ -222,7 +276,20 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           break
 
         case 'tab:created':
-          setTabs((prev) => [...prev, message.payload.tab].sort((a, b) => a.position - b.position))
+          log.ws.debug('tab:created received', {
+            tabId: message.payload.tab.id,
+            name: message.payload.tab.name,
+          })
+          // Deduplicate: only add if not already present (prevents duplicates from multiple WS clients)
+          setTabs((prev) => {
+            if (prev.some((t) => t.id === message.payload.tab.id)) {
+              log.ws.debug('tab:created skipped (already exists)', {
+                tabId: message.payload.tab.id,
+              })
+              return prev
+            }
+            return [...prev, message.payload.tab].sort((a, b) => a.position - b.position)
+          })
           break
 
         case 'tab:renamed':
@@ -248,7 +315,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           break
       }
     } catch (error) {
-      console.error('Failed to parse WebSocket message:', error)
+      log.ws.error('Failed to parse WebSocket message', { error: String(error) })
     }
   }, [])
 
@@ -353,6 +420,11 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
   const writeToTerminal = useCallback(
     (terminalId: string, data: string) => {
+      log.ws.debug('writeToTerminal called', {
+        terminalId,
+        dataLen: data.length,
+        wsReadyState: wsRef.current?.readyState,
+      })
       send({
         type: 'terminal:input',
         payload: { terminalId, data },
@@ -489,20 +561,27 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
       // Register onAttached callback if provided
       if (options?.onAttached) {
+        log.ws.debug('registering onAttached callback', { terminalId })
         onAttachedCallbacksRef.current.set(terminalId, options.onAttached)
       }
 
       // Request attachment to get buffer
+      log.ws.info('attachXterm: sending terminal:attach', {
+        terminalId,
+        wsState: wsRef.current?.readyState,
+      })
       send({
         type: 'terminal:attach',
         payload: { terminalId },
       })
 
       // Return cleanup function
+      // Note: Don't delete onAttached callback here - it needs to persist until
+      // the server responds with terminal:attached. The callback is deleted
+      // after being called in handleMessage.
       return () => {
         disposable.dispose()
         xtermMapRef.current.delete(terminalId)
-        onAttachedCallbacksRef.current.delete(terminalId)
         xterm.textarea?.removeEventListener('focus', handleFocus)
       }
     },
@@ -529,7 +608,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
               // Insert the path into the terminal
               writeToTerminal(terminalId, path)
             } catch (error) {
-              console.error('Failed to upload image:', error)
+              log.ws.error('Failed to upload image', { error: String(error) })
             }
             return
           }

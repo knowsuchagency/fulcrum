@@ -12,6 +12,10 @@ jobs:
     permissions:
       contents: write
       id-token: write  # Required for OIDC
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      should_release: ${{ steps.check_tag.outputs.exists == 'false' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,6 +57,10 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: bun install
 
+      - name: Verify version sync
+        if: steps.check_tag.outputs.exists == 'false'
+        run: mise run check:version
+
       - name: Build CLI
         if: steps.check_tag.outputs.exists == 'false'
         run: mise run cli:build
@@ -61,6 +69,8 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         working-directory: cli
         run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false'
@@ -84,12 +94,13 @@ jobs:
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (Draft)
         if: steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
+          draft: true
           body: |
             ## Changes
 
@@ -97,6 +108,147 @@ jobs:
 
             ## Installation
 
+            ### Desktop App (Recommended)
+
+            Download the appropriate package for your platform:
+            - **macOS Apple Silicon**: `Vibora-${{ steps.version.outputs.version }}-macos-arm64.dmg`
+            - **macOS Intel**: `Vibora-${{ steps.version.outputs.version }}-macos-x64.dmg`
+            - **Linux**: `Vibora-${{ steps.version.outputs.version }}-linux-x64.AppImage`
+
+            ### CLI
+
             ```bash
             npm install -g vibora
             ```
+
+  # Desktop builds - run in parallel on multiple platforms
+  build-desktop:
+    needs: publish
+    if: needs.publish.outputs.should_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS Apple Silicon
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            artifact: Vibora-${{ needs.publish.outputs.version }}-macos-arm64.dmg
+          # macOS Intel
+          - os: macos-13
+            platform: macos
+            arch: x64
+            artifact: Vibora-${{ needs.publish.outputs.version }}-macos-x64.dmg
+          # Linux x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            artifact: Vibora-${{ needs.publish.outputs.version }}-linux-x64.AppImage
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install create-dmg (macOS)
+        if: matrix.platform == 'macos'
+        run: brew install create-dmg
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2
+
+      - name: Build Neutralino app
+        run: mise run desktop:build
+
+      - name: Bundle server
+        run: mise run desktop:bundle
+
+      - name: Package DMG (macOS)
+        if: matrix.platform == 'macos'
+        run: ./desktop/scripts/package-dmg.sh ${{ matrix.arch }}
+
+      - name: Package AppImage (Linux)
+        if: matrix.platform == 'linux'
+        run: ./desktop/scripts/package-appimage.sh ${{ matrix.arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}-${{ matrix.arch }}
+          path: desktop/dist/${{ matrix.artifact }}
+
+  # Finalize release with all desktop builds
+  finalize-release:
+    needs: [publish, build-desktop]
+    if: needs.publish.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all desktop artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: desktop-*
+
+      - name: Generate update manifest
+        run: |
+          VERSION="${{ needs.publish.outputs.version }}"
+          TAG="${{ needs.publish.outputs.tag }}"
+          REPO="${{ github.repository }}"
+
+          cat > manifest.json << EOF
+          {
+            "applicationId": "io.vibora.desktop",
+            "version": "${VERSION}",
+            "platforms": {
+              "darwin-arm64": {
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-macos-arm64.dmg"
+              },
+              "darwin-x64": {
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-macos-x64.dmg"
+              },
+              "linux-x64": {
+                "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-linux-x64.AppImage"
+              }
+            }
+          }
+          EOF
+
+          echo "Generated manifest.json:"
+          cat manifest.json
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name "*.dmg" -o -name "*.AppImage" \) -exec cp {} release-assets/ \;
+          cp manifest.json release-assets/
+          ls -la release-assets/
+
+      - name: Upload assets to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.publish.outputs.tag }}
+          draft: false
+          files: release-assets/*

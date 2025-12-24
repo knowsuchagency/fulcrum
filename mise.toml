@@ -8,6 +8,15 @@ run = "bun install"
 description = "Install dependencies"
 run = "bun install"
 
+[tasks."hooks:install"]
+description = "Install git pre-commit hooks"
+run = """
+set -e
+git config core.hooksPath hooks
+echo "Git hooks installed (using hooks/ directory)"
+echo "Pre-commit hook will verify version sync on commits"
+"""
+
 [tasks.bump]
 description = "Bump version (major, minor, or patch)"
 usage = 'arg "[type]" help="Version type: major, minor, or patch" default="patch"'
@@ -44,9 +53,16 @@ if [ -f "$plugin" ]; then
   echo "Updated $plugin"
 fi
 
+# Update neutralino.config.json
+neutralino_config="desktop/neutralino.config.json"
+if [ -f "$neutralino_config" ]; then
+  jq --arg v "$new_version" '.version = $v | .globalVariables.APP_VERSION = $v' "$neutralino_config" > "${neutralino_config}.tmp" && mv "${neutralino_config}.tmp" "$neutralino_config"
+  echo "Updated $neutralino_config"
+fi
+
 echo "Bumped version: $current → $new_version"
 
-git add package.json "$marketplace" "$plugin"
+git add package.json "$marketplace" "$plugin" "$neutralino_config"
 git commit -m "bump ${usage_type}"
 """
 
@@ -62,6 +78,7 @@ run = """
 export PORT="${usage_port}"
 export VITE_BACKEND_PORT="${usage_port}"
 export VIBORA_DIR="${VIBORA_DIR:-${usage_dir}}"
+export DEBUG="1"
 if [ -n "${usage_db}" ]; then
   export VIBORA_DATABASE_PATH="${usage_db}"
 fi
@@ -78,11 +95,21 @@ bun --watch server/index.ts
 
 [tasks.client]
 description = "Start frontend dev server"
-run = "vite --host"
+run = "DEBUG=\"${DEBUG:-}\" vite --host"
 
 [tasks.build]
 description = "Build for production"
-run = "bunx tsc -b && bunx vite build"
+run = """
+rm -rf dist
+bunx tsc -b --force && bunx vite build
+"""
+
+[tasks."build:debug"]
+description = "Build for production with debug logging enabled"
+run = """
+rm -rf dist
+bunx tsc -b --force && DEBUG=1 bunx vite build
+"""
 
 [tasks.start]
 description = "Run production server"
@@ -98,8 +125,67 @@ description = "Check TypeScript types"
 run = "bunx tsc --noEmit"
 
 [tasks.check]
-description = "Run all checks (lint + typecheck)"
-depends = ["lint", "typecheck"]
+description = "Run all checks (lint + typecheck + version)"
+depends = ["lint", "typecheck", "check:version"]
+
+[tasks."check:version"]
+description = "Verify all version files are in sync"
+run = """
+#!/usr/bin/env bash
+set -e
+
+# Source of truth
+VERSION=$(jq -r '.version' package.json)
+
+# Files to check
+MARKETPLACE=".claude-plugin/marketplace.json"
+PLUGIN="plugins/vibora/.claude-plugin/plugin.json"
+NEUTRALINO="desktop/neutralino.config.json"
+
+errors=0
+
+# Check marketplace.json
+if [ -f "$MARKETPLACE" ]; then
+  MARKETPLACE_VERSION=$(jq -r '.plugins[0].version' "$MARKETPLACE")
+  if [ "$MARKETPLACE_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $MARKETPLACE version ($MARKETPLACE_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
+# Check plugin.json
+if [ -f "$PLUGIN" ]; then
+  PLUGIN_VERSION=$(jq -r '.version' "$PLUGIN")
+  if [ "$PLUGIN_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $PLUGIN version ($PLUGIN_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
+# Check neutralino.config.json (has two version fields)
+if [ -f "$NEUTRALINO" ]; then
+  NL_VERSION=$(jq -r '.version' "$NEUTRALINO")
+  NL_APP_VERSION=$(jq -r '.globalVariables.APP_VERSION' "$NEUTRALINO")
+
+  if [ "$NL_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $NEUTRALINO .version ($NL_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+
+  if [ "$NL_APP_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $NEUTRALINO .globalVariables.APP_VERSION ($NL_APP_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
+if [ $errors -gt 0 ]; then
+  echo "" >&2
+  echo "Version mismatch detected! Run 'mise run bump' to sync all versions." >&2
+  exit 1
+fi
+
+echo "All versions in sync: $VERSION"
+"""
 
 [tasks.preview]
 description = "Preview production build"
@@ -289,4 +375,299 @@ systemctl --user restart vibora-dev
 
 echo "Done. Checking status..." >&2
 systemctl --user status vibora-dev --no-pager
+"""
+
+# Desktop app tasks (client-only, connects to local or remote Vibora server)
+[tasks."desktop:setup"]
+description = "Install Neutralinojs CLI and dependencies"
+run = """
+set -e
+
+# Check if neu CLI is installed
+if ! command -v neu &> /dev/null; then
+  echo "Installing Neutralinojs CLI..." >&2
+  npm install -g @neutralinojs/neu
+fi
+
+# Download Neutralino binaries to desktop/
+cd desktop
+if [ ! -f "bin/neutralino-linux_x64" ]; then
+  echo "Downloading Neutralino binaries..." >&2
+  neu update
+fi
+
+echo "Neutralinojs setup complete"
+"""
+
+[tasks."desktop:build"]
+description = "Build desktop client app for current platform"
+depends = ["desktop:setup", "desktop:bundle"]
+run = """
+set -e
+
+cd desktop
+
+echo "Building Neutralino app..." >&2
+neu build
+
+echo ""
+echo "Desktop app built successfully!"
+echo "Binaries are in: desktop/dist/"
+echo ""
+echo "The app will connect to a Vibora server running locally or remotely."
+"""
+
+[tasks."desktop:run"]
+description = "Run desktop app in development mode"
+depends = ["desktop:setup"]
+run = """
+cd desktop
+neu run
+"""
+
+[tasks."desktop:dev"]
+description = "Run desktop app pointing to dev server (port 5173)"
+depends = ["desktop:setup"]
+run = """
+cd desktop
+neu run -- --dev
+"""
+
+[tasks."desktop:bundle"]
+description = "Bundle server and plugin for desktop app"
+depends = ["build"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
+run = """
+set -e
+
+BUNDLE_DIR="desktop/bundle"
+rm -rf "$BUNDLE_DIR"
+mkdir -p "$BUNDLE_DIR/server" "$BUNDLE_DIR/lib" "$BUNDLE_DIR/drizzle" "$BUNDLE_DIR/dist" "$BUNDLE_DIR/plugin"
+
+# Determine architecture and target
+ARCH="${usage_arch}"
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    arm64|aarch64) ARCH="arm64" ;;
+    *) ARCH="x64" ;;
+  esac
+fi
+
+# Determine target for bun compile
+case "$(uname -s)" in
+  Darwin*) TARGET="bun-darwin-${ARCH}" ;;
+  Linux*) TARGET="bun-linux-${ARCH}" ;;
+  *) echo "Unsupported platform" >&2; exit 1 ;;
+esac
+
+# Compile server as standalone executable (includes Bun runtime)
+echo "Compiling server for ${TARGET}..." >&2
+bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/vibora-server"
+chmod +x "$BUNDLE_DIR/server/vibora-server"
+
+# Copy native PTY libraries
+echo "Copying native PTY libraries..." >&2
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/rust_pty.dll "$BUNDLE_DIR/lib/" 2>/dev/null || true
+
+# Generate and copy migrations
+echo "Generating migrations..." >&2
+bunx drizzle-kit generate
+cp -r drizzle/* "$BUNDLE_DIR/drizzle/"
+
+# Copy frontend build
+echo "Copying frontend build..." >&2
+cp -r dist/* "$BUNDLE_DIR/dist/"
+
+# Copy Claude plugin (including hidden .claude-plugin directory)
+echo "Copying Claude plugin..." >&2
+cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
+
+echo "Desktop bundle created at $BUNDLE_DIR (standalone executable, no Bun required)"
+"""
+
+[tasks."desktop:bundle:debug"]
+description = "Bundle server and plugin for desktop app with debug logging"
+depends = ["build:debug"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
+run = """
+set -e
+
+BUNDLE_DIR="desktop/bundle"
+rm -rf "$BUNDLE_DIR"
+mkdir -p "$BUNDLE_DIR/server" "$BUNDLE_DIR/lib" "$BUNDLE_DIR/drizzle" "$BUNDLE_DIR/dist" "$BUNDLE_DIR/plugin"
+
+# Determine architecture and target
+ARCH="${usage_arch}"
+if [ -z "$ARCH" ]; then
+  case "$(uname -m)" in
+    arm64|aarch64) ARCH="arm64" ;;
+    *) ARCH="x64" ;;
+  esac
+fi
+
+# Determine target for bun compile
+case "$(uname -s)" in
+  Darwin*) TARGET="bun-darwin-${ARCH}" ;;
+  Linux*) TARGET="bun-linux-${ARCH}" ;;
+  *) echo "Unsupported platform" >&2; exit 1 ;;
+esac
+
+# Compile server as standalone executable (includes Bun runtime)
+echo "Compiling server for ${TARGET} (DEBUG)..." >&2
+bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/vibora-server"
+chmod +x "$BUNDLE_DIR/server/vibora-server"
+
+# Copy native PTY libraries
+echo "Copying native PTY libraries..." >&2
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.so "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/librust_pty_arm64.dylib "$BUNDLE_DIR/lib/" 2>/dev/null || true
+cp node_modules/bun-pty/rust-pty/target/release/rust_pty.dll "$BUNDLE_DIR/lib/" 2>/dev/null || true
+
+# Generate and copy migrations
+echo "Generating migrations..." >&2
+bunx drizzle-kit generate
+cp -r drizzle/* "$BUNDLE_DIR/drizzle/"
+
+# Copy frontend build (with debug logging)
+echo "Copying frontend build (DEBUG)..." >&2
+cp -r dist/* "$BUNDLE_DIR/dist/"
+
+# Copy Claude plugin (including hidden .claude-plugin directory)
+echo "Copying Claude plugin..." >&2
+cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
+
+echo "Desktop DEBUG bundle created at $BUNDLE_DIR"
+"""
+
+[tasks."desktop:build:debug"]
+description = "Build desktop client app with debug logging"
+depends = ["desktop:setup", "desktop:bundle:debug"]
+run = """
+set -e
+
+cd desktop
+
+echo "Building Neutralino app (DEBUG)..." >&2
+neu build
+
+echo ""
+echo "Desktop DEBUG app built successfully!"
+echo "Binaries are in: desktop/dist/"
+"""
+
+[tasks."desktop:clean"]
+description = "Clean desktop build artifacts"
+run = """
+rm -rf desktop/dist
+rm -rf desktop/bin
+rm -rf desktop/bundle
+echo "Desktop build artifacts cleaned"
+"""
+
+[tasks."desktop:package-appimage"]
+description = "Package desktop app as AppImage (Linux)"
+depends = ["desktop:build"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default="x64"'
+run = """
+./desktop/scripts/package-appimage.sh "${usage_arch}"
+"""
+
+[tasks."desktop:package-dmg"]
+description = "Package desktop app as DMG (macOS)"
+depends = ["desktop:build"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
+run = """
+./desktop/scripts/package-dmg.sh "${usage_arch}"
+"""
+
+[tasks."desktop:package-dmg:debug"]
+description = "Package desktop app as DMG with debug logging (macOS)"
+depends = ["desktop:build:debug"]
+usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
+run = """
+./desktop/scripts/package-dmg.sh "${usage_arch}"
+"""
+
+[tasks."desktop:package"]
+description = "Package desktop app for current platform"
+depends = ["desktop:build"]
+run = """
+set -e
+
+case "$(uname -s)" in
+  Linux*)
+    if [ "$(uname -m)" = "aarch64" ]; then
+      ./desktop/scripts/package-appimage.sh arm64
+    else
+      ./desktop/scripts/package-appimage.sh x64
+    fi
+    ;;
+  Darwin*)
+    if [ "$(uname -m)" = "arm64" ]; then
+      ./desktop/scripts/package-dmg.sh arm64
+    else
+      ./desktop/scripts/package-dmg.sh x64
+    fi
+    ;;
+  *)
+    echo "Packaging not supported on this platform"
+    exit 1
+    ;;
+esac
+"""
+
+[tasks."desktop:manifest"]
+description = "Generate update manifest.json for testing"
+run = """
+set -e
+VERSION=$(jq -r '.version' package.json)
+REPO="knowsuchagency/vibora"
+
+mkdir -p desktop/dist
+cat > desktop/dist/manifest.json << EOF
+{
+  "applicationId": "io.vibora.desktop",
+  "version": "${VERSION}",
+  "platforms": {
+    "darwin-arm64": {
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-macos-arm64.dmg"
+    },
+    "darwin-x64": {
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-macos-x64.dmg"
+    },
+    "linux-x64": {
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-linux-x64.AppImage"
+    }
+  }
+}
+EOF
+
+echo "Generated manifest.json for version $VERSION"
+cat desktop/dist/manifest.json
+"""
+
+[tasks."desktop:release"]
+description = "Build all desktop packages for current platform"
+depends = ["check:version", "desktop:build"]
+run = """
+set -e
+case "$(uname -s)" in
+  Darwin*)
+    echo "Building macOS packages..."
+    ./desktop/scripts/package-dmg.sh arm64
+    ./desktop/scripts/package-dmg.sh x64
+    ;;
+  Linux*)
+    echo "Building Linux packages..."
+    ./desktop/scripts/package-appimage.sh x64
+    ;;
+esac
+mise run desktop:manifest
+echo "Desktop release packages ready in desktop/dist/"
 """

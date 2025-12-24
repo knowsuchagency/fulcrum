@@ -4,9 +4,11 @@ import { execSync } from 'node:child_process'
 import { db } from '../db'
 import { systemMetrics } from '../db/schema'
 import { lt } from 'drizzle-orm'
+import { log } from '../lib/logger'
 
 const COLLECT_INTERVAL = 5_000 // 5 seconds
 const RETENTION_HOURS = 24
+const isMacOS = process.platform === 'darwin'
 
 interface CpuSnapshot {
   idle: number
@@ -19,12 +21,83 @@ interface MemoryInfo {
   cache: number // Cache + Buffers
 }
 
-// Parse /proc/meminfo for accurate memory breakdown on Linux
+// Parse memory info using platform-specific methods
 // Returns memory values in bytes
 function getMemoryInfo(): MemoryInfo {
+  if (isMacOS) {
+    return getMemoryInfoMacOS()
+  }
+  return getMemoryInfoLinux()
+}
+
+// macOS: Use vm_stat and sysctl for accurate memory breakdown
+function getMemoryInfoMacOS(): MemoryInfo {
+  try {
+    // Get total memory from sysctl
+    const totalStr = execSync('sysctl -n hw.memsize', {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim()
+    const total = parseInt(totalStr, 10)
+
+    // Parse vm_stat output
+    const vmstat = execSync('vm_stat', {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+
+    // Extract page size from first line: "Mach Virtual Memory Statistics: (page size of 16384 bytes)"
+    const pageSizeMatch = vmstat.match(/page size of (\d+) bytes/)
+    const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
+
+    // Parse page counts (format: "Pages free:                               19826.")
+    const parsePages = (key: string): number => {
+      const match = vmstat.match(new RegExp(`${key}:\\s+([\\d.]+)`))
+      return match ? Math.floor(parseFloat(match[1])) : 0
+    }
+
+    const pagesActive = parsePages('Pages active')
+    const pagesInactive = parsePages('Pages inactive')
+    const pagesWired = parsePages('Pages wired down')
+    const pagesCompressorOccupied = parsePages('Pages occupied by compressor')
+    const pagesPurgeable = parsePages('Pages purgeable')
+
+    // Calculate memory usage like Activity Monitor:
+    // - Used = Wired + Active + Occupied by Compressor (actual RAM being used)
+    // - Cache = Inactive + Purgeable (can be reclaimed if needed)
+    const wiredBytes = pagesWired * pageSize
+    const activeBytes = pagesActive * pageSize
+    const compressorOccupiedBytes = pagesCompressorOccupied * pageSize
+    const inactiveBytes = pagesInactive * pageSize
+    const purgeableBytes = pagesPurgeable * pageSize
+
+    const used = wiredBytes + activeBytes + compressorOccupiedBytes
+    const cache = inactiveBytes + purgeableBytes
+
+    return {
+      total,
+      used: Math.max(used, 0),
+      cache: Math.max(cache, 0),
+    }
+  } catch (err) {
+    log.metrics.error('Failed to get macOS memory info', { error: String(err) })
+    // Fallback to basic Node.js API
+    const total = os.totalmem()
+    const free = os.freemem()
+    return {
+      total,
+      used: total - free,
+      cache: 0,
+    }
+  }
+}
+
+// Linux: Parse /proc/meminfo for accurate memory breakdown
+function getMemoryInfoLinux(): MemoryInfo {
   const total = os.totalmem()
 
-  // Try to parse /proc/meminfo for accurate Linux memory stats
   try {
     const meminfo = fs.readFileSync('/proc/meminfo', 'utf-8')
     const values: Record<string, number> = {}
@@ -65,7 +138,7 @@ function getMemoryInfo(): MemoryInfo {
     return {
       total,
       used: total - free,
-      cache: 0, // Can't determine on non-Linux
+      cache: 0,
     }
   }
 }
@@ -109,22 +182,45 @@ function calculateCpuPercent(): number {
 // Get disk usage for root filesystem
 function getDiskUsage(): { used: number; total: number } {
   try {
-    // Use df to get disk usage for root filesystem
-    const output = execSync('df -B1 / | tail -1', {
-      encoding: 'utf-8',
-      timeout: 5000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
-
-    const parts = output.trim().split(/\s+/)
-    // Format: Filesystem 1B-blocks Used Available Use% Mounted
-    if (parts.length >= 4) {
-      const total = parseInt(parts[1], 10) || 0
-      const used = parseInt(parts[2], 10) || 0
-      return { used, total }
+    if (isMacOS) {
+      // macOS APFS: Query /System/Volumes/Data for user data volume
+      // The root "/" is just a read-only system snapshot with minimal usage
+      // Format: Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted
+      const output = execSync('df -k /System/Volumes/Data 2>/dev/null || df -k /', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: '/bin/bash',
+      })
+      const lines = output.trim().split('\n')
+      if (lines.length >= 2) {
+        const parts = lines[1].split(/\s+/)
+        // parts[2] = used in KB, parts[3] = available in KB
+        // Use (used + available) as total to match Finder/Disk Utility
+        if (parts.length >= 4) {
+          const used = (parseInt(parts[2], 10) || 0) * 1024 // Convert KB to bytes
+          const available = (parseInt(parts[3], 10) || 0) * 1024
+          const total = used + available
+          return { used, total }
+        }
+      }
+    } else {
+      // Linux: Use df -B1 (bytes)
+      const output = execSync('df -B1 / | tail -1', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      const parts = output.trim().split(/\s+/)
+      // Format: Filesystem 1B-blocks Used Available Use% Mounted
+      if (parts.length >= 4) {
+        const total = parseInt(parts[1], 10) || 0
+        const used = parseInt(parts[2], 10) || 0
+        return { used, total }
+      }
     }
   } catch (err) {
-    console.error('Failed to get disk usage:', err)
+    log.metrics.error('Failed to get disk usage', { error: String(err) })
   }
 
   return { used: 0, total: 0 }
@@ -154,14 +250,14 @@ function pruneOldMetrics(): void {
   const result = db.delete(systemMetrics).where(lt(systemMetrics.timestamp, cutoff)).run()
 
   if (result.changes > 0) {
-    console.log(`[MetricsCollector] Pruned ${result.changes} old metrics records`)
+    log.metrics.debug('Pruned old metrics records', { count: result.changes })
   }
 }
 
 export function startMetricsCollector(): void {
   if (intervalId) return // Already running
 
-  console.log(`Metrics collector started (${COLLECT_INTERVAL / 1000}s interval)`)
+  log.metrics.info('Metrics collector started', { intervalSeconds: COLLECT_INTERVAL / 1000 })
 
   // Initialize CPU baseline
   previousCpu = getCpuSnapshot()
@@ -189,7 +285,7 @@ export function stopMetricsCollector(): void {
   if (intervalId) {
     clearInterval(intervalId)
     intervalId = null
-    console.log('Metrics collector stopped')
+    log.metrics.info('Metrics collector stopped')
   }
 }
 
