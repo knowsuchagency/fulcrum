@@ -35,11 +35,28 @@ The desktop app is a lightweight client that connects to a Vibora server running
 
 When the desktop app starts:
 
-1. **Try localhost first**: Checks if a Vibora server is running on `localhost:3333`
-2. **Try saved remote host**: If localhost fails, tries the previously configured remote hostname
-3. **Prompt for remote host**: If no server is found, prompts the user to enter a remote hostname and port
+1. **Start local server**: The launcher script starts the bundled Vibora server
+2. **Check for remote config**: If `remoteHost` is set in settings, prompt user to choose
+3. **Connect**: Connect to chosen server (local by default)
 
-Desktop-specific settings are saved to the standard `~/.vibora/settings.json` alongside other Vibora settings:
+### Using a Remote Server
+
+To use a remote Vibora server instead of the local one:
+
+1. Configure the remote host in your `~/.vibora/settings.json`:
+   ```json
+   {
+     "remoteHost": "my-server.tailnet.ts.net"
+   }
+   ```
+
+2. Launch the desktop app - you'll be prompted to choose local or remote
+
+Note: The local server still starts (for fallback), but you can connect to your remote instance.
+
+### Settings
+
+Desktop-specific settings are saved to `~/.vibora/settings.json`:
 
 ```json
 {
@@ -136,7 +153,14 @@ To use the desktop app with a remote Vibora server:
    - Via Tailscale: Use your machine's Tailscale hostname (e.g., `my-server.tailnet.ts.net`)
    - Via direct IP: Ensure port 3333 (or your configured port) is accessible
 
-3. **Launch the desktop app** and enter your remote hostname when prompted
+3. **Configure the remote host** in your local `~/.vibora/settings.json`:
+   ```json
+   {
+     "remoteHost": "my-server.tailnet.ts.net"
+   }
+   ```
+
+4. **Launch the desktop app** and choose "Connect to Remote" when prompted
 
 ## Development
 
@@ -145,17 +169,17 @@ To use the desktop app with a remote Vibora server:
 The desktop app (`resources/js/main.js`) implements:
 
 1. **Settings persistence**: Saves/loads connection settings from `~/.vibora/settings.json`
-2. **Auto-connect flow**: localhost → saved remote → prompt user
-3. **Health checks**: Validates server availability before connecting
+2. **Server choice**: If `remoteHost` is configured, prompts user to choose local or remote
+3. **Health checks**: Waits for chosen server to be ready before connecting
 4. **Error handling**: Shows user-friendly errors with retry options
 
 ### Lifecycle
 
-1. Neutralino starts and initializes
-2. App checks for local server on localhost:3333
-3. If not found, checks for saved remote host
-4. If no saved host, prompts user for remote hostname
-5. On successful connection, loads Vibora in an iframe
+1. Launcher script starts the bundled Vibora server
+2. Neutralino starts and initializes
+3. If `remoteHost` is configured, prompt user to choose server
+4. Wait for chosen server to be ready (with retries)
+5. Load Vibora in an iframe
 6. Settings are persisted for next launch
 
 ## Known Limitations

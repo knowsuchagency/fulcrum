@@ -15,7 +15,7 @@ export const CONFIG_KEYS = {
   PORT: 'port',
   WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only, derived from VIBORA_DIR
   DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
-  HOSTNAME: 'hostname',
+  REMOTE_HOST: 'remote_host',
   SSH_PORT: 'ssh_port',
   LINEAR_API_KEY: 'linear_api_key',
   GITHUB_PAT: 'github_pat',
@@ -65,8 +65,8 @@ export function useDefaultGitReposDir() {
   }
 }
 
-export function useHostname() {
-  const query = useConfig(CONFIG_KEYS.HOSTNAME)
+export function useRemoteHost() {
+  const query = useConfig(CONFIG_KEYS.REMOTE_HOST)
 
   return {
     ...query,

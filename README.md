@@ -68,7 +68,7 @@ Run the backend on a remote server and connect from the desktop app or browser:
    npx vibora@latest up
 
    # Configure for remote access
-   vibora config set hostname your-server.example.com
+   vibora config set remoteHost your-server.example.com
    vibora config set basicAuthUsername admin
    vibora config set basicAuthPassword your-secure-password
    ```
@@ -102,7 +102,7 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 |---------|---------|---------|
 | port | `PORT` | 3333 |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
-| hostname | `VIBORA_HOSTNAME` | (empty) |
+| remoteHost | `VIBORA_REMOTE_HOST` | (empty) |
 | sshPort | `VIBORA_SSH_PORT` | 22 |
 | basicAuthUsername | `VIBORA_BASIC_AUTH_USERNAME` | null |
 | basicAuthPassword | `VIBORA_BASIC_AUTH_PASSWORD` | null |

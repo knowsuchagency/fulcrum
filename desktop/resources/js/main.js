@@ -3,10 +3,9 @@
  *
  * This script handles:
  * 1. Initializing Neutralino
- * 2. Trying to connect to localhost first
- * 3. Falling back to remote hostname from settings
- * 4. Prompting user for remote hostname if not configured
- * 5. Graceful shutdown on window close
+ * 2. Starting/connecting to the local bundled server (default)
+ * 3. Optionally connecting to a remote server if remoteHost is configured
+ * 4. Graceful shutdown on window close
  */
 
 // Configuration
@@ -104,120 +103,32 @@ function showError(title, message) {
 }
 
 /**
- * Show the remote host prompt
+ * Prompt user to choose between local and remote server
+ * Only shown when remoteHost is configured in settings
+ * @returns {Promise<boolean>} true if user wants to connect to remote
  */
-function showRemoteHostPrompt(prefillHost = '', prefillPort = DEFAULT_PORT) {
-  const app = document.getElementById('app');
-  app.innerHTML = `
-    <img src="/icons/icon.png" alt="Vibora" class="logo" style="animation: none;">
-    <div class="prompt-container">
-      <div class="prompt-title">Connect to Remote Vibora</div>
-      <div class="prompt-description">
-        Could not connect to a local Vibora server.<br>
-        Enter the hostname of your remote Vibora instance:
-      </div>
-      <form id="remote-form" class="prompt-form">
-        <div class="input-group">
-          <label for="remote-host">Hostname</label>
-          <input
-            type="text"
-            id="remote-host"
-            placeholder="e.g., my-server.tailnet.ts.net"
-            value="${prefillHost}"
-            required
-          >
-        </div>
-        <div class="input-group">
-          <label for="remote-port">Port</label>
-          <input
-            type="number"
-            id="remote-port"
-            placeholder="${DEFAULT_PORT}"
-            value="${prefillPort}"
-            min="1"
-            max="65535"
-          >
-        </div>
-        <div class="button-group">
-          <button type="submit" class="primary-btn">Connect</button>
-          <button type="button" class="secondary-btn" onclick="retryLocal()">Retry Local</button>
-        </div>
-      </form>
-    </div>
-  `;
-
-  document.getElementById('remote-form').addEventListener('submit', handleRemoteFormSubmit);
-  document.getElementById('remote-host').focus();
-}
-
-/**
- * Handle remote form submission
- */
-async function handleRemoteFormSubmit(e) {
-  e.preventDefault();
-
-  const hostInput = document.getElementById('remote-host');
-  const portInput = document.getElementById('remote-port');
-
-  const host = hostInput.value.trim();
-  const port = parseInt(portInput.value) || DEFAULT_PORT;
-
-  if (!host) {
-    hostInput.focus();
-    return;
-  }
-
-  // Show connecting state
-  setStatus('Connecting to remote server...', `${host}:${port}`);
-  document.getElementById('app').innerHTML = `
-    <img src="/icons/icon.png" alt="Vibora" class="logo">
-    <div class="spinner"></div>
-    <div class="status">
-      <div id="status-text">Connecting to remote server...</div>
-      <div class="status-detail" id="status-detail">${host}:${port}</div>
-    </div>
-  `;
-
-  // Try to connect
-  const url = `http://${host}:${port}`;
-  const isHealthy = await checkServerHealth(url);
-
-  if (isHealthy) {
-    // Save settings and connect
-    await saveSettings({
-      ...desktopSettings,
-      remoteHost: host,
-      remotePort: port,
-      lastConnectedHost: host
-    });
-    loadViboraApp(url);
-  } else {
-    // Show prompt again with error
-    showRemoteHostPrompt(host, port);
+function promptServerChoice(remoteHost) {
+  return new Promise((resolve) => {
     const app = document.getElementById('app');
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'prompt-error';
-    errorDiv.textContent = `Could not connect to ${host}:${port}. Please check the hostname and port.`;
-    app.querySelector('.prompt-container').insertBefore(errorDiv, app.querySelector('.prompt-form'));
-  }
+    app.innerHTML = `
+      <img src="/icons/icon.png" alt="Vibora" class="logo" style="animation: none;">
+      <div class="prompt-container">
+        <div class="prompt-title">Choose Server</div>
+        <div class="prompt-description">
+          You have a remote server configured at:<br>
+          <strong>${remoteHost}</strong>
+        </div>
+        <div class="button-group" style="margin-top: 1.5rem;">
+          <button class="primary-btn" id="use-local-btn">Use Local Server</button>
+          <button class="secondary-btn" id="use-remote-btn">Connect to Remote</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('use-local-btn').onclick = () => resolve(false);
+    document.getElementById('use-remote-btn').onclick = () => resolve(true);
+  });
 }
-
-/**
- * Retry connecting to localhost
- */
-window.retryLocal = async function() {
-  // Reset UI
-  document.getElementById('app').innerHTML = `
-    <img src="/icons/icon.png" alt="Vibora" class="logo">
-    <div class="spinner"></div>
-    <div class="status">
-      <div id="status-text">Connecting to local server...</div>
-      <div class="status-detail" id="status-detail"></div>
-    </div>
-  `;
-
-  await tryConnect();
-};
 
 /**
  * Check if a server is healthy
@@ -317,56 +228,57 @@ async function loadViboraApp(url) {
 
 /**
  * Main connection logic
+ *
+ * The desktop app always starts the bundled local server (via launcher script).
+ * If remoteHost is configured, we ask the user which server they want to use.
  */
 async function tryConnect() {
-  // Load settings
   await loadSettings();
 
-  // Use dev port if in dev mode, otherwise use 'port' from settings
   const localPort = isDevMode ? DEV_PORT : (desktopSettings.port || DEFAULT_PORT);
   const localUrl = `http://localhost:${localPort}`;
 
-  // Step 1: Try localhost first
-  setStatus('Checking local server...', `localhost:${localPort}${isDevMode ? ' (dev)' : ''}`);
-  console.log('[Vibora] Trying localhost...');
+  // Check if remoteHost is configured (user has a remote server)
+  const hasRemoteConfig = desktopSettings.remoteHost && desktopSettings.remoteHost.trim();
 
-  if (await checkServerHealth(localUrl)) {
-    console.log('[Vibora] Local server found');
+  if (hasRemoteConfig) {
+    // Ask user which server to use
+    const useRemote = await promptServerChoice(desktopSettings.remoteHost);
+
+    if (useRemote) {
+      const remotePort = desktopSettings.remotePort || DEFAULT_PORT;
+      const remoteUrl = `http://${desktopSettings.remoteHost}:${remotePort}`;
+
+      setStatus('Connecting to remote server...', `${desktopSettings.remoteHost}:${remotePort}`);
+      console.log('[Vibora] Connecting to remote:', desktopSettings.remoteHost);
+
+      if (await waitForServerReady(remoteUrl)) {
+        await saveSettings({
+          ...desktopSettings,
+          lastConnectedHost: desktopSettings.remoteHost
+        });
+        loadViboraApp(remoteUrl);
+        return;
+      }
+
+      // Remote failed - fall through to local
+      console.log('[Vibora] Remote server not available, falling back to local');
+    }
+  }
+
+  // Default: wait for local server (started by launcher script)
+  setStatus('Starting Vibora...', `localhost:${localPort}${isDevMode ? ' (dev)' : ''}`);
+  console.log('[Vibora] Waiting for local server...');
+
+  if (await waitForServerReady(localUrl)) {
     await saveSettings({
       ...desktopSettings,
       lastConnectedHost: 'localhost'
     });
     loadViboraApp(localUrl);
-    return;
+  } else {
+    showError('Server Failed', 'Could not connect to local server. Check the logs.');
   }
-
-  console.log('[Vibora] Local server not available');
-
-  // Step 2: Try configured remote host
-  if (desktopSettings.remoteHost) {
-    const remoteUrl = `http://${desktopSettings.remoteHost}:${desktopSettings.remotePort || DEFAULT_PORT}`;
-    setStatus('Checking remote server...', `${desktopSettings.remoteHost}:${desktopSettings.remotePort || DEFAULT_PORT}`);
-    console.log('[Vibora] Trying remote host:', desktopSettings.remoteHost);
-
-    if (await checkServerHealth(remoteUrl)) {
-      console.log('[Vibora] Remote server found');
-      await saveSettings({
-        ...desktopSettings,
-        lastConnectedHost: desktopSettings.remoteHost
-      });
-      loadViboraApp(remoteUrl);
-      return;
-    }
-
-    console.log('[Vibora] Remote server not available');
-  }
-
-  // Step 3: Prompt user for remote hostname
-  console.log('[Vibora] Prompting for remote hostname');
-  showRemoteHostPrompt(
-    desktopSettings.remoteHost || '',
-    desktopSettings.remotePort || DEFAULT_PORT
-  );
 }
 
 /**

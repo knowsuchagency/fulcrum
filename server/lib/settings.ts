@@ -7,7 +7,7 @@ import * as crypto from 'crypto'
 export interface Settings {
   port: number
   defaultGitReposDir: string
-  hostname: string
+  remoteHost: string
   sshPort: number
   basicAuthUsername: string | null
   basicAuthPassword: string | null
@@ -20,7 +20,7 @@ export interface Settings {
 const DEFAULT_SETTINGS: Settings = {
   port: 3333,
   defaultGitReposDir: os.homedir(),
-  hostname: '',
+  remoteHost: '',
   sshPort: 22,
   basicAuthUsername: null,
   basicAuthPassword: null,
@@ -125,10 +125,11 @@ export function getSettings(): Settings {
   const hasMissingKeys = allKeys.some((key) => !(key in parsed))
 
   // Merge: settings.json → default
+  // Note: 'hostname' is legacy name, migrate to 'remoteHost'
   const fileSettings: Settings = {
     port: parsed.port ?? DEFAULT_SETTINGS.port,
     defaultGitReposDir: expandPath(parsed.defaultGitReposDir ?? DEFAULT_SETTINGS.defaultGitReposDir),
-    hostname: parsed.hostname ?? DEFAULT_SETTINGS.hostname,
+    remoteHost: parsed.remoteHost ?? (parsed as { hostname?: string }).hostname ?? DEFAULT_SETTINGS.remoteHost,
     sshPort: parsed.sshPort ?? DEFAULT_SETTINGS.sshPort,
     basicAuthUsername: parsed.basicAuthUsername ?? null,
     basicAuthPassword: parsed.basicAuthPassword ?? null,
@@ -150,7 +151,7 @@ export function getSettings(): Settings {
     defaultGitReposDir: process.env.VIBORA_GIT_REPOS_DIR
       ? expandPath(process.env.VIBORA_GIT_REPOS_DIR)
       : fileSettings.defaultGitReposDir,
-    hostname: process.env.VIBORA_HOSTNAME ?? fileSettings.hostname,
+    remoteHost: process.env.VIBORA_REMOTE_HOST ?? process.env.VIBORA_HOSTNAME ?? fileSettings.remoteHost,
     sshPort: !isNaN(sshPortEnv) && sshPortEnv > 0 ? sshPortEnv : fileSettings.sshPort,
     basicAuthUsername: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.basicAuthUsername,
     basicAuthPassword: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.basicAuthPassword,

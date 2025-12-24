@@ -43,7 +43,7 @@ import {
   VisualStudioCodeIcon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
-import { useDefaultGitReposDir, useHostname, useSshPort } from '@/hooks/use-config'
+import { useDefaultGitReposDir, useRemoteHost, useSshPort } from '@/hooks/use-config'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
 import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
@@ -64,13 +64,13 @@ function RepositoryCard({
   const { t } = useTranslation('repositories')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const { data: hostname } = useHostname()
+  const { data: remoteHost } = useRemoteHost()
   const { data: sshPort } = useSshPort()
 
   const handleOpenVSCode = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const url = buildVSCodeUrl(repository.path, hostname, sshPort)
+    const url = buildVSCodeUrl(repository.path, remoteHost, sshPort)
     window.open(url, '_blank')
   }
 
