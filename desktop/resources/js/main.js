@@ -249,23 +249,25 @@ async function waitForServerReady(baseUrl) {
 }
 
 /**
- * Set zoom level
+ * Set zoom level - reloads iframe with zoom query parameter
+ * The Vibora frontend applies this as root font-size for native scaling
  */
 function setZoom(level) {
   currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
-  const frame = document.getElementById('vibora-frame');
-  if (frame) {
-    frame.style.transform = `scale(${currentZoom})`;
-    frame.style.transformOrigin = 'top left';
-    frame.style.width = `${100 / currentZoom}%`;
-    frame.style.height = `${100 / currentZoom}%`;
-  }
+
   // Update zoom level display
   const zoomLevel = document.getElementById('zoom-level');
   if (zoomLevel) {
     zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
   }
   console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
+
+  // Reload iframe with new zoom parameter
+  const frame = document.getElementById('vibora-frame');
+  if (frame && serverUrl) {
+    const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
+    frame.src = serverUrl + zoomParam;
+  }
 }
 
 // Global zoom functions for button onclick handlers
@@ -282,9 +284,10 @@ async function loadViboraApp(url) {
 
   console.log('[Vibora] Loading app from', url);
 
-  // Use iframe to embed the app
+  // Use iframe to embed the app with zoom parameter
   const frame = document.getElementById('vibora-frame');
-  frame.src = url;
+  const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
+  frame.src = url + zoomParam;
 
   frame.onload = () => {
     document.body.classList.add('loaded');
