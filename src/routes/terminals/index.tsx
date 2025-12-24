@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { TerminalGrid } from '@/components/terminal/terminal-grid'
 import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export const Route = createFileRoute('/terminals/')({
 })
 
 function TerminalsView() {
+  const { t } = useTranslation('terminals')
   const {
     terminals,
     tabs,
@@ -284,11 +286,11 @@ function TerminalsView() {
               <SelectTrigger size="sm" className="max-sm:w-auto">
                 <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
                 <SelectValue>
-                  {repoFilter || 'All Repos'}
+                  {repoFilter || t('allRepos')}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Repos</SelectItem>
+                <SelectItem value="">{t('allRepos')}</SelectItem>
                 {repoNames.map((name) => (
                   <SelectItem key={name} value={name}>
                     {name}
@@ -308,7 +310,7 @@ function TerminalsView() {
             )}
           >
             <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
-            <span className="max-sm:hidden">Task Terminals</span>
+            <span className="max-sm:hidden">{t('taskTerminals')}</span>
           </button>
           <Button
             variant="outline"
@@ -323,7 +325,7 @@ function TerminalsView() {
               strokeWidth={2}
               data-slot="icon"
             />
-            <span className="max-sm:hidden">New Terminal</span>
+            <span className="max-sm:hidden">{t('newTerminal')}</span>
           </Button>
         </div>
       </div>

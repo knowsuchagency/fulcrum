@@ -1,4 +1,7 @@
 {
+  "title": "任务",
+  "searchPlaceholder": "搜索",
+  "allRepos": "全部仓库",
   "newTask": "新建任务",
   "createModal": {
     "title": "创建新任务",
