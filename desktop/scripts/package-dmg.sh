@@ -85,11 +85,15 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
 </plist>
 EOF
 
-# Convert PNG to ICNS if possible
+# Copy pre-generated ICNS or convert PNG
+ICON_ICNS_SRC="$DESKTOP_DIR/resources/icons/icon.icns"
 ICON_PNG="$DESKTOP_DIR/resources/icons/icon.png"
 ICON_ICNS="$APP_BUNDLE/Contents/Resources/icon.icns"
 
-if [ -f "$ICON_PNG" ]; then
+if [ -f "$ICON_ICNS_SRC" ]; then
+  echo "Using pre-generated ICNS icon..."
+  cp "$ICON_ICNS_SRC" "$ICON_ICNS"
+elif [ -f "$ICON_PNG" ]; then
   if command -v iconutil &> /dev/null && command -v sips &> /dev/null; then
     echo "Converting icon to ICNS format..."
     ICONSET="$DESKTOP_DIR/dist/icon.iconset"
