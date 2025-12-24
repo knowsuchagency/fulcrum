@@ -11,21 +11,41 @@ interface FocusedTerminalsMap {
 interface TerminalViewStateResponse {
   activeTabId: string | null
   focusedTerminals: FocusedTerminalsMap
+  // View tracking for notification suppression
+  currentView: string | null
+  currentTaskId: string | null
+  isTabVisible: boolean | null
+  viewUpdatedAt: string | null
 }
 
 interface UpdateTerminalViewStateRequest {
   activeTabId?: string | null
   focusedTerminals?: FocusedTerminalsMap
+  currentView?: string | null
+  currentTaskId?: string | null
+  isTabVisible?: boolean | null
+  viewUpdatedAt?: string | null
 }
 
 // Parse focusedTerminals JSON
 function parseViewState(row: typeof terminalViewState.$inferSelect | undefined): TerminalViewStateResponse {
   if (!row) {
-    return { activeTabId: null, focusedTerminals: {} }
+    return {
+      activeTabId: null,
+      focusedTerminals: {},
+      currentView: null,
+      currentTaskId: null,
+      isTabVisible: null,
+      viewUpdatedAt: null,
+    }
   }
   return {
     activeTabId: row.activeTabId,
     focusedTerminals: row.focusedTerminals ? JSON.parse(row.focusedTerminals) : {},
+    currentView: row.currentView,
+    currentTaskId: row.currentTaskId,
+    isTabVisible: row.isTabVisible,
+    viewUpdatedAt: row.viewUpdatedAt,
   }
 }
 
@@ -75,6 +95,20 @@ app.patch('/', async (c) => {
     updates.focusedTerminals = JSON.stringify(merged)
   }
 
+  // View tracking fields (no validation needed)
+  if (body.currentView !== undefined) {
+    updates.currentView = body.currentView
+  }
+  if (body.currentTaskId !== undefined) {
+    updates.currentTaskId = body.currentTaskId
+  }
+  if (body.isTabVisible !== undefined) {
+    updates.isTabVisible = body.isTabVisible
+  }
+  if (body.viewUpdatedAt !== undefined) {
+    updates.viewUpdatedAt = body.viewUpdatedAt
+  }
+
   if (existing) {
     db.update(terminalViewState)
       .set(updates)
@@ -86,6 +120,10 @@ app.patch('/', async (c) => {
         id: SINGLETON_ID,
         activeTabId: updates.activeTabId as string | null,
         focusedTerminals: updates.focusedTerminals as string | undefined,
+        currentView: updates.currentView as string | null,
+        currentTaskId: updates.currentTaskId as string | null,
+        isTabVisible: updates.isTabVisible as boolean | null,
+        viewUpdatedAt: updates.viewUpdatedAt as string | null,
         updatedAt: now,
       })
       .run()
