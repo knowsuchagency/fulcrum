@@ -23,7 +23,7 @@ import {
   Loading03Icon,
   Alert02Icon,
   VisualStudioCodeIcon,
-  Task01Icon,
+  PlusSignIcon,
 } from '@hugeicons/core-free-icons'
 import { useHostname, useSshPort } from '@/hooks/use-config'
 import { buildVSCodeUrl } from '@/lib/vscode-url'
@@ -141,12 +141,12 @@ function RepositoryDetailView() {
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="sm"
             onClick={() => setTaskModalOpen(true)}
             className="text-muted-foreground hover:text-foreground"
-            title="Start Task"
           >
-            <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
+            <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+            New Task
           </Button>
 
           <Button
@@ -251,6 +251,7 @@ function RepositoryDetailView() {
         open={taskModalOpen}
         onOpenChange={setTaskModalOpen}
         defaultRepository={repository}
+        showTrigger={false}
       />
     </div>
   )
