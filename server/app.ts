@@ -64,6 +64,13 @@ export function createApp() {
   app.route('/api/auth', authRoutes)
   app.route('/api/monitoring', monitoringRoutes)
 
+  // Debug endpoint for frontend to send logs to server
+  app.post('/api/debug', async (c) => {
+    const body = await c.req.json()
+    console.log('[Frontend]', body.message, body.data ? JSON.stringify(body.data) : '')
+    return c.json({ ok: true })
+  })
+
   // Serve static files in production mode or bundled CLI mode
   // Note: Check VIBORA_PACKAGE_ROOT in addition to NODE_ENV because bun build
   // inlines NODE_ENV at build time, removing this block if built without NODE_ENV=production

@@ -11,6 +11,19 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 
+// Debug logging gated behind env var
+const DEBUG_ENABLED = import.meta.env.VITE_VIBORA_DEBUG === '1'
+
+function debugLog(message: string, data?: unknown) {
+  if (!DEBUG_ENABLED) return
+  console.log(message, data)
+  fetch('/api/debug', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, data }),
+  }).catch(() => {})
+}
+
 interface TaskTerminalProps {
   taskId: string
   taskName: string
@@ -27,7 +40,8 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
-  const initialTerminalIdsRef = useRef<Set<string> | null>(null)
+  // Track which terminal we've run startup commands for (prevents re-running on effect re-runs)
+  const startupRanForRef = useRef<string | null>(null)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermOpened, setXtermOpened] = useState(false)
 
@@ -203,14 +217,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     }
   }, [doFit])
 
-  // Capture initial terminal IDs synchronously during render (not in effect!)
-  // This runs BEFORE any effects, ensuring we capture IDs before createTerminal runs.
-  // Using useEffect caused a race condition where the terminal could be created
-  // and added to the list before the capture effect ran.
-  if (terminalsLoaded && initialTerminalIdsRef.current === null) {
-    initialTerminalIdsRef.current = new Set(terminals.map(t => t.id))
-  }
-
   // Find existing terminal or create new one
   // Wait for terminalsLoaded to ensure we have accurate knowledge of existing terminals
   // Use xtermOpened (not xtermReady) to avoid WebKit rAF timing issues during navigation
@@ -250,15 +256,16 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
   // Attach xterm to terminal once we have both
   // Use refs for callbacks to avoid effect re-runs when callbacks change identity
   useEffect(() => {
+    debugLog('[TaskTerminal] attach effect', {
+      terminalId,
+      hasTermRef: !!termRef.current,
+      hasContainerRef: !!containerRef.current,
+      attachedRef: attachedRef.current,
+    })
+
     if (!terminalId || !termRef.current || !containerRef.current || attachedRef.current) return
 
-    // Determine if this is a newly created terminal by checking if it existed
-    // when we first loaded the terminals list. This is more reliable than
-    // tracking creation with refs which can get out of sync in WebKit.
-    const isNewTerminal = initialTerminalIdsRef.current !== null &&
-                          !initialTerminalIdsRef.current.has(terminalId)
-    // Clean up the hook's newTerminalIds for consistency
-    newTerminalIds.delete(terminalId)
+    debugLog('[TaskTerminal] attach effect PASSED guards, calling attachXterm', { terminalId })
 
     // Capture current values for use in callbacks
     const currentTerminalId = terminalId
@@ -273,8 +280,34 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       // Trigger a resize after attaching
       requestAnimationFrame(doFit)
 
+      // SYNCHRONOUS guard: Check and set atomically to prevent race conditions
+      // This must happen BEFORE any async operations
+      if (startupRanForRef.current === currentTerminalId) {
+        debugLog('[TaskTerminal] onAttached: startup already ran, returning', { currentTerminalId })
+        return
+      }
+
+      // Use the server's isNew flag to determine if this terminal was just created
+      const isNewTerminal = newTerminalIds.has(currentTerminalId)
+
+      // Clean up the Set entry BEFORE logging (synchronous)
+      newTerminalIds.delete(currentTerminalId)
+
+      // Mark that we've run startup for this terminal IMMEDIATELY (before async operations)
+      // This prevents duplicate execution from React Strict Mode or effect re-runs
+      if (isNewTerminal) {
+        startupRanForRef.current = currentTerminalId
+      }
+
+      debugLog('[TaskTerminal] onAttached checking isNewTerminal', {
+        currentTerminalId,
+        isNewTerminal,
+        startupRanFor: startupRanForRef.current,
+      })
+
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
       if (isNewTerminal) {
+        debugLog('[TaskTerminal] onAttached: RUNNING STARTUP COMMANDS', { currentTerminalId })
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
         if (currentStartupScript) {
           setTimeout(() => {
@@ -297,6 +330,10 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
           : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTaskId}" --dangerously-skip-permissions`
 
         setTimeout(() => {
+          debugLog('[TaskTerminal] WRITING CLAUDE COMMAND TO TERMINAL', {
+            currentTerminalId,
+            taskCommand: taskCommand.substring(0, 50) + '...',
+          })
           writeToTerminalRef.current(currentTerminalId, taskCommand + '\r')
         }, currentStartupScript ? 300 : 100)
       }
@@ -307,7 +344,10 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     const cleanupPaste = setupImagePasteRef.current(containerRef.current, terminalId)
     attachedRef.current = true
 
+    debugLog('[TaskTerminal] attachedRef set to TRUE', { terminalId })
+
     return () => {
+      debugLog('[TaskTerminal] CLEANUP running, setting attachedRef to FALSE', { terminalId })
       cleanup()
       cleanupPaste()
       attachedRef.current = false

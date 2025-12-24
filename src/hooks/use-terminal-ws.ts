@@ -2,6 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { uploadImage } from '@/lib/upload'
 
+// Send debug logs to server (visible in ~/.vibora/desktop.log)
+// Enable with VITE_VIBORA_DEBUG=1 in .env or environment
+const DEBUG_ENABLED = import.meta.env.VITE_VIBORA_DEBUG === '1'
+
+function debugLog(message: string, data?: unknown) {
+  if (!DEBUG_ENABLED) return
+  console.log(message, data)
+  fetch('/api/debug', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, data }),
+  }).catch(() => {}) // Ignore errors
+}
+
 // Types matching server/types.ts
 export type TerminalStatus = 'running' | 'exited' | 'error'
 
@@ -131,9 +145,19 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           break
 
         case 'terminal:created':
+          debugLog('[useTerminalWS] terminal:created received', {
+            id: message.payload.terminal.id,
+            isNew: message.payload.isNew,
+            cwd: message.payload.terminal.cwd,
+          })
           setTerminals((prev) => [...prev, message.payload.terminal])
           if (message.payload.isNew) {
             newTerminalIdsRef.current.add(message.payload.terminal.id)
+            debugLog('[useTerminalWS] added to newTerminalIds', {
+              id: message.payload.terminal.id,
+              newSize: newTerminalIdsRef.current.size,
+              contents: Array.from(newTerminalIdsRef.current),
+            })
           }
           break
 
@@ -146,6 +170,12 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
         }
 
         case 'terminal:attached': {
+          debugLog('[useTerminalWS] terminal:attached received', {
+            terminalId: message.payload.terminalId,
+            hasXterm: xtermMapRef.current.has(message.payload.terminalId),
+            hasCallback: onAttachedCallbacksRef.current.has(message.payload.terminalId),
+            callbackKeys: Array.from(onAttachedCallbacksRef.current.keys()),
+          })
           const xterm = xtermMapRef.current.get(message.payload.terminalId)
           if (xterm) {
             // Reset terminal to clean state before replaying buffer
@@ -158,8 +188,11 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           // Call onAttached callback if registered
           const callback = onAttachedCallbacksRef.current.get(message.payload.terminalId)
           if (callback) {
+            debugLog('[useTerminalWS] calling onAttached callback')
             onAttachedCallbacksRef.current.delete(message.payload.terminalId)
             callback()
+          } else {
+            debugLog('[useTerminalWS] NO callback found for terminal')
           }
           break
         }
@@ -489,6 +522,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
       // Register onAttached callback if provided
       if (options?.onAttached) {
+        debugLog('[useTerminalWS] registering onAttached callback for', terminalId)
         onAttachedCallbacksRef.current.set(terminalId, options.onAttached)
       }
 
@@ -499,10 +533,12 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
       })
 
       // Return cleanup function
+      // Note: Don't delete onAttached callback here - it needs to persist until
+      // the server responds with terminal:attached. The callback is deleted
+      // after being called in handleMessage.
       return () => {
         disposable.dispose()
         xtermMapRef.current.delete(terminalId)
-        onAttachedCallbacksRef.current.delete(terminalId)
         xterm.textarea?.removeEventListener('focus', handleFocus)
       }
     },

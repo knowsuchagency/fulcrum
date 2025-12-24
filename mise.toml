@@ -78,6 +78,7 @@ run = """
 export PORT="${usage_port}"
 export VITE_BACKEND_PORT="${usage_port}"
 export VIBORA_DIR="${VIBORA_DIR:-${usage_dir}}"
+export VITE_VIBORA_DEBUG="1"
 if [ -n "${usage_db}" ]; then
   export VIBORA_DATABASE_PATH="${usage_db}"
 fi
@@ -94,7 +95,7 @@ bun --watch server/index.ts
 
 [tasks.client]
 description = "Start frontend dev server"
-run = "vite --host"
+run = "VITE_VIBORA_DEBUG=\"${VITE_VIBORA_DEBUG:-}\" vite --host"
 
 [tasks.build]
 description = "Build for production"

@@ -84,12 +84,14 @@ export const terminalWebSocketHandlers: WSEvents = {
         // Terminal messages
         case 'terminal:create': {
           const { name, cols, rows, cwd, tabId, positionInTab } = message.payload
+          console.log('[WS] terminal:create request', { name, cwd })
 
           // Prevent duplicate terminals for same cwd
           if (cwd) {
             const existing = ptyManager.listTerminals().find((t) => t.cwd === cwd)
             if (existing) {
               // Return existing terminal instead of creating duplicate
+              console.log('[WS] terminal:create returning EXISTING', { id: existing.id, isNew: false })
               clientData.attachedTerminals.add(existing.id)
               sendTo(ws, {
                 type: 'terminal:created',
@@ -100,6 +102,7 @@ export const terminalWebSocketHandlers: WSEvents = {
           }
 
           const terminal = ptyManager.create({ name, cols, rows, cwd, tabId, positionInTab })
+          console.log('[WS] terminal:create created NEW', { id: terminal.id, isNew: true })
           clientData.attachedTerminals.add(terminal.id)
           broadcast({
             type: 'terminal:created',
