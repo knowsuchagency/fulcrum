@@ -22,6 +22,8 @@ import {
   useSshPort,
   useLinearApiKey,
   useGitHubPat,
+  useBasicAuthUsername,
+  useBasicAuthPassword,
   useUpdateConfig,
   useResetConfig,
   useNotificationSettings,
@@ -59,6 +61,8 @@ function SettingsPage() {
   const { data: sshPort, isLoading: sshPortLoading } = useSshPort()
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
+  const { data: basicAuthUsername, isLoading: basicAuthUsernameLoading } = useBasicAuthUsername()
+  const { data: basicAuthPassword, isLoading: basicAuthPasswordLoading } = useBasicAuthPassword()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
   const { data: developerMode } = useDeveloperMode()
@@ -76,6 +80,8 @@ function SettingsPage() {
   const [localSshPort, setLocalSshPort] = useState('')
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
   const [localGitHubPat, setLocalGitHubPat] = useState('')
+  const [localBasicAuthUsername, setLocalBasicAuthUsername] = useState('')
+  const [localBasicAuthPassword, setLocalBasicAuthPassword] = useState('')
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -108,7 +114,10 @@ function SettingsPage() {
     if (sshPort !== undefined) setLocalSshPort(String(sshPort))
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
-  }, [port, defaultGitReposDir, hostname, sshPort, linearApiKey, githubPat])
+    // For username, sync directly. For password, the server returns masked value - only update if empty (not yet loaded)
+    if (basicAuthUsername !== undefined) setLocalBasicAuthUsername(basicAuthUsername)
+    // Don't sync password from server since it's masked - user must re-enter to change
+  }, [port, defaultGitReposDir, hostname, sshPort, linearApiKey, githubPat, basicAuthUsername])
 
   // Sync notification settings
   useEffect(() => {
@@ -137,7 +146,7 @@ function SettingsPage() {
   }, [zAiSettings])
 
   const isLoading =
-    portLoading || reposDirLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading
+    portLoading || reposDirLoading || hostnameLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -159,6 +168,11 @@ function SettingsPage() {
     pushoverUserKey !== (notificationSettings.pushover?.userKey ?? '')
   )
 
+  // Auth has changes if username differs OR password is non-empty (user wants to update it)
+  const hasAuthChanges =
+    localBasicAuthUsername !== basicAuthUsername ||
+    localBasicAuthPassword !== ''
+
   const hasChanges =
     localPort !== String(port) ||
     localReposDir !== defaultGitReposDir ||
@@ -166,6 +180,7 @@ function SettingsPage() {
     localSshPort !== String(sshPort) ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
+    hasAuthChanges ||
     hasNotificationChanges ||
     hasZAiChanges
 
@@ -239,6 +254,31 @@ function SettingsPage() {
           )
         })
       )
+    }
+
+    // Save auth settings
+    if (localBasicAuthUsername !== basicAuthUsername) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.BASIC_AUTH_USERNAME, value: localBasicAuthUsername },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localBasicAuthPassword !== '') {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.BASIC_AUTH_PASSWORD, value: localBasicAuthPassword },
+            { onSettled: resolve }
+          )
+        })
+      )
+      // Clear local password after saving
+      setLocalBasicAuthPassword('')
     }
 
     // Save notification settings
@@ -328,6 +368,22 @@ function SettingsPage() {
     resetConfig.mutate(CONFIG_KEYS.GITHUB_PAT, {
       onSuccess: (data) => {
         setLocalGitHubPat(data.value !== null && data.value !== undefined ? String(data.value) : '')
+      },
+    })
+  }
+
+  const handleResetBasicAuthUsername = () => {
+    resetConfig.mutate(CONFIG_KEYS.BASIC_AUTH_USERNAME, {
+      onSuccess: (data) => {
+        setLocalBasicAuthUsername(data.value !== null && data.value !== undefined ? String(data.value) : '')
+      },
+    })
+  }
+
+  const handleResetBasicAuthPassword = () => {
+    resetConfig.mutate(CONFIG_KEYS.BASIC_AUTH_PASSWORD, {
+      onSuccess: () => {
+        setLocalBasicAuthPassword('')
       },
     })
   }
@@ -428,6 +484,72 @@ function SettingsPage() {
                   </div>
                   <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
                     {t('fields.gitReposDir.description')}
+                  </p>
+                </div>
+              </SettingsSection>
+
+              {/* Authentication */}
+              <SettingsSection title={t('sections.authentication')}>
+                <div className="space-y-4">
+                  {/* Username */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.auth.username')}
+                      </label>
+                      <div className="flex flex-1 items-center gap-2">
+                        <Input
+                          value={localBasicAuthUsername}
+                          onChange={(e) => setLocalBasicAuthUsername(e.target.value)}
+                          placeholder={t('fields.auth.usernamePlaceholder')}
+                          disabled={isLoading}
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetBasicAuthUsername}
+                          disabled={isLoading || resetConfig.isPending}
+                          title={tc('buttons.reset')}
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.auth.password')}
+                      </label>
+                      <div className="flex flex-1 items-center gap-2">
+                        <Input
+                          type="password"
+                          value={localBasicAuthPassword}
+                          onChange={(e) => setLocalBasicAuthPassword(e.target.value)}
+                          placeholder={basicAuthPassword ? t('fields.auth.passwordSet') : t('fields.auth.passwordPlaceholder')}
+                          disabled={isLoading}
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetBasicAuthPassword}
+                          disabled={isLoading || resetConfig.isPending}
+                          title={tc('buttons.reset')}
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    {t('fields.auth.description')}
                   </p>
                 </div>
               </SettingsSection>

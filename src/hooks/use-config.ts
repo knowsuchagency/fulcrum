@@ -20,6 +20,8 @@ export const CONFIG_KEYS = {
   LINEAR_API_KEY: 'linear_api_key',
   GITHUB_PAT: 'github_pat',
   LANGUAGE: 'language',
+  BASIC_AUTH_USERNAME: 'basic_auth_username',
+  BASIC_AUTH_PASSWORD: 'basic_auth_password',
 } as const
 
 // Default values (client-side fallbacks)
@@ -111,6 +113,27 @@ export function useLanguage() {
   return {
     ...query,
     data: (query.data?.value as Language) ?? null,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useBasicAuthUsername() {
+  const query = useConfig(CONFIG_KEYS.BASIC_AUTH_USERNAME)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? '',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useBasicAuthPassword() {
+  const query = useConfig(CONFIG_KEYS.BASIC_AUTH_PASSWORD)
+
+  return {
+    ...query,
+    // Password is masked on the server, so we just check if it's set
+    data: (query.data?.value as string) ?? '',
     isDefault: query.data?.isDefault ?? true,
   }
 }

@@ -26,6 +26,8 @@ export const CONFIG_KEYS = {
   LINEAR_API_KEY: 'linearApiKey',
   GITHUB_PAT: 'githubPat',
   LANGUAGE: 'language',
+  BASIC_AUTH_USERNAME: 'basicAuthUsername',
+  BASIC_AUTH_PASSWORD: 'basicAuthPassword',
 } as const
 
 const app = new Hono()
@@ -187,6 +189,11 @@ app.get('/:key', (c) => {
     value = settings.githubPat
   } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
     return c.json({ key, value: settings.language, isDefault: settings.language === null })
+  } else if (key === 'basic_auth_username' || key === CONFIG_KEYS.BASIC_AUTH_USERNAME) {
+    return c.json({ key, value: settings.basicAuthUsername, isDefault: settings.basicAuthUsername === null })
+  } else if (key === 'basic_auth_password' || key === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
+    // For security, don't return the actual password value, just whether it's set
+    return c.json({ key, value: settings.basicAuthPassword ? '••••••••' : null, isDefault: settings.basicAuthPassword === null })
   } else if (key === 'worktree_base_path') {
     // Read-only: derived from VIBORA_DIR
     return c.json({ key, value: getWorktreeBasePath(), isDefault: true })
@@ -252,6 +259,19 @@ app.put('/:key', async (c) => {
       }
       updateSettings({ language: langValue as 'en' | 'zh' | null })
       return c.json({ key, value: langValue })
+    } else if (key === 'basic_auth_username' || key === CONFIG_KEYS.BASIC_AUTH_USERNAME) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
+      updateSettings({ basicAuthUsername: body.value || null })
+      return c.json({ key, value: body.value })
+    } else if (key === 'basic_auth_password' || key === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
+      if (typeof body.value !== 'string') {
+        return c.json({ error: 'Value must be a string' }, 400)
+      }
+      updateSettings({ basicAuthPassword: body.value || null })
+      // Don't return the actual password
+      return c.json({ key, value: body.value ? '••••••••' : null })
     } else {
       return c.json({ error: `Unknown or read-only config key: ${key}` }, 400)
     }
@@ -282,6 +302,10 @@ app.delete('/:key', (c) => {
     defaultValue = defaults.githubPat
   } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
     defaultValue = defaults.language
+  } else if (key === 'basic_auth_username' || key === CONFIG_KEYS.BASIC_AUTH_USERNAME) {
+    defaultValue = defaults.basicAuthUsername
+  } else if (key === 'basic_auth_password' || key === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
+    defaultValue = defaults.basicAuthPassword
   }
 
   return c.json({ key, value: defaultValue, isDefault: true })

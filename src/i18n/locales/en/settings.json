@@ -3,6 +3,7 @@
   "sections": {
     "serverDefaults": "Server & Defaults",
     "paths": "Paths",
+    "authentication": "Authentication",
     "remoteAccess": "Remote Access",
     "integrations": "Integrations",
     "zai": "z.ai",
@@ -39,6 +40,14 @@
     "github": {
       "label": "GitHub",
       "description": "PAT for Issues & PRs"
+    },
+    "auth": {
+      "username": "Username",
+      "password": "Password",
+      "usernamePlaceholder": "Leave empty to disable",
+      "passwordPlaceholder": "Leave empty to disable",
+      "passwordSet": "Enter new password to change",
+      "description": "Set both username and password to enable basic authentication. Leave empty to disable."
     },
     "zai": {
       "enable": "Enable",
