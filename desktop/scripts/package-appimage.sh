@@ -15,11 +15,19 @@ APP_NAME="Vibora"
 
 echo "Packaging Vibora ${VERSION} AppImage for ${ARCH}..."
 
+# Check for server bundle
+BUNDLE_DIR="$DESKTOP_DIR/bundle"
+if [ ! -d "$BUNDLE_DIR/server" ]; then
+  echo "Error: Server bundle not found at $BUNDLE_DIR"
+  echo "Run 'mise run desktop:bundle' first"
+  exit 1
+fi
+
 # Create AppDir structure
 APP_DIR="$DESKTOP_DIR/dist/Vibora-${VERSION}-${ARCH}.AppDir"
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/usr/bin"
-mkdir -p "$APP_DIR/usr/share/vibora"
+mkdir -p "$APP_DIR/usr/share/vibora/bundle"
 mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 
@@ -39,21 +47,26 @@ fi
 cp "$NL_BINARY" "$APP_DIR/usr/bin/vibora-desktop"
 chmod +x "$APP_DIR/usr/bin/vibora-desktop"
 
-# Copy resources
-cp -r "$DESKTOP_DIR/dist/vibora-desktop/resources" "$APP_DIR/usr/share/vibora/"
+# Copy resources.neu (must be next to binary)
+cp "$DESKTOP_DIR/dist/vibora-desktop/resources.neu" "$APP_DIR/usr/bin/"
 
-# Create AppRun script
+# Copy server bundle
+echo "Copying server bundle..."
+cp -r "$BUNDLE_DIR" "$APP_DIR/usr/share/vibora/bundle"
+
+# Copy launcher script
+echo "Installing launcher script..."
+cp "$SCRIPT_DIR/vibora-launcher-linux.sh" "$APP_DIR/usr/bin/vibora-launcher"
+chmod +x "$APP_DIR/usr/bin/vibora-launcher"
+
+# Create AppRun script (calls launcher instead of direct binary)
 cat > "$APP_DIR/AppRun" << 'APPRUN'
 #!/bin/bash
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 export PATH="${HERE}/usr/bin:${PATH}"
-
-# Set up Neutralino paths
-export NL_PATH="${HERE}/usr/share/vibora"
-
-cd "${HERE}/usr/share/vibora"
-exec "${HERE}/usr/bin/vibora-desktop" "$@"
+cd "${HERE}/usr/bin"
+exec "${HERE}/usr/bin/vibora-launcher" "$@"
 APPRUN
 chmod +x "$APP_DIR/AppRun"
 
@@ -63,7 +76,7 @@ cat > "$APP_DIR/usr/share/applications/vibora.desktop" << EOF
 Type=Application
 Name=Vibora
 Comment=The Vibe Engineer's Cockpit
-Exec=vibora-desktop
+Exec=vibora-launcher
 Icon=vibora
 Categories=Development;IDE;
 Terminal=false
@@ -108,3 +121,5 @@ fi
 echo ""
 echo "AppImage created: $OUTPUT"
 echo "Size: $(du -h "$OUTPUT" | cut -f1)"
+echo ""
+echo "The app will start its own Vibora server and install the Claude plugin."

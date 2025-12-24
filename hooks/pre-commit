@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Pre-commit hook: verify all version files are in sync
+# Install with: mise run hooks:install
+
+set -e
+
+# Only run version check if any version files are staged
+VERSION_FILES="package.json .claude-plugin/marketplace.json plugins/vibora/.claude-plugin/plugin.json desktop/neutralino.config.json"
+
+staged_version_files=false
+for file in $VERSION_FILES; do
+  if git diff --cached --name-only | grep -q "^$file$"; then
+    staged_version_files=true
+    break
+  fi
+done
+
+if [ "$staged_version_files" = true ]; then
+  echo "Checking version sync..."
+  mise run check:version
+fi

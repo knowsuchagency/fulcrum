@@ -15,6 +15,8 @@ const DEFAULT_PORT = 3333;
 const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
 const MAX_HEALTH_RETRIES = 10;
 const DEV_PORT = 5173;
+const UPDATE_CHECK_URL = 'https://github.com/knowsuchagency/vibora/releases/latest/download/manifest.json';
+const UPDATE_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // Check daily (24 hours)
 
 // State
 let serverUrl = null;
@@ -403,6 +405,172 @@ async function shutdown() {
   Neutralino.app.exit();
 }
 
+// =============================================================================
+// Update Checking
+// =============================================================================
+
+/**
+ * Get platform identifier for update manifest
+ */
+function getPlatformId() {
+  const os = NL_OS.toLowerCase();
+  // NL_ARCH is 'x64' or 'arm64' on supported platforms
+  const arch = typeof NL_ARCH !== 'undefined' ? NL_ARCH : 'x64';
+
+  if (os === 'darwin') {
+    return `darwin-${arch}`;
+  } else if (os === 'linux') {
+    return `linux-${arch}`;
+  } else if (os === 'windows') {
+    return `windows-${arch}`;
+  }
+  return null;
+}
+
+/**
+ * Compare semantic versions
+ * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
+ */
+function compareVersions(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 > p2) return 1;
+    if (p1 < p2) return -1;
+  }
+  return 0;
+}
+
+/**
+ * Check for updates
+ * @param {boolean} showNoUpdateMessage - Show message even if no update available
+ */
+async function checkForUpdates(showNoUpdateMessage = false) {
+  try {
+    console.log('[Vibora] Checking for updates...');
+
+    // Fetch the manifest
+    const response = await fetch(UPDATE_CHECK_URL);
+    if (!response.ok) {
+      console.log('[Vibora] Failed to fetch update manifest:', response.status);
+      return null;
+    }
+
+    const manifest = await response.json();
+    const currentVersion = NL_APPVERSION;
+    const latestVersion = manifest.version;
+
+    console.log(`[Vibora] Current: ${currentVersion}, Latest: ${latestVersion}`);
+
+    if (compareVersions(latestVersion, currentVersion) > 0) {
+      // New version available
+      const platformId = getPlatformId();
+      const downloadUrl = manifest.platforms?.[platformId]?.url;
+
+      return {
+        currentVersion,
+        latestVersion,
+        downloadUrl
+      };
+    } else if (showNoUpdateMessage) {
+      await Neutralino.os.showMessageBox(
+        'Up to Date',
+        `You are running the latest version (${currentVersion}).`,
+        'INFO',
+        ['OK']
+      );
+    }
+
+    return null;
+  } catch (err) {
+    console.error('[Vibora] Update check failed:', err);
+    if (showNoUpdateMessage) {
+      await Neutralino.os.showMessageBox(
+        'Update Check Failed',
+        'Could not check for updates. Please check your internet connection.',
+        'WARNING',
+        ['OK']
+      );
+    }
+    return null;
+  }
+}
+
+/**
+ * Prompt user about available update
+ */
+async function promptForUpdate(updateInfo) {
+  const message = `A new version of Vibora is available!\n\n` +
+    `Current: ${updateInfo.currentVersion}\n` +
+    `Latest: ${updateInfo.latestVersion}\n\n` +
+    `Would you like to download the update?`;
+
+  try {
+    const result = await Neutralino.os.showMessageBox(
+      'Update Available',
+      message,
+      'QUESTION',
+      ['Download', 'Later']
+    );
+
+    if (result === 'Download' && updateInfo.downloadUrl) {
+      // Open download URL in browser
+      await Neutralino.os.open(updateInfo.downloadUrl);
+    }
+  } catch (err) {
+    console.error('[Vibora] Failed to show update dialog:', err);
+  }
+}
+
+/**
+ * Auto-check for updates on startup (once per day)
+ */
+async function autoCheckForUpdates() {
+  // Don't check in dev mode
+  if (isDevMode) {
+    console.log('[Vibora] Skipping update check in dev mode');
+    return;
+  }
+
+  try {
+    // Check if we should check (based on last check time)
+    const settingsPath = await getSettingsPath();
+    let settings = {};
+    try {
+      const content = await Neutralino.filesystem.readFile(settingsPath);
+      settings = JSON.parse(content);
+    } catch {
+      // No settings file yet
+    }
+
+    const lastCheck = settings.lastUpdateCheck || 0;
+    const now = Date.now();
+
+    if (now - lastCheck < UPDATE_CHECK_INTERVAL) {
+      console.log('[Vibora] Skipping update check (checked recently)');
+      return;
+    }
+
+    // Save check time
+    settings.lastUpdateCheck = now;
+    await saveSettings(settings);
+
+    // Check for updates
+    const updateInfo = await checkForUpdates();
+    if (updateInfo) {
+      await promptForUpdate(updateInfo);
+    }
+  } catch (err) {
+    console.error('[Vibora] Auto update check failed:', err);
+  }
+}
+
+// Expose for manual check from UI
+window.checkForUpdates = () => checkForUpdates(true);
+
 /**
  * Initialize the application
  */
@@ -450,6 +618,9 @@ async function init() {
 
     // Start connection flow
     await tryConnect();
+
+    // Check for updates after app is loaded (wait 5 seconds to not block startup)
+    setTimeout(autoCheckForUpdates, 5000);
 
   } catch (err) {
     console.error('[Vibora] Initialization error:', err);

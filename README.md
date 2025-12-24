@@ -14,9 +14,28 @@ The Vibe Engineer's Cockpit. A terminal-first tool for orchestrating AI coding a
 
 ## Quick Start
 
-Requires [Node.js](https://nodejs.org/) and [Claude Code](https://claude.ai/code).
+Requires [Bun](https://bun.sh/) and [Claude Code](https://claude.ai/code).
 
-### Install via curl (recommended)
+### Desktop App (Recommended)
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/knowsuchagency/vibora/releases/latest):
+
+- **macOS Apple Silicon**: `Vibora-X.X.X-macos-arm64.dmg`
+- **macOS Intel**: `Vibora-X.X.X-macos-x64.dmg`
+- **Linux**: `Vibora-X.X.X-linux-x64.AppImage`
+
+The desktop app bundles everything—just install and run. It will:
+- Start the Vibora server automatically
+- Install the Claude Code plugin
+- Check for updates on startup
+
+> **macOS note**: On first launch, right-click the app and select "Open" to bypass Gatekeeper.
+
+### Web Application (Alternative)
+
+Run Vibora as a web server if you prefer browser access or need remote server deployment.
+
+#### Install via curl
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.sh | bash
@@ -24,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.
 
 This installs vibora, the Claude Code plugin, and starts the server.
 
-### Install via npm
+#### Install via npm
 
 ```bash
 npx vibora@latest up
@@ -37,15 +56,39 @@ claude plugin marketplace add knowsuchagency/vibora
 claude plugin install vibora@vibora --scope user
 ```
 
-### Server Commands
+Open http://localhost:3333 in your browser.
+
+### Remote Server Setup
+
+Run the backend on a remote server and connect from the desktop app or browser:
+
+1. **On the remote server:**
+   ```bash
+   # Install and start
+   npx vibora@latest up
+
+   # Configure for remote access
+   vibora config set hostname your-server.example.com
+   vibora config set basicAuthUsername admin
+   vibora config set basicAuthPassword your-secure-password
+   ```
+
+2. **Connect from desktop app:**
+   - Launch the app
+   - Click "Connect to Remote" (if local server not found)
+   - Enter the server URL: `your-server.example.com:3333`
+   - Enter credentials when prompted
+
+3. **Or access via browser:**
+   Open `http://your-server.example.com:3333`
+
+### Server Commands (Web Application)
 
 ```bash
 vibora up       # Start server daemon
 vibora down     # Stop the server
 vibora status   # Check if running
 ```
-
-Open http://localhost:3333 in your browser.
 
 ## Configuration
 

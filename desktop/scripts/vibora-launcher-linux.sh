@@ -1,0 +1,184 @@
+#!/bin/bash
+# Vibora Desktop Launcher for Linux
+# Checks dependencies, starts server, installs plugin, launches UI
+
+set -e
+
+# Get the directory where the app is installed
+SELF=$(readlink -f "$0")
+APP_DIR="${SELF%/*}"
+BUNDLE_DIR="$APP_DIR/../share/vibora/bundle"
+VIBORA_DIR="${VIBORA_DIR:-$HOME/.vibora}"
+LOG_FILE="$VIBORA_DIR/desktop.log"
+PID_FILE="$VIBORA_DIR/desktop-server.pid"
+PORT="${PORT:-3333}"
+
+# Ensure vibora directory exists
+mkdir -p "$VIBORA_DIR"
+
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+  echo "$1" >&2
+}
+
+error_dialog() {
+  # Try zenity (GNOME), kdialog (KDE), or fall back to terminal
+  if command -v zenity &> /dev/null; then
+    zenity --error --title="Vibora" --text="$1" 2>/dev/null || echo "ERROR: $1" >&2
+  elif command -v kdialog &> /dev/null; then
+    kdialog --error "$1" --title "Vibora" 2>/dev/null || echo "ERROR: $1" >&2
+  else
+    echo "ERROR: $1" >&2
+  fi
+}
+
+# Check for Bun
+check_bun() {
+  if ! command -v bun &> /dev/null; then
+    log "Bun not found"
+    error_dialog "Bun is required but not installed.
+
+Install it with:
+  curl -fsSL https://bun.sh/install | bash
+
+Or visit: https://bun.sh"
+    exit 1
+  fi
+  log "Bun found: $(which bun)"
+}
+
+# Check for dtach
+check_dtach() {
+  if ! command -v dtach &> /dev/null; then
+    log "dtach not found"
+    error_dialog "dtach is required for terminal persistence but not installed.
+
+Install it with:
+  apt install dtach    # Debian/Ubuntu
+  dnf install dtach    # Fedora
+  pacman -S dtach      # Arch"
+    exit 1
+  fi
+  log "dtach found: $(which dtach)"
+}
+
+# Install Claude plugin if not present
+install_plugin() {
+  PLUGIN_SRC="$BUNDLE_DIR/plugin"
+  PLUGIN_DEST="$HOME/.claude/plugins/vibora"
+
+  if [ -d "$PLUGIN_SRC" ]; then
+    # Check if plugin needs update (compare versions)
+    if [ -f "$PLUGIN_DEST/.claude-plugin/plugin.json" ] && [ -f "$PLUGIN_SRC/.claude-plugin/plugin.json" ]; then
+      SRC_VERSION=$(jq -r '.version' "$PLUGIN_SRC/.claude-plugin/plugin.json" 2>/dev/null || echo "0")
+      DEST_VERSION=$(jq -r '.version' "$PLUGIN_DEST/.claude-plugin/plugin.json" 2>/dev/null || echo "0")
+      if [ "$SRC_VERSION" = "$DEST_VERSION" ]; then
+        log "Claude plugin already installed (v$DEST_VERSION)"
+        return
+      fi
+      log "Updating Claude plugin: v$DEST_VERSION -> v$SRC_VERSION"
+    else
+      log "Installing Claude plugin..."
+    fi
+
+    mkdir -p "$HOME/.claude/plugins"
+    rm -rf "$PLUGIN_DEST"
+    cp -r "$PLUGIN_SRC" "$PLUGIN_DEST"
+    log "Claude plugin installed to $PLUGIN_DEST"
+  else
+    log "Plugin source not found at $PLUGIN_SRC"
+  fi
+}
+
+# Stop any existing server
+stop_existing_server() {
+  if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+      log "Stopping existing server (PID: $OLD_PID)"
+      kill "$OLD_PID" 2>/dev/null || true
+      sleep 1
+      # Force kill if still running
+      if kill -0 "$OLD_PID" 2>/dev/null; then
+        kill -9 "$OLD_PID" 2>/dev/null || true
+      fi
+    fi
+    rm -f "$PID_FILE"
+  fi
+}
+
+# Start the server
+start_server() {
+  SERVER_JS="$BUNDLE_DIR/server/index.js"
+
+  if [ ! -f "$SERVER_JS" ]; then
+    log "Server bundle not found at $SERVER_JS"
+    error_dialog "Server bundle not found. The app may be corrupted."
+    exit 1
+  fi
+
+  # Determine PTY library
+  ARCH=$(uname -m)
+  if [ "$ARCH" = "aarch64" ]; then
+    PTY_LIB="$BUNDLE_DIR/lib/librust_pty_arm64.so"
+  else
+    PTY_LIB="$BUNDLE_DIR/lib/librust_pty.so"
+  fi
+
+  log "Starting server on port $PORT..."
+
+  # Start server in background
+  NODE_ENV=production \
+  PORT="$PORT" \
+  VIBORA_DIR="$VIBORA_DIR" \
+  VIBORA_PACKAGE_ROOT="$BUNDLE_DIR" \
+  BUN_PTY_LIB="$PTY_LIB" \
+  bun "$SERVER_JS" >> "$LOG_FILE" 2>&1 &
+
+  SERVER_PID=$!
+  echo "$SERVER_PID" > "$PID_FILE"
+  log "Server started with PID: $SERVER_PID"
+
+  # Wait for server to be ready
+  for i in {1..30}; do
+    if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
+      log "Server is ready"
+      return 0
+    fi
+    sleep 0.5
+  done
+
+  log "Server failed to start"
+  error_dialog "Failed to start Vibora server. Check $LOG_FILE for details."
+  exit 1
+}
+
+# Cleanup on exit
+cleanup() {
+  log "Shutting down..."
+  if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+      kill "$PID" 2>/dev/null || true
+    fi
+    rm -f "$PID_FILE"
+  fi
+}
+
+trap cleanup EXIT
+
+# Main
+log "=== Vibora Desktop starting ==="
+log "APP_DIR: $APP_DIR"
+log "BUNDLE_DIR: $BUNDLE_DIR"
+log "VIBORA_DIR: $VIBORA_DIR"
+
+check_bun
+check_dtach
+install_plugin
+stop_existing_server
+start_server
+
+# Launch Neutralino
+log "Launching UI..."
+exec "$APP_DIR/vibora-desktop" "$@"

@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
   "applicationId": "io.vibora.desktop",
-  "version": "1.12.2",
+  "version": "1.15.0",
   "defaultMode": "window",
   "port": 0,
   "documentRoot": "/resources/",
@@ -21,11 +21,12 @@
     "events.*",
     "extensions.*",
     "window.*",
-    "clipboard.*"
+    "clipboard.*",
+    "updater.*"
   ],
   "globalVariables": {
     "APP_NAME": "Vibora",
-    "APP_VERSION": "1.12.2"
+    "APP_VERSION": "1.15.0"
   },
   "modes": {
     "window": {
@@ -49,7 +50,9 @@
   "cli": {
     "binaryName": "vibora-desktop",
     "resourcesPath": "/resources/",
-    "clientLibrary": "/resources/js/neutralino.js"
+    "clientLibrary": "/resources/js/neutralino.js",
+    "binaryVersion": "6.4.0",
+    "clientVersion": "6.4.0"
   },
   "enableExtensions": false
 }

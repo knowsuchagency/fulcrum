@@ -8,6 +8,15 @@ run = "bun install"
 description = "Install dependencies"
 run = "bun install"
 
+[tasks."hooks:install"]
+description = "Install git pre-commit hooks"
+run = """
+set -e
+git config core.hooksPath hooks
+echo "Git hooks installed (using hooks/ directory)"
+echo "Pre-commit hook will verify version sync on commits"
+"""
+
 [tasks.bump]
 description = "Bump version (major, minor, or patch)"
 usage = 'arg "[type]" help="Version type: major, minor, or patch" default="patch"'
@@ -44,9 +53,16 @@ if [ -f "$plugin" ]; then
   echo "Updated $plugin"
 fi
 
+# Update neutralino.config.json
+neutralino_config="desktop/neutralino.config.json"
+if [ -f "$neutralino_config" ]; then
+  jq --arg v "$new_version" '.version = $v | .globalVariables.APP_VERSION = $v' "$neutralino_config" > "${neutralino_config}.tmp" && mv "${neutralino_config}.tmp" "$neutralino_config"
+  echo "Updated $neutralino_config"
+fi
+
 echo "Bumped version: $current → $new_version"
 
-git add package.json "$marketplace" "$plugin"
+git add package.json "$marketplace" "$plugin" "$neutralino_config"
 git commit -m "bump ${usage_type}"
 """
 
@@ -98,8 +114,67 @@ description = "Check TypeScript types"
 run = "bunx tsc --noEmit"
 
 [tasks.check]
-description = "Run all checks (lint + typecheck)"
-depends = ["lint", "typecheck"]
+description = "Run all checks (lint + typecheck + version)"
+depends = ["lint", "typecheck", "check:version"]
+
+[tasks."check:version"]
+description = "Verify all version files are in sync"
+run = """
+#!/usr/bin/env bash
+set -e
+
+# Source of truth
+VERSION=$(jq -r '.version' package.json)
+
+# Files to check
+MARKETPLACE=".claude-plugin/marketplace.json"
+PLUGIN="plugins/vibora/.claude-plugin/plugin.json"
+NEUTRALINO="desktop/neutralino.config.json"
+
+errors=0
+
+# Check marketplace.json
+if [ -f "$MARKETPLACE" ]; then
+  MARKETPLACE_VERSION=$(jq -r '.plugins[0].version' "$MARKETPLACE")
+  if [ "$MARKETPLACE_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $MARKETPLACE version ($MARKETPLACE_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
+# Check plugin.json
+if [ -f "$PLUGIN" ]; then
+  PLUGIN_VERSION=$(jq -r '.version' "$PLUGIN")
+  if [ "$PLUGIN_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $PLUGIN version ($PLUGIN_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
+# Check neutralino.config.json (has two version fields)
+if [ -f "$NEUTRALINO" ]; then
+  NL_VERSION=$(jq -r '.version' "$NEUTRALINO")
+  NL_APP_VERSION=$(jq -r '.globalVariables.APP_VERSION' "$NEUTRALINO")
+
+  if [ "$NL_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $NEUTRALINO .version ($NL_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+
+  if [ "$NL_APP_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $NEUTRALINO .globalVariables.APP_VERSION ($NL_APP_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
+if [ $errors -gt 0 ]; then
+  echo "" >&2
+  echo "Version mismatch detected! Run 'mise run bump' to sync all versions." >&2
+  exit 1
+fi
+
+echo "All versions in sync: $VERSION"
+"""
 
 [tasks.preview]
 description = "Preview production build"
@@ -396,7 +471,7 @@ echo "Desktop build artifacts cleaned"
 
 [tasks."desktop:package-appimage"]
 description = "Package desktop app as AppImage (Linux)"
-depends = ["desktop:build"]
+depends = ["desktop:build", "desktop:bundle"]
 usage = 'arg "[arch]" help="Architecture: x64 or arm64" default="x64"'
 run = """
 ./desktop/scripts/package-appimage.sh "${usage_arch}"
@@ -436,4 +511,54 @@ case "$(uname -s)" in
     exit 1
     ;;
 esac
+"""
+
+[tasks."desktop:manifest"]
+description = "Generate update manifest.json for testing"
+run = """
+set -e
+VERSION=$(jq -r '.version' package.json)
+REPO="knowsuchagency/vibora"
+
+mkdir -p desktop/dist
+cat > desktop/dist/manifest.json << EOF
+{
+  "applicationId": "io.vibora.desktop",
+  "version": "${VERSION}",
+  "platforms": {
+    "darwin-arm64": {
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-macos-arm64.dmg"
+    },
+    "darwin-x64": {
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-macos-x64.dmg"
+    },
+    "linux-x64": {
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-linux-x64.AppImage"
+    }
+  }
+}
+EOF
+
+echo "Generated manifest.json for version $VERSION"
+cat desktop/dist/manifest.json
+"""
+
+[tasks."desktop:release"]
+description = "Build all desktop packages for current platform"
+depends = ["check:version", "desktop:build", "desktop:bundle"]
+run = """
+set -e
+case "$(uname -s)" in
+  Darwin*)
+    echo "Building macOS packages..."
+    ./desktop/scripts/package-dmg.sh arm64
+    ./desktop/scripts/package-dmg.sh x64
+    ;;
+  Linux*)
+    echo "Building Linux packages..."
+    ./desktop/scripts/package-appimage.sh x64
+    ;;
+esac
+mise run desktop:manifest
+echo "Desktop release packages ready in desktop/dist/"
 """
