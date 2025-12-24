@@ -1,4 +1,7 @@
 {
+  "title": "Tasks",
+  "searchPlaceholder": "Search",
+  "allRepos": "All Repos",
   "newTask": "New Task",
   "createModal": {
     "title": "Create New Task",

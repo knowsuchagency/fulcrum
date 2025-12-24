@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   useRepositories,
   useCreateRepository,
@@ -60,6 +61,7 @@ function RepositoryCard({
   onDelete: () => Promise<void>
   onStartTask: () => void
 }) {
+  const { t } = useTranslation('repositories')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { data: hostname } = useHostname()
@@ -135,7 +137,7 @@ function RepositoryCard({
                 className="border-primary text-muted-foreground hover:text-foreground"
               >
                 <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-                New Task
+                {t('newTask')}
               </Button>
             </div>
           </CardContent>
@@ -148,7 +150,7 @@ function RepositoryCard({
           size="icon-sm"
           onClick={handleOpenVSCode}
           className="shrink-0 text-muted-foreground hover:text-foreground"
-          title="Open in VS Code"
+          title={t('card.openInVSCode')}
         >
           <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
         </Button>
@@ -167,14 +169,13 @@ function RepositoryCard({
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Repository</AlertDialogTitle>
+              <AlertDialogTitle>{t('delete.title')}</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove "{repository.displayName}" from Vibora. The actual repository files
-                will not be affected.
+                {t('delete.description', { name: repository.displayName })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isDeleting}>{t('addModal.cancel')}</AlertDialogCancel>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
@@ -189,7 +190,7 @@ function RepositoryCard({
                     className="animate-spin"
                   />
                 )}
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? t('delete.deleting') : t('delete.button')}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -200,6 +201,7 @@ function RepositoryCard({
 }
 
 function CreateRepositoryDialog() {
+  const { t } = useTranslation('repositories')
   const [open, setOpen] = useState(false)
   const [browserOpen, setBrowserOpen] = useState(false)
   const [path, setPath] = useState('')
@@ -248,20 +250,20 @@ function CreateRepositoryDialog() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button size="sm" />}>
           <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-          Add Repository
+          {t('addRepository')}
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>Add Repository</DialogTitle>
+              <DialogTitle>{t('addModal.title')}</DialogTitle>
               <DialogDescription>
-                Add a git repository for quick access when creating tasks.
+                {t('addModal.description')}
               </DialogDescription>
             </DialogHeader>
 
             <FieldGroup className="mt-4">
               <Field>
-                <FieldLabel>Repository Path</FieldLabel>
+                <FieldLabel>{t('addModal.fields.path')}</FieldLabel>
                 <Button
                   type="button"
                   variant="outline"
@@ -277,13 +279,13 @@ function CreateRepositoryDialog() {
                   {folderName ? (
                     <span className="truncate">{path}</span>
                   ) : (
-                    <span className="text-muted-foreground">Select repository...</span>
+                    <span className="text-muted-foreground">{t('addModal.fields.pathPlaceholder')}</span>
                   )}
                 </Button>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="displayName">Display Name</FieldLabel>
+                <FieldLabel htmlFor="displayName">{t('addModal.fields.displayName')}</FieldLabel>
                 <Input
                   id="displayName"
                   value={displayName}
@@ -293,37 +295,37 @@ function CreateRepositoryDialog() {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="startupScript">Startup Script</FieldLabel>
+                <FieldLabel htmlFor="startupScript">{t('addModal.fields.startupScript')}</FieldLabel>
                 <Textarea
                   id="startupScript"
                   value={startupScript}
                   onChange={(e) => setStartupScript(e.target.value)}
-                  placeholder="npm install && npm run dev"
+                  placeholder={t('addModal.fields.startupScriptPlaceholder')}
                   rows={2}
                 />
                 <FieldDescription>
-                  Command to run in the terminal when creating a worktree.
+                  {t('addModal.fields.startupScriptDescription')}
                 </FieldDescription>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="copyFiles">Copy Files</FieldLabel>
+                <FieldLabel htmlFor="copyFiles">{t('addModal.fields.copyFiles')}</FieldLabel>
                 <Input
                   id="copyFiles"
                   value={copyFiles}
                   onChange={(e) => setCopyFiles(e.target.value)}
-                  placeholder=".env, config.local.json"
+                  placeholder={t('addModal.fields.copyFilesPlaceholder')}
                 />
                 <FieldDescription>
-                  Comma-separated glob patterns for files to copy into new worktrees.
+                  {t('addModal.fields.copyFilesDescription')}
                 </FieldDescription>
               </Field>
             </FieldGroup>
 
             <DialogFooter className="mt-4">
-              <DialogClose render={<Button variant="outline" type="button" />}>Cancel</DialogClose>
+              <DialogClose render={<Button variant="outline" type="button" />}>{t('addModal.cancel')}</DialogClose>
               <Button type="submit" disabled={createRepository.isPending || !path.trim()}>
-                {createRepository.isPending ? 'Adding...' : 'Add Repository'}
+                {createRepository.isPending ? t('addModal.adding') : t('addRepository')}
               </Button>
             </DialogFooter>
           </form>
@@ -341,6 +343,7 @@ function CreateRepositoryDialog() {
 }
 
 function RepositoriesView() {
+  const { t } = useTranslation('repositories')
   const { data: repositories, isLoading, error } = useRepositories()
   const deleteRepository = useDeleteRepository()
   const [taskModalRepo, setTaskModalRepo] = useState<Repository | null>(null)
@@ -353,9 +356,9 @@ function RepositoriesView() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-4">
-          <h1 className="text-sm font-medium">Repositories</h1>
+          <h1 className="text-sm font-medium">{t('title')}</h1>
           {repositories && (
-            <div className="text-xs text-muted-foreground">{repositories.length} total</div>
+            <div className="text-xs text-muted-foreground">{t('total', { count: repositories.length })}</div>
           )}
         </div>
 
@@ -377,14 +380,14 @@ function RepositoriesView() {
         {error && (
           <div className="flex items-center gap-3 py-6 text-destructive">
             <HugeiconsIcon icon={Alert02Icon} size={20} strokeWidth={2} />
-            <span className="text-sm">Failed to load repositories: {error.message}</span>
+            <span className="text-sm">{t('error.failedToLoad', { message: error.message })}</span>
           </div>
         )}
 
         {!isLoading && !error && repositories?.length === 0 && (
           <div className="py-12 text-muted-foreground">
             <p className="text-sm">
-              No repositories added yet. Add a repository for quick access when creating tasks.
+              {t('empty.noRepositories')}
             </p>
           </div>
         )}
