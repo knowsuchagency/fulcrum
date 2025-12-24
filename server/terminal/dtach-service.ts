@@ -115,8 +115,9 @@ export class DtachService {
     const socketPath = this.getSocketPath(terminalId)
     const shell = process.env.SHELL || '/bin/bash'
     // -n: don't attach after creating
-    // -z: use the specified socket path
-    return ['dtach', '-n', socketPath, '-z', shell]
+    // -z: disable suspend key
+    // -l: login shell (sources .profile which sources .bashrc for starship/etc)
+    return ['dtach', '-n', socketPath, '-z', shell, '-l']
   }
 
   // Get command to attach to an existing session
