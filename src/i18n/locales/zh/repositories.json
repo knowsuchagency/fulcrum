@@ -1,0 +1,38 @@
+{
+  "title": "仓库",
+  "total": "共 {{count}} 个",
+  "newTask": "新建任务",
+  "addRepository": "添加仓库",
+  "card": {
+    "openInVSCode": "在 VS Code 中打开"
+  },
+  "delete": {
+    "title": "删除仓库",
+    "description": "这将从 Vibora 中移除 \"{{name}}\"。实际的仓库文件不会受到影响。",
+    "button": "删除",
+    "deleting": "删除中..."
+  },
+  "addModal": {
+    "title": "添加仓库",
+    "description": "添加一个 Git 仓库，以便在创建任务时快速访问。",
+    "fields": {
+      "path": "仓库路径",
+      "pathPlaceholder": "选择仓库...",
+      "displayName": "显示名称",
+      "startupScript": "启动脚本",
+      "startupScriptPlaceholder": "npm install && npm run dev",
+      "startupScriptDescription": "创建工作树时在终端中运行的命令。",
+      "copyFiles": "复制文件",
+      "copyFilesPlaceholder": ".env, config.local.json",
+      "copyFilesDescription": "用逗号分隔的 glob 模式，用于复制文件到新的工作树。"
+    },
+    "adding": "添加中...",
+    "cancel": "取消"
+  },
+  "empty": {
+    "noRepositories": "尚未添加任何仓库。添加一个仓库以便在创建任务时快速访问。"
+  },
+  "error": {
+    "failedToLoad": "加载仓库失败：{{message}}"
+  }
+}

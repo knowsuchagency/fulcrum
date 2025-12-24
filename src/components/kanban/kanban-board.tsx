@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
@@ -17,15 +18,9 @@ const COLUMNS: TaskStatus[] = [
   'CANCELED',
 ]
 
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  IN_PROGRESS: 'In Progress',
-  IN_REVIEW: 'In Review',
-  DONE: 'Done',
-  CANCELED: 'Canceled',
-}
-
 // Mobile drop zone for cross-column drag-and-drop
 function MobileDropZone({ status }: { status: TaskStatus }) {
+  const { t } = useTranslation('common')
   const ref = useRef<HTMLDivElement>(null)
   const [isOver, setIsOver] = useState(false)
 
@@ -53,7 +48,7 @@ function MobileDropZone({ status }: { status: TaskStatus }) {
           : 'border-muted-foreground/30 text-muted-foreground'
       )}
     >
-      {STATUS_LABELS[status]}
+      {t(`statuses.${status}`)}
     </div>
   )
 }
@@ -64,6 +59,7 @@ interface KanbanBoardProps {
 }
 
 function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
+  const { t } = useTranslation('common')
   const { data: allTasks = [], isLoading } = useTasks()
   const updateStatus = useUpdateTaskStatus()
   const { activeTask } = useDrag()
@@ -195,7 +191,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
           <TabsList variant="line" className="w-full justify-start px-4">
             {COLUMNS.map((status) => (
               <TabsTrigger key={status} value={status} className="gap-1.5">
-                <span className="truncate">{STATUS_LABELS[status]}</span>
+                <span className="truncate">{t(`statuses.${status}`)}</span>
                 <span className="text-muted-foreground">
                   {taskCounts[status]}
                 </span>

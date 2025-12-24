@@ -1,0 +1,38 @@
+{
+  "title": "Repositories",
+  "total": "{{count}} total",
+  "newTask": "New Task",
+  "addRepository": "Add Repository",
+  "card": {
+    "openInVSCode": "Open in VS Code"
+  },
+  "delete": {
+    "title": "Delete Repository",
+    "description": "This will remove \"{{name}}\" from Vibora. The actual repository files will not be affected.",
+    "button": "Delete",
+    "deleting": "Deleting..."
+  },
+  "addModal": {
+    "title": "Add Repository",
+    "description": "Add a git repository for quick access when creating tasks.",
+    "fields": {
+      "path": "Repository Path",
+      "pathPlaceholder": "Select repository...",
+      "displayName": "Display Name",
+      "startupScript": "Startup Script",
+      "startupScriptPlaceholder": "npm install && npm run dev",
+      "startupScriptDescription": "Command to run in the terminal when creating a worktree.",
+      "copyFiles": "Copy Files",
+      "copyFilesPlaceholder": ".env, config.local.json",
+      "copyFilesDescription": "Comma-separated glob patterns for files to copy into new worktrees."
+    },
+    "adding": "Adding...",
+    "cancel": "Cancel"
+  },
+  "empty": {
+    "noRepositories": "No repositories added yet. Add a repository for quick access when creating tasks."
+  },
+  "error": {
+    "failedToLoad": "Failed to load repositories: {{message}}"
+  }
+}

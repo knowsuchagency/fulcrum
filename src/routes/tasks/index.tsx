@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FilterIcon, Search01Icon } from '@hugeicons/core-free-icons'
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/tasks/')({
 })
 
 function KanbanView() {
+  const { t } = useTranslation('tasks')
   const { data: tasks = [] } = useTasks()
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -30,18 +32,18 @@ function KanbanView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
-        <h1 className="text-sm font-medium max-sm:hidden">Tasks</h1>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <HugeiconsIcon icon={Search01Icon} size={12} strokeWidth={2} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter tasks..."
-              className="w-40 pl-6"
-            />
-          </div>
+      <div className="flex shrink-0 items-center border-b border-border px-4 py-2">
+        <h1 className="text-sm font-medium max-sm:hidden">{t('title')}</h1>
+        <div className="relative sm:mx-auto">
+          <HugeiconsIcon icon={Search01Icon} size={12} strokeWidth={2} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('searchPlaceholder')}
+            className="w-40 pl-6"
+          />
+        </div>
+        <div className="ml-auto">
           <Select
             value={repoFilter ?? ''}
             onValueChange={(v) => setRepoFilter(v || null)}
@@ -49,11 +51,11 @@ function KanbanView() {
             <SelectTrigger size="sm" className="max-sm:w-auto gap-1.5">
               <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
               <SelectValue>
-                {repoFilter || 'All Repos'}
+                {repoFilter || t('allRepos')}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="min-w-[160px]">
-              <SelectItem value="">All Repos</SelectItem>
+              <SelectItem value="">{t('allRepos')}</SelectItem>
               {repoNames.map((name) => (
                 <SelectItem key={name} value={name}>
                   {name}
