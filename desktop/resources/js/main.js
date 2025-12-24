@@ -21,20 +21,20 @@ let isShuttingDown = false;
 let desktopSettings = null;
 
 /**
- * Get the path to desktop settings file
+ * Get the path to settings file
  */
 function getSettingsPath() {
-  // Store in user's home directory under .vibora/desktop-settings.json
+  // Use the standard Vibora settings file
   const home = NL_OS === 'Darwin'
     ? `/Users/${NL_USER}`
     : NL_OS === 'Windows'
       ? `C:\\Users\\${NL_USER}`
       : `/home/${NL_USER}`;
-  return `${home}/.vibora/desktop-settings.json`;
+  return `${home}/.vibora/settings.json`;
 }
 
 /**
- * Load desktop settings from file
+ * Load settings from file
  */
 async function loadSettings() {
   try {
@@ -46,17 +46,13 @@ async function loadSettings() {
   } catch (err) {
     // File doesn't exist or is invalid, use defaults
     console.log('[Vibora] No existing settings, using defaults');
-    desktopSettings = {
-      remoteHost: null,
-      remotePort: DEFAULT_PORT,
-      lastConnectedHost: null
-    };
+    desktopSettings = {};
     return desktopSettings;
   }
 }
 
 /**
- * Save desktop settings to file
+ * Save settings to file
  */
 async function saveSettings(settings) {
   try {
@@ -281,7 +277,8 @@ async function tryConnect() {
   // Load settings
   await loadSettings();
 
-  const localPort = desktopSettings.localPort || DEFAULT_PORT;
+  // Use 'port' from settings (same as server config)
+  const localPort = desktopSettings.port || DEFAULT_PORT;
   const localUrl = `http://localhost:${localPort}`;
 
   // Step 1: Try localhost first
@@ -333,10 +330,10 @@ async function tryConnect() {
 function handleExtensionReady(port) {
   console.log(`[Vibora] Local server extension ready on port ${port}`);
 
-  // Save local port for future reference
+  // Save port for future reference
   saveSettings({
     ...desktopSettings,
-    localPort: port,
+    port: port,
     lastConnectedHost: 'localhost'
   });
 
