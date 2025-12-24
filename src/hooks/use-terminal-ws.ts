@@ -296,8 +296,14 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
       }
-      if (wsRef.current) {
-        wsRef.current.close()
+      const ws = wsRef.current
+      if (ws) {
+        // Don't close WebSocket if it's still connecting - this causes
+        // "WebSocket is closed before the connection is established" errors in WebKit.
+        // Let it naturally complete or fail, then it will close on its own.
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close()
+        }
         wsRef.current = null
       }
     }
