@@ -1029,12 +1029,16 @@ function SettingsPage() {
                           })
                         }}
                         disabled={restartVibora.isPending || isRestarting}
-                        className="shrink-0"
+                        className="shrink-0 gap-2"
                       >
-                        <HugeiconsIcon
-                          icon={Loading03Icon}
-                          className={`mr-2 size-4 ${restartVibora.isPending || isRestarting ? 'animate-spin' : ''}`}
-                        />
+                        {(restartVibora.isPending || isRestarting) && (
+                          <HugeiconsIcon
+                            icon={Loading03Icon}
+                            size={14}
+                            strokeWidth={2}
+                            className="animate-spin"
+                          />
+                        )}
                         {isRestarting ? t('developer.restarting') : t('developer.restartButton')}
                       </Button>
                     </div>
