@@ -517,8 +517,27 @@ async function init() {
             { id: 'paste', text: 'Paste', shortcut: 'v', action: 'paste:' },
             { id: 'selectAll', text: 'Select All', shortcut: 'a', action: 'selectAll:' }
           ]
+        },
+        {
+          id: 'view',
+          text: 'View',
+          menuItems: [
+            { id: 'zoomIn', text: 'Zoom In', shortcut: '+' },
+            { id: 'zoomOut', text: 'Zoom Out', shortcut: '-' },
+            { id: 'zoomReset', text: 'Actual Size', shortcut: '0' }
+          ]
         }
       ]);
+
+      // Handle custom menu actions (zoom)
+      Neutralino.events.on('mainMenuItemClicked', (evt) => {
+        switch (evt.detail.id) {
+          case 'zoomIn': zoomIn(); break;
+          case 'zoomOut': zoomOut(); break;
+          case 'zoomReset': zoomReset(); break;
+        }
+      });
+
       console.log('[Vibora] macOS menu configured');
     }
 
