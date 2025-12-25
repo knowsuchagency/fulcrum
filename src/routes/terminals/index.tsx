@@ -149,6 +149,8 @@ function TerminalsView() {
   // Guard against duplicate creations from React Strict Mode or double-click
   const pendingTerminalCreateRef = useRef(false)
   const pendingTabCreateRef = useRef(false)
+  // Track the number of tabs when we initiated a tab creation to detect new tabs
+  const tabCountBeforeCreateRef = useRef<number | null>(null)
 
   // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
   useEffect(() => {
@@ -230,6 +232,43 @@ function TerminalsView() {
     }
   }, [terminals, allTaskWorktrees, assignTerminalToTab])
 
+  // Auto-open newly created tabs and create a terminal inside
+  useEffect(() => {
+    // Only run if we're expecting a new tab (tabCountBeforeCreateRef is set)
+    if (tabCountBeforeCreateRef.current === null) return
+
+    // Check if a new tab was added
+    if (tabs.length > tabCountBeforeCreateRef.current) {
+      // Find the newest tab (highest position)
+      const newestTab = tabs.reduce((prev, curr) =>
+        curr.position > prev.position ? curr : prev
+      )
+
+      log.terminal.debug('New tab detected, auto-opening', { tabId: newestTab.id, name: newestTab.name })
+
+      // Clear the ref to prevent re-triggering
+      tabCountBeforeCreateRef.current = null
+
+      // Switch to the new tab
+      setActiveTab(newestTab.id)
+
+      // Create a terminal inside the new tab after a short delay
+      // to ensure the tab switch is processed first
+      setTimeout(() => {
+        terminalCountRef.current++
+        const terminalName = `Terminal ${terminalCountRef.current}`
+        log.terminal.debug('Creating terminal in new tab', { tabId: newestTab.id, name: terminalName })
+        createTerminal({
+          name: terminalName,
+          cols: 80,
+          rows: 24,
+          tabId: newestTab.id,
+          positionInTab: 0,
+        })
+      }, 100)
+    }
+  }, [tabs, setActiveTab, createTerminal])
+
   const handleTerminalClose = useCallback(
     (terminalId: string) => {
       // Clean up xterm attachment
@@ -273,6 +312,9 @@ function TerminalsView() {
       return
     }
     pendingTabCreateRef.current = true
+
+    // Record current tab count to detect when new tab arrives
+    tabCountBeforeCreateRef.current = tabs.length
 
     const tabName = `Tab ${tabs.length + 1}`
     log.terminal.debug('Creating tab', { name: tabName })
