@@ -1,0 +1,1 @@
+ALTER TABLE `repositories` ADD `last_used_at` text;
