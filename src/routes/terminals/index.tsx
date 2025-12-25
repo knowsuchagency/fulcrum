@@ -411,8 +411,8 @@ function TerminalsView() {
             className={cn(
               'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
               activeTabId === ALL_TASKS_TAB_ID
-                ? 'bg-destructive text-white'
-                : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+                ? 'bg-destructive/90 text-white'
+                : 'bg-destructive/30 text-accent hover:bg-destructive/60'
             )}
           >
             <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />

@@ -31,6 +31,7 @@
     --chart-3: #dd403a;                           /* Cinnabar */
     --chart-4: oklch(0.50 0.06 195);              /* Teal variant */
     --chart-5: #2a2a27;                           /* Graphite */
+    --chart-system: #0d5c63;                      /* Stormy Teal - system metrics in light mode */
     --radius: 0.45rem;
     --sidebar: #faf9f5;                           /* Porcelain */
     --sidebar-foreground: #2a2a27;                /* Graphite */
@@ -56,23 +57,24 @@
     --secondary-foreground: #faf9f5;              /* Porcelain */
     --muted: #333330;                             /* Slightly lighter Graphite */
     --muted-foreground: #8d909b;                  /* Lavender Grey */
-    --accent: #0d5c63;                            /* Stormy Teal */
-    --accent-foreground: #faf9f5;                 /* Porcelain */
+    --accent: #faf9f5;                            /* Porcelain - better contrast */
+    --accent-foreground: #2a2a27;                 /* Graphite - dark text on porcelain */
     --destructive: #dd403a;                       /* Cinnabar */
     --border: #3d3d3a;                            /* Dark border */
     --input: #3d3d3a;                             /* Dark input */
     --ring: #faf9f5;                              /* Porcelain */
-    --chart-1: #0d5c63;                           /* Stormy Teal */
+    --chart-1: #faf9f5;                           /* Porcelain - better contrast */
     --chart-2: #8d909b;                           /* Lavender Grey */
     --chart-3: #dd403a;                           /* Cinnabar */
     --chart-4: oklch(0.55 0.08 195);              /* Teal variant */
     --chart-5: #faf9f5;                           /* Porcelain */
+    --chart-system: #dd403a;                      /* Cinnabar - system metrics in dark mode */
     --sidebar: #333330;                           /* Slightly lighter Graphite */
     --sidebar-foreground: #faf9f5;                /* Porcelain */
     --sidebar-primary: #faf9f5;                   /* Porcelain */
     --sidebar-primary-foreground: #2a2a27;        /* Graphite */
-    --sidebar-accent: #0d5c63;                    /* Stormy Teal */
-    --sidebar-accent-foreground: #faf9f5;         /* Porcelain */
+    --sidebar-accent: #faf9f5;                    /* Porcelain - better contrast */
+    --sidebar-accent-foreground: #2a2a27;         /* Graphite */
     --sidebar-border: #3d3d3a;                    /* Dark border */
     --sidebar-ring: #faf9f5;                      /* Porcelain */
 }
@@ -92,6 +94,7 @@
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+    --color-chart-system: var(--chart-system);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);

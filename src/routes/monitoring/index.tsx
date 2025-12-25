@@ -39,11 +39,11 @@ const TIME_WINDOWS: TimeWindow[] = ['1m', '10m', '1h', '3h', '6h', '12h', '24h']
 const chartConfig: ChartConfig = {
   cpu: {
     label: 'CPU',
-    color: 'var(--accent)', // Stormy Teal
+    color: 'var(--chart-system)', // Stormy Teal (light) / Cinnabar (dark)
   },
   memoryUsed: {
     label: 'Used',
-    color: 'var(--accent)', // Stormy Teal
+    color: 'var(--chart-system)', // Stormy Teal (light) / Cinnabar (dark)
   },
   memoryCache: {
     label: 'Cache / Buffers',
@@ -170,7 +170,7 @@ function ClaudeInstancesTab() {
                 <span className="font-mono text-xs">{instance.pid}</span>
                 <span className="truncate text-sm">
                   {instance.isViboraManaged ? (
-                    <span className="text-accent">{instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}</span>
+                    <span>{instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}</span>
                   ) : (
                     <span className="text-muted-foreground">{t('claude.source.external')}</span>
                   )}
@@ -574,7 +574,7 @@ function ViboraInstancesTab() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium">
                       <span className="font-mono">:{group.port}</span>
-                      <span className={`ml-2 text-xs ${group.mode === 'development' ? 'text-muted-foreground' : 'text-accent'}`}>
+                      <span className={`ml-2 text-xs ${group.mode === 'development' ? 'text-muted-foreground' : ''}`}>
                         {group.mode === 'development' ? t('vibora.mode.dev') : t('vibora.mode.prod')}
                         {group.frontend && ` + ${t('vibora.vite')}`}
                       </span>
@@ -600,7 +600,7 @@ function ViboraInstancesTab() {
                 {/* Desktop: grid layout */}
                 <div className="hidden lg:grid grid-cols-[80px_100px_1fr_100px_80px] items-center gap-4">
                   <span className="font-mono text-sm">{group.port}</span>
-                  <span className={`text-xs ${group.mode === 'development' ? 'text-muted-foreground' : 'text-accent'}`}>
+                  <span className={`text-xs ${group.mode === 'development' ? 'text-muted-foreground' : ''}`}>
                     {group.mode === 'development' ? t('vibora.mode.dev') : t('vibora.mode.prod')}
                     {group.frontend && ` + ${t('vibora.vite')}`}
                   </span>
@@ -634,9 +634,9 @@ function ViboraInstancesTab() {
 
 // Helper to get text color class based on usage percentage
 function getUsageTextColor(percent: number): string {
-  if (percent >= 90) return 'text-destructive'   // Cinnabar
+  if (percent >= 90) return 'text-destructive'      // Cinnabar
   if (percent >= 70) return 'text-muted-foreground' // Lavender Grey
-  return 'text-accent'                            // Stormy Teal
+  return 'text-chart-system'                        // Stormy Teal (light) / Cinnabar (dark)
 }
 
 // Helper to format time remaining
@@ -728,9 +728,9 @@ function ClaudeUsageLimitsTab() {
 
   // Get color based on usage level
   const getGaugeColor = (percent: number): string => {
-    if (percent >= 90) return 'var(--destructive)'   // Cinnabar
+    if (percent >= 90) return 'var(--destructive)'      // Cinnabar
     if (percent >= 70) return 'var(--muted-foreground)' // Lavender Grey
-    return 'var(--accent)'                            // Stormy Teal
+    return 'var(--chart-system)'                        // Stormy Teal (light) / Cinnabar (dark)
   }
 
   return (
