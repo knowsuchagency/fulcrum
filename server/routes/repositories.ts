@@ -1,12 +1,20 @@
 import { Hono } from 'hono'
 import { db, repositories, type NewRepository } from '../db'
-import { eq } from 'drizzle-orm'
+import { eq, desc, sql } from 'drizzle-orm'
 
 const app = new Hono()
 
-// GET /api/repositories - List all repositories
+// GET /api/repositories - List all repositories (sorted by last used, then created)
 app.get('/', (c) => {
-  const allRepos = db.select().from(repositories).all()
+  const allRepos = db
+    .select()
+    .from(repositories)
+    .orderBy(
+      // Sort by lastUsedAt DESC (nulls last), then by createdAt DESC
+      desc(sql`COALESCE(${repositories.lastUsedAt}, '1970-01-01')`),
+      desc(repositories.createdAt)
+    )
+    .all()
   return c.json(allRepos)
 })
 

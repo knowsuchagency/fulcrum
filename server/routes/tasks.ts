@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { db, tasks, type Task, type NewTask } from '../db'
+import { db, tasks, repositories, type Task, type NewTask } from '../db'
 import { eq, asc } from 'drizzle-orm'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
@@ -184,6 +184,15 @@ app.post('/', async (c) => {
     }
 
     db.insert(tasks).values(newTask).run()
+
+    // Update lastUsedAt for the repository (if it exists in our database)
+    if (body.repoPath) {
+      db.update(repositories)
+        .set({ lastUsedAt: now, updatedAt: now })
+        .where(eq(repositories.path, body.repoPath))
+        .run()
+    }
+
     const created = db.select().from(tasks).where(eq(tasks.id, newTask.id)).get()
     broadcast({ type: 'task:updated', payload: { taskId: newTask.id } })
     return c.json(created ? parseViewState(created) : null, 201)

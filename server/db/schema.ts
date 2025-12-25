@@ -66,6 +66,7 @@ export const repositories = sqliteTable('repositories', {
   startupScript: text('startup_script'), // Command to run after worktree creation
   copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
   remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
+  lastUsedAt: text('last_used_at'), // Timestamp of last task creation with this repo
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
