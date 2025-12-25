@@ -22,7 +22,7 @@
       "default": "Default"
     },
     "tabs": {
-      "saved": "Saved",
+      "saved": "Repos",
       "browse": "Browse"
     },
     "worktreePrefix": "Worktree:",

@@ -101,13 +101,18 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   // Filter repositories based on search query (case-insensitive fuzzy match)
   const filteredRepositories = useMemo(() => {
     if (!repositories) return []
+    // Don't filter when a repo is selected and the query matches its display name
+    // This ensures all repos are shown in the dropdown when the modal opens
+    if (selectedRepo && repoSearchQuery === selectedRepo.displayName) {
+      return repositories
+    }
     if (!repoSearchQuery.trim()) return repositories
     const query = repoSearchQuery.toLowerCase()
     return repositories.filter((repo) =>
       repo.displayName.toLowerCase().includes(query) ||
       repo.path.toLowerCase().includes(query)
     )
-  }, [repositories, repoSearchQuery])
+  }, [repositories, repoSearchQuery, selectedRepo])
 
   // Set default tab based on whether repositories exist
   useEffect(() => {

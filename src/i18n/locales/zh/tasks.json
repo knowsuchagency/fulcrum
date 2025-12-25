@@ -22,7 +22,7 @@
       "default": "默认"
     },
     "tabs": {
-      "saved": "已保存",
+      "saved": "仓库",
       "browse": "浏览"
     },
     "worktreePrefix": "工作树：",
