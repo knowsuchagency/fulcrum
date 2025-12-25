@@ -241,3 +241,35 @@ mise run dev 3333 ~/.vibora/custom
 # Production (uses ~/.vibora with port 3333)
 mise run start
 ```
+
+## Terminal Architecture Notes
+
+### dtach Session Lifecycle
+
+Vibora uses `dtach` for persistent terminal sessions. Understanding the lifecycle is critical:
+
+1. **Creation** (`dtach -n`): Creates socket and spawns shell, then **exits immediately**
+2. **Attachment** (`dtach -a`): Connects to existing socket, this is the long-lived process
+
+**Critical**: These are two separate processes. The creation process exits right away—don't hold references to it.
+
+### Past Bug: Blank Screen Race Condition (Dec 2024)
+
+**Symptom**: Task terminals showed blank screens in desktop app, worked fine in web.
+
+**Root Cause**: Race condition in `TerminalSession` between `start()` and `attach()`:
+
+```
+Timeline:
+  0ms   start() called - spawns dtach -n, sets this.pty
+  5ms   dtach -n creates socket
+ 10ms   dtach -n exits (its job is done)
+ 16ms   attach() called - sees this.pty is set, returns early!
+        → dtach -a never spawns → no data handlers → blank screen
+```
+
+The `start()` method was storing the short-lived `dtach -n` PTY in `this.pty`. When `attach()` checked `if (this.pty) return`, it bailed out thinking attachment already happened.
+
+**Fix** (`server/terminal/terminal-session.ts`): Use a local `creationPty` variable in `start()` instead of `this.pty`. This ensures `attach()` always proceeds to spawn `dtach -a`.
+
+**Lesson**: Never conflate the creation process with the attachment process. They have completely different lifecycles.
