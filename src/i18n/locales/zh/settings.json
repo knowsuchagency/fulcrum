@@ -87,6 +87,22 @@
         "light": "浅色",
         "dark": "深色"
       }
+    },
+    "syncClaudeTheme": {
+      "label": "同步 Claude Code",
+      "description": "当 Vibora 在浅色和深色模式之间切换时自动更新 Claude Code 的主题"
+    },
+    "claudeCodeTheme": {
+      "light": "浅色模式",
+      "dark": "深色模式",
+      "options": {
+        "light": "浅色",
+        "light-ansi": "浅色 ANSI",
+        "light-daltonized": "浅色（色盲友好）",
+        "dark": "深色",
+        "dark-ansi": "深色 ANSI",
+        "dark-daltonized": "深色（色盲友好）"
+      }
     }
   },
   "notifications": {

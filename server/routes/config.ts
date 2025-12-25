@@ -9,11 +9,14 @@ import {
   updateZAiSettings,
   getClaudeSettings,
   updateClaudeSettings,
+  syncClaudeCodeTheme,
   isDeveloperMode,
   getDefaultValue,
+  CLAUDE_CODE_THEMES,
   type NotificationSettings,
   type ZAiSettings,
   type EditorApp,
+  type ClaudeCodeTheme,
 } from '../lib/settings'
 import { spawn } from 'child_process'
 import { testNotificationChannel, sendNotification, type NotificationPayload } from '../services/notification-service'
@@ -33,6 +36,9 @@ export const CONFIG_KEYS = {
   GITHUB_PAT: 'integrations.githubPat',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
+  SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
+  CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
+  CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
 } as const
 
 // Legacy key mapping to new nested paths (for backward compatibility)
@@ -230,6 +236,23 @@ app.post('/restart', (c) => {
   return c.json({ success: true, message: 'Restart initiated (build + migrate + restart)' })
 })
 
+// POST /api/config/sync-claude-theme - Sync theme to Claude Code config
+app.post('/sync-claude-theme', async (c) => {
+  try {
+    const body = await c.req.json<{ resolvedTheme: 'light' | 'dark' }>()
+    const { resolvedTheme } = body
+
+    if (resolvedTheme !== 'light' && resolvedTheme !== 'dark') {
+      return c.json({ error: 'resolvedTheme must be "light" or "dark"' }, 400)
+    }
+
+    syncClaudeCodeTheme(resolvedTheme)
+    return c.json({ success: true, resolvedTheme })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to sync Claude theme' }, 400)
+  }
+})
+
 // GET /api/config/:key - Get config value
 app.get('/:key', (c) => {
   const key = c.req.param('key')
@@ -292,6 +315,14 @@ app.put('/:key', async (c) => {
         return c.json({ error: 'Theme must be "system", "light", "dark", or null' }, 400)
       }
       value = value === '' || value === 'system' ? null : value
+    } else if (path === CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME) {
+      if (typeof value !== 'boolean') {
+        return c.json({ error: 'syncClaudeCodeTheme must be a boolean' }, 400)
+      }
+    } else if (path === CONFIG_KEYS.CLAUDE_CODE_LIGHT_THEME || path === CONFIG_KEYS.CLAUDE_CODE_DARK_THEME) {
+      if (!CLAUDE_CODE_THEMES.includes(value as ClaudeCodeTheme)) {
+        return c.json({ error: `Claude Code theme must be one of: ${CLAUDE_CODE_THEMES.join(', ')}` }, 400)
+      }
     } else if (path === CONFIG_KEYS.EDITOR_APP) {
       const validApps: EditorApp[] = ['vscode', 'cursor', 'windsurf', 'zed']
       if (!validApps.includes(value as EditorApp)) {

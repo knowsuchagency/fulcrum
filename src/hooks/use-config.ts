@@ -26,6 +26,9 @@ export const CONFIG_KEYS = {
   GITHUB_PAT: 'integrations.githubPat',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
+  SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
+  CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
+  CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
 } as const
 
 // Default values (client-side fallbacks)
@@ -163,6 +166,39 @@ export function useTheme() {
     ...query,
     // null means system preference (default)
     data: (query.data?.value as Theme | null) ?? 'system',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useSyncClaudeCodeTheme() {
+  const query = useConfig(CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME)
+
+  return {
+    ...query,
+    data: (query.data?.value as boolean) ?? false,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export type ClaudeCodeTheme = 'light' | 'light-ansi' | 'light-daltonized' | 'dark' | 'dark-ansi' | 'dark-daltonized'
+export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'light-daltonized', 'dark', 'dark-ansi', 'dark-daltonized']
+
+export function useClaudeCodeLightTheme() {
+  const query = useConfig(CONFIG_KEYS.CLAUDE_CODE_LIGHT_THEME)
+
+  return {
+    ...query,
+    data: (query.data?.value as ClaudeCodeTheme) ?? 'light-ansi',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useClaudeCodeDarkTheme() {
+  const query = useConfig(CONFIG_KEYS.CLAUDE_CODE_DARK_THEME)
+
+  return {
+    ...query,
+    data: (query.data?.value as ClaudeCodeTheme) ?? 'dark-ansi',
     isDefault: query.data?.isDefault ?? true,
   }
 }

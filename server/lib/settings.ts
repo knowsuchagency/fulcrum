@@ -10,6 +10,10 @@ const CURRENT_SCHEMA_VERSION = 2
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed'
 
+// Claude Code theme types
+export type ClaudeCodeTheme = 'light' | 'light-ansi' | 'light-daltonized' | 'dark' | 'dark-ansi' | 'dark-daltonized'
+export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'light-daltonized', 'dark', 'dark-ansi', 'dark-daltonized']
+
 // Nested settings interface
 export interface Settings {
   _schemaVersion?: number
@@ -39,6 +43,9 @@ export interface Settings {
   appearance: {
     language: 'en' | 'zh' | null
     theme: 'system' | 'light' | 'dark' | null
+    syncClaudeCodeTheme: boolean
+    claudeCodeLightTheme: ClaudeCodeTheme
+    claudeCodeDarkTheme: ClaudeCodeTheme
   }
 }
 
@@ -71,6 +78,9 @@ const DEFAULT_SETTINGS: Settings = {
   appearance: {
     language: null,
     theme: null,
+    syncClaudeCodeTheme: false,
+    claudeCodeLightTheme: 'light-ansi',
+    claudeCodeDarkTheme: 'dark-ansi',
   },
 }
 
@@ -90,6 +100,9 @@ const MIGRATION_MAP: Record<string, string> = {
   githubPat: 'integrations.githubPat',
   language: 'appearance.language',
   theme: 'appearance.theme',
+  syncClaudeCodeTheme: 'appearance.syncClaudeCodeTheme',
+  claudeCodeLightTheme: 'appearance.claudeCodeLightTheme',
+  claudeCodeDarkTheme: 'appearance.claudeCodeDarkTheme',
 }
 
 // Helper: Get nested value from object using dot notation
@@ -310,6 +323,9 @@ export function getSettings(): Settings {
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
       theme: ((parsed.appearance as Record<string, unknown>)?.theme as 'system' | 'light' | 'dark' | null) ?? null,
+      syncClaudeCodeTheme: ((parsed.appearance as Record<string, unknown>)?.syncClaudeCodeTheme as boolean) ?? false,
+      claudeCodeLightTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeLightTheme as ClaudeCodeTheme) ?? 'light-ansi',
+      claudeCodeDarkTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeDarkTheme as ClaudeCodeTheme) ?? 'dark-ansi',
     },
   }
 
@@ -373,6 +389,9 @@ export interface LegacySettings {
   githubPat: string | null
   language: 'en' | 'zh' | null
   theme: 'system' | 'light' | 'dark' | null
+  syncClaudeCodeTheme: boolean
+  claudeCodeLightTheme: ClaudeCodeTheme
+  claudeCodeDarkTheme: ClaudeCodeTheme
 }
 
 // Convert nested settings to legacy flat format
@@ -388,6 +407,9 @@ export function toLegacySettings(settings: Settings): LegacySettings {
     githubPat: settings.integrations.githubPat,
     language: settings.appearance.language,
     theme: settings.appearance.theme,
+    syncClaudeCodeTheme: settings.appearance.syncClaudeCodeTheme,
+    claudeCodeLightTheme: settings.appearance.claudeCodeLightTheme,
+    claudeCodeDarkTheme: settings.appearance.claudeCodeDarkTheme,
   }
 }
 
@@ -595,6 +617,46 @@ export function updateClaudeSettings(updates: Record<string, unknown>): void {
   const current = getClaudeSettings()
   const merged = { ...current, ...updates }
   fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
+}
+
+// ==================== Claude Code Config ====================
+// These functions manage ~/.claude.json for Claude Code preferences (theme, etc.)
+
+// Get Claude config file path (~/.claude.json)
+function getClaudeConfigPath(): string {
+  return path.join(os.homedir(), '.claude.json')
+}
+
+// Read Claude Code config
+export function getClaudeConfig(): Record<string, unknown> {
+  const configPath = getClaudeConfigPath()
+  if (!fs.existsSync(configPath)) return {}
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  } catch {
+    return {}
+  }
+}
+
+// Update Claude Code config (merges with existing)
+export function updateClaudeConfig(updates: Record<string, unknown>): void {
+  const configPath = getClaudeConfigPath()
+  const current = getClaudeConfig()
+  const merged = { ...current, ...updates }
+  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), 'utf-8')
+}
+
+// Update Claude Code theme if sync is enabled
+// Uses user-configured themes for light/dark mode
+export function syncClaudeCodeTheme(resolvedTheme: 'light' | 'dark'): void {
+  const settings = getSettings()
+  if (!settings.appearance.syncClaudeCodeTheme) return
+
+  const claudeTheme = resolvedTheme === 'light'
+    ? settings.appearance.claudeCodeLightTheme
+    : settings.appearance.claudeCodeDarkTheme
+  updateClaudeConfig({ theme: claudeTheme })
+  log.settings.info('Synced Claude Code theme', { claudeTheme, resolvedTheme })
 }
 
 // ==================== z.ai Settings ====================

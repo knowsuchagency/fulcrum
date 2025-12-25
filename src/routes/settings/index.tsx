@@ -35,8 +35,12 @@ import {
   useUpdateZAiSettings,
   useDeveloperMode,
   useRestartVibora,
+  useClaudeCodeLightTheme,
+  useClaudeCodeDarkTheme,
   CONFIG_KEYS,
+  CLAUDE_CODE_THEMES,
   type EditorApp,
+  type ClaudeCodeTheme,
 } from '@/hooks/use-config'
 import { useLanguageSync } from '@/hooks/use-language-sync'
 import { useThemeSync } from '@/hooks/use-theme-sync'
@@ -74,7 +78,9 @@ function SettingsPage() {
   const { data: developerMode } = useDeveloperMode()
   const restartVibora = useRestartVibora()
   const { savedLanguage, changeLanguage } = useLanguageSync()
-  const { theme, changeTheme } = useThemeSync()
+  const { theme, syncClaudeCode, changeTheme } = useThemeSync()
+  const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
+  const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -111,6 +117,11 @@ function SettingsPage() {
   const [zAiHaikuModel, setZAiHaikuModel] = useState('glm-4.5-air')
   const [zAiSonnetModel, setZAiSonnetModel] = useState('glm-4.7')
   const [zAiOpusModel, setZAiOpusModel] = useState('glm-4.7')
+
+  // Claude Code theme sync local state
+  const [localSyncClaudeCode, setLocalSyncClaudeCode] = useState(false)
+  const [localClaudeCodeLightTheme, setLocalClaudeCodeLightTheme] = useState<ClaudeCodeTheme>('light-ansi')
+  const [localClaudeCodeDarkTheme, setLocalClaudeCodeDarkTheme] = useState<ClaudeCodeTheme>('dark-ansi')
 
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
@@ -156,6 +167,13 @@ function SettingsPage() {
     }
   }, [zAiSettings])
 
+  // Sync Claude Code theme settings
+  useEffect(() => {
+    if (syncClaudeCode !== undefined) setLocalSyncClaudeCode(syncClaudeCode)
+    if (claudeCodeLightTheme !== undefined) setLocalClaudeCodeLightTheme(claudeCodeLightTheme)
+    if (claudeCodeDarkTheme !== undefined) setLocalClaudeCodeDarkTheme(claudeCodeDarkTheme)
+  }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
+
   const isLoading =
     portLoading || reposDirLoading || remoteHostLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
 
@@ -166,6 +184,11 @@ function SettingsPage() {
     zAiSonnetModel !== zAiSettings.sonnetModel ||
     zAiOpusModel !== zAiSettings.opusModel
   )
+
+  const hasClaudeCodeChanges =
+    localSyncClaudeCode !== (syncClaudeCode ?? false) ||
+    localClaudeCodeLightTheme !== claudeCodeLightTheme ||
+    localClaudeCodeDarkTheme !== claudeCodeDarkTheme
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -198,7 +221,8 @@ function SettingsPage() {
     hasAuthChanges ||
     hasEditorChanges ||
     hasNotificationChanges ||
-    hasZAiChanges
+    hasZAiChanges ||
+    hasClaudeCodeChanges
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -354,6 +378,40 @@ function SettingsPage() {
           )
         })
       )
+    }
+
+    // Save Claude Code theme settings
+    if (hasClaudeCodeChanges) {
+      if (localSyncClaudeCode !== (syncClaudeCode ?? false)) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME, value: localSyncClaudeCode },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localClaudeCodeLightTheme !== claudeCodeLightTheme) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.CLAUDE_CODE_LIGHT_THEME, value: localClaudeCodeLightTheme },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localClaudeCodeDarkTheme !== claudeCodeDarkTheme) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.CLAUDE_CODE_DARK_THEME, value: localClaudeCodeDarkTheme },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
     }
 
     await Promise.all(promises)
@@ -1083,6 +1141,71 @@ function SettingsPage() {
                       {t('fields.theme.description')}
                     </p>
                   </div>
+
+                  {/* Sync Claude Code Theme */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.syncClaudeTheme.label')}
+                      </label>
+                      <Switch
+                        checked={localSyncClaudeCode}
+                        onCheckedChange={setLocalSyncClaudeCode}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.syncClaudeTheme.description')}
+                    </p>
+                  </div>
+
+                  {/* Claude Code Theme Options (shown when sync is enabled) */}
+                  {localSyncClaudeCode && (
+                    <div className="space-y-3 border-t border-border pt-4 sm:ml-32 sm:pl-2">
+                      {/* Light Theme */}
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-24 sm:shrink-0">
+                          {t('fields.claudeCodeTheme.light')}
+                        </label>
+                        <Select
+                          value={localClaudeCodeLightTheme}
+                          onValueChange={(v) => setLocalClaudeCodeLightTheme(v as ClaudeCodeTheme)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CLAUDE_CODE_THEMES.filter(thm => thm.startsWith('light')).map((thm) => (
+                              <SelectItem key={thm} value={thm}>
+                                {t(`fields.claudeCodeTheme.options.${thm}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Dark Theme */}
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-24 sm:shrink-0">
+                          {t('fields.claudeCodeTheme.dark')}
+                        </label>
+                        <Select
+                          value={localClaudeCodeDarkTheme}
+                          onValueChange={(v) => setLocalClaudeCodeDarkTheme(v as ClaudeCodeTheme)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CLAUDE_CODE_THEMES.filter(thm => thm.startsWith('dark')).map((thm) => (
+                              <SelectItem key={thm} value={thm}>
+                                {t(`fields.claudeCodeTheme.options.${thm}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </SettingsSection>
 

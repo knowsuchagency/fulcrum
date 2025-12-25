@@ -1,16 +1,20 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useTheme as useNextTheme } from 'next-themes'
-import { useTheme, useUpdateConfig, CONFIG_KEYS, type Theme } from './use-config'
+import { useTheme, useSyncClaudeCodeTheme, useUpdateConfig, CONFIG_KEYS, type Theme } from './use-config'
+import { fetchJSON } from '@/lib/api'
 
 /**
  * Hook to sync theme between next-themes and backend settings.
  * - On mount: applies saved theme preference from backend
  * - Provides changeTheme function to update both next-themes and backend
+ * - Optionally syncs theme to Claude Code config when enabled
  */
 export function useThemeSync() {
   const { setTheme, resolvedTheme, theme: currentTheme } = useNextTheme()
   const { data: savedTheme, isSuccess } = useTheme()
+  const { data: syncClaudeCode } = useSyncClaudeCodeTheme()
   const updateConfig = useUpdateConfig()
+  const prevResolvedTheme = useRef<string | undefined>(undefined)
 
   // Apply saved theme on mount (if different from current)
   useEffect(() => {
@@ -18,6 +22,20 @@ export function useThemeSync() {
       setTheme(savedTheme)
     }
   }, [isSuccess, savedTheme, currentTheme, setTheme])
+
+  // Sync to Claude Code when resolved theme changes (if enabled)
+  useEffect(() => {
+    if (resolvedTheme && resolvedTheme !== prevResolvedTheme.current && syncClaudeCode) {
+      prevResolvedTheme.current = resolvedTheme
+      // Fire and forget - no need to await
+      fetchJSON('/api/config/sync-claude-theme', {
+        method: 'POST',
+        body: JSON.stringify({ resolvedTheme }),
+      }).catch(() => {
+        // Silently ignore sync errors
+      })
+    }
+  }, [resolvedTheme, syncClaudeCode])
 
   // Function to change theme and persist to backend
   const changeTheme = useCallback(
@@ -36,6 +54,7 @@ export function useThemeSync() {
     theme: (currentTheme as Theme) ?? 'system',
     resolvedTheme: resolvedTheme as 'light' | 'dark' | undefined,
     savedTheme,
+    syncClaudeCode,
     changeTheme,
     isUpdating: updateConfig.isPending,
   }
