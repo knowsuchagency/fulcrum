@@ -80,10 +80,10 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  IN_PROGRESS: 'bg-blue-500/20 text-blue-500',
-  IN_REVIEW: 'bg-yellow-500/20 text-yellow-600',
-  DONE: 'bg-green-500/20 text-green-600',
-  CANCELED: 'bg-red-500/20 text-red-500',
+  IN_PROGRESS: 'bg-muted-foreground/20 text-muted-foreground',
+  IN_REVIEW: 'bg-primary/20 text-primary',
+  DONE: 'bg-accent/20 text-accent',
+  CANCELED: 'bg-destructive/20 text-destructive',
 }
 
 function TaskView() {

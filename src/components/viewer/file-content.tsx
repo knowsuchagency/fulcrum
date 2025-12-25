@@ -141,7 +141,7 @@ export function FileContent({
           {fileName}
         </span>
         {content.truncated && (
-          <span className="text-yellow-500">
+          <span className="text-destructive">
             Truncated ({content.lineCount.toLocaleString()} lines)
           </span>
         )}

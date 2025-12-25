@@ -99,11 +99,11 @@ function FileDiffSection({ file, wrap, isCollapsed, onToggle }: FileDiffSectionP
           </span>
           <span className="text-xs text-muted-foreground shrink-0">
             {file.additions > 0 && (
-              <span className="text-green-500">+{file.additions}</span>
+              <span className="text-accent">+{file.additions}</span>
             )}
             {file.additions > 0 && file.deletions > 0 && ' '}
             {file.deletions > 0 && (
-              <span className="text-red-500">-{file.deletions}</span>
+              <span className="text-destructive">-{file.deletions}</span>
             )}
           </span>
         </div>
@@ -115,10 +115,10 @@ function FileDiffSection({ file, wrap, isCollapsed, onToggle }: FileDiffSectionP
               key={i}
               className={cn(
                 'flex px-2 py-0.5',
-                line.type === 'added' && 'bg-green-500/10',
-                line.type === 'removed' && 'bg-red-500/10',
+                line.type === 'added' && 'bg-accent/10',
+                line.type === 'removed' && 'bg-destructive/10',
                 line.type === 'header' && 'bg-muted/50 text-muted-foreground',
-                line.type === 'hunk' && 'bg-blue-500/10 text-blue-400'
+                line.type === 'hunk' && 'bg-accent/10 text-accent'
               )}
             >
               {(line.type === 'added' ||
@@ -136,8 +136,8 @@ function FileDiffSection({ file, wrap, isCollapsed, onToggle }: FileDiffSectionP
               <span
                 className={cn(
                   'w-4 shrink-0 select-none text-center',
-                  line.type === 'added' && 'text-green-500',
-                  line.type === 'removed' && 'text-red-500'
+                  line.type === 'added' && 'text-accent',
+                  line.type === 'removed' && 'text-destructive'
                 )}
               >
                 {line.type === 'added' && '+'}
@@ -147,8 +147,8 @@ function FileDiffSection({ file, wrap, isCollapsed, onToggle }: FileDiffSectionP
                 className={cn(
                   'flex-1',
                   wrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre',
-                  line.type === 'added' && 'text-green-400',
-                  line.type === 'removed' && 'text-red-400'
+                  line.type === 'added' && 'text-accent',
+                  line.type === 'removed' && 'text-destructive'
                 )}
               >
                 {line.content}
@@ -239,10 +239,10 @@ export function DiffViewer({ taskId, worktreePath }: DiffViewerProps) {
                 <div key={f.path} className="flex gap-2">
                   <span className={cn(
                     'w-4 text-center',
-                    f.status === 'added' && 'text-green-500',
-                    f.status === 'deleted' && 'text-red-500',
-                    f.status === 'modified' && 'text-yellow-500',
-                    f.status === 'untracked' && 'text-gray-500'
+                    f.status === 'added' && 'text-accent',
+                    f.status === 'deleted' && 'text-destructive',
+                    f.status === 'modified' && 'text-muted-foreground',
+                    f.status === 'untracked' && 'text-muted-foreground'
                   )}>
                     {f.status === 'added' && 'A'}
                     {f.status === 'deleted' && 'D'}

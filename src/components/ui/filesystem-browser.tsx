@@ -207,8 +207,8 @@ export function FilesystemBrowser({
                           strokeWidth={2}
                           className={
                             entry.isGitRepo
-                              ? 'text-emerald-500'
-                              : 'text-blue-500'
+                              ? 'text-accent'
+                              : 'text-accent'
                           }
                         />
                         <button
@@ -218,7 +218,7 @@ export function FilesystemBrowser({
                           {entry.name}
                         </button>
                         {entry.isGitRepo && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/50 text-emerald-500 font-medium shrink-0">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-accent/50 text-accent font-medium shrink-0">
                             <span className="max-sm:hidden">git repo</span>
                             <span className="sm:hidden">git</span>
                           </span>

@@ -363,12 +363,12 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     <div className="flex h-full min-h-0 flex-col">
       {/* Status bar */}
       {!connected && (
-        <div className="shrink-0 px-2 py-1 bg-yellow-500/20 text-yellow-500 text-xs">
+        <div className="shrink-0 px-2 py-1 bg-muted-foreground/20 text-muted-foreground text-xs">
           Connecting to terminal server...
         </div>
       )}
       {terminalStatus === 'error' && (
-        <div className="shrink-0 px-2 py-1 bg-red-500/20 text-red-500 text-xs">
+        <div className="shrink-0 px-2 py-1 bg-destructive/20 text-destructive text-xs">
           Terminal failed to start. The worktree directory may not exist.
         </div>
       )}

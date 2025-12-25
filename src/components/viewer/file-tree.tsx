@@ -106,7 +106,7 @@ function TreeNode({
           strokeWidth={2}
           className={cn(
             'shrink-0',
-            isDirectory ? 'text-yellow-500' : 'text-muted-foreground'
+            isDirectory ? 'text-accent' : 'text-muted-foreground'
           )}
         />
         <span className="break-all">{entry.name}</span>

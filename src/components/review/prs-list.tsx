@@ -93,7 +93,7 @@ function PRCard({ pr }: { pr: GitHubPR }) {
                 variant="secondary"
                 className={cn(
                   'text-xs',
-                  'bg-amber-400/20 text-amber-600 dark:text-amber-400'
+                  'bg-muted-foreground/20 text-muted-foreground'
                 )}
               >
                 {t('prs.draft')}

@@ -1162,7 +1162,7 @@ function SettingsPage() {
           {/* Save Button */}
           <div className="flex items-center justify-end gap-2 pt-2">
             {saved && (
-              <span className="flex items-center gap-1 text-xs text-emerald-500">
+              <span className="flex items-center gap-1 text-xs text-accent">
                 <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
                 {tc('status.saved')}
               </span>

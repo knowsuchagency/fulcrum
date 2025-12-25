@@ -69,7 +69,7 @@ export function LoginModal() {
                 required
               />
             </Field>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </FieldGroup>
           <DialogFooter className="mt-4">
             <Button type="submit" disabled={isLoading || !username || !password}>
