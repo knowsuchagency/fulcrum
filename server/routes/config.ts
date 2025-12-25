@@ -158,13 +158,13 @@ app.post('/restart', (c) => {
   // Build first in the background, then restart only if successful
   // This prevents stopping the old instance if build fails
   setTimeout(() => {
-    spawn('bash', ['-c', 'cd ~/projects/vibora && mise run build && systemctl --user restart vibora-dev'], {
+    spawn('bash', ['-c', 'cd ~/projects/vibora && mise run build && bun run drizzle-kit push && systemctl --user restart vibora-dev'], {
       detached: true,
       stdio: 'ignore',
     }).unref()
   }, 100)
 
-  return c.json({ success: true, message: 'Restart initiated (building first)' })
+  return c.json({ success: true, message: 'Restart initiated (build + migrate + restart)' })
 })
 
 // GET /api/config/:key - Get config value
