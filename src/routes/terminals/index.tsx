@@ -411,8 +411,8 @@ function TerminalsView() {
             className={cn(
               'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
               activeTabId === ALL_TASKS_TAB_ID
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                ? 'bg-destructive text-white'
+                : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
             )}
           >
             <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
@@ -423,7 +423,7 @@ function TerminalsView() {
             size="sm"
             onClick={handleTerminalAdd}
             disabled={!connected || visibleTerminalCount >= 24 || activeTabId === ALL_TASKS_TAB_ID}
-            className="max-sm:px-2"
+            className="max-sm:px-2 border-accent text-accent hover:bg-accent hover:text-white"
           >
             <HugeiconsIcon
               icon={PlusSignIcon}
