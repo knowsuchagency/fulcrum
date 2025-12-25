@@ -113,9 +113,9 @@ else
   ARCH_FLAG="x86_64"
 fi
 
-"$APPIMAGETOOL" --appimage-extract-and-run -n "$APP_DIR" "$OUTPUT" || {
+ARCH="$ARCH_FLAG" "$APPIMAGETOOL" --appimage-extract-and-run -n "$APP_DIR" "$OUTPUT" || {
   # Fallback: use FUSE-less extraction
-  "$APPIMAGETOOL" -n "$APP_DIR" "$OUTPUT"
+  ARCH="$ARCH_FLAG" "$APPIMAGETOOL" -n "$APP_DIR" "$OUTPUT"
 }
 
 echo ""
