@@ -353,7 +353,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
 
   if (!cwd) {
     return (
-      <div className={cn('flex h-full items-center justify-center text-muted-foreground text-sm', isDark ? 'bg-[#2a2827]' : 'bg-[#faf9f5]', className)}>
+      <div className={cn('flex h-full items-center justify-center text-muted-foreground text-sm bg-terminal-background', className)}>
         No worktree path configured for this task
       </div>
     )
@@ -382,7 +382,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className={cn('h-full w-full overflow-hidden p-2', isDark ? 'bg-[#2a2827]' : 'bg-[#faf9f5]', className)}
+          className={cn('h-full w-full overflow-hidden p-2 bg-terminal-background', className)}
         />
         <button
           onClick={() => termRef.current?.scrollToBottom()}

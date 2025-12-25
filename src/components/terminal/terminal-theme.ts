@@ -25,25 +25,25 @@ export const lightTheme: ITheme = {
 }
 
 export const darkTheme: ITheme = {
-  background: '#2a2a27',           // Graphite
-  foreground: '#faf9f5',           // Porcelain
-  cursor: '#faf9f5',               // Porcelain
-  cursorAccent: '#2a2a27',         // Graphite
-  selectionBackground: '#3d3d3a',
-  black: '#2a2a27',                // Graphite
-  red: '#dd403a',                  // Cinnabar
-  green: '#0d5c63',                // Stormy Teal
-  yellow: '#dd403a',               // Cinnabar (warm accent)
-  blue: '#0d5c63',                 // Stormy Teal
-  magenta: '#8d909b',              // Lavender Grey
-  cyan: '#0d5c63',                 // Stormy Teal
-  white: '#faf9f5',                // Porcelain
-  brightBlack: '#8d909b',          // Lavender Grey
-  brightRed: '#dd403a',            // Cinnabar
-  brightGreen: '#0d5c63',          // Stormy Teal
-  brightYellow: '#dd403a',         // Cinnabar (warm accent)
-  brightBlue: '#0d5c63',           // Stormy Teal
-  brightMagenta: '#8d909b',        // Lavender Grey
-  brightCyan: '#0d5c63',           // Stormy Teal
-  brightWhite: '#faf9f5',          // Porcelain
+  background: '#0a0a0a',
+  foreground: '#e4e4e7',
+  cursor: '#e4e4e7',
+  cursorAccent: '#0a0a0a',
+  selectionBackground: '#3f3f46',
+  black: '#18181b',
+  red: '#ef4444',
+  green: '#22c55e',
+  yellow: '#eab308',
+  blue: '#3b82f6',
+  magenta: '#a855f7',
+  cyan: '#06b6d4',
+  white: '#e4e4e7',
+  brightBlack: '#52525b',
+  brightRed: '#f87171',
+  brightGreen: '#4ade80',
+  brightYellow: '#facc15',
+  brightBlue: '#60a5fa',
+  brightMagenta: '#c084fc',
+  brightCyan: '#22d3ee',
+  brightWhite: '#fafafa',
 }

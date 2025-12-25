@@ -41,42 +41,50 @@
     --sidebar-accent-foreground: #faf9f5;         /* Porcelain */
     --sidebar-border: hsl(214.3 31.8% 91.4%);     /* Light border */
     --sidebar-ring: #2a2a27;                      /* Graphite */
+    --terminal-background: #faf9f5;               /* Porcelain - matches background */
 }
 
 .dark {
-    /* Dark mode: Graphite background, Porcelain foreground */
-    --background: #2a2a27;                        /* Graphite */
-    --foreground: #faf9f5;                        /* Porcelain */
-    --card: #333330;                              /* Slightly lighter Graphite for cards */
-    --card-foreground: #faf9f5;                   /* Porcelain */
-    --popover: #333330;                           /* Slightly lighter Graphite */
-    --popover-foreground: #faf9f5;                /* Porcelain */
-    --primary: #faf9f5;                           /* Porcelain - primary in dark mode */
-    --primary-foreground: #2a2a27;                /* Graphite */
-    --secondary: #333330;                         /* Slightly lighter Graphite */
-    --secondary-foreground: #faf9f5;              /* Porcelain */
-    --muted: #333330;                             /* Slightly lighter Graphite */
-    --muted-foreground: #8d909b;                  /* Lavender Grey */
-    --accent: #faf9f5;                            /* Porcelain - better contrast */
-    --accent-foreground: #2a2a27;                 /* Graphite - dark text on porcelain */
-    --destructive: #dd403a;                       /* Cinnabar */
-    --border: #3d3d3a;                            /* Dark border */
-    --input: #3d3d3a;                             /* Dark input */
-    --ring: #faf9f5;                              /* Porcelain */
-    --chart-1: #faf9f5;                           /* Porcelain - better contrast */
-    --chart-2: #8d909b;                           /* Lavender Grey */
-    --chart-3: #dd403a;                           /* Cinnabar */
-    --chart-4: oklch(0.55 0.08 195);              /* Teal variant */
-    --chart-5: #faf9f5;                           /* Porcelain */
-    --chart-system: #dd403a;                      /* Cinnabar - system metrics in dark mode */
-    --sidebar: #333330;                           /* Slightly lighter Graphite */
-    --sidebar-foreground: #faf9f5;                /* Porcelain */
-    --sidebar-primary: #faf9f5;                   /* Porcelain */
-    --sidebar-primary-foreground: #2a2a27;        /* Graphite */
-    --sidebar-accent: #faf9f5;                    /* Porcelain - better contrast */
-    --sidebar-accent-foreground: #2a2a27;         /* Graphite */
-    --sidebar-border: #3d3d3a;                    /* Dark border */
-    --sidebar-ring: #faf9f5;                      /* Porcelain */
+    /* Base colors from main branch (oklch) */
+    --background: oklch(0.147 0.004 49.25);
+    --foreground: oklch(0.985 0.001 106.423);
+    --card: oklch(0.216 0.006 56.043);
+    --card-foreground: oklch(0.985 0.001 106.423);
+    --popover: oklch(0.216 0.006 56.043);
+    --popover-foreground: oklch(0.985 0.001 106.423);
+    --secondary: oklch(0.274 0.006 286.033);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.268 0.007 34.298);
+    --muted-foreground: oklch(0.709 0.01 56.259);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+
+    /* Keep current colors for contrast - NOT orange */
+    --primary: #faf9f5;
+    --primary-foreground: #2a2a27;
+    --accent: #faf9f5;
+    --accent-foreground: #2a2a27;
+    --destructive: #dd403a;
+    --ring: oklch(0.985 0.001 106.423);
+
+    /* Chart colors */
+    --chart-1: #faf9f5;
+    --chart-2: #8d909b;
+    --chart-3: #dd403a;
+    --chart-4: oklch(0.55 0.08 195);
+    --chart-5: #faf9f5;
+    --chart-system: #dd403a;
+
+    /* Sidebar */
+    --sidebar: oklch(0.216 0.006 56.043);
+    --sidebar-foreground: oklch(0.985 0.001 106.423);
+    --sidebar-primary: #faf9f5;
+    --sidebar-primary-foreground: #2a2a27;
+    --sidebar-accent: #faf9f5;
+    --sidebar-accent-foreground: #2a2a27;
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.985 0.001 106.423);
+    --terminal-background: #0a0a0a;
 }
 
 @theme inline {
@@ -113,6 +121,7 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
+    --color-terminal-background: var(--terminal-background);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);

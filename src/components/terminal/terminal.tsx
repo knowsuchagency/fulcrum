@@ -185,7 +185,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className={cn('h-full w-full max-w-full overflow-hidden p-2', isDark ? 'bg-[#2a2827]' : 'bg-[#faf9f5]', className)}
+          className={cn('h-full w-full max-w-full overflow-hidden p-2 bg-terminal-background', className)}
         />
         <button
           onClick={handleScrollToBottom}
