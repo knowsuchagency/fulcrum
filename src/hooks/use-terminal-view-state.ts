@@ -49,6 +49,10 @@ export function useTerminalViewState() {
       if (!response.ok) throw new Error('Failed to fetch terminal view state')
       return response.json()
     },
+    // Prevent refetch from racing with optimistic updates during navigation.
+    // The 500ms debounced mutation needs time to persist before a refetch could
+    // potentially return stale server data and overwrite the optimistic state.
+    staleTime: 2000,
   })
 
   // Mutation for backend persistence
