@@ -537,24 +537,14 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => {
       xtermMapRef.current.set(terminalId, xterm)
 
-      // Handle special keyboard shortcuts
+      // Handle Shift+Enter to insert a newline for Claude Code multi-line input
       xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-        // Handle Shift+Enter to insert a newline for Claude Code multi-line input
         if (event.type === 'keydown' && event.shiftKey && event.key === 'Enter') {
           event.preventDefault()
           event.stopPropagation()
           writeToTerminal(terminalId, '\n')
           return false // Prevent xterm from processing (would send regular CR)
         }
-
-        // Handle Cmd+A (Mac) / Ctrl+A (Windows/Linux) for select all
-        // xterm.js doesn't bind this by default since Ctrl+A is readline's "go to beginning"
-        if (event.type === 'keydown' && (event.metaKey || event.ctrlKey) && event.key === 'a') {
-          event.preventDefault()
-          xterm.selectAll()
-          return false
-        }
-
         return true // Allow all other keys to be processed normally
       })
 
