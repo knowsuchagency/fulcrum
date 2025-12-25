@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { useTheme as useNextTheme } from 'next-themes'
-import { useTheme, useSyncClaudeCodeTheme, useSyncStarshipTheme, useUpdateConfig, CONFIG_KEYS, type Theme } from './use-config'
+import { useTheme, useSyncClaudeCodeTheme, useUpdateConfig, CONFIG_KEYS, type Theme } from './use-config'
 import { fetchJSON } from '@/lib/api'
 
 /**
@@ -13,11 +13,9 @@ export function useThemeSync() {
   const { setTheme, resolvedTheme, theme: currentTheme } = useNextTheme()
   const { data: savedTheme, isSuccess } = useTheme()
   const { data: syncClaudeCode } = useSyncClaudeCodeTheme()
-  const { data: syncStarship } = useSyncStarshipTheme()
   const updateConfig = useUpdateConfig()
   const prevResolvedTheme = useRef<string | undefined>(undefined)
   const prevSyncClaudeCode = useRef<boolean | undefined>(undefined)
-  const prevSyncStarship = useRef<boolean | undefined>(undefined)
   const hasInitialized = useRef(false)
 
   // Apply saved theme on mount (if different from current)
@@ -27,28 +25,22 @@ export function useThemeSync() {
     }
   }, [isSuccess, savedTheme, currentTheme, setTheme])
 
-  // Sync to external tools when:
-  // 1. Resolved theme changes (if any sync is enabled)
-  // 2. A sync setting is toggled on after initial load (immediate sync with current theme)
-  // The backend endpoint handles syncing to both Claude Code and Starship
+  // Sync to Claude Code when:
+  // 1. Resolved theme changes (if sync is enabled)
+  // 2. Sync setting is toggled on after initial load (immediate sync with current theme)
   useEffect(() => {
-    const shouldSync = syncClaudeCode || syncStarship
     const themeChanged = resolvedTheme && resolvedTheme !== prevResolvedTheme.current
 
     // Only detect "just enabled" after initial render to avoid syncing on page load
-    const syncJustEnabled = hasInitialized.current && (
-      (syncClaudeCode && prevSyncClaudeCode.current === false) ||
-      (syncStarship && prevSyncStarship.current === false)
-    )
+    const syncJustEnabled = hasInitialized.current && syncClaudeCode && prevSyncClaudeCode.current === false
 
     // Update refs
     prevResolvedTheme.current = resolvedTheme
     prevSyncClaudeCode.current = syncClaudeCode
-    prevSyncStarship.current = syncStarship
     hasInitialized.current = true
 
     // Sync if theme changed while sync is enabled, or if sync was just enabled
-    if (resolvedTheme && shouldSync && (themeChanged || syncJustEnabled)) {
+    if (resolvedTheme && syncClaudeCode && (themeChanged || syncJustEnabled)) {
       // Fire and forget - no need to await
       fetchJSON('/api/config/sync-claude-theme', {
         method: 'POST',
@@ -57,7 +49,7 @@ export function useThemeSync() {
         // Silently ignore sync errors
       })
     }
-  }, [resolvedTheme, syncClaudeCode, syncStarship])
+  }, [resolvedTheme, syncClaudeCode])
 
   // Function to change theme and persist to backend
   const changeTheme = useCallback(
@@ -77,7 +69,6 @@ export function useThemeSync() {
     resolvedTheme: resolvedTheme as 'light' | 'dark' | undefined,
     savedTheme,
     syncClaudeCode,
-    syncStarship,
     changeTheme,
     isUpdating: updateConfig.isPending,
   }

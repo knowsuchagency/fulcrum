@@ -103,10 +103,6 @@
         "dark-ansi": "深色 ANSI",
         "dark-daltonized": "深色（色盲友好）"
       }
-    },
-    "syncStarshipTheme": {
-      "label": "同步 Starship",
-      "description": "当 Vibora 在浅色和深色模式之间切换时自动更新 Starship 提示符颜色"
     }
   },
   "notifications": {

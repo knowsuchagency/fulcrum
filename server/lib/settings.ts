@@ -46,7 +46,6 @@ export interface Settings {
     syncClaudeCodeTheme: boolean
     claudeCodeLightTheme: ClaudeCodeTheme
     claudeCodeDarkTheme: ClaudeCodeTheme
-    syncStarshipTheme: boolean
   }
 }
 
@@ -82,7 +81,6 @@ const DEFAULT_SETTINGS: Settings = {
     syncClaudeCodeTheme: false,
     claudeCodeLightTheme: 'light-ansi',
     claudeCodeDarkTheme: 'dark-ansi',
-    syncStarshipTheme: false,
   },
 }
 
@@ -105,7 +103,6 @@ const MIGRATION_MAP: Record<string, string> = {
   syncClaudeCodeTheme: 'appearance.syncClaudeCodeTheme',
   claudeCodeLightTheme: 'appearance.claudeCodeLightTheme',
   claudeCodeDarkTheme: 'appearance.claudeCodeDarkTheme',
-  syncStarshipTheme: 'appearance.syncStarshipTheme',
 }
 
 // Helper: Get nested value from object using dot notation
@@ -329,7 +326,6 @@ export function getSettings(): Settings {
       syncClaudeCodeTheme: ((parsed.appearance as Record<string, unknown>)?.syncClaudeCodeTheme as boolean) ?? false,
       claudeCodeLightTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeLightTheme as ClaudeCodeTheme) ?? 'light-ansi',
       claudeCodeDarkTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeDarkTheme as ClaudeCodeTheme) ?? 'dark-ansi',
-      syncStarshipTheme: ((parsed.appearance as Record<string, unknown>)?.syncStarshipTheme as boolean) ?? false,
     },
   }
 
@@ -396,7 +392,6 @@ export interface LegacySettings {
   syncClaudeCodeTheme: boolean
   claudeCodeLightTheme: ClaudeCodeTheme
   claudeCodeDarkTheme: ClaudeCodeTheme
-  syncStarshipTheme: boolean
 }
 
 // Convert nested settings to legacy flat format
@@ -415,7 +410,6 @@ export function toLegacySettings(settings: Settings): LegacySettings {
     syncClaudeCodeTheme: settings.appearance.syncClaudeCodeTheme,
     claudeCodeLightTheme: settings.appearance.claudeCodeLightTheme,
     claudeCodeDarkTheme: settings.appearance.claudeCodeDarkTheme,
-    syncStarshipTheme: settings.appearance.syncStarshipTheme,
   }
 }
 
@@ -741,83 +735,6 @@ export function updateZAiSettings(updates: Partial<ZAiSettings>): ZAiSettings {
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
 
   return updated
-}
-
-// ==================== Starship Theme Sync ====================
-// These functions manage ~/.config/starship.toml for prompt theming
-
-// Vibora light palette - darker colors for light backgrounds
-const VIBORA_LIGHT_PALETTE = `
-[palettes.vibora-light]
-# Vibora light mode palette - darker colors for light backgrounds
-black = "#2a2a27"
-red = "#dd403a"
-green = "#0d5c63"
-yellow = "#8d6e00"
-blue = "#0d5c63"
-purple = "#6b5b95"
-cyan = "#0d5c63"
-white = "#faf9f5"
-`
-
-// Vibora dark palette - brighter colors for dark backgrounds
-const VIBORA_DARK_PALETTE = `
-[palettes.vibora-dark]
-# Vibora dark mode palette - brighter colors for dark backgrounds
-black = "#2a2a27"
-red = "#dd403a"
-green = "#8abeb7"
-yellow = "#f0c674"
-blue = "#81a2be"
-purple = "#b294bb"
-cyan = "#17a7b5"
-white = "#faf9f5"
-`
-
-// Get starship config file path
-function getStarshipConfigPath(): string {
-  return path.join(os.homedir(), '.config', 'starship.toml')
-}
-
-// Sync starship theme if sync is enabled
-export function syncStarshipTheme(resolvedTheme: 'light' | 'dark'): void {
-  const settings = getSettings()
-  if (!settings.appearance.syncStarshipTheme) return
-
-  const configPath = getStarshipConfigPath()
-  const configDir = path.dirname(configPath)
-
-  // Ensure config directory exists
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true })
-  }
-
-  // Read existing config or start fresh
-  let config = ''
-  if (fs.existsSync(configPath)) {
-    config = fs.readFileSync(configPath, 'utf-8')
-  }
-
-  // Ensure our palettes exist (append if not present)
-  if (!config.includes('[palettes.vibora-light]')) {
-    config += VIBORA_LIGHT_PALETTE
-  }
-  if (!config.includes('[palettes.vibora-dark]')) {
-    config += VIBORA_DARK_PALETTE
-  }
-
-  // Update or add palette line at the top
-  const paletteName = resolvedTheme === 'light' ? 'vibora-light' : 'vibora-dark'
-  if (config.match(/^palette\s*=/m)) {
-    // Replace existing palette line
-    config = config.replace(/^palette\s*=.*/m, `palette = "${paletteName}"`)
-  } else {
-    // Add palette line at the beginning
-    config = `palette = "${paletteName}"\n` + config
-  }
-
-  fs.writeFileSync(configPath, config, 'utf-8')
-  log.settings.info('Synced Starship theme', { paletteName, resolvedTheme })
 }
 
 // Export helper functions for use in other modules

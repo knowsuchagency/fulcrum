@@ -103,10 +103,6 @@
         "dark-ansi": "Dark ANSI",
         "dark-daltonized": "Dark (colorblind)"
       }
-    },
-    "syncStarshipTheme": {
-      "label": "Sync Starship",
-      "description": "Automatically update Starship prompt colors when Vibora switches between light and dark mode"
     }
   },
   "notifications": {

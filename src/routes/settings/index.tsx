@@ -37,7 +37,6 @@ import {
   useRestartVibora,
   useClaudeCodeLightTheme,
   useClaudeCodeDarkTheme,
-  useSyncStarshipTheme,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
   type EditorApp,
@@ -79,10 +78,9 @@ function SettingsPage() {
   const { data: developerMode } = useDeveloperMode()
   const restartVibora = useRestartVibora()
   const { savedLanguage, changeLanguage } = useLanguageSync()
-  const { theme, syncClaudeCode, syncStarship, changeTheme } = useThemeSync()
+  const { theme, syncClaudeCode, changeTheme } = useThemeSync()
   const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
-  const { data: starshipSyncSetting } = useSyncStarshipTheme()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -124,9 +122,6 @@ function SettingsPage() {
   const [localSyncClaudeCode, setLocalSyncClaudeCode] = useState(false)
   const [localClaudeCodeLightTheme, setLocalClaudeCodeLightTheme] = useState<ClaudeCodeTheme>('light-ansi')
   const [localClaudeCodeDarkTheme, setLocalClaudeCodeDarkTheme] = useState<ClaudeCodeTheme>('dark-ansi')
-
-  // Starship theme sync local state
-  const [localSyncStarship, setLocalSyncStarship] = useState(false)
 
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
@@ -179,11 +174,6 @@ function SettingsPage() {
     if (claudeCodeDarkTheme !== undefined) setLocalClaudeCodeDarkTheme(claudeCodeDarkTheme)
   }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
 
-  // Sync Starship theme settings
-  useEffect(() => {
-    if (starshipSyncSetting !== undefined) setLocalSyncStarship(starshipSyncSetting)
-  }, [starshipSyncSetting])
-
   const isLoading =
     portLoading || reposDirLoading || remoteHostLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
 
@@ -199,9 +189,6 @@ function SettingsPage() {
     localSyncClaudeCode !== (syncClaudeCode ?? false) ||
     localClaudeCodeLightTheme !== claudeCodeLightTheme ||
     localClaudeCodeDarkTheme !== claudeCodeDarkTheme
-
-  const hasStarshipChanges =
-    localSyncStarship !== (syncStarship ?? false)
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -235,8 +222,7 @@ function SettingsPage() {
     hasEditorChanges ||
     hasNotificationChanges ||
     hasZAiChanges ||
-    hasClaudeCodeChanges ||
-    hasStarshipChanges
+    hasClaudeCodeChanges
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -426,18 +412,6 @@ function SettingsPage() {
           })
         )
       }
-    }
-
-    // Save Starship theme settings
-    if (hasStarshipChanges) {
-      promises.push(
-        new Promise((resolve) => {
-          updateConfig.mutate(
-            { key: CONFIG_KEYS.SYNC_STARSHIP_THEME, value: localSyncStarship },
-            { onSettled: resolve }
-          )
-        })
-      )
     }
 
     await Promise.all(promises)
@@ -1233,21 +1207,6 @@ function SettingsPage() {
                     </div>
                   )}
 
-                  {/* Sync Starship Theme */}
-                  <div className="space-y-1">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
-                        {t('fields.syncStarshipTheme.label')}
-                      </label>
-                      <Switch
-                        checked={localSyncStarship}
-                        onCheckedChange={setLocalSyncStarship}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                      {t('fields.syncStarshipTheme.description')}
-                    </p>
-                  </div>
                 </div>
               </SettingsSection>
 

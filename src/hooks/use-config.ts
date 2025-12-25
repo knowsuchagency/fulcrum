@@ -29,7 +29,6 @@ export const CONFIG_KEYS = {
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
   CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
   CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
-  SYNC_STARSHIP_THEME: 'appearance.syncStarshipTheme',
 } as const
 
 // Default values (client-side fallbacks)
@@ -200,16 +199,6 @@ export function useClaudeCodeDarkTheme() {
   return {
     ...query,
     data: (query.data?.value as ClaudeCodeTheme) ?? 'dark-ansi',
-    isDefault: query.data?.isDefault ?? true,
-  }
-}
-
-export function useSyncStarshipTheme() {
-  const query = useConfig(CONFIG_KEYS.SYNC_STARSHIP_THEME)
-
-  return {
-    ...query,
-    data: (query.data?.value as boolean) ?? false,
     isDefault: query.data?.isDefault ?? true,
   }
 }
