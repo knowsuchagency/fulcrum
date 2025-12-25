@@ -55,9 +55,6 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   return (
     <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-4 max-sm:px-2">
       <div className="flex min-w-0 items-center gap-4 max-sm:gap-2">
-        <Link to="/tasks" className="flex items-center">
-          <img src="/vibora-logo.jpeg" alt="Vibora" className="h-7 rounded" />
-        </Link>
 
         {/* Mobile navigation menu */}
         <NavigationMenu className="lg:hidden">

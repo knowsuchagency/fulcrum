@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Terminal as XTerm } from '@xterm/xterm'
+import { Terminal as XTerm, ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
@@ -9,6 +9,55 @@ import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
+import { useTheme } from 'next-themes'
+
+const lightTheme: ITheme = {
+  background: '#faf9f5',           // Porcelain
+  foreground: '#2a2a27',           // Graphite
+  cursor: '#2a2a27',               // Graphite
+  cursorAccent: '#faf9f5',         // Porcelain
+  selectionBackground: '#d1d5db',
+  black: '#2a2a27',                // Graphite
+  red: '#dd403a',                  // Cinnabar
+  green: '#0d5c63',                // Stormy Teal
+  yellow: '#dd403a',               // Cinnabar (warm accent)
+  blue: '#0d5c63',                 // Stormy Teal
+  magenta: '#8d909b',              // Lavender Grey
+  cyan: '#0d5c63',                 // Stormy Teal
+  white: '#faf9f5',                // Porcelain
+  brightBlack: '#8d909b',          // Lavender Grey
+  brightRed: '#dd403a',            // Cinnabar
+  brightGreen: '#0d5c63',          // Stormy Teal
+  brightYellow: '#dd403a',         // Cinnabar (warm accent)
+  brightBlue: '#0d5c63',           // Stormy Teal
+  brightMagenta: '#8d909b',        // Lavender Grey
+  brightCyan: '#0d5c63',           // Stormy Teal
+  brightWhite: '#faf9f5',          // Porcelain
+}
+
+const darkTheme: ITheme = {
+  background: '#2a2a27',           // Graphite
+  foreground: '#faf9f5',           // Porcelain
+  cursor: '#faf9f5',               // Porcelain
+  cursorAccent: '#2a2a27',         // Graphite
+  selectionBackground: '#3d3d3a',
+  black: '#2a2a27',                // Graphite
+  red: '#dd403a',                  // Cinnabar
+  green: '#0d5c63',                // Stormy Teal
+  yellow: '#dd403a',               // Cinnabar (warm accent)
+  blue: '#0d5c63',                 // Stormy Teal
+  magenta: '#8d909b',              // Lavender Grey
+  cyan: '#0d5c63',                 // Stormy Teal
+  white: '#faf9f5',                // Porcelain
+  brightBlack: '#8d909b',          // Lavender Grey
+  brightRed: '#dd403a',            // Cinnabar
+  brightGreen: '#0d5c63',          // Stormy Teal
+  brightYellow: '#dd403a',         // Cinnabar (warm accent)
+  brightBlue: '#0d5c63',           // Stormy Teal
+  brightMagenta: '#8d909b',        // Lavender Grey
+  brightCyan: '#0d5c63',           // Stormy Teal
+  brightWhite: '#faf9f5',          // Porcelain
+}
 
 interface TerminalProps {
   className?: string
@@ -30,6 +79,9 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
   const onReadyRef = useRef(onReady)
   const onContainerReadyRef = useRef(onContainerReady)
   const { setTerminalFocused } = useKeyboardContext()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const terminalTheme = isDark ? darkTheme : lightTheme
 
   // Keep refs updated
   useEffect(() => {
@@ -64,29 +116,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       fontSize: Math.round(13 * desktopZoom),
       fontFamily: 'JetBrains Mono Variable, Menlo, Monaco, monospace',
       lineHeight: 1.2,
-      theme: {
-        background: '#0a0a0a',
-        foreground: '#e4e4e7',
-        cursor: '#e4e4e7',
-        cursorAccent: '#0a0a0a',
-        selectionBackground: '#3f3f46',
-        black: '#18181b',
-        red: '#ef4444',
-        green: '#22c55e',
-        yellow: '#eab308',
-        blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
-        white: '#e4e4e7',
-        brightBlack: '#52525b',
-        brightRed: '#f87171',
-        brightGreen: '#4ade80',
-        brightYellow: '#facc15',
-        brightBlue: '#60a5fa',
-        brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee',
-        brightWhite: '#fafafa',
-      },
+      theme: terminalTheme,
     })
 
     const fitAddon = new FitAddon()
@@ -177,6 +207,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       termRef.current = null
       fitAddonRef.current = null
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- terminalTheme excluded: theme updates handled by separate effect
   }, [doFit, setTerminalFocused])
 
   // Set up image paste when terminalId is available
@@ -185,6 +216,12 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
     const cleanup = setupImagePaste(containerRef.current, terminalId)
     return cleanup
   }, [terminalId, setupImagePaste])
+
+  // Update terminal theme when system theme changes
+  useEffect(() => {
+    if (!termRef.current) return
+    termRef.current.options.theme = terminalTheme
+  }, [terminalTheme])
 
   const handleScrollToBottom = useCallback(() => {
     termRef.current?.scrollToBottom()
@@ -195,11 +232,11 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className={cn('h-full w-full max-w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
+          className={cn('h-full w-full max-w-full overflow-hidden p-2', isDark ? 'bg-[#2a2827]' : 'bg-[#faf9f5]', className)}
         />
         <button
           onClick={handleScrollToBottom}
-          className="absolute top-2 right-5 p-1 text-white/50 hover:text-white/80 transition-colors"
+          className={cn('absolute top-2 right-5 p-1 transition-colors', isDark ? 'text-white/50 hover:text-white/80' : 'text-black/50 hover:text-black/80')}
         >
           <HugeiconsIcon icon={ArrowDownDoubleIcon} size={20} strokeWidth={2} />
         </button>

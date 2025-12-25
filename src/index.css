@@ -7,74 +7,74 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    /* Light mode: warm cream background, dark foreground */
-    --background: hsl(48 33% 97%);                /* Warm cream */
-    --foreground: hsl(222.2 84% 4.9%);            /* Dark blue-black */
-    --card: hsl(0 0% 100%);                       /* White card */
-    --card-foreground: hsl(222.2 84% 4.9%);       /* Dark blue-black */
-    --popover: hsl(0 0% 100%);                    /* White popover */
-    --popover-foreground: hsl(222.2 84% 4.9%);    /* Dark blue-black */
-    --primary: hsl(222.2 84% 4.9%);               /* Dark - primary in light mode */
-    --primary-foreground: hsl(48 33% 97%);        /* Warm cream */
-    --secondary: hsl(0 0% 100%);                  /* White */
-    --secondary-foreground: hsl(222.2 84% 4.9%);  /* Dark */
-    --muted: hsl(48 33% 97%);                     /* Warm cream */
-    --muted-foreground: hsl(222.2 84% 4.9%);      /* Dark */
-    --accent: oklch(0.41 0.08 195);               /* Stormy Teal #0d5c63 */
-    --accent-foreground: hsl(48 33% 97%);         /* Warm cream */
-    --destructive: oklch(0.60 0.22 25);           /* Cinnabar #dd403a */
+    /* Light mode: Porcelain background, Graphite foreground */
+    --background: #faf9f5;                        /* Porcelain */
+    --foreground: #2a2a27;                        /* Graphite */
+    --card: #ffffff;                              /* White card */
+    --card-foreground: #2a2a27;                   /* Graphite */
+    --popover: #ffffff;                           /* White popover */
+    --popover-foreground: #2a2a27;                /* Graphite */
+    --primary: #2a2a27;                           /* Graphite - primary in light mode */
+    --primary-foreground: #faf9f5;                /* Porcelain */
+    --secondary: #ffffff;                         /* White */
+    --secondary-foreground: #2a2a27;              /* Graphite */
+    --muted: #faf9f5;                             /* Porcelain */
+    --muted-foreground: #8d909b;                  /* Lavender Grey */
+    --accent: #0d5c63;                            /* Stormy Teal */
+    --accent-foreground: #faf9f5;                 /* Porcelain */
+    --destructive: #dd403a;                       /* Cinnabar */
     --border: hsl(214.3 31.8% 91.4%);             /* Light border */
     --input: hsl(214.3 31.8% 91.4%);              /* Light input */
-    --ring: hsl(222.2 84% 4.9%);                  /* Dark ring */
-    --chart-1: oklch(0.41 0.08 195);              /* Stormy Teal */
-    --chart-2: oklch(0.65 0.02 270);              /* Lavender Grey */
-    --chart-3: oklch(0.60 0.22 25);               /* Cinnabar */
+    --ring: #2a2a27;                              /* Graphite */
+    --chart-1: #0d5c63;                           /* Stormy Teal */
+    --chart-2: #8d909b;                           /* Lavender Grey */
+    --chart-3: #dd403a;                           /* Cinnabar */
     --chart-4: oklch(0.50 0.06 195);              /* Teal variant */
-    --chart-5: hsl(222.2 84% 4.9%);               /* Dark */
+    --chart-5: #2a2a27;                           /* Graphite */
     --radius: 0.45rem;
-    --sidebar: hsl(48 33% 97%);                   /* Warm cream */
-    --sidebar-foreground: hsl(222.2 84% 4.9%);    /* Dark */
-    --sidebar-primary: hsl(222.2 84% 4.9%);       /* Dark */
-    --sidebar-primary-foreground: hsl(48 33% 97%); /* Warm cream */
-    --sidebar-accent: oklch(0.41 0.08 195);       /* Stormy Teal */
-    --sidebar-accent-foreground: hsl(48 33% 97%); /* Warm cream */
+    --sidebar: #faf9f5;                           /* Porcelain */
+    --sidebar-foreground: #2a2a27;                /* Graphite */
+    --sidebar-primary: #2a2a27;                   /* Graphite */
+    --sidebar-primary-foreground: #faf9f5;        /* Porcelain */
+    --sidebar-accent: #0d5c63;                    /* Stormy Teal */
+    --sidebar-accent-foreground: #faf9f5;         /* Porcelain */
     --sidebar-border: hsl(214.3 31.8% 91.4%);     /* Light border */
-    --sidebar-ring: hsl(222.2 84% 4.9%);          /* Dark */
+    --sidebar-ring: #2a2a27;                      /* Graphite */
 }
 
 .dark {
-    /* Dark mode: warm dark background, light foreground */
-    --background: hsl(48 4% 16%);                 /* Warm dark */
-    --foreground: hsl(48 7% 85%);                 /* Warm light */
-    --card: hsl(60 2% 18%);                       /* Muted dark card */
-    --card-foreground: hsl(48 7% 85%);            /* Warm light */
-    --popover: hsl(60 2% 18%);                    /* Muted dark popover */
-    --popover-foreground: hsl(48 7% 85%);         /* Warm light */
-    --primary: hsl(48 7% 85%);                    /* Warm light - primary in dark mode */
-    --primary-foreground: hsl(48 4% 16%);         /* Warm dark */
-    --secondary: hsl(60 2% 18%);                  /* Muted dark */
-    --secondary-foreground: hsl(48 7% 85%);       /* Warm light */
-    --muted: hsl(60 2% 18%);                      /* Muted dark */
-    --muted-foreground: hsl(48 7% 85%);           /* Warm light */
-    --accent: oklch(0.50 0.10 195);               /* Brighter Stormy Teal for dark mode */
-    --accent-foreground: hsl(48 7% 85%);          /* Warm light */
-    --destructive: oklch(0.65 0.20 25);           /* Brighter Cinnabar for dark mode */
-    --border: hsl(60 2% 25%);                     /* Dark border */
-    --input: hsl(60 2% 25%);                      /* Dark input */
-    --ring: hsl(212.7 26.8% 83.9%);               /* Light ring */
-    --chart-1: oklch(0.50 0.10 195);              /* Brighter Stormy Teal */
-    --chart-2: oklch(0.65 0.02 270);              /* Lavender Grey */
-    --chart-3: oklch(0.65 0.20 25);               /* Brighter Cinnabar */
+    /* Dark mode: Graphite background, Porcelain foreground */
+    --background: #2a2a27;                        /* Graphite */
+    --foreground: #faf9f5;                        /* Porcelain */
+    --card: #333330;                              /* Slightly lighter Graphite for cards */
+    --card-foreground: #faf9f5;                   /* Porcelain */
+    --popover: #333330;                           /* Slightly lighter Graphite */
+    --popover-foreground: #faf9f5;                /* Porcelain */
+    --primary: #faf9f5;                           /* Porcelain - primary in dark mode */
+    --primary-foreground: #2a2a27;                /* Graphite */
+    --secondary: #333330;                         /* Slightly lighter Graphite */
+    --secondary-foreground: #faf9f5;              /* Porcelain */
+    --muted: #333330;                             /* Slightly lighter Graphite */
+    --muted-foreground: #8d909b;                  /* Lavender Grey */
+    --accent: #0d5c63;                            /* Stormy Teal */
+    --accent-foreground: #faf9f5;                 /* Porcelain */
+    --destructive: #dd403a;                       /* Cinnabar */
+    --border: #3d3d3a;                            /* Dark border */
+    --input: #3d3d3a;                             /* Dark input */
+    --ring: #faf9f5;                              /* Porcelain */
+    --chart-1: #0d5c63;                           /* Stormy Teal */
+    --chart-2: #8d909b;                           /* Lavender Grey */
+    --chart-3: #dd403a;                           /* Cinnabar */
     --chart-4: oklch(0.55 0.08 195);              /* Teal variant */
-    --chart-5: hsl(48 7% 85%);                    /* Warm light */
-    --sidebar: hsl(60 2% 18%);                    /* Muted dark */
-    --sidebar-foreground: hsl(48 7% 85%);         /* Warm light */
-    --sidebar-primary: hsl(48 7% 85%);            /* Warm light */
-    --sidebar-primary-foreground: hsl(48 4% 16%); /* Warm dark */
-    --sidebar-accent: oklch(0.50 0.10 195);       /* Brighter Stormy Teal */
-    --sidebar-accent-foreground: hsl(48 7% 85%);  /* Warm light */
-    --sidebar-border: hsl(60 2% 25%);             /* Dark border */
-    --sidebar-ring: hsl(212.7 26.8% 83.9%);       /* Light ring */
+    --chart-5: #faf9f5;                           /* Porcelain */
+    --sidebar: #333330;                           /* Slightly lighter Graphite */
+    --sidebar-foreground: #faf9f5;                /* Porcelain */
+    --sidebar-primary: #faf9f5;                   /* Porcelain */
+    --sidebar-primary-foreground: #2a2a27;        /* Graphite */
+    --sidebar-accent: #0d5c63;                    /* Stormy Teal */
+    --sidebar-accent-foreground: #faf9f5;         /* Porcelain */
+    --sidebar-border: #3d3d3a;                    /* Dark border */
+    --sidebar-ring: #faf9f5;                      /* Porcelain */
 }
 
 @theme inline {

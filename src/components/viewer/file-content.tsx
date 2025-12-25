@@ -119,7 +119,7 @@ export function FileContent({
             <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
           </button>
         </div>
-        <div className="flex flex-1 items-center justify-center p-4 bg-[#0d1117]">
+        <div className="flex flex-1 items-center justify-center p-4 bg-muted">
           <img
             src={content.content}
             alt={filePath}

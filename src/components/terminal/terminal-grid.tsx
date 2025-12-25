@@ -15,6 +15,7 @@ import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 import { MobileTerminalControls } from './mobile-terminal-controls'
+import { useTheme } from 'next-themes'
 
 interface TaskInfo {
   taskId: string
@@ -127,8 +128,10 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
 }
 
 function EmptyPane({ onAdd }: { onAdd?: () => void }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   return (
-    <div className="flex h-full items-center justify-center bg-[#0a0a0a]">
+    <div className={`flex h-full items-center justify-center ${isDark ? 'bg-[#2a2827]' : 'bg-[#faf9f5]'}`}>
       {onAdd ? (
         <Button variant="outline" size="sm" onClick={onAdd} className="gap-2">
           <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2} />
