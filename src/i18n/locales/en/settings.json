@@ -78,6 +78,15 @@
         "en": "English",
         "zh": "Chinese (Simplified)"
       }
+    },
+    "theme": {
+      "label": "Theme",
+      "description": "Color theme for the interface",
+      "options": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      }
     }
   },
   "notifications": {

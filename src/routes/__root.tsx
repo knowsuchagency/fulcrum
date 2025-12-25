@@ -3,6 +3,7 @@ import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
 import { Header } from '@/components/layout/header'
 import { useTaskSync } from '@/hooks/use-task-sync'
 import { useLanguageSync } from '@/hooks/use-language-sync'
+import { useThemeSync } from '@/hooks/use-theme-sync'
 import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { KeyboardProvider } from '@/contexts/keyboard-context'
 import { CommandPalette } from '@/components/command-palette/command-palette'
@@ -20,6 +21,11 @@ function TaskSync() {
 
 function LanguageSync() {
   useLanguageSync()
+  return null
+}
+
+function ThemeSync() {
+  useThemeSync()
   return null
 }
 
@@ -89,6 +95,7 @@ function RootLayout() {
       <div className="flex h-screen flex-col overflow-x-hidden bg-background text-foreground">
         <TaskSync />
         <LanguageSync />
+        <ThemeSync />
         <ViewTracking />
         <DesktopBridge />
         <Header onNewTaskRef={handleNewTaskRef} onOpenCommandPalette={handleOpenCommandPalette} />

@@ -25,6 +25,7 @@ export const CONFIG_KEYS = {
   LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
   LANGUAGE: 'appearance.language',
+  THEME: 'appearance.theme',
 } as const
 
 // Default values (client-side fallbacks)
@@ -149,6 +150,19 @@ export function useLanguage() {
   return {
     ...query,
     data: (query.data?.value as Language) ?? null,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export type Theme = 'system' | 'light' | 'dark'
+
+export function useTheme() {
+  const query = useConfig(CONFIG_KEYS.THEME)
+
+  return {
+    ...query,
+    // null means system preference (default)
+    data: (query.data?.value as Theme | null) ?? 'system',
     isDefault: query.data?.isDefault ?? true,
   }
 }

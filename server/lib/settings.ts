@@ -38,6 +38,7 @@ export interface Settings {
   }
   appearance: {
     language: 'en' | 'zh' | null
+    theme: 'system' | 'light' | 'dark' | null
   }
 }
 
@@ -69,6 +70,7 @@ const DEFAULT_SETTINGS: Settings = {
   },
   appearance: {
     language: null,
+    theme: null,
   },
 }
 
@@ -87,6 +89,7 @@ const MIGRATION_MAP: Record<string, string> = {
   linearApiKey: 'integrations.linearApiKey',
   githubPat: 'integrations.githubPat',
   language: 'appearance.language',
+  theme: 'appearance.theme',
 }
 
 // Helper: Get nested value from object using dot notation
@@ -306,6 +309,7 @@ export function getSettings(): Settings {
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
+      theme: ((parsed.appearance as Record<string, unknown>)?.theme as 'system' | 'light' | 'dark' | null) ?? null,
     },
   }
 
@@ -368,6 +372,7 @@ export interface LegacySettings {
   linearApiKey: string | null
   githubPat: string | null
   language: 'en' | 'zh' | null
+  theme: 'system' | 'light' | 'dark' | null
 }
 
 // Convert nested settings to legacy flat format
@@ -382,6 +387,7 @@ export function toLegacySettings(settings: Settings): LegacySettings {
     linearApiKey: settings.integrations.linearApiKey,
     githubPat: settings.integrations.githubPat,
     language: settings.appearance.language,
+    theme: settings.appearance.theme,
   }
 }
 

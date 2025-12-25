@@ -32,6 +32,7 @@ export const CONFIG_KEYS = {
   LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
   LANGUAGE: 'appearance.language',
+  THEME: 'appearance.theme',
 } as const
 
 // Legacy key mapping to new nested paths (for backward compatibility)
@@ -47,6 +48,7 @@ const LEGACY_KEY_MAP: Record<string, string> = {
   linear_api_key: 'integrations.linearApiKey',
   github_pat: 'integrations.githubPat',
   language: 'appearance.language',
+  theme: 'appearance.theme',
   // camelCase legacy keys
   defaultGitReposDir: 'paths.defaultGitReposDir',
   basicAuthUsername: 'authentication.username',
@@ -285,6 +287,11 @@ app.put('/:key', async (c) => {
         return c.json({ error: 'Language must be "en", "zh", or null' }, 400)
       }
       value = value === '' ? null : value
+    } else if (path === CONFIG_KEYS.THEME) {
+      if (value !== null && value !== '' && value !== 'system' && value !== 'light' && value !== 'dark') {
+        return c.json({ error: 'Theme must be "system", "light", "dark", or null' }, 400)
+      }
+      value = value === '' || value === 'system' ? null : value
     } else if (path === CONFIG_KEYS.EDITOR_APP) {
       const validApps: EditorApp[] = ['vscode', 'cursor', 'windsurf', 'zed']
       if (!validApps.includes(value as EditorApp)) {

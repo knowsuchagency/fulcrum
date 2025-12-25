@@ -39,6 +39,7 @@ import {
   type EditorApp,
 } from '@/hooks/use-config'
 import { useLanguageSync } from '@/hooks/use-language-sync'
+import { useThemeSync } from '@/hooks/use-theme-sync'
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsPage,
@@ -73,6 +74,7 @@ function SettingsPage() {
   const { data: developerMode } = useDeveloperMode()
   const restartVibora = useRestartVibora()
   const { savedLanguage, changeLanguage } = useLanguageSync()
+  const { theme, changeTheme } = useThemeSync()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -1031,28 +1033,56 @@ function SettingsPage() {
 
               {/* Appearance */}
               <SettingsSection title={t('sections.appearance')}>
-                <div className="space-y-1">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
-                      {t('fields.language.label')}
-                    </label>
-                    <Select
-                      value={savedLanguage ?? 'auto'}
-                      onValueChange={(v) => changeLanguage(v === 'auto' ? null : (v as 'en' | 'zh'))}
-                    >
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto">{t('fields.language.options.auto')}</SelectItem>
-                        <SelectItem value="en">{t('fields.language.options.en')}</SelectItem>
-                        <SelectItem value="zh">{t('fields.language.options.zh')}</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-4">
+                  {/* Language */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.language.label')}
+                      </label>
+                      <Select
+                        value={savedLanguage ?? 'auto'}
+                        onValueChange={(v) => changeLanguage(v === 'auto' ? null : (v as 'en' | 'zh'))}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">{t('fields.language.options.auto')}</SelectItem>
+                          <SelectItem value="en">{t('fields.language.options.en')}</SelectItem>
+                          <SelectItem value="zh">{t('fields.language.options.zh')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.language.description')}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                    {t('fields.language.description')}
-                  </p>
+
+                  {/* Theme */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.theme.label')}
+                      </label>
+                      <Select
+                        value={theme ?? 'system'}
+                        onValueChange={(v) => changeTheme(v as 'system' | 'light' | 'dark')}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="system">{t('fields.theme.options.system')}</SelectItem>
+                          <SelectItem value="light">{t('fields.theme.options.light')}</SelectItem>
+                          <SelectItem value="dark">{t('fields.theme.options.dark')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.theme.description')}
+                    </p>
+                  </div>
                 </div>
               </SettingsSection>
 
