@@ -11,7 +11,6 @@ import {
   searchCommands,
   groupCommandsByCategory,
 } from './command-registry'
-import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   GridViewIcon,
@@ -40,7 +39,6 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const { setActiveTab } = useTerminalViewState()
 
   // Build command list
   const commands = useMemo<Command[]>(() => {
@@ -77,8 +75,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         category: 'navigation',
         icon: <HugeiconsIcon icon={GridViewIcon} size={16} strokeWidth={2} />,
         action: () => {
-          setActiveTab('all-tasks')
-          navigate({ to: '/terminals' })
+          navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
           setOpen(false)
         },
       },
@@ -144,7 +141,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       },
     ]
     return cmds
-  }, [navigate, onNewTask, onShowShortcuts, setActiveTab, setOpen, t])
+  }, [navigate, onNewTask, onShowShortcuts, setOpen, t])
 
   // Filter commands based on query
   const filteredCommands = useMemo(
@@ -191,8 +188,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+i', () => {
-    setActiveTab('all-tasks')
-    navigate({ to: '/terminals' })
+    navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
   }, { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+3', () => navigate({ to: '/worktrees' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+4', () => navigate({ to: '/repositories' }), { allowInInput: true, allowInTerminal: true })

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useSearch, useNavigate } from '@tanstack/react-router'
 import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TerminalGrid } from '@/components/terminal/terminal-grid'
@@ -26,12 +26,21 @@ import { log } from '@/lib/logger'
 const ALL_TASKS_TAB_ID = 'all-tasks'
 const ACTIVE_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW']
 
+interface TerminalsSearch {
+  tab?: string
+}
+
 export const Route = createFileRoute('/terminals/')({
   component: TerminalsView,
+  validateSearch: (search: Record<string, unknown>): TerminalsSearch => ({
+    tab: typeof search.tab === 'string' ? search.tab : undefined,
+  }),
 })
 
 function TerminalsView() {
   const { t } = useTranslation('terminals')
+  const navigate = useNavigate()
+  const { tab: tabFromUrl } = useSearch({ from: '/terminals/' })
   const {
     terminals,
     tabs,
@@ -53,15 +62,28 @@ function TerminalsView() {
   // Track active tab via server-persisted state
   const { activeTabId, setActiveTab, isLoading: isViewStateLoading } = useTerminalViewState()
 
-  // Ensure activeTabId is valid - set to first tab if invalid
+  // Handle tab from URL search param (e.g., from cmd+i navigation)
+  // This runs before the fallback effect and clears the URL param
+  const hasAppliedUrlTab = useRef(false)
   useEffect(() => {
-    if (tabs.length > 0 && !isViewStateLoading) {
+    if (tabFromUrl && !hasAppliedUrlTab.current) {
+      hasAppliedUrlTab.current = true
+      setActiveTab(tabFromUrl)
+      // Clear the search param from URL without adding to history
+      navigate({ to: '/terminals', search: {}, replace: true })
+    }
+  }, [tabFromUrl, setActiveTab, navigate])
+
+  // Ensure activeTabId is valid - set to first tab if invalid
+  // Skip if we just applied a tab from URL to avoid race condition
+  useEffect(() => {
+    if (tabs.length > 0 && !isViewStateLoading && !tabFromUrl) {
       const tabIds = tabs.map((t) => t.id)
       if (!activeTabId || (!tabIds.includes(activeTabId) && activeTabId !== ALL_TASKS_TAB_ID)) {
         setActiveTab(tabs[0].id)
       }
     }
-  }, [tabs, activeTabId, isViewStateLoading, setActiveTab])
+  }, [tabs, activeTabId, isViewStateLoading, setActiveTab, tabFromUrl])
 
   const { data: tasks = [], isLoading: isTasksLoading } = useTasks()
   const { data: repositories = [] } = useRepositories()
