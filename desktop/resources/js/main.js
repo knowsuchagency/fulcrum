@@ -493,6 +493,35 @@ async function init() {
     console.log('[Vibora] Neutralino initialized');
     console.log('[Vibora] OS:', NL_OS);
 
+    // Set up native menu for macOS (required for Cmd+C/V/X/A shortcuts to work)
+    if (NL_OS === 'Darwin') {
+      await Neutralino.window.setMainMenu([
+        {
+          id: 'app',
+          text: 'Vibora',
+          menuItems: [
+            { id: 'about', text: 'About Vibora' },
+            { text: '-' },
+            { id: 'quit', text: 'Quit Vibora', shortcut: 'q', action: 'terminate:' }
+          ]
+        },
+        {
+          id: 'edit',
+          text: 'Edit',
+          menuItems: [
+            { id: 'undo', text: 'Undo', shortcut: 'z', action: 'undo:' },
+            { id: 'redo', text: 'Redo', shortcut: 'Z', action: 'redo:' },
+            { text: '-' },
+            { id: 'cut', text: 'Cut', shortcut: 'x', action: 'cut:' },
+            { id: 'copy', text: 'Copy', shortcut: 'c', action: 'copy:' },
+            { id: 'paste', text: 'Paste', shortcut: 'v', action: 'paste:' },
+            { id: 'selectAll', text: 'Select All', shortcut: 'a', action: 'selectAll:' }
+          ]
+        }
+      ]);
+      console.log('[Vibora] macOS menu configured');
+    }
+
     // Check for --dev flag in command line args
     isDevMode = typeof NL_ARGS !== 'undefined' && NL_ARGS.includes('--dev');
     if (isDevMode) {
