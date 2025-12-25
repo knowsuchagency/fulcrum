@@ -32,15 +32,15 @@ function KanbanView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center border-b border-border px-4 py-2">
+      <div className="relative flex shrink-0 items-center border-b border-border px-4 py-2">
         <h1 className="text-sm font-medium max-sm:hidden">{t('title')}</h1>
-        <div className="relative sm:mx-auto">
+        <div className="absolute left-1/2 -translate-x-1/2">
           <HugeiconsIcon icon={Search01Icon} size={12} strokeWidth={2} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('searchPlaceholder')}
-            className="w-40 pl-6"
+            className="w-64 pl-6"
           />
         </div>
         <div className="ml-auto">
