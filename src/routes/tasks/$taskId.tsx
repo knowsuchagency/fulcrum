@@ -523,7 +523,6 @@ function TaskView() {
 
           <TabsContent value="terminal" className="flex-1 min-h-0">
             <TaskTerminal
-              taskId={task.id}
               taskName={task.title}
               cwd={task.worktreePath}
               aiMode={aiMode}
@@ -570,7 +569,6 @@ function TaskView() {
           {/* Left: Terminal */}
           <ResizablePanel defaultSize={50} minSize={30}>
             <TaskTerminal
-              taskId={task.id}
               taskName={task.title}
               cwd={task.worktreePath}
               aiMode={aiMode}

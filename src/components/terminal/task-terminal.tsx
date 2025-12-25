@@ -13,7 +13,6 @@ import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
 
 interface TaskTerminalProps {
-  taskId: string
   taskName: string
   cwd: string | null
   className?: string
@@ -22,7 +21,7 @@ interface TaskTerminalProps {
   startupScript?: string | null
 }
 
-export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, description, startupScript }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -274,7 +273,6 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
     const currentAiMode = aiMode
     const currentDescription = description
     const currentTaskName = taskName
-    const currentTaskId = taskId
 
     // Callback when terminal is fully attached (buffer received from server)
     const onAttached = () => {
@@ -328,8 +326,8 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
         const escapedSystemPrompt = systemPrompt.replace(/"/g, '\\"')
 
         const taskCommand = currentAiMode === 'plan'
-          ? `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTaskId}" --allow-dangerously-skip-permissions --permission-mode plan`
-          : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTaskId}" --dangerously-skip-permissions`
+          ? `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTerminalId}" --allow-dangerously-skip-permissions --permission-mode plan`
+          : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTerminalId}" --dangerously-skip-permissions`
 
         setTimeout(() => {
           log.taskTerminal.debug('writing claude command to terminal', {
@@ -354,7 +352,7 @@ export function TaskTerminal({ taskId, taskName, cwd, className, aiMode, descrip
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, doFit, startupScript, aiMode, description, taskName, taskId])
+  }, [terminalId, doFit, startupScript, aiMode, description, taskName])
 
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {
