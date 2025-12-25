@@ -214,6 +214,15 @@ function TaskView() {
     sendInputToTerminal(taskTerminal.id, 'commit')
   }
 
+  // Send create PR prompt to Claude Code
+  const handleCreatePR = () => {
+    if (!taskTerminal) return
+    sendInputToTerminal(
+      taskTerminal.id,
+      'Create a PR for this task and link it using: vibora current-task pr <url>'
+    )
+  }
+
   const handleOpenVSCodeModal = () => {
     setVscodeModalOpen(true)
   }
@@ -431,6 +440,20 @@ function TaskView() {
             strokeWidth={2}
           />
         </Button>
+
+        {/* Create PR Button */}
+        {!task.prUrl && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleCreatePR}
+            disabled={!taskTerminal}
+            className="text-muted-foreground hover:text-foreground"
+            title="Create Pull Request"
+          >
+            <HugeiconsIcon icon={GitPullRequestIcon} size={16} strokeWidth={2} />
+          </Button>
+        )}
 
         {/* VS Code Button */}
         <Button
