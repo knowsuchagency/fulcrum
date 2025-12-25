@@ -375,15 +375,6 @@ function SettingsPage() {
     })
   }
 
-  const handleResetRemoteHost = () => {
-    resetConfig.mutate(CONFIG_KEYS.REMOTE_HOST, {
-      onSuccess: (data) => {
-        if (data.value !== null && data.value !== undefined)
-          setLocalRemoteHost(String(data.value))
-      },
-    })
-  }
-
   const handleResetEditorApp = () => {
     resetConfig.mutate(CONFIG_KEYS.EDITOR_APP, {
       onSuccess: (data) => {
@@ -477,7 +468,7 @@ function SettingsPage() {
                         max={65535}
                         value={localPort}
                         onChange={(e) => setLocalPort(e.target.value)}
-                        placeholder="3333"
+                        placeholder="7777"
                         disabled={isLoading}
                         className="w-24 font-mono text-sm"
                       />

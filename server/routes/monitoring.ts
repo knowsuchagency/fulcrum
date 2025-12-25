@@ -674,7 +674,7 @@ function findViboraInstances(): ViboraInstanceGroup[] {
         const isProdBackend = isBunProcess && (!!env.VIBORA_PACKAGE_ROOT || (cmdline.includes('server/index.ts') && env.NODE_ENV === 'production'))
 
         if (isDevBackend || isProdBackend) {
-          const port = parseInt(env.PORT || '3333', 10)
+          const port = parseInt(env.PORT || '7777', 10)
           const cwd = getProcessCwd(pid)
           // Resolve viboraDir - if relative, combine with cwd; if absolute or starts with ~, use as-is
           let viboraDir = env.VIBORA_DIR || (isDevBackend ? '~/.vibora/dev' : '~/.vibora')

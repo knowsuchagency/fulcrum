@@ -429,6 +429,91 @@ function getLocalPort() {
 }
 
 /**
+ * Get path to the bundle directory (contains server, lib, etc.)
+ */
+async function getBundlePath() {
+  if (NL_OS === 'Darwin') {
+    // macOS: .../Vibora.app/Contents/MacOS -> .../Vibora.app/Contents/Resources/bundle
+    return `${NL_PATH}/../Resources/bundle`;
+  } else {
+    // Linux: .../usr/bin -> .../usr/share/vibora/bundle
+    return `${NL_PATH}/../share/vibora/bundle`;
+  }
+}
+
+/**
+ * Get the Vibora data directory
+ */
+async function getViboraDir() {
+  const home = NL_OS === 'Windows'
+    ? await Neutralino.os.getEnv('USERPROFILE')
+    : await Neutralino.os.getEnv('HOME');
+  return `${home}/.vibora`;
+}
+
+/**
+ * Start the local server if not already running
+ * Called when launcher didn't start it (first launch or remote mode switch)
+ */
+async function startLocalServer() {
+  const port = getLocalPort();
+  const localUrl = `http://localhost:${port}`;
+
+  // Check if server is already running
+  if (await checkServerHealth(localUrl)) {
+    console.log('[Vibora] Server already running');
+    return true;
+  }
+
+  setStatus('Starting local server...', `Port ${port}`);
+  console.log('[Vibora] Starting local server...');
+
+  try {
+    const bundleDir = await getBundlePath();
+    const viboraDir = await getViboraDir();
+
+    // Determine PTY library based on OS and architecture
+    const arch = typeof NL_ARCH !== 'undefined' ? NL_ARCH : 'x64';
+    let ptyLib;
+    if (NL_OS === 'Darwin') {
+      ptyLib = arch === 'arm64'
+        ? `${bundleDir}/lib/librust_pty_arm64.dylib`
+        : `${bundleDir}/lib/librust_pty.dylib`;
+    } else {
+      // Linux
+      ptyLib = arch === 'arm64' || arch === 'aarch64'
+        ? `${bundleDir}/lib/librust_pty_arm64.so`
+        : `${bundleDir}/lib/librust_pty.so`;
+    }
+
+    const serverBin = `${bundleDir}/server/vibora-server`;
+
+    // Build command with environment variables
+    const cmd = `NODE_ENV=production PORT=${port} VIBORA_DIR="${viboraDir}" ` +
+      `VIBORA_PACKAGE_ROOT="${bundleDir}" BUN_PTY_LIB="${ptyLib}" ` +
+      `"${serverBin}"`;
+
+    console.log('[Vibora] Server command:', cmd);
+
+    // Start server process in background
+    const result = await Neutralino.os.spawnProcess(cmd);
+    console.log('[Vibora] Server process spawned:', result);
+
+    // Wait for server to be ready
+    if (await waitForServerReady(localUrl)) {
+      console.log('[Vibora] Server is ready');
+      return true;
+    }
+
+    console.error('[Vibora] Server failed to become ready');
+    return false;
+  } catch (err) {
+    console.error('[Vibora] Failed to start server:', err);
+    return false;
+  }
+}
+
+/**
  * Get remote server config from settings (nested format)
  */
 function getRemoteConfig() {
@@ -461,15 +546,18 @@ async function connectToRemote(remoteHost, remotePort) {
 
 /**
  * Connect to local server
+ * Will start the server if it's not already running (e.g., first launch or switching from remote)
  */
 async function connectToLocal() {
   const localPort = getLocalPort();
   const localUrl = `http://localhost:${localPort}`;
 
-  setStatus('Starting Vibora...', `localhost:${localPort}${isDevMode ? ' (dev)' : ''}`);
-  console.log('[Vibora] Waiting for local server...');
+  setStatus('Connecting to local server...', `localhost:${localPort}${isDevMode ? ' (dev)' : ''}`);
+  console.log('[Vibora] Connecting to local server...');
 
-  if (await waitForServerReady(localUrl)) {
+  // Check if server is already running (launcher may have started it)
+  if (await checkServerHealth(localUrl)) {
+    console.log('[Vibora] Server already running');
     await saveSettings({
       ...desktopSettings,
       lastConnectedHost: 'localhost'
@@ -478,7 +566,18 @@ async function connectToLocal() {
     return true;
   }
 
-  showError('Server Failed', 'Could not connect to local server. Check the logs.');
+  // Server not running - start it
+  console.log('[Vibora] Server not running, starting...');
+  if (await startLocalServer()) {
+    await saveSettings({
+      ...desktopSettings,
+      lastConnectedHost: 'localhost'
+    });
+    loadViboraApp(localUrl);
+    return true;
+  }
+
+  showError('Server Failed', 'Could not start local server. Check ~/.vibora/desktop.log for details.');
   return false;
 }
 
@@ -762,6 +861,40 @@ async function autoCheckForUpdates() {
 window.checkForUpdates = () => checkForUpdates(true);
 
 /**
+ * Play a notification sound locally
+ * Uses native system commands for each platform
+ */
+async function playNotificationSound() {
+  try {
+    if (NL_OS === 'Darwin') {
+      // macOS: use afplay with system sound
+      await Neutralino.os.execCommand('afplay /System/Library/Sounds/Glass.aiff');
+    } else if (NL_OS === 'Linux') {
+      // Linux: try various audio players in order of preference
+      try {
+        // Try PulseAudio first (most common)
+        await Neutralino.os.execCommand('paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null');
+      } catch {
+        try {
+          // Try ALSA
+          await Neutralino.os.execCommand('aplay /usr/share/sounds/sound-icons/xylofon.wav 2>/dev/null');
+        } catch {
+          // Fall back to beep if available
+          await Neutralino.os.execCommand('echo -e "\\a" 2>/dev/null');
+        }
+      }
+    } else if (NL_OS === 'Windows') {
+      // Windows: use PowerShell to play system sound
+      await Neutralino.os.execCommand('powershell -c "[System.Media.SystemSounds]::Exclamation.Play()"');
+    }
+    console.log('[Vibora] Notification sound played');
+  } catch (err) {
+    // Sound is non-critical, just log the error
+    console.error('[Vibora] Failed to play notification sound:', err);
+  }
+}
+
+/**
  * Initialize the application
  */
 async function init() {
@@ -851,6 +984,9 @@ async function init() {
         Neutralino.os.showNotification(title, message || '').catch((err) => {
           console.error('[Vibora] Failed to show notification:', err);
         });
+      } else if (event.data?.type === 'vibora:playSound') {
+        // Play notification sound locally
+        playNotificationSound();
       }
     });
 

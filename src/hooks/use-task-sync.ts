@@ -15,6 +15,7 @@ interface NotificationMessage {
     message: string
     notificationType: 'success' | 'info' | 'warning' | 'error'
     taskId?: string
+    playSound?: boolean
   }
 }
 
@@ -42,7 +43,7 @@ export function useTaskSync() {
         if (message.type === 'task:updated') {
           queryClient.invalidateQueries({ queryKey: ['tasks'] })
         } else if (message.type === 'notification' && 'payload' in message) {
-          const { title, message: description, notificationType } = (message as NotificationMessage).payload
+          const { title, message: description, notificationType, playSound } = (message as NotificationMessage).payload
           switch (notificationType) {
             case 'success':
               toast.success(title, { description })
@@ -65,6 +66,11 @@ export function useTaskSync() {
               { type: 'vibora:notification', title, message: description, notificationType },
               '*'
             )
+
+            // Send sound request to desktop app if enabled
+            if (playSound) {
+              window.parent.postMessage({ type: 'vibora:playSound' }, '*')
+            }
           }
         }
       } catch {

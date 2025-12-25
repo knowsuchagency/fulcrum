@@ -204,8 +204,8 @@ async function main() {
   // Read Neutralino config from stdin
   const nlConfig = await readNeutralinoConfig()
 
-  // Find an available port (prefer 3333, but find another if taken)
-  const preferredPort = parseInt(process.env.PORT || '3333', 10)
+  // Find an available port (prefer 7777, but find another if taken)
+  const preferredPort = parseInt(process.env.PORT || '7777', 10)
   const PORT = await findAvailablePort(preferredPort)
   log.desktop.info('Using port', { port: PORT })
 

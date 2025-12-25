@@ -125,7 +125,7 @@ Commands:
   dev status                Check if developer mode is enabled
 
 Global Options:
-  --port=<port>     Server port (default: 3333)
+  --port=<port>     Server port (default: 7777)
   --url=<url>       Override full server URL
   --pretty          Pretty-print JSON output
   --version         Show version

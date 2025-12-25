@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import {
   getSettings,
   updateSettingByPath,
-  resetSettings,
   getWorktreeBasePath,
   getNotificationSettings,
   updateNotificationSettings,
@@ -12,7 +11,6 @@ import {
   updateClaudeSettings,
   isDeveloperMode,
   getDefaultValue,
-  getSetting,
   type NotificationSettings,
   type ZAiSettings,
   type EditorApp,

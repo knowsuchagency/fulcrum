@@ -299,12 +299,13 @@ VIBORA_DIR="${VIBORA_DIR:-$HOME/.vibora}"
 PID_FILE="$VIBORA_DIR/vibora.pid"
 SETTINGS_FILE="$VIBORA_DIR/settings.json"
 
-# Determine port: env var > settings.json > default 3333
+# Determine port: env var > settings.json > default 7777
 if [ -z "$PORT" ]; then
   if [ -f "$SETTINGS_FILE" ] && command -v jq >/dev/null 2>&1; then
-    PORT=$(jq -r '.port // empty' "$SETTINGS_FILE" 2>/dev/null)
+    # Try nested format first, fall back to flat
+    PORT=$(jq -r '.server.port // .port // empty' "$SETTINGS_FILE" 2>/dev/null)
   fi
-  PORT="${PORT:-3333}"
+  PORT="${PORT:-7777}"
 fi
 
 # Check if already running

@@ -60,9 +60,12 @@ Desktop-specific settings are saved to `~/.vibora/settings.json`:
 
 ```json
 {
-  "port": 3333,
-  "remoteHost": "my-server.tailnet.ts.net",
-  "remotePort": 3333,
+  "_schemaVersion": 2,
+  "server": { "port": 7777 },
+  "remoteVibora": {
+    "host": "my-server.tailnet.ts.net",
+    "port": 7777
+  },
   "lastConnectedHost": "my-server.tailnet.ts.net"
 }
 ```
@@ -157,12 +160,14 @@ To use the desktop app with a remote Vibora server:
 
 2. **Ensure the server is accessible**:
    - Via Tailscale: Use your machine's Tailscale hostname (e.g., `my-server.tailnet.ts.net`)
-   - Via direct IP: Ensure port 3333 (or your configured port) is accessible
+   - Via direct IP: Ensure port 7777 (or your configured port) is accessible
 
 3. **Configure the remote host** in your local `~/.vibora/settings.json`:
    ```json
    {
-     "remoteHost": "my-server.tailnet.ts.net"
+     "remoteVibora": {
+       "host": "my-server.tailnet.ts.net"
+     }
    }
    ```
 
