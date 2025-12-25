@@ -10,6 +10,7 @@ import {
   getClaudeSettings,
   updateClaudeSettings,
   syncClaudeCodeTheme,
+  syncStarshipTheme,
   isDeveloperMode,
   getDefaultValue,
   CLAUDE_CODE_THEMES,
@@ -39,6 +40,7 @@ export const CONFIG_KEYS = {
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
   CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
   CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
+  SYNC_STARSHIP_THEME: 'appearance.syncStarshipTheme',
 } as const
 
 // Legacy key mapping to new nested paths (for backward compatibility)
@@ -236,7 +238,7 @@ app.post('/restart', (c) => {
   return c.json({ success: true, message: 'Restart initiated (build + migrate + restart)' })
 })
 
-// POST /api/config/sync-claude-theme - Sync theme to Claude Code config
+// POST /api/config/sync-theme - Sync theme to external configs (Claude Code, Starship)
 app.post('/sync-claude-theme', async (c) => {
   try {
     const body = await c.req.json<{ resolvedTheme: 'light' | 'dark' }>()
@@ -246,10 +248,12 @@ app.post('/sync-claude-theme', async (c) => {
       return c.json({ error: 'resolvedTheme must be "light" or "dark"' }, 400)
     }
 
+    // Sync to both Claude Code and Starship (each checks its own sync setting)
     syncClaudeCodeTheme(resolvedTheme)
+    syncStarshipTheme(resolvedTheme)
     return c.json({ success: true, resolvedTheme })
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to sync Claude theme' }, 400)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to sync theme' }, 400)
   }
 })
 
@@ -315,9 +319,9 @@ app.put('/:key', async (c) => {
         return c.json({ error: 'Theme must be "system", "light", "dark", or null' }, 400)
       }
       value = value === '' || value === 'system' ? null : value
-    } else if (path === CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME) {
+    } else if (path === CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME || path === CONFIG_KEYS.SYNC_STARSHIP_THEME) {
       if (typeof value !== 'boolean') {
-        return c.json({ error: 'syncClaudeCodeTheme must be a boolean' }, 400)
+        return c.json({ error: 'Sync setting must be a boolean' }, 400)
       }
     } else if (path === CONFIG_KEYS.CLAUDE_CODE_LIGHT_THEME || path === CONFIG_KEYS.CLAUDE_CODE_DARK_THEME) {
       if (!CLAUDE_CODE_THEMES.includes(value as ClaudeCodeTheme)) {
