@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon } from '@hugeicons/core-free-icons'
-import { highlightCode, getLangFromPath } from '@/lib/shiki'
+import { highlightCode, getLangFromPath, type ShikiTheme } from '@/lib/shiki'
 import { cn } from '@/lib/utils'
 import type { FileContent as FileContentType } from '@/types'
+import { useTheme } from 'next-themes'
 
 interface FileContentProps {
   filePath: string | null
@@ -24,6 +25,8 @@ export function FileContent({
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
   const [isHighlighting, setIsHighlighting] = useState(false)
   const [wrap, setWrap] = useState(true)
+  const { resolvedTheme } = useTheme()
+  const shikiTheme: ShikiTheme = resolvedTheme === 'light' ? 'light' : 'dark'
 
   useEffect(() => {
     if (!content || !filePath) {
@@ -44,7 +47,7 @@ export function FileContent({
     setIsHighlighting(true)
     const lang = getLangFromPath(filePath)
 
-    highlightCode(content.content, lang)
+    highlightCode(content.content, lang, shikiTheme)
       .then((html) => {
         setHighlightedHtml(html)
         setIsHighlighting(false)
@@ -53,7 +56,7 @@ export function FileContent({
         setHighlightedHtml(null)
         setIsHighlighting(false)
       })
-  }, [content, filePath])
+  }, [content, filePath, shikiTheme])
 
   // No file selected
   if (!filePath) {

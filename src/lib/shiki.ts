@@ -29,7 +29,7 @@ async function initHighlighter(): Promise<Highlighter> {
   if (initPromise) return initPromise
 
   initPromise = createHighlighter({
-    themes: ['github-dark'],
+    themes: ['github-dark', 'github-light'],
     langs: COMMON_LANGS,
   })
 
@@ -37,11 +37,15 @@ async function initHighlighter(): Promise<Highlighter> {
   return highlighter
 }
 
+export type ShikiTheme = 'light' | 'dark'
+
 export async function highlightCode(
   code: string,
-  lang: string
+  lang: string,
+  theme: ShikiTheme = 'dark'
 ): Promise<string> {
   const hl = await initHighlighter()
+  const shikiTheme = theme === 'light' ? 'github-light' : 'github-dark'
 
   // Normalize language name
   const normalizedLang = normalizeLang(lang)
@@ -54,11 +58,11 @@ export async function highlightCode(
       await hl.loadLanguage(normalizedLang as Parameters<typeof hl.loadLanguage>[0])
     } catch {
       // Fall back to plaintext
-      return hl.codeToHtml(code, { lang: 'plaintext', theme: 'github-dark' })
+      return hl.codeToHtml(code, { lang: 'plaintext', theme: shikiTheme })
     }
   }
 
-  return hl.codeToHtml(code, { lang: normalizedLang, theme: 'github-dark' })
+  return hl.codeToHtml(code, { lang: normalizedLang, theme: shikiTheme })
 }
 
 function normalizeLang(lang: string): string {
