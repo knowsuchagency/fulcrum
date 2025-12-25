@@ -331,7 +331,7 @@ function promptRemoteConfig() {
 /**
  * Prompt user to choose between local and remote server
  * Only shown when remote URL is configured in settings
- * @returns {Promise<boolean>} true if user wants to connect to remote
+ * @returns {Promise<'local' | 'remote' | 'edit'>}
  */
 function promptServerChoice(remoteUrl) {
   return new Promise((resolve) => {
@@ -348,11 +348,13 @@ function promptServerChoice(remoteUrl) {
           <button class="primary-btn" id="use-local-btn">Use Local Server</button>
           <button class="secondary-btn" id="use-remote-btn">Connect to Remote</button>
         </div>
+        <button class="text-btn" id="edit-url-btn" style="margin-top: 1rem;">Change URL</button>
       </div>
     `;
 
-    document.getElementById('use-local-btn').onclick = () => resolve(false);
-    document.getElementById('use-remote-btn').onclick = () => resolve(true);
+    document.getElementById('use-local-btn').onclick = () => resolve('local');
+    document.getElementById('use-remote-btn').onclick = () => resolve('remote');
+    document.getElementById('edit-url-btn').onclick = () => resolve('edit');
   });
 }
 
@@ -672,9 +674,30 @@ async function tryConnect() {
   // Check if remote URL is configured (returning user with remote setup)
   if (hasRemoteConfig) {
     // Ask user which server to use
-    const useRemote = await promptServerChoice(remote.url);
+    const choice = await promptServerChoice(remote.url);
 
-    if (useRemote) {
+    if (choice === 'edit') {
+      // User wants to change the URL
+      const config = await promptRemoteConfig();
+      if (config) {
+        // Save new remote config
+        await saveSettings({
+          ...desktopSettings,
+          remoteVibora: { url: config.url },
+        });
+        // Try to connect to new remote
+        if (await connectToRemote(config.url)) {
+          return;
+        }
+        showError('Connection Failed', `Could not connect to ${config.url}`);
+        return;
+      }
+      // User cancelled - restart choice
+      await tryConnect();
+      return;
+    }
+
+    if (choice === 'remote') {
       if (await connectToRemote(remote.url)) {
         return;
       }
