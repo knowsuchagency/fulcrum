@@ -1,9 +1,11 @@
 {
   "title": "设置",
   "sections": {
+    "server": "服务器",
     "serverDefaults": "服务器与默认设置",
     "paths": "路径",
     "authentication": "身份验证",
+    "remote": "远程服务器",
     "editor": "编辑器",
     "integrations": "集成",
     "zai": "z.ai",
@@ -77,6 +79,12 @@
         "auto": "自动检测",
         "en": "English",
         "zh": "简体中文"
+      }
+    },
+    "remote": {
+      "url": {
+        "label": "服务器地址",
+        "description": "远程 Vibora 服务器的 URL。支持 Tailscale Serve 的 HTTPS。"
       }
     }
   },

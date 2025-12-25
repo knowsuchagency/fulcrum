@@ -1,9 +1,11 @@
 {
   "title": "Settings",
   "sections": {
+    "server": "Server",
     "serverDefaults": "Server & Defaults",
     "paths": "Paths",
     "authentication": "Authentication",
+    "remote": "Remote Server",
     "editor": "Editor",
     "integrations": "Integrations",
     "zai": "z.ai",
@@ -77,6 +79,12 @@
         "auto": "Auto-detect",
         "en": "English",
         "zh": "Chinese (Simplified)"
+      }
+    },
+    "remote": {
+      "url": {
+        "label": "Server URL",
+        "description": "URL of a remote Vibora server. Supports HTTPS for Tailscale Serve."
       }
     }
   },

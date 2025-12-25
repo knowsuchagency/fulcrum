@@ -11,7 +11,7 @@
 // Configuration
 const SERVER_EXTENSION_ID = 'io.vibora.server';
 const DEFAULT_PORT = 7777;
-const CURRENT_SCHEMA_VERSION = 2;
+const CURRENT_SCHEMA_VERSION = 3;
 const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
 const MAX_HEALTH_RETRIES = 10;
 const DEV_PORT = 5173;
@@ -64,56 +64,83 @@ function isFirstLaunch() {
 }
 
 /**
+ * Helper: Construct URL from host and port
+ */
+function constructRemoteUrl(host, port) {
+  if (!host) return '';
+  const effectivePort = port || DEFAULT_PORT;
+  // Omit port for standard HTTP/HTTPS ports
+  const portSuffix = effectivePort === 80 || effectivePort === 443 ? '' : `:${effectivePort}`;
+  return `http://${host}${portSuffix}`;
+}
+
+/**
  * Migrate settings from flat to nested format
  */
 function migrateSettings(settings) {
-  if (settings._schemaVersion >= CURRENT_SCHEMA_VERSION) {
+  const version = settings._schemaVersion || 1;
+  if (version >= CURRENT_SCHEMA_VERSION) {
     return settings; // Already migrated
   }
 
-  console.log('[Vibora] Migrating settings to nested format...');
-
-  // Migration map from flat keys to nested paths
-  const migrationMap = {
-    port: ['server', 'port'],
-    defaultGitReposDir: ['paths', 'defaultGitReposDir'],
-    basicAuthUsername: ['authentication', 'username'],
-    basicAuthPassword: ['authentication', 'password'],
-    remoteHost: ['remoteVibora', 'host'],
-    hostname: ['remoteVibora', 'host'], // Legacy key
-    remotePort: ['remoteVibora', 'port'],
-    sshPort: ['editor', 'sshPort'],
-    linearApiKey: ['integrations', 'linearApiKey'],
-    githubPat: ['integrations', 'githubPat'],
-    language: ['appearance', 'language'],
-  };
+  console.log('[Vibora] Migrating settings from version', version, 'to', CURRENT_SCHEMA_VERSION);
 
   const migrated = {
     _schemaVersion: CURRENT_SCHEMA_VERSION,
     server: { port: DEFAULT_PORT },
-    remoteVibora: { host: '', port: DEFAULT_PORT },
+    remoteVibora: { url: '' },
     editor: { app: 'vscode', host: '', sshPort: 22 },
   };
 
-  // Copy existing nested groups if present
-  for (const key of ['server', 'paths', 'authentication', 'remoteVibora', 'editor', 'integrations', 'appearance', 'notifications', 'zai']) {
+  // Copy existing nested groups if present (except remoteVibora which needs special handling)
+  for (const key of ['server', 'paths', 'authentication', 'editor', 'integrations', 'appearance', 'notifications', 'zai']) {
     if (settings[key] && typeof settings[key] === 'object') {
       migrated[key] = { ...migrated[key], ...settings[key] };
     }
   }
 
-  // Migrate flat keys
-  for (const [flatKey, [group, prop]] of Object.entries(migrationMap)) {
-    if (settings[flatKey] !== undefined && settings[flatKey] !== null) {
-      // Don't migrate old default port (3333) - let user get new default
-      if (flatKey === 'port' && settings[flatKey] === 3333) {
-        continue;
+  // Schema 1 → 2: Migrate flat keys to nested structure
+  if (version < 2) {
+    const migrationMap = {
+      port: ['server', 'port'],
+      defaultGitReposDir: ['paths', 'defaultGitReposDir'],
+      basicAuthUsername: ['authentication', 'username'],
+      basicAuthPassword: ['authentication', 'password'],
+      sshPort: ['editor', 'sshPort'],
+      linearApiKey: ['integrations', 'linearApiKey'],
+      githubPat: ['integrations', 'githubPat'],
+      language: ['appearance', 'language'],
+    };
+
+    for (const [flatKey, [group, prop]] of Object.entries(migrationMap)) {
+      if (settings[flatKey] !== undefined && settings[flatKey] !== null) {
+        // Don't migrate old default port (3333) - let user get new default
+        if (flatKey === 'port' && settings[flatKey] === 3333) {
+          continue;
+        }
+        if (!migrated[group]) migrated[group] = {};
+        if (migrated[group][prop] === undefined || migrated[group][prop] === null || migrated[group][prop] === '') {
+          migrated[group][prop] = settings[flatKey];
+        }
       }
-      // Only migrate if not already set in nested format
-      if (!migrated[group]) migrated[group] = {};
-      if (migrated[group][prop] === undefined || migrated[group][prop] === null || migrated[group][prop] === '') {
-        migrated[group][prop] = settings[flatKey];
-      }
+    }
+
+    // Handle flat remoteHost/hostname → remoteVibora.url
+    const flatHost = settings.remoteHost || settings.hostname || '';
+    if (flatHost) {
+      migrated.remoteVibora = { url: constructRemoteUrl(flatHost, DEFAULT_PORT) };
+    }
+  }
+
+  // Schema 2 → 3: Migrate remoteVibora.host + remoteVibora.port → remoteVibora.url
+  if (version < 3 && settings.remoteVibora) {
+    if ('host' in settings.remoteVibora) {
+      const host = settings.remoteVibora.host || '';
+      const port = settings.remoteVibora.port || DEFAULT_PORT;
+      migrated.remoteVibora = { url: constructRemoteUrl(host, port) };
+    } else if ('url' in settings.remoteVibora) {
+      // Already has url format
+      migrated.remoteVibora = { url: settings.remoteVibora.url || '' };
     }
   }
 
@@ -247,7 +274,7 @@ function promptOnboardingChoice() {
 
 /**
  * Prompt user to configure remote server connection
- * @returns {Promise<{host: string, port: number} | null>} null if cancelled
+ * @returns {Promise<{url: string} | null>} null if cancelled
  */
 function promptRemoteConfig() {
   return new Promise((resolve) => {
@@ -257,17 +284,13 @@ function promptRemoteConfig() {
       <div class="prompt-container">
         <div class="prompt-title">Connect to Remote Server</div>
         <div class="prompt-description">
-          Enter the hostname and port of your remote Vibora server.
+          Enter the URL of your remote Vibora server.
         </div>
         <div id="remote-error" class="prompt-error" style="display: none;"></div>
         <form class="prompt-form" id="remote-form">
           <div class="input-group">
-            <label for="remote-host">Hostname</label>
-            <input type="text" id="remote-host" placeholder="example.com or 192.168.1.100" required autocomplete="off" />
-          </div>
-          <div class="input-group">
-            <label for="remote-port">Port</label>
-            <input type="number" id="remote-port" placeholder="${DEFAULT_PORT}" value="${DEFAULT_PORT}" min="1" max="65535" />
+            <label for="remote-url">Server URL</label>
+            <input type="url" id="remote-url" placeholder="http://example.com:7777 or https://vibora.tailnet.ts.net" required autocomplete="off" />
           </div>
           <div class="button-group">
             <button type="button" class="secondary-btn" id="back-btn">Back</button>
@@ -280,37 +303,46 @@ function promptRemoteConfig() {
     document.getElementById('back-btn').onclick = () => resolve(null);
     document.getElementById('remote-form').onsubmit = (e) => {
       e.preventDefault();
-      const host = document.getElementById('remote-host').value.trim();
-      const port = parseInt(document.getElementById('remote-port').value, 10) || DEFAULT_PORT;
+      const urlInput = document.getElementById('remote-url').value.trim();
+      const errorEl = document.getElementById('remote-error');
 
-      if (!host) {
-        const errorEl = document.getElementById('remote-error');
-        errorEl.textContent = 'Please enter a hostname';
+      if (!urlInput) {
+        errorEl.textContent = 'Please enter a URL';
         errorEl.style.display = 'block';
         return;
       }
 
-      resolve({ host, port });
+      // Validate URL
+      try {
+        const url = new URL(urlInput);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+          throw new Error('URL must be http:// or https://');
+        }
+        // Normalize to origin (removes trailing slash, path)
+        resolve({ url: url.origin });
+      } catch (err) {
+        errorEl.textContent = 'Please enter a valid URL (e.g., http://example.com:7777)';
+        errorEl.style.display = 'block';
+      }
     };
   });
 }
 
 /**
  * Prompt user to choose between local and remote server
- * Only shown when remoteHost is configured in settings
+ * Only shown when remote URL is configured in settings
  * @returns {Promise<boolean>} true if user wants to connect to remote
  */
-function promptServerChoice(remoteHost, remotePort) {
+function promptServerChoice(remoteUrl) {
   return new Promise((resolve) => {
     const app = document.getElementById('app');
-    const displayHost = remotePort !== DEFAULT_PORT ? `${remoteHost}:${remotePort}` : remoteHost;
     app.innerHTML = `
       <img src="/icons/icon.png" alt="Vibora" class="logo" style="animation: none;">
       <div class="prompt-container">
         <div class="prompt-title">Choose Server</div>
         <div class="prompt-description">
           You have a remote server configured at:<br>
-          <strong>${displayHost}</strong>
+          <strong>${remoteUrl}</strong>
         </div>
         <div class="button-group" style="margin-top: 1.5rem;">
           <button class="primary-btn" id="use-local-btn">Use Local Server</button>
@@ -517,24 +549,21 @@ async function startLocalServer() {
  * Get remote server config from settings (nested format)
  */
 function getRemoteConfig() {
-  const host = desktopSettings?.remoteVibora?.host?.trim() || '';
-  const port = desktopSettings?.remoteVibora?.port || DEFAULT_PORT;
-  return { host, port };
+  const url = desktopSettings?.remoteVibora?.url?.trim() || '';
+  return { url };
 }
 
 /**
  * Connect to remote server
  */
-async function connectToRemote(remoteHost, remotePort) {
-  const remoteUrl = `http://${remoteHost}:${remotePort}`;
-
-  setStatus('Connecting to remote server...', `${remoteHost}:${remotePort}`);
-  console.log('[Vibora] Connecting to remote:', remoteHost);
+async function connectToRemote(remoteUrl) {
+  setStatus('Connecting to remote server...', remoteUrl);
+  console.log('[Vibora] Connecting to remote:', remoteUrl);
 
   if (await waitForServerReady(remoteUrl)) {
     await saveSettings({
       ...desktopSettings,
-      lastConnectedHost: remoteHost
+      lastConnectedHost: remoteUrl
     });
     loadViboraApp(remoteUrl);
     return true;
@@ -593,7 +622,7 @@ async function tryConnect() {
   await loadSettings();
 
   const remote = getRemoteConfig();
-  const hasRemoteConfig = remote.host !== '';
+  const hasRemoteConfig = remote.url !== '';
 
   // First launch - show onboarding
   if (isFirstLaunch()) {
@@ -611,17 +640,17 @@ async function tryConnect() {
           ...desktopSettings,
           _schemaVersion: CURRENT_SCHEMA_VERSION,
           server: { port: DEFAULT_PORT },
-          remoteVibora: { host: config.host, port: config.port },
+          remoteVibora: { url: config.url },
           editor: { app: 'vscode', host: '', sshPort: 22 },
         });
 
         // Try to connect to remote
-        if (await connectToRemote(config.host, config.port)) {
+        if (await connectToRemote(config.url)) {
           return;
         }
 
         // Remote failed - ask if they want to try local instead
-        showError('Connection Failed', `Could not connect to ${config.host}:${config.port}. Try running locally or check the server.`);
+        showError('Connection Failed', `Could not connect to ${config.url}. Try running locally or check the server.`);
         return;
       }
 
@@ -635,18 +664,18 @@ async function tryConnect() {
       ...desktopSettings,
       _schemaVersion: CURRENT_SCHEMA_VERSION,
       server: { port: DEFAULT_PORT },
-      remoteVibora: { host: '', port: DEFAULT_PORT },
+      remoteVibora: { url: '' },
       editor: { app: 'vscode', host: '', sshPort: 22 },
     });
   }
 
-  // Check if remoteHost is configured (returning user with remote setup)
+  // Check if remote URL is configured (returning user with remote setup)
   if (hasRemoteConfig) {
     // Ask user which server to use
-    const useRemote = await promptServerChoice(remote.host, remote.port);
+    const useRemote = await promptServerChoice(remote.url);
 
     if (useRemote) {
-      if (await connectToRemote(remote.host, remote.port)) {
+      if (await connectToRemote(remote.url)) {
         return;
       }
       // Remote failed - fall through to local
@@ -656,6 +685,32 @@ async function tryConnect() {
 
   // Connect to local server
   await connectToLocal();
+}
+
+/**
+ * Handle reconnection request from the React app (via postMessage)
+ * Called when user changes the remote URL in Settings
+ */
+async function handleReconnect(newUrl) {
+  console.log('[Vibora] Reconnect requested:', newUrl || 'local');
+
+  // Save new URL to settings
+  await saveSettings({
+    ...desktopSettings,
+    remoteVibora: { url: newUrl || '' }
+  });
+
+  if (newUrl) {
+    // Connect to remote
+    if (await connectToRemote(newUrl)) {
+      return;
+    }
+    // Failed - show error but don't fall back automatically
+    showError('Connection Failed', `Could not connect to ${newUrl}`);
+  } else {
+    // Switch to local
+    await connectToLocal();
+  }
 }
 
 /**
@@ -987,6 +1042,10 @@ async function init() {
       } else if (event.data?.type === 'vibora:playSound') {
         // Play notification sound locally
         playNotificationSound();
+      } else if (event.data?.type === 'vibora:reconnect') {
+        // Handle reconnection request from Settings UI
+        const newUrl = event.data.url;
+        handleReconnect(newUrl);
       }
     });
 

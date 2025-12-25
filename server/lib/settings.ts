@@ -5,7 +5,7 @@ import * as crypto from 'crypto'
 import { log } from './logger'
 
 // Schema version for settings migration
-const CURRENT_SCHEMA_VERSION = 2
+const CURRENT_SCHEMA_VERSION = 3
 
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed'
@@ -24,8 +24,7 @@ export interface Settings {
     password: string | null
   }
   remoteVibora: {
-    host: string
-    port: number
+    url: string
   }
   editor: {
     app: EditorApp
@@ -55,8 +54,7 @@ const DEFAULT_SETTINGS: Settings = {
     password: null,
   },
   remoteVibora: {
-    host: '',
-    port: 7777,
+    url: '',
   },
   editor: {
     app: 'vscode',
@@ -81,8 +79,7 @@ const MIGRATION_MAP: Record<string, string> = {
   defaultGitReposDir: 'paths.defaultGitReposDir',
   basicAuthUsername: 'authentication.username',
   basicAuthPassword: 'authentication.password',
-  remoteHost: 'remoteVibora.host',
-  hostname: 'remoteVibora.host', // Legacy key
+  // remoteHost and hostname are handled specially in migrateSettings (need URL construction)
   sshPort: 'editor.sshPort',
   linearApiKey: 'integrations.linearApiKey',
   githubPat: 'integrations.githubPat',
@@ -121,6 +118,15 @@ interface MigrationResult {
   warnings: string[]
 }
 
+// Helper: Construct URL from host and port
+function constructRemoteUrl(host: string, port?: number): string {
+  if (!host) return ''
+  const effectivePort = port || 7777
+  // Omit port for standard HTTP/HTTPS ports
+  const portSuffix = effectivePort === 80 || effectivePort === 443 ? '' : `:${effectivePort}`
+  return `http://${host}${portSuffix}`
+}
+
 // Migrate flat settings to nested structure
 function migrateSettings(parsed: Record<string, unknown>): MigrationResult {
   const result: MigrationResult = { migrated: false, migratedKeys: [], warnings: [] }
@@ -131,32 +137,59 @@ function migrateSettings(parsed: Record<string, unknown>): MigrationResult {
     return result
   }
 
-  for (const [oldKey, newPath] of Object.entries(MIGRATION_MAP)) {
-    // Check if old flat key exists
-    if (oldKey in parsed && parsed[oldKey] !== undefined) {
-      const oldValue = parsed[oldKey]
+  // Schema 1 → 2: Migrate flat keys to nested structure
+  if (version < 2) {
+    for (const [oldKey, newPath] of Object.entries(MIGRATION_MAP)) {
+      // Check if old flat key exists
+      if (oldKey in parsed && parsed[oldKey] !== undefined) {
+        const oldValue = parsed[oldKey]
 
-      // Special case: don't migrate old default port - let users get the new default
-      if (oldKey === 'port' && oldValue === OLD_DEFAULT_PORT) {
+        // Special case: don't migrate old default port - let users get the new default
+        if (oldKey === 'port' && oldValue === OLD_DEFAULT_PORT) {
+          delete parsed[oldKey]
+          result.migrated = true
+          continue
+        }
+
+        // Check if new nested path already has a value (partial migration)
+        const existingValue = getNestedValue(parsed, newPath)
+
+        if (existingValue !== undefined) {
+          // New path already has value - prefer new, log warning
+          result.warnings.push(`Key "${oldKey}" exists but "${newPath}" already set. Removing old key.`)
+        } else {
+          // Migrate value to new nested path
+          setNestedValue(parsed, newPath, oldValue)
+          result.migratedKeys.push(oldKey)
+        }
+
+        // Remove old flat key
         delete parsed[oldKey]
         result.migrated = true
-        continue
       }
+    }
 
-      // Check if new nested path already has a value (partial migration)
-      const existingValue = getNestedValue(parsed, newPath)
+    // Handle flat remoteHost/hostname → remoteVibora.url
+    const flatHost = (parsed.remoteHost as string) || (parsed.hostname as string) || ''
+    if (flatHost) {
+      const url = constructRemoteUrl(flatHost, 7777)
+      setNestedValue(parsed, 'remoteVibora.url', url)
+      result.migratedKeys.push('remoteHost')
+      delete parsed.remoteHost
+      delete parsed.hostname
+      result.migrated = true
+    }
+  }
 
-      if (existingValue !== undefined) {
-        // New path already has value - prefer new, log warning
-        result.warnings.push(`Key "${oldKey}" exists but "${newPath}" already set. Removing old key.`)
-      } else {
-        // Migrate value to new nested path
-        setNestedValue(parsed, newPath, oldValue)
-        result.migratedKeys.push(oldKey)
-      }
-
-      // Remove old flat key
-      delete parsed[oldKey]
+  // Schema 2 → 3: Migrate remoteVibora.host + remoteVibora.port → remoteVibora.url
+  if (version < 3) {
+    const remoteVibora = parsed.remoteVibora as Record<string, unknown> | undefined
+    if (remoteVibora && 'host' in remoteVibora) {
+      const host = (remoteVibora.host as string) || ''
+      const port = (remoteVibora.port as number) || 7777
+      const url = constructRemoteUrl(host, port)
+      parsed.remoteVibora = { url }
+      result.migratedKeys.push('remoteVibora.host')
       result.migrated = true
     }
   }
@@ -292,8 +325,7 @@ export function getSettings(): Settings {
       password: ((parsed.authentication as Record<string, unknown>)?.password as string | null) ?? null,
     },
     remoteVibora: {
-      host: ((parsed.remoteVibora as Record<string, unknown>)?.host as string) ?? DEFAULT_SETTINGS.remoteVibora.host,
-      port: ((parsed.remoteVibora as Record<string, unknown>)?.port as number) ?? DEFAULT_SETTINGS.remoteVibora.port,
+      url: ((parsed.remoteVibora as Record<string, unknown>)?.url as string) ?? DEFAULT_SETTINGS.remoteVibora.url,
     },
     editor: {
       app: ((parsed.editor as Record<string, unknown>)?.app as EditorApp) ?? DEFAULT_SETTINGS.editor.app,
@@ -328,8 +360,7 @@ export function getSettings(): Settings {
       password: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.authentication.password,
     },
     remoteVibora: {
-      host: process.env.VIBORA_REMOTE_HOST ?? process.env.VIBORA_HOSTNAME ?? fileSettings.remoteVibora.host,
-      port: fileSettings.remoteVibora.port,
+      url: process.env.VIBORA_REMOTE_URL ?? fileSettings.remoteVibora.url,
     },
     editor: {
       app: fileSettings.editor.app,
@@ -361,7 +392,7 @@ export function getSettingByKey<K extends keyof LegacySettings>(key: K): LegacyS
 export interface LegacySettings {
   port: number
   defaultGitReposDir: string
-  remoteHost: string
+  remoteUrl: string
   sshPort: number
   basicAuthUsername: string | null
   basicAuthPassword: string | null
@@ -375,7 +406,7 @@ export function toLegacySettings(settings: Settings): LegacySettings {
   return {
     port: settings.server.port,
     defaultGitReposDir: settings.paths.defaultGitReposDir,
-    remoteHost: settings.remoteVibora.host,
+    remoteUrl: settings.remoteVibora.url,
     sshPort: settings.editor.sshPort,
     basicAuthUsername: settings.authentication.username,
     basicAuthPassword: settings.authentication.password,
