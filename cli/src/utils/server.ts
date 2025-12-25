@@ -2,10 +2,56 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 
+// Settings interface supporting both nested (v2) and flat (legacy) formats
 interface Settings {
+  _schemaVersion?: number
+  // Nested format (v2)
+  server?: { port?: number }
+  authentication?: { username?: string | null; password?: string | null }
+  // Legacy flat format
   port?: number
   basicAuthUsername?: string
   basicAuthPassword?: string
+}
+
+const DEFAULT_PORT = 7777
+
+/**
+ * Get port from settings (supports nested and flat formats)
+ */
+function getPortFromSettings(settings: Settings | null): number | null {
+  if (!settings) return null
+  // Try nested format first (v2)
+  if (settings.server?.port) {
+    return settings.server.port
+  }
+  // Fall back to flat format (legacy)
+  if (settings.port) {
+    return settings.port
+  }
+  return null
+}
+
+/**
+ * Get auth credentials from settings (supports nested and flat formats)
+ */
+function getAuthFromSettings(settings: Settings | null): { username: string; password: string } | null {
+  if (!settings) return null
+  // Try nested format first (v2)
+  if (settings.authentication?.username && settings.authentication?.password) {
+    return {
+      username: settings.authentication.username,
+      password: settings.authentication.password,
+    }
+  }
+  // Fall back to flat format (legacy)
+  if (settings.basicAuthUsername && settings.basicAuthPassword) {
+    return {
+      username: settings.basicAuthUsername,
+      password: settings.basicAuthPassword,
+    }
+  }
+  return null
 }
 
 function expandPath(p: string): string {
@@ -36,7 +82,7 @@ function readSettingsFile(path: string): Settings | null {
  * 4. VIBORA_DIR settings.json (read port)
  * 5. .vibora/settings.json in CWD (read port)
  * 6. ~/.vibora/settings.json (read port)
- * 7. Default: http://localhost:3333
+ * 7. Default: http://localhost:7777
  */
 export function discoverServerUrl(urlOverride?: string, portOverride?: string): string {
   // 1. Explicit URL override
@@ -58,27 +104,30 @@ export function discoverServerUrl(urlOverride?: string, portOverride?: string): 
   if (process.env.VIBORA_DIR) {
     const viboraDirSettings = join(expandPath(process.env.VIBORA_DIR), 'settings.json')
     const settings = readSettingsFile(viboraDirSettings)
-    if (settings?.port) {
-      return `http://localhost:${settings.port}`
+    const port = getPortFromSettings(settings)
+    if (port) {
+      return `http://localhost:${port}`
     }
   }
 
   // 5. Local .vibora/settings.json
   const cwdSettings = join(process.cwd(), '.vibora', 'settings.json')
   const localSettings = readSettingsFile(cwdSettings)
-  if (localSettings?.port) {
-    return `http://localhost:${localSettings.port}`
+  const localPort = getPortFromSettings(localSettings)
+  if (localPort) {
+    return `http://localhost:${localPort}`
   }
 
   // 6. Global ~/.vibora/settings.json
   const globalSettings = join(homedir(), '.vibora', 'settings.json')
   const homeSettings = readSettingsFile(globalSettings)
-  if (homeSettings?.port) {
-    return `http://localhost:${homeSettings.port}`
+  const homePort = getPortFromSettings(homeSettings)
+  if (homePort) {
+    return `http://localhost:${homePort}`
   }
 
   // 7. Default
-  return 'http://localhost:3333'
+  return `http://localhost:${DEFAULT_PORT}`
 }
 
 /**
@@ -101,6 +150,7 @@ export function getViboraDir(): string {
 
 /**
  * Gets auth credentials from settings.json.
+ * Supports both nested (v2) and flat (legacy) formats.
  * Priority: VIBORA_DIR → CWD .vibora → ~/.vibora
  * Returns null if no credentials are configured.
  */
@@ -113,11 +163,9 @@ export function getAuthCredentials(): { username: string; password: string } | n
 
   for (const path of settingsPaths) {
     const settings = readSettingsFile(path)
-    if (settings?.basicAuthUsername && settings?.basicAuthPassword) {
-      return {
-        username: settings.basicAuthUsername,
-        password: settings.basicAuthPassword,
-      }
+    const auth = getAuthFromSettings(settings)
+    if (auth) {
+      return auth
     }
   }
 

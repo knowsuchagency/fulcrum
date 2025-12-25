@@ -19,7 +19,9 @@ import {
   usePort,
   useDefaultGitReposDir,
   useRemoteHost,
-  useSshPort,
+  useEditorApp,
+  useEditorHost,
+  useEditorSshPort,
   useLinearApiKey,
   useGitHubPat,
   useBasicAuthUsername,
@@ -34,6 +36,7 @@ import {
   useDeveloperMode,
   useRestartVibora,
   CONFIG_KEYS,
+  type EditorApp,
 } from '@/hooks/use-config'
 import { useLanguageSync } from '@/hooks/use-language-sync'
 
@@ -58,7 +61,9 @@ function SettingsPage() {
   const { data: port, isLoading: portLoading } = usePort()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const { data: remoteHost, isLoading: remoteHostLoading } = useRemoteHost()
-  const { data: sshPort, isLoading: sshPortLoading } = useSshPort()
+  const { data: editorApp, isLoading: editorAppLoading } = useEditorApp()
+  const { data: editorHost, isLoading: editorHostLoading } = useEditorHost()
+  const { data: editorSshPort, isLoading: editorSshPortLoading } = useEditorSshPort()
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: basicAuthUsername, isLoading: basicAuthUsernameLoading } = useBasicAuthUsername()
@@ -77,7 +82,9 @@ function SettingsPage() {
   const [localPort, setLocalPort] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
   const [localRemoteHost, setLocalRemoteHost] = useState('')
-  const [localSshPort, setLocalSshPort] = useState('')
+  const [localEditorApp, setLocalEditorApp] = useState<EditorApp>('vscode')
+  const [localEditorHost, setLocalEditorHost] = useState('')
+  const [localEditorSshPort, setLocalEditorSshPort] = useState('')
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
   const [localGitHubPat, setLocalGitHubPat] = useState('')
   const [localBasicAuthUsername, setLocalBasicAuthUsername] = useState('')
@@ -111,13 +118,15 @@ function SettingsPage() {
     if (port !== undefined) setLocalPort(String(port))
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
     if (remoteHost !== undefined) setLocalRemoteHost(remoteHost)
-    if (sshPort !== undefined) setLocalSshPort(String(sshPort))
+    if (editorApp !== undefined) setLocalEditorApp(editorApp)
+    if (editorHost !== undefined) setLocalEditorHost(editorHost)
+    if (editorSshPort !== undefined) setLocalEditorSshPort(String(editorSshPort))
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
     // For username, sync directly. For password, the server returns masked value - only update if empty (not yet loaded)
     if (basicAuthUsername !== undefined) setLocalBasicAuthUsername(basicAuthUsername)
     // Don't sync password from server since it's masked - user must re-enter to change
-  }, [port, defaultGitReposDir, remoteHost, sshPort, linearApiKey, githubPat, basicAuthUsername])
+  }, [port, defaultGitReposDir, remoteHost, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, basicAuthUsername])
 
   // Sync notification settings
   useEffect(() => {
@@ -146,7 +155,7 @@ function SettingsPage() {
   }, [zAiSettings])
 
   const isLoading =
-    portLoading || reposDirLoading || remoteHostLoading || sshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
+    portLoading || reposDirLoading || remoteHostLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -173,14 +182,19 @@ function SettingsPage() {
     localBasicAuthUsername !== basicAuthUsername ||
     localBasicAuthPassword !== ''
 
+  const hasEditorChanges =
+    localEditorApp !== editorApp ||
+    localEditorHost !== editorHost ||
+    localEditorSshPort !== String(editorSshPort)
+
   const hasChanges =
     localPort !== String(port) ||
     localReposDir !== defaultGitReposDir ||
     localRemoteHost !== remoteHost ||
-    localSshPort !== String(sshPort) ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
     hasAuthChanges ||
+    hasEditorChanges ||
     hasNotificationChanges ||
     hasZAiChanges
 
@@ -220,13 +234,36 @@ function SettingsPage() {
       )
     }
 
-    if (localSshPort !== String(sshPort)) {
-      const portNum = parseInt(localSshPort, 10)
+    // Save editor settings
+    if (localEditorApp !== editorApp) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.EDITOR_APP, value: localEditorApp },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localEditorHost !== editorHost) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.EDITOR_HOST, value: localEditorHost },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localEditorSshPort !== String(editorSshPort)) {
+      const portNum = parseInt(localEditorSshPort, 10)
       if (!isNaN(portNum) && portNum >= 1 && portNum <= 65535) {
         promises.push(
           new Promise((resolve) => {
             updateConfig.mutate(
-              { key: CONFIG_KEYS.SSH_PORT, value: portNum },
+              { key: CONFIG_KEYS.EDITOR_SSH_PORT, value: portNum },
               { onSettled: resolve }
             )
           })
@@ -347,11 +384,28 @@ function SettingsPage() {
     })
   }
 
-  const handleResetSshPort = () => {
-    resetConfig.mutate(CONFIG_KEYS.SSH_PORT, {
+  const handleResetEditorApp = () => {
+    resetConfig.mutate(CONFIG_KEYS.EDITOR_APP, {
       onSuccess: (data) => {
         if (data.value !== null && data.value !== undefined)
-          setLocalSshPort(String(data.value))
+          setLocalEditorApp(data.value as EditorApp)
+      },
+    })
+  }
+
+  const handleResetEditorHost = () => {
+    resetConfig.mutate(CONFIG_KEYS.EDITOR_HOST, {
+      onSuccess: (data) => {
+        setLocalEditorHost(data.value !== null && data.value !== undefined ? String(data.value) : '')
+      },
+    })
+  }
+
+  const handleResetEditorSshPort = () => {
+    resetConfig.mutate(CONFIG_KEYS.EDITOR_SSH_PORT, {
+      onSuccess: (data) => {
+        if (data.value !== null && data.value !== undefined)
+          setLocalEditorSshPort(String(data.value))
       },
     })
   }
@@ -554,30 +608,37 @@ function SettingsPage() {
                 </div>
               </SettingsSection>
 
-              {/* Remote Access + Integrations side by side */}
+              {/* Editor + Integrations side by side */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {/* Remote Access */}
-                <SettingsSection title={t('sections.remoteAccess')}>
+                {/* Editor */}
+                <SettingsSection title={t('sections.editor')}>
                   <div className="space-y-4">
-                    {/* Remote Host */}
+                    {/* Editor App */}
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
-                          {t('fields.remoteHost.label')}
+                          {t('fields.editor.app.label')}
                         </label>
-                        <div className="flex flex-1 items-center gap-2">
-                          <Input
-                            value={localRemoteHost}
-                            onChange={(e) => setLocalRemoteHost(e.target.value)}
-                            placeholder={t('fields.remoteHost.placeholder')}
-                            disabled={isLoading}
-                            className="flex-1 font-mono text-sm"
-                          />
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={localEditorApp}
+                            onValueChange={(v) => setLocalEditorApp(v as EditorApp)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="vscode">VS Code</SelectItem>
+                              <SelectItem value="cursor">Cursor</SelectItem>
+                              <SelectItem value="windsurf">Windsurf</SelectItem>
+                              <SelectItem value="zed">Zed</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={handleResetRemoteHost}
+                            onClick={handleResetEditorApp}
                             disabled={isLoading || resetConfig.isPending}
                             title={tc('buttons.reset')}
                           >
@@ -586,7 +647,38 @@ function SettingsPage() {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
-                        {t('fields.remoteHost.description')}
+                        {t('fields.editor.app.description')}
+                      </p>
+                    </div>
+
+                    {/* Editor Host */}
+                    <div className="space-y-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                          {t('fields.editor.host.label')}
+                        </label>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            value={localEditorHost}
+                            onChange={(e) => setLocalEditorHost(e.target.value)}
+                            placeholder={t('fields.editor.host.placeholder')}
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleResetEditorHost}
+                            disabled={isLoading || resetConfig.isPending}
+                            title={tc('buttons.reset')}
+                          >
+                            <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
+                        {t('fields.editor.host.description')}
                       </p>
                     </div>
 
@@ -594,15 +686,15 @@ function SettingsPage() {
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
-                          {t('fields.sshPort.label')}
+                          {t('fields.editor.sshPort.label')}
                         </label>
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
                             min={1}
                             max={65535}
-                            value={localSshPort}
-                            onChange={(e) => setLocalSshPort(e.target.value)}
+                            value={localEditorSshPort}
+                            onChange={(e) => setLocalEditorSshPort(e.target.value)}
                             placeholder="22"
                             disabled={isLoading}
                             className="w-20 font-mono text-sm"
@@ -611,7 +703,7 @@ function SettingsPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={handleResetSshPort}
+                            onClick={handleResetEditorSshPort}
                             disabled={isLoading || resetConfig.isPending}
                             title={tc('buttons.reset')}
                           >
@@ -620,7 +712,7 @@ function SettingsPage() {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
-                        {t('fields.sshPort.description')}
+                        {t('fields.editor.sshPort.description')}
                       </p>
                     </div>
                   </div>

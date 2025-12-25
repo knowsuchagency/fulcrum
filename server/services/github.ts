@@ -43,7 +43,7 @@ let octokitClient: Octokit | null = null
 let cachedPat: string | null = null
 
 function getOctokit(): Octokit | null {
-  const pat = getSetting('githubPat')
+  const pat = getSetting('integrations.githubPat')
   if (!pat) return null
 
   // Recreate client if PAT changed

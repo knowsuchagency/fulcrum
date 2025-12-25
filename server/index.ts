@@ -7,12 +7,12 @@ import {
   broadcast,
   broadcastToTerminal,
 } from './websocket/terminal-ws'
-import { getSetting } from './lib/settings'
+import { getSettingByKey } from './lib/settings'
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { log } from './lib/logger'
 
-const PORT = getSetting('port')
+const PORT = getSettingByKey('port')
 
 // Initialize PTY manager with broadcast callbacks
 const ptyManager = initPTYManager({

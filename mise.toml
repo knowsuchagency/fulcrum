@@ -67,21 +67,19 @@ git commit -m "bump ${usage_type}"
 """
 
 [tasks.dev]
-description = "Start frontend and backend dev servers"
+description = "Start frontend and backend dev servers (requires PORT and VIBORA_DIR env vars)"
 depends = ["install"]
-usage = '''
-arg "[port]" help="Port to run on" default="3222"
-arg "[dir]" help="Vibora directory" default="~/.vibora/dev"
-flag "--db" help="Database path (overrides dir/vibora.db)"
-'''
 run = """
-export PORT="${usage_port}"
-export VITE_BACKEND_PORT="${usage_port}"
-export VIBORA_DIR="${VIBORA_DIR:-${usage_dir}}"
-export DEBUG="1"
-if [ -n "${usage_db}" ]; then
-  export VIBORA_DATABASE_PATH="${usage_db}"
+if [ -z "$PORT" ]; then
+  echo "Error: PORT env var is required. Example: PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev"
+  exit 1
 fi
+if [ -z "$VIBORA_DIR" ]; then
+  echo "Error: VIBORA_DIR env var is required. Example: PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev"
+  exit 1
+fi
+export VITE_BACKEND_PORT="$PORT"
+export DEBUG="1"
 bunx concurrently -n server,client -c blue,green 'mise run server' 'mise run client'
 """
 

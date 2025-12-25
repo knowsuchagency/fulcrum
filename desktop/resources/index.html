@@ -150,6 +150,11 @@
       margin-top: 8px;
     }
 
+    .button-group.vertical {
+      flex-direction: column;
+      gap: 12px;
+    }
+
     .primary-btn, .secondary-btn, .retry-btn {
       flex: 1;
       padding: 10px 16px;
@@ -159,6 +164,38 @@
       cursor: pointer;
       transition: all 0.2s;
       border: none;
+    }
+
+    .primary-btn.large, .secondary-btn.large {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .btn-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .btn-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .btn-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: inherit;
+    }
+
+    .btn-desc {
+      font-size: 12px;
+      opacity: 0.7;
+      font-weight: 400;
     }
 
     .primary-btn {

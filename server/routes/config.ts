@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import {
   getSettings,
-  updateSettings,
+  updateSettingByPath,
   resetSettings,
   getWorktreeBasePath,
   getNotificationSettings,
@@ -11,24 +11,87 @@ import {
   getClaudeSettings,
   updateClaudeSettings,
   isDeveloperMode,
+  getDefaultValue,
+  getSetting,
   type NotificationSettings,
   type ZAiSettings,
+  type EditorApp,
 } from '../lib/settings'
 import { spawn } from 'child_process'
 import { testNotificationChannel, sendNotification, type NotificationPayload } from '../services/notification-service'
 
-// Config keys (mapped to settings keys)
+// Config keys using dot-notation for nested settings
 export const CONFIG_KEYS = {
-  PORT: 'port',
-  DEFAULT_GIT_REPOS_DIR: 'defaultGitReposDir',
-  REMOTE_HOST: 'remoteHost',
-  SSH_PORT: 'sshPort',
-  LINEAR_API_KEY: 'linearApiKey',
-  GITHUB_PAT: 'githubPat',
-  LANGUAGE: 'language',
-  BASIC_AUTH_USERNAME: 'basicAuthUsername',
-  BASIC_AUTH_PASSWORD: 'basicAuthPassword',
+  PORT: 'server.port',
+  DEFAULT_GIT_REPOS_DIR: 'paths.defaultGitReposDir',
+  BASIC_AUTH_USERNAME: 'authentication.username',
+  BASIC_AUTH_PASSWORD: 'authentication.password',
+  REMOTE_HOST: 'remoteVibora.host',
+  REMOTE_PORT: 'remoteVibora.port',
+  EDITOR_APP: 'editor.app',
+  EDITOR_HOST: 'editor.host',
+  EDITOR_SSH_PORT: 'editor.sshPort',
+  LINEAR_API_KEY: 'integrations.linearApiKey',
+  GITHUB_PAT: 'integrations.githubPat',
+  LANGUAGE: 'appearance.language',
 } as const
+
+// Legacy key mapping to new nested paths (for backward compatibility)
+const LEGACY_KEY_MAP: Record<string, string> = {
+  // snake_case legacy keys
+  port: 'server.port',
+  default_git_repos_dir: 'paths.defaultGitReposDir',
+  basic_auth_username: 'authentication.username',
+  basic_auth_password: 'authentication.password',
+  remote_host: 'remoteVibora.host',
+  hostname: 'remoteVibora.host', // Extra legacy key
+  ssh_port: 'editor.sshPort',
+  linear_api_key: 'integrations.linearApiKey',
+  github_pat: 'integrations.githubPat',
+  language: 'appearance.language',
+  // camelCase legacy keys
+  defaultGitReposDir: 'paths.defaultGitReposDir',
+  basicAuthUsername: 'authentication.username',
+  basicAuthPassword: 'authentication.password',
+  remoteHost: 'remoteVibora.host',
+  sshPort: 'editor.sshPort',
+  linearApiKey: 'integrations.linearApiKey',
+  githubPat: 'integrations.githubPat',
+}
+
+// Valid nested paths
+const VALID_PATHS = new Set(Object.values(CONFIG_KEYS))
+
+// Resolve a key to its nested path
+function resolveConfigKey(key: string): string | null {
+  // If it's already a valid dot-notation path, return it
+  if (VALID_PATHS.has(key as (typeof CONFIG_KEYS)[keyof typeof CONFIG_KEYS])) {
+    return key
+  }
+
+  // Check legacy key map
+  if (key in LEGACY_KEY_MAP) {
+    return LEGACY_KEY_MAP[key]
+  }
+
+  return null
+}
+
+// Get value from nested settings by path
+function getSettingValue(path: string): unknown {
+  const settings = getSettings()
+  const parts = path.split('.')
+
+  let current: unknown = settings
+  for (const part of parts) {
+    if (current && typeof current === 'object' && part in current) {
+      current = (current as Record<string, unknown>)[part]
+    } else {
+      return undefined
+    }
+  }
+  return current
+}
 
 const app = new Hono()
 
@@ -170,113 +233,82 @@ app.post('/restart', (c) => {
 // GET /api/config/:key - Get config value
 app.get('/:key', (c) => {
   const key = c.req.param('key')
-  const settings = getSettings()
 
-  // Map API keys to settings keys
-  let value: string | number | null = null
-
-  if (key === 'port' || key === CONFIG_KEYS.PORT) {
-    value = settings.port
-  } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
-    value = settings.defaultGitReposDir
-  } else if (key === 'remote_host' || key === 'remoteHost' || key === CONFIG_KEYS.REMOTE_HOST || key === 'hostname') {
-    // 'hostname' accepted for backward compatibility
-    value = settings.remoteHost
-  } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
-    value = settings.sshPort
-  } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
-    value = settings.linearApiKey
-  } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
-    value = settings.githubPat
-  } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
-    return c.json({ key, value: settings.language, isDefault: settings.language === null })
-  } else if (key === 'basic_auth_username' || key === CONFIG_KEYS.BASIC_AUTH_USERNAME) {
-    return c.json({ key, value: settings.basicAuthUsername, isDefault: settings.basicAuthUsername === null })
-  } else if (key === 'basic_auth_password' || key === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
-    // For security, don't return the actual password value, just whether it's set
-    return c.json({ key, value: settings.basicAuthPassword ? '••••••••' : null, isDefault: settings.basicAuthPassword === null })
-  } else if (key === 'worktree_base_path') {
-    // Read-only: derived from VIBORA_DIR
+  // Handle special read-only keys
+  if (key === 'worktree_base_path') {
     return c.json({ key, value: getWorktreeBasePath(), isDefault: true })
   }
 
-  if (value === null) {
-    return c.json({ key, value: null, isDefault: true })
+  // Resolve key to nested path
+  const path = resolveConfigKey(key)
+  if (!path) {
+    return c.json({ key, value: null, isDefault: true, error: 'Unknown config key' }, 404)
   }
 
-  return c.json({ key, value, isDefault: false })
+  const value = getSettingValue(path)
+  const defaultValue = getDefaultValue(path)
+  const isDefault = value === defaultValue || value === undefined || value === null
+
+  // Mask password for security
+  if (path === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
+    return c.json({
+      key,
+      value: value ? '••••••••' : null,
+      isDefault: value === null || value === undefined,
+    })
+  }
+
+  return c.json({ key, value: value ?? defaultValue, isDefault })
 })
 
 // PUT /api/config/:key - Set config value
 app.put('/:key', async (c) => {
   const key = c.req.param('key')
 
-  try {
-    const body = await c.req.json<{ value: string | number }>()
+  // Resolve key to nested path
+  const path = resolveConfigKey(key)
+  if (!path) {
+    return c.json({ error: `Unknown or read-only config key: ${key}` }, 400)
+  }
 
-    // Map API keys to settings keys and update
-    if (key === 'port' || key === CONFIG_KEYS.PORT) {
-      const port = typeof body.value === 'number' ? body.value : parseInt(body.value, 10)
+  try {
+    const body = await c.req.json<{ value: string | number | null }>()
+    let { value } = body
+
+    // Validate based on the setting type
+    if (path === CONFIG_KEYS.PORT || path === CONFIG_KEYS.REMOTE_PORT || path === CONFIG_KEYS.EDITOR_SSH_PORT) {
+      const port = typeof value === 'number' ? value : parseInt(value as string, 10)
       if (isNaN(port) || port < 1 || port > 65535) {
         return c.json({ error: 'Port must be a number between 1 and 65535' }, 400)
       }
-      updateSettings({ port })
-      return c.json({ key, value: port })
-    } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
-      }
-      updateSettings({ defaultGitReposDir: body.value })
-      return c.json({ key, value: body.value })
-    } else if (key === 'remote_host' || key === 'remoteHost' || key === CONFIG_KEYS.REMOTE_HOST || key === 'hostname') {
-      // 'hostname' accepted for backward compatibility
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
-      }
-      updateSettings({ remoteHost: body.value })
-      return c.json({ key, value: body.value })
-    } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
-      const sshPort = typeof body.value === 'number' ? body.value : parseInt(body.value, 10)
-      if (isNaN(sshPort) || sshPort < 1 || sshPort > 65535) {
-        return c.json({ error: 'SSH port must be a number between 1 and 65535' }, 400)
-      }
-      updateSettings({ sshPort })
-      return c.json({ key, value: sshPort })
-    } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
-      }
-      updateSettings({ linearApiKey: body.value || null })
-      return c.json({ key, value: body.value })
-    } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
-      }
-      updateSettings({ githubPat: body.value || null })
-      return c.json({ key, value: body.value })
-    } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
-      const langValue = body.value === '' || body.value === null ? null : body.value
-      if (langValue !== null && langValue !== 'en' && langValue !== 'zh') {
+      value = port
+    } else if (path === CONFIG_KEYS.LANGUAGE) {
+      if (value !== null && value !== '' && value !== 'en' && value !== 'zh') {
         return c.json({ error: 'Language must be "en", "zh", or null' }, 400)
       }
-      updateSettings({ language: langValue as 'en' | 'zh' | null })
-      return c.json({ key, value: langValue })
-    } else if (key === 'basic_auth_username' || key === CONFIG_KEYS.BASIC_AUTH_USERNAME) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
+      value = value === '' ? null : value
+    } else if (path === CONFIG_KEYS.EDITOR_APP) {
+      const validApps: EditorApp[] = ['vscode', 'cursor', 'windsurf', 'zed']
+      if (!validApps.includes(value as EditorApp)) {
+        return c.json({ error: `Editor app must be one of: ${validApps.join(', ')}` }, 400)
       }
-      updateSettings({ basicAuthUsername: body.value || null })
-      return c.json({ key, value: body.value })
-    } else if (key === 'basic_auth_password' || key === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
-      if (typeof body.value !== 'string') {
-        return c.json({ error: 'Value must be a string' }, 400)
+    } else if (typeof value === 'string' && value === '') {
+      // Convert empty strings to null for nullable fields
+      if (path === CONFIG_KEYS.LINEAR_API_KEY || path === CONFIG_KEYS.GITHUB_PAT ||
+          path === CONFIG_KEYS.BASIC_AUTH_USERNAME || path === CONFIG_KEYS.BASIC_AUTH_PASSWORD ||
+          path === CONFIG_KEYS.REMOTE_HOST || path === CONFIG_KEYS.EDITOR_HOST) {
+        value = null
       }
-      updateSettings({ basicAuthPassword: body.value || null })
-      // Don't return the actual password
-      return c.json({ key, value: body.value ? '••••••••' : null })
-    } else {
-      return c.json({ error: `Unknown or read-only config key: ${key}` }, 400)
     }
+
+    updateSettingByPath(path, value)
+
+    // Mask password in response
+    if (path === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
+      return c.json({ key, value: value ? '••••••••' : null })
+    }
+
+    return c.json({ key, value })
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to set config' }, 400)
   }
@@ -286,30 +318,17 @@ app.put('/:key', async (c) => {
 app.delete('/:key', (c) => {
   const key = c.req.param('key')
 
-  // Reset all settings and return the default for the requested key
-  const defaults = resetSettings()
-
-  let defaultValue: string | number | null = null
-  if (key === 'port' || key === CONFIG_KEYS.PORT) {
-    defaultValue = defaults.port
-  } else if (key === 'default_git_repos_dir' || key === CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR) {
-    defaultValue = defaults.defaultGitReposDir
-  } else if (key === 'remote_host' || key === 'remoteHost' || key === CONFIG_KEYS.REMOTE_HOST || key === 'hostname') {
-    // 'hostname' accepted for backward compatibility
-    defaultValue = defaults.remoteHost
-  } else if (key === 'ssh_port' || key === CONFIG_KEYS.SSH_PORT) {
-    defaultValue = defaults.sshPort
-  } else if (key === 'linear_api_key' || key === CONFIG_KEYS.LINEAR_API_KEY) {
-    defaultValue = defaults.linearApiKey
-  } else if (key === 'github_pat' || key === CONFIG_KEYS.GITHUB_PAT) {
-    defaultValue = defaults.githubPat
-  } else if (key === 'language' || key === CONFIG_KEYS.LANGUAGE) {
-    defaultValue = defaults.language
-  } else if (key === 'basic_auth_username' || key === CONFIG_KEYS.BASIC_AUTH_USERNAME) {
-    defaultValue = defaults.basicAuthUsername
-  } else if (key === 'basic_auth_password' || key === CONFIG_KEYS.BASIC_AUTH_PASSWORD) {
-    defaultValue = defaults.basicAuthPassword
+  // Resolve key to nested path
+  const path = resolveConfigKey(key)
+  if (!path) {
+    return c.json({ error: `Unknown config key: ${key}` }, 400)
   }
+
+  // Get the default value for this specific key
+  const defaultValue = getDefaultValue(path)
+
+  // Update the setting to its default value
+  updateSettingByPath(path, defaultValue)
 
   return c.json({ key, value: defaultValue, isDefault: true })
 })

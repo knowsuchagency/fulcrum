@@ -119,4 +119,5 @@ export const log = {
   linear: createLogger('Linear'),
   notification: createLogger('Notification'),
   server: createLogger('Server'),
+  settings: createLogger('Settings'),
 }

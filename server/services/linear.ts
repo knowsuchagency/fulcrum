@@ -12,7 +12,7 @@ export interface LinearTicketInfo {
 let linearClient: LinearClient | null = null
 
 function getLinearClient(): LinearClient | null {
-  const apiKey = getSetting('linearApiKey')
+  const apiKey = getSetting('integrations.linearApiKey')
   if (!apiKey) return null
   if (!linearClient) {
     linearClient = new LinearClient({ apiKey })

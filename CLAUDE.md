@@ -123,7 +123,7 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 | Setting | Env Var | Default |
 |---------|---------|---------|
 | (base directory) | `VIBORA_DIR` | .vibora in CWD or ~/.vibora |
-| port | `PORT` | 3333 |
+| port | `PORT` | 7777 |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
 | linearApiKey | `LINEAR_API_KEY` | null |
 
@@ -226,19 +226,13 @@ mise run build:debug                # Web build with debug logging
 
 ### Development vs Production
 
-The `mise run dev` command defaults to `~/.vibora/dev` (port 3222) to keep development data separate from production:
+The `mise run dev` command requires explicit `PORT` and `VIBORA_DIR` environment variables to avoid accidentally running against production data:
 
 ```bash
-# Development (uses ~/.vibora/dev with port 3222)
-mise run dev
+# Development (explicitly set port and directory)
+PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev
 
-# Development with custom port
-mise run dev 3333
-
-# Development with custom directory
-mise run dev 3333 ~/.vibora/custom
-
-# Production (uses ~/.vibora with port 3333)
+# Production (uses ~/.vibora with port 7777)
 mise run start
 ```
 

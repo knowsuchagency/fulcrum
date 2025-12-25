@@ -25,8 +25,8 @@ import {
   VisualStudioCodeIcon,
   PlusSignIcon,
 } from '@hugeicons/core-free-icons'
-import { useRemoteHost, useSshPort } from '@/hooks/use-config'
-import { buildVSCodeUrl } from '@/lib/vscode-url'
+import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { buildEditorUrl, getEditorDisplayName } from '@/lib/editor-url'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
 export const Route = createFileRoute('/repositories/$repoId')({
@@ -39,8 +39,9 @@ function RepositoryDetailView() {
   const { data: repository, isLoading, error } = useRepository(repoId)
   const updateRepository = useUpdateRepository()
   const deleteRepository = useDeleteRepository()
-  const { data: remoteHost } = useRemoteHost()
-  const { data: sshPort } = useSshPort()
+  const { data: editorApp } = useEditorApp()
+  const { data: editorHost } = useEditorHost()
+  const { data: editorSshPort } = useEditorSshPort()
 
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
@@ -88,9 +89,9 @@ function RepositoryDetailView() {
     navigate({ to: '/repositories' })
   }
 
-  const handleOpenVSCode = () => {
+  const handleOpenEditor = () => {
     if (!repository) return
-    const url = buildVSCodeUrl(repository.path, remoteHost, sshPort)
+    const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
     window.open(url, '_blank')
   }
 
@@ -152,9 +153,9 @@ function RepositoryDetailView() {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={handleOpenVSCode}
+            onClick={handleOpenEditor}
             className="text-muted-foreground hover:text-foreground"
-            title="Open in VS Code"
+            title={`Open in ${getEditorDisplayName(editorApp)}`}
           >
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
           </Button>

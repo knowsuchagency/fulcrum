@@ -10,22 +10,28 @@ interface ConfigResponse {
   isDefault?: boolean
 }
 
-// Config keys matching server
+// Config keys using dot-notation for nested settings
 export const CONFIG_KEYS = {
-  PORT: 'port',
+  PORT: 'server.port',
   WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only, derived from VIBORA_DIR
-  DEFAULT_GIT_REPOS_DIR: 'default_git_repos_dir',
-  REMOTE_HOST: 'remote_host',
-  SSH_PORT: 'ssh_port',
-  LINEAR_API_KEY: 'linear_api_key',
-  GITHUB_PAT: 'github_pat',
-  LANGUAGE: 'language',
-  BASIC_AUTH_USERNAME: 'basic_auth_username',
-  BASIC_AUTH_PASSWORD: 'basic_auth_password',
+  DEFAULT_GIT_REPOS_DIR: 'paths.defaultGitReposDir',
+  BASIC_AUTH_USERNAME: 'authentication.username',
+  BASIC_AUTH_PASSWORD: 'authentication.password',
+  REMOTE_HOST: 'remoteVibora.host',
+  REMOTE_PORT: 'remoteVibora.port',
+  EDITOR_APP: 'editor.app',
+  EDITOR_HOST: 'editor.host',
+  EDITOR_SSH_PORT: 'editor.sshPort',
+  LINEAR_API_KEY: 'integrations.linearApiKey',
+  GITHUB_PAT: 'integrations.githubPat',
+  LANGUAGE: 'appearance.language',
 } as const
 
 // Default values (client-side fallbacks)
-const DEFAULT_PORT = 3333
+const DEFAULT_PORT = 7777
+
+// Editor app types
+export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed'
 
 export function useConfig(key: string) {
   return useQuery({
@@ -75,8 +81,38 @@ export function useRemoteHost() {
   }
 }
 
-export function useSshPort() {
-  const query = useConfig(CONFIG_KEYS.SSH_PORT)
+export function useRemotePort() {
+  const query = useConfig(CONFIG_KEYS.REMOTE_PORT)
+
+  return {
+    ...query,
+    data: (query.data?.value as number) ?? DEFAULT_PORT,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useEditorApp() {
+  const query = useConfig(CONFIG_KEYS.EDITOR_APP)
+
+  return {
+    ...query,
+    data: (query.data?.value as EditorApp) ?? 'vscode',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useEditorHost() {
+  const query = useConfig(CONFIG_KEYS.EDITOR_HOST)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? '',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useEditorSshPort() {
+  const query = useConfig(CONFIG_KEYS.EDITOR_SSH_PORT)
 
   return {
     ...query,
@@ -142,7 +178,7 @@ export function useUpdateConfig() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ key, value }: { key: string; value: string | number }) =>
+    mutationFn: ({ key, value }: { key: string; value: string | number | null }) =>
       fetchJSON<ConfigResponse>(`${API_BASE}/api/config/${key}`, {
         method: 'PUT',
         body: JSON.stringify({ value }),
@@ -282,3 +318,7 @@ export function useRestartVibora() {
       }),
   })
 }
+
+// Legacy hook aliases for backward compatibility
+/** @deprecated Use useEditorSshPort instead */
+export const useSshPort = useEditorSshPort
