@@ -368,7 +368,7 @@ function SystemMetricsTab() {
             </div>
             <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-muted-foreground transition-all"
+                className="h-full bg-chart-system transition-all"
                 style={{ width: `${Math.min(metrics.current.disk.usedPercent, 100)}%` }}
               />
             </div>
