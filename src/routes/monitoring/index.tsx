@@ -39,19 +39,19 @@ const TIME_WINDOWS: TimeWindow[] = ['1m', '10m', '1h', '3h', '6h', '12h', '24h']
 const chartConfig: ChartConfig = {
   cpu: {
     label: 'CPU',
-    color: '#22c55e', // Green
+    color: 'var(--accent)', // Stormy Teal
   },
   memoryUsed: {
     label: 'Used',
-    color: '#22c55e', // Green (darker)
+    color: 'var(--accent)', // Stormy Teal
   },
   memoryCache: {
     label: 'Cache / Buffers',
-    color: 'hsl(160 60% 45%)', // Lighter green (matches Beszel)
+    color: 'var(--muted-foreground)', // Lavender Grey
   },
   disk: {
     label: 'Disk',
-    color: '#f59e0b', // Amber
+    color: 'var(--muted-foreground)', // Lavender Grey
   },
 }
 
@@ -170,7 +170,7 @@ function ClaudeInstancesTab() {
                 <span className="font-mono text-xs">{instance.pid}</span>
                 <span className="truncate text-sm">
                   {instance.isViboraManaged ? (
-                    <span className="text-blue-500">{instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}</span>
+                    <span className="text-accent">{instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}</span>
                   ) : (
                     <span className="text-muted-foreground">{t('claude.source.external')}</span>
                   )}
@@ -368,7 +368,7 @@ function SystemMetricsTab() {
             </div>
             <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-amber-500 transition-all"
+                className="h-full bg-muted-foreground transition-all"
                 style={{ width: `${Math.min(metrics.current.disk.usedPercent, 100)}%` }}
               />
             </div>
@@ -574,7 +574,7 @@ function ViboraInstancesTab() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium">
                       <span className="font-mono">:{group.port}</span>
-                      <span className={`ml-2 text-xs ${group.mode === 'development' ? 'text-yellow-500' : 'text-green-500'}`}>
+                      <span className={`ml-2 text-xs ${group.mode === 'development' ? 'text-muted-foreground' : 'text-accent'}`}>
                         {group.mode === 'development' ? t('vibora.mode.dev') : t('vibora.mode.prod')}
                         {group.frontend && ` + ${t('vibora.vite')}`}
                       </span>
@@ -600,7 +600,7 @@ function ViboraInstancesTab() {
                 {/* Desktop: grid layout */}
                 <div className="hidden lg:grid grid-cols-[80px_100px_1fr_100px_80px] items-center gap-4">
                   <span className="font-mono text-sm">{group.port}</span>
-                  <span className={`text-xs ${group.mode === 'development' ? 'text-yellow-500' : 'text-green-500'}`}>
+                  <span className={`text-xs ${group.mode === 'development' ? 'text-muted-foreground' : 'text-accent'}`}>
                     {group.mode === 'development' ? t('vibora.mode.dev') : t('vibora.mode.prod')}
                     {group.frontend && ` + ${t('vibora.vite')}`}
                   </span>
@@ -634,9 +634,9 @@ function ViboraInstancesTab() {
 
 // Helper to get text color class based on usage percentage
 function getUsageTextColor(percent: number): string {
-  if (percent >= 90) return 'text-red-500'
-  if (percent >= 70) return 'text-yellow-500'
-  return 'text-green-500'
+  if (percent >= 90) return 'text-destructive'   // Cinnabar
+  if (percent >= 70) return 'text-muted-foreground' // Lavender Grey
+  return 'text-accent'                            // Stormy Teal
 }
 
 // Helper to format time remaining
@@ -701,7 +701,7 @@ function UsageGauge({
               tick={false}
             />
             <RadialBar
-              background={{ fill: 'hsl(var(--muted))' }}
+              background={{ fill: 'var(--border)' }}
               dataKey="value"
               cornerRadius={5}
               angleAxisId={0}
@@ -728,9 +728,9 @@ function ClaudeUsageLimitsTab() {
 
   // Get color based on usage level
   const getGaugeColor = (percent: number): string => {
-    if (percent >= 90) return '#ef4444' // red-500
-    if (percent >= 70) return '#eab308' // yellow-500
-    return '#22c55e' // green-500
+    if (percent >= 90) return 'var(--destructive)'   // Cinnabar
+    if (percent >= 70) return 'var(--muted-foreground)' // Lavender Grey
+    return 'var(--accent)'                            // Stormy Teal
   }
 
   return (
@@ -748,7 +748,7 @@ function ClaudeUsageLimitsTab() {
       )}
 
       {usage && !usage.available && (
-        <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-600 dark:text-yellow-400">
+        <div className="rounded-lg border border-muted-foreground/50 bg-muted p-4 text-sm text-muted-foreground">
           {usage.error || t('usage.unavailable')}
         </div>
       )}

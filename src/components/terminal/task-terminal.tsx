@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { Terminal as XTerm, ITheme } from '@xterm/xterm'
+import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
@@ -12,54 +12,7 @@ import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
 import { useTheme } from 'next-themes'
-
-const lightTheme: ITheme = {
-  background: '#faf9f5',           // Porcelain
-  foreground: '#2a2a27',           // Graphite
-  cursor: '#2a2a27',               // Graphite
-  cursorAccent: '#faf9f5',         // Porcelain
-  selectionBackground: '#d1d5db',
-  black: '#2a2a27',                // Graphite
-  red: '#dd403a',                  // Cinnabar
-  green: '#0d5c63',                // Stormy Teal
-  yellow: '#dd403a',               // Cinnabar (warm accent)
-  blue: '#0d5c63',                 // Stormy Teal
-  magenta: '#8d909b',              // Lavender Grey
-  cyan: '#0d5c63',                 // Stormy Teal
-  white: '#faf9f5',                // Porcelain
-  brightBlack: '#8d909b',          // Lavender Grey
-  brightRed: '#dd403a',            // Cinnabar
-  brightGreen: '#0d5c63',          // Stormy Teal
-  brightYellow: '#dd403a',         // Cinnabar (warm accent)
-  brightBlue: '#0d5c63',           // Stormy Teal
-  brightMagenta: '#8d909b',        // Lavender Grey
-  brightCyan: '#0d5c63',           // Stormy Teal
-  brightWhite: '#faf9f5',          // Porcelain
-}
-
-const darkTheme: ITheme = {
-  background: '#2a2a27',           // Graphite
-  foreground: '#faf9f5',           // Porcelain
-  cursor: '#faf9f5',               // Porcelain
-  cursorAccent: '#2a2a27',         // Graphite
-  selectionBackground: '#3d3d3a',
-  black: '#2a2a27',                // Graphite
-  red: '#dd403a',                  // Cinnabar
-  green: '#0d5c63',                // Stormy Teal
-  yellow: '#dd403a',               // Cinnabar (warm accent)
-  blue: '#0d5c63',                 // Stormy Teal
-  magenta: '#8d909b',              // Lavender Grey
-  cyan: '#0d5c63',                 // Stormy Teal
-  white: '#faf9f5',                // Porcelain
-  brightBlack: '#8d909b',          // Lavender Grey
-  brightRed: '#dd403a',            // Cinnabar
-  brightGreen: '#0d5c63',          // Stormy Teal
-  brightYellow: '#dd403a',         // Cinnabar (warm accent)
-  brightBlue: '#0d5c63',           // Stormy Teal
-  brightMagenta: '#8d909b',        // Lavender Grey
-  brightCyan: '#0d5c63',           // Stormy Teal
-  brightWhite: '#faf9f5',          // Porcelain
-}
+import { lightTheme, darkTheme } from './terminal-theme'
 
 interface TaskTerminalProps {
   taskName: string

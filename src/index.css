@@ -19,7 +19,7 @@
     --secondary: #ffffff;                         /* White */
     --secondary-foreground: #2a2a27;              /* Graphite */
     --muted: #faf9f5;                             /* Porcelain */
-    --muted-foreground: #8d909b;                  /* Lavender Grey */
+    --muted-foreground: #5c5c59;                  /* Darker grey for contrast */
     --accent: #0d5c63;                            /* Stormy Teal */
     --accent-foreground: #faf9f5;                 /* Porcelain */
     --destructive: #dd403a;                       /* Cinnabar */
