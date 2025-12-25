@@ -283,6 +283,7 @@ export interface NotificationMessage {
     message: string
     notificationType: 'success' | 'info' | 'warning' | 'error'
     taskId?: string
+    playSound?: boolean // Tell desktop app to play local sound
   }
 }
 

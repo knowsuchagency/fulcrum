@@ -13,10 +13,10 @@ import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
-import { useRemoteHost, useSshPort } from '@/hooks/use-config'
+import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
-import { buildVSCodeUrl } from '@/lib/vscode-url'
+import { buildEditorUrl } from '@/lib/editor-url'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
 import { DiffViewer } from '@/components/viewer/diff-viewer'
 import { BrowserPreview } from '@/components/viewer/browser-preview'
@@ -98,8 +98,9 @@ function TaskView() {
   const gitMerge = useGitMergeToMain()
   const gitSyncParent = useGitSyncParent()
   const killClaude = useKillClaudeInTask()
-  const { data: remoteHost } = useRemoteHost()
-  const { data: sshPort } = useSshPort()
+  const { data: editorApp } = useEditorApp()
+  const { data: editorHost } = useEditorHost()
+  const { data: editorSshPort } = useEditorSshPort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
 
   // Read AI mode state from navigation (only set when coming from task creation)
@@ -229,14 +230,14 @@ function TaskView() {
 
   const handleOpenVSCodeWorktree = () => {
     if (!task?.worktreePath) return
-    const url = buildVSCodeUrl(task.worktreePath, remoteHost, sshPort)
+    const url = buildEditorUrl(task.worktreePath, editorApp, editorHost, editorSshPort)
     window.open(url, '_blank')
     setVscodeModalOpen(false)
   }
 
   const handleOpenVSCodeRepo = () => {
     if (!task?.repoPath) return
-    const url = buildVSCodeUrl(task.repoPath, remoteHost, sshPort)
+    const url = buildEditorUrl(task.repoPath, editorApp, editorHost, editorSshPort)
     window.open(url, '_blank')
     setVscodeModalOpen(false)
   }

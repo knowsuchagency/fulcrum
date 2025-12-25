@@ -15,7 +15,7 @@ BUNDLE_DIR="$APP_DIR/../share/vibora/bundle"
 VIBORA_DIR="${VIBORA_DIR:-$HOME/.vibora}"
 LOG_FILE="$VIBORA_DIR/desktop.log"
 PID_FILE="$VIBORA_DIR/desktop-server.pid"
-PORT="${PORT:-3333}"
+PORT="${PORT:-7777}"
 
 # Ensure vibora directory exists
 mkdir -p "$VIBORA_DIR"
@@ -156,6 +156,45 @@ cleanup() {
 
 trap cleanup EXIT
 
+# Determine if we should start the server
+# Only start if settings indicate local mode with certainty
+should_start_server() {
+  SETTINGS_FILE="$VIBORA_DIR/settings.json"
+
+  if [ ! -f "$SETTINGS_FILE" ]; then
+    # First launch - don't start server, let UI handle onboarding
+    log "No settings file found (first launch)"
+    return 1
+  fi
+
+  # Check if jq is available
+  if ! command -v jq &> /dev/null; then
+    # Can't read JSON, assume local mode
+    log "jq not available, defaulting to local mode"
+    return 0
+  fi
+
+  # Check if user has remote configured
+  REMOTE_HOST=$(jq -r '.remoteVibora.host // .remoteHost // ""' "$SETTINGS_FILE" 2>/dev/null)
+  LAST_CONNECTED=$(jq -r '.lastConnectedHost // ""' "$SETTINGS_FILE" 2>/dev/null)
+
+  log "Remote host: '$REMOTE_HOST', Last connected: '$LAST_CONNECTED'"
+
+  if [ -z "$REMOTE_HOST" ] || [ "$REMOTE_HOST" = "null" ]; then
+    # No remote configured - definitely local mode
+    log "No remote configured, starting server"
+    return 0
+  elif [ "$LAST_CONNECTED" = "localhost" ]; then
+    # User last used local - likely local mode
+    log "Last connected to localhost, starting server"
+    return 0
+  else
+    # Remote configured and last connected to remote, don't start server
+    log "Remote mode detected, skipping server start"
+    return 1
+  fi
+}
+
 # Main
 log "=== Vibora Desktop starting ==="
 log "APP_DIR: $APP_DIR"
@@ -164,8 +203,14 @@ log "VIBORA_DIR: $VIBORA_DIR"
 
 check_dtach
 install_plugin
-stop_existing_server
-start_server
+
+# Conditionally start server
+if should_start_server; then
+  stop_existing_server
+  start_server
+else
+  log "Server start skipped - will be handled by UI if needed"
+fi
 
 # Launch Neutralino
 log "Launching UI..."

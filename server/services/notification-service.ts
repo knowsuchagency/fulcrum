@@ -166,7 +166,7 @@ async function sendPushoverNotification(
 }
 
 // Broadcast notification to UI via WebSocket
-function broadcastUINotification(payload: NotificationPayload): void {
+function broadcastUINotification(payload: NotificationPayload, playSound: boolean): void {
   const notificationType =
     payload.type === 'pr_merged' || payload.type === 'plan_complete' ? 'success' : 'info'
 
@@ -178,6 +178,7 @@ function broadcastUINotification(payload: NotificationPayload): void {
       message: payload.message,
       notificationType,
       taskId: payload.taskId,
+      playSound, // Tell desktop app to play local sound
     },
   })
 }
@@ -193,8 +194,12 @@ export async function sendNotification(payload: NotificationPayload): Promise<No
   const results: NotificationResult[] = []
   const promises: Promise<void>[] = []
 
-  // Always broadcast to UI
-  broadcastUINotification(payload)
+  // Determine if sound should be played
+  // Pass this to UI so desktop app can play sound locally
+  const playSound = settings.sound?.enabled ?? false
+
+  // Always broadcast to UI (with sound flag for desktop app)
+  broadcastUINotification(payload, playSound)
 
   // Sound (macOS only)
   if (settings.sound?.enabled) {

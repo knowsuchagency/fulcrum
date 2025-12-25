@@ -121,7 +121,7 @@ start_vibora() {
         echo ""
         echo -e "${GREEN}Installation complete!${NC}"
         echo ""
-        echo "Open http://localhost:3333 in your browser"
+        echo "Open http://localhost:7777 in your browser"
         echo ""
         echo "Commands:"
         echo "  vibora status    # Check server status"

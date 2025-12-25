@@ -43,8 +43,8 @@ import {
   VisualStudioCodeIcon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
-import { useDefaultGitReposDir, useRemoteHost, useSshPort } from '@/hooks/use-config'
-import { buildVSCodeUrl } from '@/lib/vscode-url'
+import { useDefaultGitReposDir, useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { buildEditorUrl, getEditorDisplayName } from '@/lib/editor-url'
 import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
@@ -64,13 +64,14 @@ function RepositoryCard({
   const { t } = useTranslation('repositories')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const { data: remoteHost } = useRemoteHost()
-  const { data: sshPort } = useSshPort()
+  const { data: editorApp } = useEditorApp()
+  const { data: editorHost } = useEditorHost()
+  const { data: editorSshPort } = useEditorSshPort()
 
-  const handleOpenVSCode = (e: React.MouseEvent) => {
+  const handleOpenEditor = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const url = buildVSCodeUrl(repository.path, remoteHost, sshPort)
+    const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
     window.open(url, '_blank')
   }
 
@@ -148,9 +149,9 @@ function RepositoryCard({
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={handleOpenVSCode}
+          onClick={handleOpenEditor}
           className="shrink-0 text-muted-foreground hover:text-foreground"
-          title={t('card.openInVSCode')}
+          title={`Open in ${getEditorDisplayName(editorApp)}`}
         >
           <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
         </Button>

@@ -56,7 +56,7 @@ claude plugin marketplace add knowsuchagency/vibora
 claude plugin install vibora@vibora --scope user
 ```
 
-Open http://localhost:3333 in your browser.
+Open http://localhost:7777 in your browser.
 
 ### Remote Server Setup
 
@@ -76,11 +76,11 @@ Run the backend on a remote server and connect from the desktop app or browser:
 2. **Connect from desktop app:**
    - Launch the app
    - Click "Connect to Remote" (if local server not found)
-   - Enter the server URL: `your-server.example.com:3333`
+   - Enter the server URL: `your-server.example.com:7777`
    - Enter credentials when prompted
 
 3. **Or access via browser:**
-   Open `http://your-server.example.com:3333`
+   Open `http://your-server.example.com:7777`
 
 ### Server Commands (Web Application)
 
@@ -100,7 +100,7 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
-| port | `PORT` | 3333 |
+| port | `PORT` | 7777 |
 | defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
 | remoteHost | `VIBORA_REMOTE_HOST` | (empty) |
 | sshPort | `VIBORA_SSH_PORT` | 22 |
@@ -212,7 +212,7 @@ vibora notify <title> [message]  # Send a notification to all enabled channels
 ### Global Options
 
 ```bash
---port=<port>     # Server port (default: 3333)
+--port=<port>     # Server port (default: 7777)
 --url=<url>       # Override full server URL
 --pretty          # Pretty-print JSON output
 ```

@@ -15,7 +15,7 @@ mise install
 mise run dev
 
 # Or run separately:
-mise run server    # Backend (port 3333, with auto-reload)
+mise run server    # Backend (uses PORT env var, with auto-reload)
 mise run client    # Frontend (port 5173, proxies to backend)
 ```
 

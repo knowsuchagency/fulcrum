@@ -81,5 +81,5 @@ export function getPort(portOverride?: string): number {
     if (!isNaN(port)) return port
   }
 
-  return 3333
+  return 7777
 }

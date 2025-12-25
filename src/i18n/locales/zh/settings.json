@@ -4,7 +4,7 @@
     "serverDefaults": "服务器与默认设置",
     "paths": "路径",
     "authentication": "身份验证",
-    "remoteAccess": "远程访问",
+    "editor": "编辑器",
     "integrations": "集成",
     "zai": "z.ai",
     "notifications": "通知",
@@ -24,14 +24,26 @@
       "label": "Git 仓库目录",
       "description": "仓库选择器的起始目录"
     },
-    "remoteHost": {
-      "label": "远程主机",
-      "description": "用于 VS Code SSH 地址和桌面应用远程连接",
-      "placeholder": "例如：my-server.tailnet.ts.net"
-    },
-    "sshPort": {
-      "label": "SSH 端口",
-      "description": "远程连接端口"
+    "editor": {
+      "app": {
+        "label": "编辑器",
+        "description": "用于打开工作树的代码编辑器",
+        "options": {
+          "vscode": "VS Code",
+          "cursor": "Cursor",
+          "windsurf": "Windsurf",
+          "zed": "Zed"
+        }
+      },
+      "host": {
+        "label": "远程主机",
+        "description": "代码在远程机器上时使用的 SSH 地址",
+        "placeholder": "例如：my-server.tailnet.ts.net"
+      },
+      "sshPort": {
+        "label": "SSH 端口",
+        "description": "远程 SSH 端口（默认 22）"
+      }
     },
     "linear": {
       "label": "Linear",
