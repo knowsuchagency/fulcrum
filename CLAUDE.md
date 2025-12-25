@@ -255,7 +255,7 @@ Vibora uses `dtach` for persistent terminal sessions. Understanding the lifecycl
 
 ### Past Bug: Blank Screen Race Condition (Dec 2024)
 
-**Symptom**: Task terminals showed blank screens in desktop app, worked fine in web.
+**Symptom**: Task terminals showed blank screens in desktop app (the "blank screen of death"), worked fine in web.
 
 **Root Cause**: Race condition in `TerminalSession` between `start()` and `attach()`:
 
