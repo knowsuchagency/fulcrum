@@ -24,7 +24,7 @@ export function KanbanColumn({ status, tasks, isMobile }: KanbanColumnProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [isOver, setIsOver] = useState(false)
 
-  const sortedTasks = [...tasks].sort((a, b) => a.position - b.position)
+  const sortedTasks = [...tasks].sort((a, b) => b.position - a.position)
 
   useEffect(() => {
     const el = ref.current
