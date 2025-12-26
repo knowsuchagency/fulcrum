@@ -557,9 +557,9 @@ function TaskView() {
             />
           </TabsContent>
 
-          <TabsContent value="details" className="flex-1 min-h-0">
+          <TabsContent value="details" className="flex-1 min-h-0 bg-background">
             <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
-              <div className="shrink-0 border-b border-border px-2 py-1">
+              <div className="shrink-0 border-b border-border bg-background px-2 py-1">
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
                     <HugeiconsIcon icon={CodeIcon} size={14} strokeWidth={2} data-slot="icon" />
@@ -607,9 +607,9 @@ function TaskView() {
           <ResizableHandle withHandle />
 
           {/* Right: Diff/Browser Toggle */}
-          <ResizablePanel defaultSize={50} minSize={30}>
+          <ResizablePanel defaultSize={50} minSize={30} className="bg-background">
             <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
-              <div className="shrink-0 border-b border-border px-2 py-1">
+              <div className="shrink-0 border-b border-border bg-background px-2 py-1">
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
                     <HugeiconsIcon

@@ -87,7 +87,7 @@ function FileDiffSection({ file, wrap, isCollapsed, onToggle }: FileDiffSectionP
   return (
     <Collapsible open={!isCollapsed} onOpenChange={() => onToggle()}>
       <CollapsibleTrigger asChild>
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/30 border-b border-border cursor-pointer hover:bg-muted/50 select-none">
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-card border-b border-border cursor-pointer hover:bg-muted select-none">
           <HugeiconsIcon
             icon={isCollapsed ? ArrowRight01Icon : ArrowDown01Icon}
             size={12}
@@ -271,9 +271,9 @@ export function DiffViewer({ taskId, worktreePath }: DiffViewerProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 px-2 py-1.5 bg-muted/50 border-b border-border text-xs">
+      <div className="flex items-center gap-3 px-2 py-1.5 bg-card border-b border-border text-xs">
         {data?.branch && (
           <span className="text-muted-foreground">
             {data.branch}

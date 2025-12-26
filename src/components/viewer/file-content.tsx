@@ -109,8 +109,8 @@ export function FileContent({
   // Image file
   if (content.mimeType.startsWith('image/')) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between px-2 py-1.5 bg-muted/50 border-b border-border text-xs">
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <div className="flex shrink-0 items-center justify-between px-2 py-1.5 bg-card border-b border-border text-xs">
           <span className="text-muted-foreground truncate" title={filePath}>
             {filePath.split('/').pop() || filePath}
           </span>
@@ -137,9 +137,9 @@ export function FileContent({
   const fileName = filePath.split('/').pop() || filePath
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center gap-3 px-2 py-1.5 bg-muted/50 border-b border-border text-xs">
+      <div className="flex shrink-0 items-center gap-3 px-2 py-1.5 bg-card border-b border-border text-xs">
         <span className="text-muted-foreground truncate flex-1" title={filePath}>
           {fileName}
         </span>
