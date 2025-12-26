@@ -21,9 +21,10 @@ interface TaskTerminalProps {
   aiMode?: 'default' | 'plan'
   description?: string
   startupScript?: string | null
+  serverPort?: number
 }
 
-export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript, serverPort = 7777 }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -301,10 +302,11 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         }
 
         // 2. Then run Claude with the task prompt
+        const portFlag = serverPort !== 7777 ? ` --port=${serverPort}` : ''
         const systemPrompt = 'You are working in a Vibora task worktree. ' +
-          'When you finish working and need user input, run: vibora current-task review. ' +
-          'When linking a PR: vibora current-task pr <url>. ' +
-          'For notifications: vibora notify "Title" "Message".'
+          `When you finish working and need user input, run: vibora current-task review${portFlag}. ` +
+          `When linking a PR: vibora current-task pr <url>${portFlag}. ` +
+          `For notifications: vibora notify "Title" "Message"${portFlag}.`
         const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
         const prompt = taskInfo.replace(/"/g, '\\"')
         const escapedSystemPrompt = systemPrompt.replace(/"/g, '\\"')

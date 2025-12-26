@@ -13,7 +13,7 @@ import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
-import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { useEditorApp, useEditorHost, useEditorSshPort, usePort } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { buildEditorUrl } from '@/lib/editor-url'
@@ -101,6 +101,7 @@ function TaskView() {
   const { data: editorApp } = useEditorApp()
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
+  const { data: serverPort } = usePort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
 
   // Read AI mode state from navigation (only set when coming from task creation)
@@ -529,6 +530,7 @@ function TaskView() {
               aiMode={aiMode}
               description={aiModeDescription}
               startupScript={task.startupScript}
+              serverPort={serverPort}
             />
           </TabsContent>
 
@@ -575,6 +577,7 @@ function TaskView() {
               aiMode={aiMode}
               description={aiModeDescription}
               startupScript={task.startupScript}
+              serverPort={serverPort}
             />
           </ResizablePanel>
 
