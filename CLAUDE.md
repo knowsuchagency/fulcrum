@@ -230,7 +230,7 @@ The `mise run dev` command requires explicit `PORT` and `VIBORA_DIR` environment
 
 ```bash
 # Development (explicitly set port and directory)
-PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev
+PORT=6666 VIBORA_DIR=~/.vibora/dev mise run dev
 
 # Production (uses ~/.vibora with port 7777)
 mise run start

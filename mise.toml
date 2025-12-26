@@ -72,11 +72,11 @@ depends = ["install"]
 usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
 run = """
 if [ -z "$PORT" ]; then
-  echo "Error: PORT env var is required. Example: PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev"
+  echo "Error: PORT env var is required. Example: PORT=6666 VIBORA_DIR=~/.vibora/dev mise run dev"
   exit 1
 fi
 if [ -z "$VIBORA_DIR" ]; then
-  echo "Error: VIBORA_DIR env var is required. Example: PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev"
+  echo "Error: VIBORA_DIR env var is required. Example: PORT=6666 VIBORA_DIR=~/.vibora/dev mise run dev"
   exit 1
 fi
 # Determine host binding

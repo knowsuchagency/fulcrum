@@ -19,7 +19,7 @@ mise run server    # Backend (uses PORT env var, with auto-reload)
 mise run client    # Frontend (port 5173, proxies to backend)
 ```
 
-Development mode defaults to `~/.vibora/dev` (port 3222) to keep development data separate from production.
+Development mode defaults to `~/.vibora/dev` (port 6666) to keep development data separate from production.
 
 ## Available Tasks
 
