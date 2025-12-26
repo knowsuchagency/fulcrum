@@ -139,7 +139,8 @@ export async function handleUpCommand(flags: Record<string, string>) {
   // Explicitly set VIBORA_DIR to ensure consistent path resolution
   // regardless of where the CLI was invoked from
   const viboraDir = getViboraDir()
-  console.error('Starting Vibora server...')
+  const debug = flags.debug === 'true'
+  console.error(`Starting Vibora server${debug ? ' (debug mode)' : ''}...`)
   const serverProc = spawn('bun', [serverPath], {
     detached: true,
     stdio: 'ignore',
@@ -151,6 +152,7 @@ export async function handleUpCommand(flags: Record<string, string>) {
       VIBORA_DIR: viboraDir,
       VIBORA_PACKAGE_ROOT: packageRoot,
       BUN_PTY_LIB: ptyLibPath,
+      ...(debug && { LOG_LEVEL: 'debug', DEBUG: '1' }),
     },
   })
 
