@@ -7,14 +7,13 @@ import { fetchJSON } from '@/lib/api'
  * Hook to sync theme between next-themes and backend settings.
  * - On mount: applies saved theme preference from backend
  * - Provides changeTheme function to update both next-themes and backend
- * - Optionally syncs theme to Claude Code config when enabled
+ * - Optionally syncs theme to Claude Code config when enabled (only on explicit user action)
  */
 export function useThemeSync() {
   const { setTheme, resolvedTheme, theme: currentTheme } = useNextTheme()
   const { data: savedTheme, isSuccess } = useTheme()
   const { data: syncClaudeCode } = useSyncClaudeCodeTheme()
   const updateConfig = useUpdateConfig()
-  const prevResolvedTheme = useRef<string | undefined>(undefined)
   const prevSyncClaudeCode = useRef<boolean | undefined>(undefined)
   const hasInitialized = useRef(false)
 
@@ -42,31 +41,23 @@ export function useThemeSync() {
     link.href = favicon
   }, [resolvedTheme])
 
-  // Sync to Claude Code when:
-  // 1. Resolved theme changes (if sync is enabled)
-  // 2. Sync setting is toggled on after initial load (immediate sync with current theme)
+  // Sync to Claude Code when sync setting is toggled on (immediate sync with current theme)
+  // NOTE: We intentionally do NOT sync on resolvedTheme changes here to avoid a feedback loop
+  // when multiple tabs are open. Cross-tab theme sync is handled by next-themes via localStorage.
+  // Claude sync only happens on explicit user action (changeTheme) or when enabling the toggle.
   useEffect(() => {
-    const themeChanged = resolvedTheme && resolvedTheme !== prevResolvedTheme.current
-
-    // Only detect "just enabled" after initial render to avoid syncing on page load
     const syncJustEnabled = hasInitialized.current && syncClaudeCode && prevSyncClaudeCode.current === false
 
-    // Update refs
-    prevResolvedTheme.current = resolvedTheme
     prevSyncClaudeCode.current = syncClaudeCode
     hasInitialized.current = true
 
-    // Sync if theme changed while sync is enabled, or if sync was just enabled
-    if (resolvedTheme && syncClaudeCode && (themeChanged || syncJustEnabled)) {
-      // Fire and forget - no need to await
+    if (resolvedTheme && syncJustEnabled) {
       fetchJSON('/api/config/sync-claude-theme', {
         method: 'POST',
         body: JSON.stringify({ resolvedTheme }),
-      }).catch(() => {
-        // Silently ignore sync errors
-      })
+      }).catch(() => {})
     }
-  }, [resolvedTheme, syncClaudeCode])
+  }, [syncClaudeCode, resolvedTheme])
 
   // Function to change theme and persist to backend
   const changeTheme = useCallback(
@@ -77,8 +68,19 @@ export function useThemeSync() {
         key: CONFIG_KEYS.THEME,
         value: theme === 'system' ? '' : theme,
       })
+
+      // Sync to Claude Code if enabled (only on explicit user action, not cross-tab sync)
+      if (syncClaudeCode) {
+        const effectiveTheme = theme === 'system'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : theme
+        fetchJSON('/api/config/sync-claude-theme', {
+          method: 'POST',
+          body: JSON.stringify({ resolvedTheme: effectiveTheme }),
+        }).catch(() => {})
+      }
     },
-    [setTheme, updateConfig]
+    [setTheme, updateConfig, syncClaudeCode]
   )
 
   return {
