@@ -23,6 +23,7 @@ import {
   More03Icon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
+import { cn } from '@/lib/utils'
 
 interface HeaderProps {
   onNewTaskRef?: (openModal: () => void) => void
@@ -86,20 +87,25 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to, item.matchPrefix)
             return (
-              <Link key={item.to} to={item.to}>
-                <Button
-                  variant={active ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className={active ? 'dark:bg-transparent text-destructive' : undefined}
-                >
-                  <HugeiconsIcon
-                    icon={item.icon}
-                    size={16}
-                    strokeWidth={2}
-                    data-slot="icon"
-                  />
-                  {t(item.labelKey)}
-                </Button>
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  'relative flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-background text-foreground'
+                    : 'text-foreground/60 hover:text-foreground',
+                  'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
+                  active ? 'after:opacity-100' : 'after:opacity-0'
+                )}
+              >
+                <HugeiconsIcon
+                  icon={item.icon}
+                  size={16}
+                  strokeWidth={2}
+                  data-slot="icon"
+                />
+                {t(item.labelKey)}
               </Link>
             )
           })}
@@ -116,14 +122,18 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
         >
           <HugeiconsIcon icon={BrowserIcon} size={16} strokeWidth={2} />
         </Button>
-        <Link to="/settings">
-          <Button
-            variant={pathname === '/settings' ? 'secondary' : 'ghost'}
-            size="icon-sm"
-            className={pathname === '/settings' ? 'dark:bg-transparent text-destructive' : undefined}
-          >
-            <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />
-          </Button>
+        <Link
+          to="/settings"
+          className={cn(
+            'relative flex items-center justify-center rounded-md p-1.5 transition-colors',
+            pathname === '/settings'
+              ? 'bg-background text-foreground'
+              : 'text-foreground/60 hover:text-foreground',
+            'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
+            pathname === '/settings' ? 'after:opacity-100' : 'after:opacity-0'
+          )}
+        >
+          <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />
         </Link>
       </div>
     </header>
