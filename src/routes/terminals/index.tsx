@@ -79,7 +79,7 @@ function TerminalsView() {
     }
   }, [tabs, isValidTab, navigate])
 
-  const { data: tasks = [], isLoading: isTasksLoading } = useTasks()
+  const { data: tasks = [], status: tasksStatus } = useTasks()
   const { data: repositories = [] } = useRepositories()
   const { data: worktreeBasePath } = useWorktreeBasePath()
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
@@ -172,9 +172,9 @@ function TerminalsView() {
 
   // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
   useEffect(() => {
-    // Don't run cleanup until tasks are loaded - otherwise we'd destroy valid terminals
-    // because allTaskWorktrees would be empty while tasks are still loading
-    if (!worktreeBasePath || isTasksLoading) return
+    // Only run cleanup when tasks have successfully loaded
+    // status === 'success' ensures we have valid data, not stale/empty cache from React Query
+    if (!worktreeBasePath || tasksStatus !== 'success') return
 
     for (const terminal of terminals) {
       const isInWorktreesDir = terminal.cwd?.startsWith(worktreeBasePath)
@@ -184,7 +184,7 @@ function TerminalsView() {
         destroyTerminal(terminal.id)
       }
     }
-  }, [terminals, allTaskWorktrees, worktreeBasePath, destroyTerminal, isTasksLoading])
+  }, [terminals, allTaskWorktrees, worktreeBasePath, destroyTerminal, tasksStatus])
 
   // Filter terminals for the active tab
   const visibleTerminals = useMemo(() => {
@@ -241,6 +241,9 @@ function TerminalsView() {
 
   // Task-related terminals should not be in regular tabs - remove them if they are
   useEffect(() => {
+    // Wait for tasks to load before determining which terminals are task-related
+    if (tasksStatus !== 'success') return
+
     for (const terminal of terminals) {
       const isTaskTerminal = terminal.cwd && allTaskWorktrees.has(terminal.cwd)
       if (isTaskTerminal && terminal.tabId) {
@@ -248,7 +251,7 @@ function TerminalsView() {
         assignTerminalToTab(terminal.id, null)
       }
     }
-  }, [terminals, allTaskWorktrees, assignTerminalToTab])
+  }, [terminals, allTaskWorktrees, assignTerminalToTab, tasksStatus])
 
   // Auto-open newly created tabs and create a terminal inside
   useEffect(() => {
