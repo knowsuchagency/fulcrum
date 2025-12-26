@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDown03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon, GitCommitIcon } from '@hugeicons/core-free-icons'
+import { ArrowRight03Icon, ArrowLeft03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon, GitCommitIcon } from '@hugeicons/core-free-icons'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,7 +20,6 @@ interface GitActionsButtonsProps {
   worktreePath: string
   baseBranch: string
   taskId: string
-  hasPR?: boolean
   isMobile?: boolean
   terminalId?: string
   sendInputToTerminal?: (terminalId: string, text: string) => void
@@ -31,7 +30,6 @@ export function GitActionsButtons({
   worktreePath,
   baseBranch,
   taskId,
-  hasPR,
   isMobile,
   terminalId,
   sendInputToTerminal,
@@ -167,21 +165,30 @@ export function GitActionsButtons({
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleSync} disabled={gitSync.isPending}>
             <HugeiconsIcon
-              icon={ArrowDown03Icon}
+              icon={ArrowRight03Icon}
               size={12}
               strokeWidth={2}
               className={gitSync.isPending ? 'animate-spin' : ''}
             />
             Pull from main
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={hasPR ? handlePush : handleMergeToMain} disabled={hasPR ? gitPush.isPending : gitMerge.isPending}>
+          <DropdownMenuItem onClick={handleMergeToMain} disabled={gitMerge.isPending}>
+            <HugeiconsIcon
+              icon={ArrowLeft03Icon}
+              size={12}
+              strokeWidth={2}
+              className={gitMerge.isPending ? 'animate-pulse' : ''}
+            />
+            Merge to main
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handlePush} disabled={gitPush.isPending}>
             <HugeiconsIcon
               icon={ArrowUp03Icon}
               size={12}
               strokeWidth={2}
-              className={(hasPR ? gitPush.isPending : gitMerge.isPending) ? 'animate-pulse' : ''}
+              className={gitPush.isPending ? 'animate-pulse' : ''}
             />
-            {hasPR ? 'Push to origin' : 'Merge to main'}
+            Push to origin
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleSyncParent} disabled={gitSyncParent.isPending}>
             <HugeiconsIcon
@@ -218,7 +225,7 @@ export function GitActionsButtons({
         title="Pull from main"
       >
         <HugeiconsIcon
-          icon={ArrowDown03Icon}
+          icon={ArrowRight03Icon}
           size={12}
           strokeWidth={2}
           className={gitSync.isPending ? 'animate-spin' : ''}
@@ -228,16 +235,32 @@ export function GitActionsButtons({
       <Button
         variant="ghost"
         size="icon-xs"
-        onClick={hasPR ? handlePush : handleMergeToMain}
-        disabled={hasPR ? gitPush.isPending : gitMerge.isPending}
+        onClick={handleMergeToMain}
+        disabled={gitMerge.isPending}
         className="h-5 w-5 text-muted-foreground hover:text-foreground"
-        title={hasPR ? 'Push to origin' : 'Merge to main'}
+        title="Merge to main"
+      >
+        <HugeiconsIcon
+          icon={ArrowLeft03Icon}
+          size={12}
+          strokeWidth={2}
+          className={gitMerge.isPending ? 'animate-pulse' : ''}
+        />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        onClick={handlePush}
+        disabled={gitPush.isPending}
+        className="h-5 w-5 text-muted-foreground hover:text-foreground"
+        title="Push to origin"
       >
         <HugeiconsIcon
           icon={ArrowUp03Icon}
           size={12}
           strokeWidth={2}
-          className={(hasPR ? gitPush.isPending : gitMerge.isPending) ? 'animate-pulse' : ''}
+          className={gitPush.isPending ? 'animate-pulse' : ''}
         />
       </Button>
 
