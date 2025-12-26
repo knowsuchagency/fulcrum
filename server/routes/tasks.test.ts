@@ -242,7 +242,6 @@ describe('Tasks Routes', () => {
       const res = await patch('/api/tasks/nonexistent', {
         title: 'New Title',
       })
-      const body = await res.json()
 
       expect(res.status).toBe(404)
     })
@@ -284,7 +283,6 @@ describe('Tasks Routes', () => {
       const res = await request('/api/tasks/nonexistent', {
         method: 'DELETE',
       })
-      const body = await res.json()
 
       expect(res.status).toBe(404)
     })

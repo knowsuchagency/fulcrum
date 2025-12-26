@@ -150,7 +150,7 @@ describe('Settings', () => {
 
       // File should be updated with nested structure
       const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(migrated._schemaVersion).toBe(2)
+      expect(migrated._schemaVersion).toBe(3) // Current schema version
       expect(migrated.server?.port).toBe(8888)
       expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
       expect(migrated.integrations?.linearApiKey).toBe('migrated-key')
@@ -180,7 +180,7 @@ describe('Settings', () => {
     test('skips migration if already at current schema version', async () => {
       const settingsPath = join(tempDir, 'settings.json')
       const originalContent = {
-        _schemaVersion: 2,
+        _schemaVersion: 3, // Current schema version
         server: { port: 8888 },
       }
       writeFileSync(settingsPath, JSON.stringify(originalContent))
@@ -269,8 +269,9 @@ describe('Settings', () => {
       ensureViboraDir()
       const settings = getNotificationSettings()
 
-      expect(settings.enabled).toBe(false)
-      expect(settings.sound.enabled).toBe(false)
+      // New defaults: notifications and sound enabled by default
+      expect(settings.enabled).toBe(true)
+      expect(settings.sound.enabled).toBe(true)
       expect(settings.slack.enabled).toBe(false)
       expect(settings.discord.enabled).toBe(false)
       expect(settings.pushover.enabled).toBe(false)
@@ -283,7 +284,7 @@ describe('Settings', () => {
         JSON.stringify({
           notifications: {
             enabled: true,
-            sound: { enabled: true, soundFile: '/path/to/sound.wav' },
+            sound: { enabled: true, customSoundFile: '/path/to/sound.wav' },
             slack: { enabled: true, webhookUrl: 'https://hooks.slack.com/test' },
           },
         })
@@ -294,7 +295,7 @@ describe('Settings', () => {
 
       expect(settings.enabled).toBe(true)
       expect(settings.sound.enabled).toBe(true)
-      expect(settings.sound.soundFile).toBe('/path/to/sound.wav')
+      expect(settings.sound.customSoundFile).toBe('/path/to/sound.wav')
       expect(settings.slack.enabled).toBe(true)
       expect(settings.slack.webhookUrl).toBe('https://hooks.slack.com/test')
     })
@@ -305,13 +306,13 @@ describe('Settings', () => {
       ensureViboraDir()
 
       updateNotificationSettings({
-        enabled: true,
-        sound: { enabled: true },
+        enabled: false,
+        sound: { enabled: false },
       })
 
       const settings = getNotificationSettings()
-      expect(settings.enabled).toBe(true)
-      expect(settings.sound.enabled).toBe(true)
+      expect(settings.enabled).toBe(false)
+      expect(settings.sound.enabled).toBe(false)
     })
   })
 

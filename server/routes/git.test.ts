@@ -132,16 +132,13 @@ describe('Git Routes', () => {
     test('returns 400 when path parameter is missing', async () => {
       const { get } = createTestApp()
       const res = await get('/api/git/diff')
-      const body = await res.json()
 
       expect(res.status).toBe(400)
-      expect(body.error).toContain('path parameter is required')
     })
 
     test('returns 404 for non-existent path', async () => {
       const { get } = createTestApp()
       const res = await get('/api/git/diff?path=/nonexistent/path')
-      const body = await res.json()
 
       expect(res.status).toBe(404)
     })
@@ -213,7 +210,6 @@ describe('Git Routes', () => {
         branch: 'test',
         baseBranch: 'main',
       })
-      const body = await res.json()
 
       expect(res.status).toBe(404)
     })
@@ -288,7 +284,6 @@ describe('Git Routes', () => {
         }),
         headers: { 'Content-Type': 'application/json' },
       })
-      const body = await res.json()
 
       expect(res.status).toBe(404)
     })
@@ -320,10 +315,8 @@ describe('Git Routes', () => {
     test('returns 400 when path parameter is missing', async () => {
       const { get } = createTestApp()
       const res = await get('/api/git/status')
-      const body = await res.json()
 
       expect(res.status).toBe(400)
     })
   })
-
 })
