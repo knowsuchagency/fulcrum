@@ -29,6 +29,7 @@ import {
   type ViboraInstanceGroup,
 } from '@/hooks/use-monitoring'
 import { useDeveloperMode } from '@/hooks/use-config'
+import { desktopZoom } from '@/main'
 
 export const Route = createFileRoute('/monitoring/')({
   component: MonitoringPage,
@@ -678,18 +679,26 @@ function UsageGauge({
 }) {
   const data = [{ value: Math.min(percent, 100), fill: color }]
 
+  // Scale pixel values for desktop zoom (rem-based container scales, but Recharts uses pixels)
+  const size = Math.round(96 * desktopZoom)
+  const center = Math.round(48 * desktopZoom)
+  const innerRadius = Math.round(32 * desktopZoom)
+  const outerRadius = Math.round(44 * desktopZoom)
+  const barSize = Math.round(10 * desktopZoom)
+  const cornerRadius = Math.round(5 * desktopZoom)
+
   return (
     <Card className="p-4">
       <div className="flex items-center gap-4">
         <div className="relative size-24 shrink-0">
           <RadialBarChart
-            width={96}
-            height={96}
-            cx={48}
-            cy={48}
-            innerRadius={32}
-            outerRadius={44}
-            barSize={10}
+            width={size}
+            height={size}
+            cx={center}
+            cy={center}
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+            barSize={barSize}
             data={data}
             startAngle={90}
             endAngle={-270}
@@ -703,7 +712,7 @@ function UsageGauge({
             <RadialBar
               background={{ fill: 'var(--border)' }}
               dataKey="value"
-              cornerRadius={5}
+              cornerRadius={cornerRadius}
               angleAxisId={0}
             />
           </RadialBarChart>
