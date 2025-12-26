@@ -15,7 +15,6 @@ import {
   GridViewIcon,
   CommandLineIcon,
   Settings01Icon,
-  FolderSyncIcon,
   LibraryIcon,
   GitPullRequestIcon,
   BrowserIcon,
@@ -35,7 +34,6 @@ const NAV_ITEMS = [
   { to: '/terminals', icon: CommandLineIcon, labelKey: 'header.terminals', matchPrefix: false },
   { to: '/repositories', icon: LibraryIcon, labelKey: 'header.repositories', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
-  { to: '/worktrees', icon: FolderSyncIcon, labelKey: 'header.worktrees', matchPrefix: true },
   { to: '/monitoring', icon: ChartLineData01Icon, labelKey: 'header.monitoring', matchPrefix: true },
 ] as const
 

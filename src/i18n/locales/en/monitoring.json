@@ -5,6 +5,7 @@
     "system": "System Metrics",
     "processes": "Processes",
     "vibora": "Vibora Servers",
+    "worktrees": "Worktrees",
     "usage": "Usage Limits"
   },
   "claude": {
