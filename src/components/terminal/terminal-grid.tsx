@@ -62,7 +62,7 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
         {taskInfo ? (
           // Task terminal header: [Task Link] [Repo Name] [Path] ... [Git Actions] [Close]
-          <div className="flex flex-1 items-center gap-2 px-2 py-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1">
             <Link
               to="/tasks/$taskId"
               params={{ taskId: taskInfo.taskId }}
