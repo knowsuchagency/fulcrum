@@ -360,20 +360,21 @@ function promptServerChoice(remoteUrl) {
 
 /**
  * Check if a server is healthy
+ * Uses native HTTP request via curl to bypass WebView CORS restrictions
  */
 async function checkServerHealth(baseUrl) {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT);
-
-    const response = await fetch(`${baseUrl}/health`, {
-      method: 'GET',
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch {
+    // Use curl for health check to bypass WebView CORS restrictions
+    // -s: silent, -o /dev/null: discard output, -w "%{http_code}": print status code
+    // --max-time: timeout in seconds
+    const timeoutSec = Math.ceil(HEALTH_CHECK_TIMEOUT / 1000);
+    const result = await Neutralino.os.execCommand(
+      `curl -s -o /dev/null -w "%{http_code}" --max-time ${timeoutSec} "${baseUrl}/health"`
+    );
+    const statusCode = parseInt(result.stdOut.trim(), 10);
+    return statusCode >= 200 && statusCode < 300;
+  } catch (err) {
+    console.log('[Vibora] Health check failed:', err);
     return false;
   }
 }
