@@ -25,6 +25,7 @@ export const terminalTabs = sqliteTable('terminal_tabs', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   position: integer('position').notNull().default(0), // Tab order in the UI
+  directory: text('directory'), // Optional default directory for terminals in this tab
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
@@ -66,6 +67,7 @@ export const repositories = sqliteTable('repositories', {
   startupScript: text('startup_script'), // Command to run after worktree creation
   copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
   remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
+  isCopierTemplate: integer('is_copier_template', { mode: 'boolean' }).default(false), // Mark as Copier template
   lastUsedAt: text('last_used_at'), // Timestamp of last task creation with this repo
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

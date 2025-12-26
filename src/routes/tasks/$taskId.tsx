@@ -8,6 +8,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
+import { useRepositories } from '@/hooks/use-repositories'
 import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
@@ -30,13 +31,15 @@ import {
   Delete02Icon,
   Folder01Icon,
   GitPullRequestIcon,
-  ArrowDown03Icon,
+  ArrowRight03Icon,
+  ArrowLeft03Icon,
   ArrowUp03Icon,
   Orbit01Icon,
   VisualStudioCodeIcon,
   Task01Icon,
   Settings05Icon,
   GitCommitIcon,
+  LibraryIcon,
 } from '@hugeicons/core-free-icons'
 import { TaskConfigModal } from '@/components/task-config-modal'
 import {
@@ -105,6 +108,10 @@ function TaskView() {
   const { data: editorSshPort } = useEditorSshPort()
   const { data: serverPort } = usePort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
+  const { data: repositories = [] } = useRepositories()
+
+  // Find the repository matching this task's repo path
+  const repository = repositories.find((r) => r.path === task?.repoPath)
 
   // Read AI mode state from navigation (only set when coming from task creation)
   const navState = location.state as { aiMode?: 'default' | 'plan'; description?: string } | undefined
@@ -333,7 +340,21 @@ function TaskView() {
             </button>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{task.repoName}</span>
+            {repository ? (
+              <Link
+                to="/repositories/$repoId"
+                params={{ repoId: repository.id }}
+                className="flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                <span>{task.repoName}</span>
+              </Link>
+            ) : (
+              <span className="flex items-center gap-1">
+                <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                <span>{task.repoName}</span>
+              </span>
+            )}
             <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
             <span className="font-mono">{task.branch}</span>
             {task.prUrl && (
@@ -409,27 +430,44 @@ function TaskView() {
           title="Pull from main"
         >
           <HugeiconsIcon
-            icon={ArrowDown03Icon}
+            icon={ArrowRight03Icon}
             size={16}
             strokeWidth={2}
             className={gitSync.isPending ? 'animate-spin' : ''}
           />
         </Button>
 
-        {/* Push / Merge to Main Button */}
+        {/* Merge to Main Button */}
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={task.prUrl ? handlePush : handleMergeToMain}
-          disabled={(task.prUrl ? gitPush.isPending : gitMerge.isPending) || !task.worktreePath}
+          onClick={handleMergeToMain}
+          disabled={gitMerge.isPending || !task.worktreePath}
           className="text-muted-foreground hover:text-foreground"
-          title={task.prUrl ? 'Push to origin' : 'Merge to main'}
+          title="Merge to main"
+        >
+          <HugeiconsIcon
+            icon={ArrowLeft03Icon}
+            size={16}
+            strokeWidth={2}
+            className={gitMerge.isPending ? 'animate-pulse' : ''}
+          />
+        </Button>
+
+        {/* Push to Origin Button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handlePush}
+          disabled={gitPush.isPending || !task.worktreePath}
+          className="text-muted-foreground hover:text-foreground"
+          title="Push to origin"
         >
           <HugeiconsIcon
             icon={ArrowUp03Icon}
             size={16}
             strokeWidth={2}
-            className={(task.prUrl ? gitPush.isPending : gitMerge.isPending) ? 'animate-pulse' : ''}
+            className={gitPush.isPending ? 'animate-pulse' : ''}
           />
         </Button>
 

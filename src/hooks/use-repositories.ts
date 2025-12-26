@@ -28,6 +28,7 @@ export function useCreateRepository() {
       displayName: string
       startupScript?: string | null
       copyFiles?: string | null
+      isCopierTemplate?: boolean
     }) =>
       fetchJSON<Repository>(`${API_BASE}/api/repositories`, {
         method: 'POST',
@@ -48,7 +49,7 @@ export function useUpdateRepository() {
       updates,
     }: {
       id: string
-      updates: Partial<Pick<Repository, 'path' | 'displayName' | 'startupScript' | 'copyFiles'>>
+      updates: Partial<Pick<Repository, 'path' | 'displayName' | 'startupScript' | 'copyFiles' | 'isCopierTemplate'>>
     }) =>
       fetchJSON<Repository>(`${API_BASE}/api/repositories/${id}`, {
         method: 'PATCH',

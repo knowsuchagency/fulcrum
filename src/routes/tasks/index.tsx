@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -14,15 +14,34 @@ import {
 import { Input } from '@/components/ui/input'
 import { useTasks } from '@/hooks/use-tasks'
 
+interface TasksSearch {
+  repo?: string
+}
+
 export const Route = createFileRoute('/tasks/')({
   component: KanbanView,
+  validateSearch: (search: Record<string, unknown>): TasksSearch => ({
+    repo: typeof search.repo === 'string' ? search.repo : undefined,
+  }),
 })
 
 function KanbanView() {
   const { t } = useTranslation('tasks')
   const { data: tasks = [] } = useTasks()
-  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  const { repo: repoFilter } = Route.useSearch()
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
+
+  const setRepoFilter = useCallback(
+    (repo: string | null) => {
+      navigate({
+        to: '/tasks',
+        search: repo ? { repo } : {},
+        replace: true,
+      })
+    },
+    [navigate]
+  )
 
   // Unique repo names for filtering
   const repoNames = useMemo(() => {
@@ -51,7 +70,7 @@ function KanbanView() {
             <SelectTrigger size="sm" className="max-sm:w-auto gap-1.5">
               <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
               <SelectValue>
-                {repoFilter || t('allRepos')}
+                {repoFilter ?? t('allRepos')}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="min-w-[160px]">
@@ -66,7 +85,7 @@ function KanbanView() {
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
-        <KanbanBoard repoFilter={repoFilter} searchQuery={searchQuery} />
+        <KanbanBoard repoFilter={repoFilter ?? null} searchQuery={searchQuery} />
       </div>
     </div>
   )

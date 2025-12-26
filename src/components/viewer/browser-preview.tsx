@@ -65,7 +65,7 @@ export function BrowserPreview({ taskId }: BrowserPreviewProps) {
       </div>
 
       {/* Browser content */}
-      <div className="flex-1 overflow-hidden bg-white">
+      <div className="flex-1 overflow-hidden bg-card">
         <iframe
           key={key}
           src={url}

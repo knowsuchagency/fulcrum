@@ -61,7 +61,7 @@ export function useTaskSync() {
             <img
               src={iconUrl}
               alt=""
-              className="size-4 rounded-sm object-cover"
+              className="size-8 shrink-0 aspect-square rounded-sm object-cover"
             />
           )
 

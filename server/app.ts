@@ -15,6 +15,7 @@ import uploadsRoutes from './routes/uploads'
 import worktreesRoutes from './routes/worktrees'
 import terminalViewStateRoutes from './routes/terminal-view-state'
 import repositoriesRoutes from './routes/repositories'
+import copierRoutes from './routes/copier'
 import linearRoutes from './routes/linear'
 import githubRoutes from './routes/github'
 import authRoutes from './routes/auth'
@@ -61,6 +62,7 @@ export function createApp() {
   app.route('/api/worktrees', worktreesRoutes)
   app.route('/api/terminal-view-state', terminalViewStateRoutes)
   app.route('/api/repositories', repositoriesRoutes)
+  app.route('/api/copier', copierRoutes)
   app.route('/api/linear', linearRoutes)
   app.route('/api/github', githubRoutes)
   app.route('/api/auth', authRoutes)
@@ -140,7 +142,7 @@ export function createApp() {
     })
 
     // Serve specific static files
-    const staticFiles = ['favicon.ico', 'vibora-icon.png', 'vibora-logo.jpeg', 'vite.svg', 'logo-dark.jpg', 'logo-light.jpg']
+    const staticFiles = ['favicon.ico', 'vibora-icon.png', 'vibora-logo.jpeg', 'vite.svg', 'logo-dark.jpg', 'logo-light.jpg', 'goat.jpeg']
     for (const file of staticFiles) {
       app.get(`/${file}`, async () => {
         const filePath = join(distPath, file)

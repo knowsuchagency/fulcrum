@@ -12,7 +12,7 @@ export class TabManager {
   /**
    * Create a new tab
    */
-  create(options: { name: string; position?: number }): TabInfo {
+  create(options: { name: string; position?: number; directory?: string }): TabInfo {
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
 
@@ -24,6 +24,7 @@ export class TabManager {
         id,
         name: options.name,
         position,
+        directory: options.directory ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -33,17 +34,27 @@ export class TabManager {
       id,
       name: options.name,
       position,
+      directory: options.directory,
       createdAt: Date.now(),
     }
   }
 
   /**
-   * Rename a tab
+   * Update a tab's name and/or directory
    */
-  rename(tabId: string, name: string): boolean {
+  update(tabId: string, updates: { name?: string; directory?: string | null }): boolean {
+    const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() }
+
+    if (updates.name !== undefined) {
+      updateData.name = updates.name
+    }
+    if (updates.directory !== undefined) {
+      updateData.directory = updates.directory
+    }
+
     const result = db
       .update(terminalTabs)
-      .set({ name, updatedAt: new Date().toISOString() })
+      .set(updateData)
       .where(eq(terminalTabs.id, tabId))
       .run()
 
@@ -137,6 +148,7 @@ export class TabManager {
       id: row.id,
       name: row.name,
       position: row.position,
+      directory: row.directory ?? undefined,
       createdAt: new Date(row.createdAt).getTime(),
     }
   }
@@ -151,6 +163,7 @@ export class TabManager {
       id: row.id,
       name: row.name,
       position: row.position,
+      directory: row.directory ?? undefined,
       createdAt: new Date(row.createdAt).getTime(),
     }))
   }

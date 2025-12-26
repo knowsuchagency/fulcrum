@@ -32,7 +32,7 @@ import {
   ComboboxEmpty,
 } from '@/components/ui/combobox'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PlusSignIcon, Folder01Icon } from '@hugeicons/core-free-icons'
+import { TaskAdd01Icon, Folder01Icon } from '@hugeicons/core-free-icons'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCreateTask } from '@/hooks/use-tasks'
 import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
@@ -247,7 +247,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
       <Dialog open={open} onOpenChange={setOpen}>
         {showTrigger && (
           <DialogTrigger render={<Button size="sm" />}>
-            <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+            <HugeiconsIcon icon={TaskAdd01Icon} size={16} strokeWidth={2} data-slot="icon" className="-translate-y-px" />
             {t('newTask')}
           </DialogTrigger>
         )}

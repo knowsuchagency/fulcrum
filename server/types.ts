@@ -7,6 +7,7 @@ export interface TabInfo {
   id: string
   name: string
   position: number
+  directory?: string // Optional default directory for terminals in this tab
   createdAt: number
 }
 
@@ -104,14 +105,16 @@ export interface TabCreateMessage {
   payload: {
     name: string
     position?: number
+    directory?: string
   }
 }
 
-export interface TabRenameMessage {
-  type: 'tab:rename'
+export interface TabUpdateMessage {
+  type: 'tab:update'
   payload: {
     tabId: string
-    name: string
+    name?: string
+    directory?: string | null // null to clear directory
   }
 }
 
@@ -145,7 +148,7 @@ export type ClientMessage =
   | TerminalAssignTabMessage
   | TerminalClearBufferMessage
   | TabCreateMessage
-  | TabRenameMessage
+  | TabUpdateMessage
   | TabDeleteMessage
   | TabReorderMessage
   | TabsListMessage
@@ -238,11 +241,12 @@ export interface TabCreatedMessage {
   }
 }
 
-export interface TabRenamedMessage {
-  type: 'tab:renamed'
+export interface TabUpdatedMessage {
+  type: 'tab:updated'
   payload: {
     tabId: string
-    name: string
+    name?: string
+    directory?: string | null
   }
 }
 
@@ -299,7 +303,7 @@ export type ServerMessage =
   | TerminalDestroyedMessage
   | TerminalTabAssignedMessage
   | TabCreatedMessage
-  | TabRenamedMessage
+  | TabUpdatedMessage
   | TabDeletedMessage
   | TabReorderedMessage
   | TabsListResponseMessage
