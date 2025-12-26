@@ -206,58 +206,15 @@ jobs:
           path: artifacts
           pattern: desktop-*
 
-      - name: Generate update manifest
-        run: |
-          VERSION="${{ needs.publish.outputs.version }}"
-          TAG="${{ needs.publish.outputs.tag }}"
-          REPO="${{ github.repository }}"
-
-          cat > manifest.json << EOF
-          {
-            "applicationId": "io.vibora.desktop",
-            "version": "${VERSION}",
-            "platforms": {
-              "darwin-arm64": {
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-macos-arm64.dmg"
-              },
-              "linux-x64": {
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-linux-x64.AppImage"
-              }
-            }
-          }
-          EOF
-
-          echo "Generated manifest.json:"
-          cat manifest.json
-
       - name: Flatten artifacts
         run: |
           mkdir -p release-assets
           find artifacts -type f \( -name "*.dmg" -o -name "*.AppImage" \) -exec cp {} release-assets/ \;
-          cp manifest.json release-assets/
           ls -la release-assets/
-
-      - name: Generate checksums
-        id: checksums
-        run: |
-          cd release-assets
-          sha256sum *.dmg *.AppImage > checksums.sha256
-          cat checksums.sha256
-          echo "checksums<<EOF" >> $GITHUB_OUTPUT
-          cat checksums.sha256 >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Upload assets to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.publish.outputs.tag }}
           draft: false
-          append_body: true
-          body: |
-
-            ### Checksums (SHA256)
-
-            ```
-            ${{ steps.checksums.outputs.checksums }}
-            ```
           files: release-assets/*
