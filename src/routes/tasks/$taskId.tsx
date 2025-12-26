@@ -31,7 +31,8 @@ import {
   Delete02Icon,
   Folder01Icon,
   GitPullRequestIcon,
-  ArrowDown03Icon,
+  ArrowRight02Icon,
+  ArrowLeft02Icon,
   ArrowUp03Icon,
   Orbit01Icon,
   VisualStudioCodeIcon,
@@ -429,27 +430,44 @@ function TaskView() {
           title="Pull from main"
         >
           <HugeiconsIcon
-            icon={ArrowDown03Icon}
+            icon={ArrowRight02Icon}
             size={16}
             strokeWidth={2}
             className={gitSync.isPending ? 'animate-spin' : ''}
           />
         </Button>
 
-        {/* Push / Merge to Main Button */}
+        {/* Merge to Main Button */}
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={task.prUrl ? handlePush : handleMergeToMain}
-          disabled={(task.prUrl ? gitPush.isPending : gitMerge.isPending) || !task.worktreePath}
+          onClick={handleMergeToMain}
+          disabled={gitMerge.isPending || !task.worktreePath}
           className="text-muted-foreground hover:text-foreground"
-          title={task.prUrl ? 'Push to origin' : 'Merge to main'}
+          title="Merge to main"
+        >
+          <HugeiconsIcon
+            icon={ArrowLeft02Icon}
+            size={16}
+            strokeWidth={2}
+            className={gitMerge.isPending ? 'animate-pulse' : ''}
+          />
+        </Button>
+
+        {/* Push to Origin Button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handlePush}
+          disabled={gitPush.isPending || !task.worktreePath}
+          className="text-muted-foreground hover:text-foreground"
+          title="Push to origin"
         >
           <HugeiconsIcon
             icon={ArrowUp03Icon}
             size={16}
             strokeWidth={2}
-            className={(task.prUrl ? gitPush.isPending : gitMerge.isPending) ? 'animate-pulse' : ''}
+            className={gitPush.isPending ? 'animate-pulse' : ''}
           />
         </Button>
 
