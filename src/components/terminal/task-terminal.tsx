@@ -304,6 +304,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         // 2. Then run Claude with the task prompt
         const portFlag = serverPort !== 7777 ? ` --port=${serverPort}` : ''
         const systemPrompt = 'You are working in a Vibora task worktree. ' +
+          'Commit after completing each logical unit of work (feature, fix, refactor) to preserve progress. ' +
           `When you finish working and need user input, run: vibora current-task review${portFlag}. ` +
           `When linking a PR: vibora current-task pr <url>${portFlag}. ` +
           `For notifications: vibora notify "Title" "Message"${portFlag}.`
