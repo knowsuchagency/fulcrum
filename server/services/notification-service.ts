@@ -147,7 +147,7 @@ async function sendPushoverNotification(
 }
 
 // Broadcast notification to UI via WebSocket
-function broadcastUINotification(payload: NotificationPayload, playSound: boolean): void {
+function broadcastUINotification(payload: NotificationPayload, playSound: boolean, isCustomSound: boolean): void {
   const notificationType =
     payload.type === 'pr_merged' || payload.type === 'plan_complete' ? 'success' : 'info'
 
@@ -160,6 +160,7 @@ function broadcastUINotification(payload: NotificationPayload, playSound: boolea
       notificationType,
       taskId: payload.taskId,
       playSound, // Tell desktop app to play local sound
+      isCustomSound, // Whether user has custom sound file (affects notification icon)
     },
   })
 }
@@ -178,9 +179,10 @@ export async function sendNotification(payload: NotificationPayload): Promise<No
   // Determine if sound should be played
   // Pass this to UI so desktop app can play sound locally
   const playSound = settings.sound?.enabled ?? false
+  const isCustomSound = !!settings.sound?.customSoundFile
 
   // Always broadcast to UI (with sound flag for desktop app)
-  broadcastUINotification(payload, playSound)
+  broadcastUINotification(payload, playSound, isCustomSound)
 
   // Sound (macOS only)
   if (settings.sound?.enabled) {
