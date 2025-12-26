@@ -5,6 +5,7 @@ import { eq, ne } from 'drizzle-orm'
 import * as os from 'os'
 import type { TerminalInfo } from '../types'
 import { log } from '../lib/logger'
+import { getViboraDir } from '../lib/settings'
 
 export interface PTYManagerCallbacks {
   onData: (terminalId: string, data: string) => void
@@ -20,7 +21,7 @@ export class PTYManager {
   }
 
   // Called on server startup to restore terminals from DB
-  restoreFromDatabase(): void {
+  async restoreFromDatabase(): Promise<void> {
     // Check if dtach is available
     if (!DtachService.isAvailable()) {
       log.pty.error('dtach is not installed, terminal persistence disabled')
@@ -34,8 +35,23 @@ export class PTYManager {
       .where(ne(terminals.status, 'exited'))
       .all()
 
+    const MAX_RETRIES = 3
+    const RETRY_DELAY_MS = 100
+
     for (const record of storedTerminals) {
-      if (dtach.hasSession(record.id)) {
+      // Retry socket check a few times with small delays to handle timing issues
+      let socketFound = false
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        if (dtach.hasSession(record.id)) {
+          socketFound = true
+          break
+        }
+        if (attempt < MAX_RETRIES - 1) {
+          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+        }
+      }
+
+      if (socketFound) {
         // Session exists - create TerminalSession object (but don't attach yet)
         const session = new TerminalSession({
           id: record.id,
@@ -52,12 +68,17 @@ export class PTYManager {
         this.sessions.set(record.id, session)
         log.pty.info('Restored terminal', { terminalId: record.id, name: record.name })
       } else {
-        // Session is gone - mark as exited
+        // Session is gone after retries - mark as exited
         db.update(terminals)
           .set({ status: 'exited', updatedAt: new Date().toISOString() })
           .where(eq(terminals.id, record.id))
           .run()
-        log.pty.warn('Terminal dtach socket not found, marked as exited', { terminalId: record.id })
+        log.pty.warn('Terminal dtach socket not found after retries, marked as exited', {
+          terminalId: record.id,
+          name: record.name,
+          socketPath: dtach.getSocketPath(record.id),
+          viboraDir: getViboraDir(),
+        })
       }
     }
 
