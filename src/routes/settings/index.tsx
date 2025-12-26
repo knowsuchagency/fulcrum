@@ -235,9 +235,9 @@ function SettingsPage() {
     hasZAiChanges ||
     hasClaudeCodeChanges
 
-  // Block navigation when there are unsaved changes
+  // Block navigation when there are unsaved changes (but not during initial loading)
   const { proceed, reset, status } = useBlocker({
-    shouldBlockFn: () => hasChanges,
+    shouldBlockFn: () => !isLoading && hasChanges,
     withResolver: true,
   })
 
