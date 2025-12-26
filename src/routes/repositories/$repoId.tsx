@@ -111,7 +111,7 @@ function RepositoryDetailView() {
   if (error || !repository) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
           <Link to="/repositories" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={2} />
             Repositories
@@ -129,7 +129,7 @@ function RepositoryDetailView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <div className="flex items-center gap-2">
           <Link to="/repositories" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={2} />

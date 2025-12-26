@@ -7,6 +7,7 @@ import { useThemeSync } from '@/hooks/use-theme-sync'
 import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { KeyboardProvider } from '@/contexts/keyboard-context'
 import { CommandPalette } from '@/components/command-palette/command-palette'
+import { PageBackground } from '@/components/layout/page-background'
 import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -99,7 +100,8 @@ function RootLayout() {
         <ViewTracking />
         <DesktopBridge />
         <Header onNewTaskRef={handleNewTaskRef} onOpenCommandPalette={handleOpenCommandPalette} />
-        <main className="isolate flex-1 overflow-hidden">
+        <main className="isolate flex-1 overflow-hidden relative">
+          <PageBackground />
           <Outlet />
         </main>
         <CommandPalette

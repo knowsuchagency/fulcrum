@@ -355,7 +355,7 @@ function RepositoriesView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <div className="flex items-center gap-4">
           <h1 className="text-sm font-medium">{t('title')}</h1>
           {repositories && (
@@ -366,7 +366,7 @@ function RepositoriesView() {
         <CreateRepositoryDialog />
       </div>
 
-      <div className="pixel-grid flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4">
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <HugeiconsIcon

@@ -293,7 +293,7 @@ function TaskView() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Task Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border bg-background px-4 py-2">
         <div className="flex-1">
           <div className="flex items-center gap-1.5">
             <h1 className="text-sm font-medium">

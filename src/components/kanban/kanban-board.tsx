@@ -183,7 +183,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Mobile tabs - hidden on desktop */}
-      <div className="border-b lg:hidden">
+      <div className="border-b bg-background lg:hidden">
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as TaskStatus)}
@@ -202,7 +202,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
       </div>
 
       {/* Desktop layout - hidden on mobile */}
-      <div className="pixel-grid hidden h-full justify-center gap-4 overflow-x-auto p-4 lg:flex">
+      <div className="hidden h-full justify-center gap-4 overflow-x-auto p-4 lg:flex">
         {COLUMNS.map((status) => (
           <KanbanColumn
             key={status}
@@ -213,7 +213,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
       </div>
 
       {/* Mobile single column */}
-      <div className="pixel-grid flex-1 overflow-y-auto p-4 lg:hidden">
+      <div className="flex-1 overflow-y-auto p-4 lg:hidden">
         <KanbanColumn
           status={activeTab}
           tasks={tasks.filter((t) => t.status === activeTab)}

@@ -510,11 +510,11 @@ function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <h1 className="text-sm font-medium">{t('title')}</h1>
       </div>
 
-      <div className="pixel-grid flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-5xl space-y-4">
               {/* Server */}
               <SettingsSection title={t('sections.server')}>

@@ -42,6 +42,7 @@
     --sidebar-border: hsl(214.3 31.8% 91.4%);     /* Light border */
     --sidebar-ring: #2a2a27;                      /* Graphite */
     --terminal-background: #faf9f5;               /* Porcelain - matches background */
+    --tile: rgba(42, 42, 39, 0.1);                /* Graphite 10% */
 }
 
 .dark {
@@ -85,6 +86,7 @@
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.985 0.001 106.423);
     --terminal-background: #0a0a0a;
+    --tile: rgba(250, 249, 245, 0.1);             /* Porcelain 10% */
 }
 
 @theme inline {
@@ -122,6 +124,7 @@
     --color-foreground: var(--foreground);
     --color-background: var(--background);
     --color-terminal-background: var(--terminal-background);
+    --color-tile: var(--tile);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
@@ -141,12 +144,4 @@
   html {
     @apply font-sans;
     }
-}
-
-/* 8-bit pixel grid background */
-.pixel-grid {
-  background-image:
-    linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
-  background-size: 8px 8px;
 }

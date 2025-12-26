@@ -371,7 +371,7 @@ function TerminalsView() {
   return (
     <div className="flex h-full max-w-full flex-col overflow-hidden">
       {/* Tab Bar + Actions */}
-      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-muted/30 px-2 py-1">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-background px-2 py-1">
         <div className="min-w-0 flex-1 overflow-x-auto">
           <TerminalTabBar
             tabs={tabBarTabs}
@@ -437,7 +437,7 @@ function TerminalsView() {
       </div>
 
       {/* Terminal Grid */}
-      <div className="pixel-grid min-w-0 flex-1 overflow-hidden">
+      <div className="min-w-0 flex-1 overflow-hidden">
         <TerminalGrid
           terminals={visibleTerminals}
           onTerminalClose={activeTabId === ALL_TASKS_TAB_ID ? undefined : handleTerminalClose}
