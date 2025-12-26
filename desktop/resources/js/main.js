@@ -26,6 +26,8 @@ let currentZoom = 1.0;
 let currentRoute = { pathname: '/', search: '' }; // Track current SPA route from iframe
 let isDevMode = false;
 let logFilePath = null;
+let loadingStartTime = null;
+const MIN_LOADING_DURATION = 3000; // Show loading screen for at least 3 seconds
 
 // =============================================================================
 // Centralized JSONL Logger (writes to ~/.vibora/desktop.log)
@@ -343,8 +345,17 @@ async function loadViboraApp(url) {
     showError('Connection Failed', `Could not load Vibora from ${url}.`);
   }, 10000); // 10 second timeout
 
-  frame.onload = () => {
+  frame.onload = async () => {
     clearTimeout(loadTimeout);
+
+    // Ensure minimum loading screen duration
+    const elapsed = Date.now() - loadingStartTime;
+    const remaining = MIN_LOADING_DURATION - elapsed;
+    if (remaining > 0) {
+      log.debug('Waiting for minimum loading duration', { remaining });
+      await new Promise(resolve => setTimeout(resolve, remaining));
+    }
+
     document.body.classList.add('loaded');
     log.info('App loaded successfully', { url });
   };
@@ -741,6 +752,9 @@ async function playNotificationSound() {
  * Initialize the application
  */
 async function init() {
+  // Record start time for minimum loading duration
+  loadingStartTime = Date.now();
+
   try {
     // Initialize Neutralino
     Neutralino.init();

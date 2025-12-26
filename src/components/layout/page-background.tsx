@@ -1,7 +1,7 @@
 import { useRouterState } from '@tanstack/react-router'
 import { Tiles } from '@/components/ui/tiles'
 
-const ROUTES_WITH_BACKGROUND = ['/', '/tasks', '/terminals', '/worktrees', '/repositories', '/review', '/monitoring']
+const ROUTES_WITH_BACKGROUND = ['/', '/tasks', '/terminals', '/worktrees', '/repositories', '/review', '/monitoring', '/settings']
 
 export function PageBackground() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
   NavigationMenu,
@@ -43,6 +44,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   const { location } = useRouterState()
   const pathname = location.pathname
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
+  const { resolvedTheme } = useTheme()
 
   const isActive = (to: string, matchPrefix: boolean) =>
     matchPrefix ? pathname.startsWith(to) : pathname === to
@@ -83,6 +85,13 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
 
         {/* Desktop navigation */}
         <nav className="hidden items-center gap-1 lg:flex">
+          <Link to="/tasks" className="mr-2">
+            <img
+              src={resolvedTheme === 'dark' ? '/logo-dark.jpg' : '/logo-light.jpg'}
+              alt="Vibora"
+              className="h-8 w-8 rounded"
+            />
+          </Link>
           {NAV_ITEMS.map((item) => (
             <Link key={item.to} to={item.to}>
               <Button

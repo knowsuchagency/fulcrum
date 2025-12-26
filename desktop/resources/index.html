@@ -33,7 +33,26 @@
     .logo {
       width: 80px;
       height: 80px;
+      border-radius: 8px;
       animation: pulse 2s ease-in-out infinite;
+    }
+
+    .logo-light { display: none; }
+    .logo-dark { display: block; }
+
+    @media (prefers-color-scheme: light) {
+      body {
+        background: #f8f8f8;
+        color: #1a1a1a;
+      }
+      .logo-light { display: block; }
+      .logo-dark { display: none; }
+      .status { color: #525252; }
+      .status-detail { color: #737373; }
+      .spinner {
+        border-color: #e5e5e5;
+        border-top-color: #3b82f6;
+      }
     }
 
     @keyframes pulse {
@@ -352,7 +371,8 @@
 </head>
 <body>
   <div id="app">
-    <img src="/icons/icon.png" alt="Vibora" class="logo">
+    <img src="/icons/logo-light.jpg" alt="Vibora" class="logo logo-light">
+    <img src="/icons/logo-dark.jpg" alt="Vibora" class="logo logo-dark">
     <div class="spinner"></div>
     <div class="status">
       <div id="status-text">Starting Vibora...</div>
