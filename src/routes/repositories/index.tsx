@@ -268,7 +268,7 @@ function CreateRepositoryDialog() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button size="sm" />}>
           <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-          {t('addRepository')}
+          <span className="max-sm:hidden">{t('addRepository')}</span>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <form onSubmit={handleSubmit}>
@@ -394,8 +394,8 @@ function RepositoriesView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
-        <div className="flex items-center gap-4">
-          <h1 className="text-sm font-medium">{t('title')}</h1>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <h1 className="text-sm font-medium max-sm:hidden">{t('title')}</h1>
           {repositories && (
             <div className="text-xs text-muted-foreground">{t('total', { count: repositories.length })}</div>
           )}
