@@ -62,10 +62,12 @@ export function TerminalTabBar({
           onClick={() => onTabSelect(tab.id)}
           onDoubleClick={() => handleDoubleClick(tab)}
           className={cn(
-            'group relative flex items-center gap-1.5 rounded-t-md border-x border-t px-3 py-1.5 text-xs transition-colors max-sm:px-2 max-sm:py-1',
+            'group relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2 max-sm:py-1',
             tab.id === activeTabId
-              ? 'border-accent bg-background text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'bg-background text-foreground'
+              : 'text-muted-foreground hover:text-foreground',
+            'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
+            tab.id === activeTabId ? 'after:opacity-100' : 'after:opacity-0'
           )}
         >
           {editingTabId === tab.id ? (

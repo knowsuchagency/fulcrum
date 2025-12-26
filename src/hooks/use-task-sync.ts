@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 
 interface TaskUpdatedMessage {
@@ -16,6 +17,7 @@ interface NotificationMessage {
     notificationType: 'success' | 'info' | 'warning' | 'error'
     taskId?: string
     playSound?: boolean
+    isCustomSound?: boolean
   }
 }
 
@@ -31,6 +33,7 @@ const RECONNECT_INTERVAL = 2000
 
 export function useTaskSync() {
   const queryClient = useQueryClient()
+  const { resolvedTheme } = useTheme()
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const reconnectAttemptsRef = useRef(0)
@@ -43,21 +46,49 @@ export function useTaskSync() {
         if (message.type === 'task:updated') {
           queryClient.invalidateQueries({ queryKey: ['tasks'] })
         } else if (message.type === 'notification' && 'payload' in message) {
-          const { title, message: description, notificationType, playSound } = (message as NotificationMessage).payload
+          const { id, title, message: description, notificationType, playSound, isCustomSound } = (message as NotificationMessage).payload
+
+          // Determine icon: goat if default sound enabled, otherwise theme-appropriate logo
+          const useGoat = playSound && !isCustomSound
+          const iconUrl = useGoat
+            ? '/goat.jpeg'
+            : resolvedTheme === 'dark'
+              ? '/logo-dark.jpg'
+              : '/logo-light.jpg'
+
+          // Create icon element for toast
+          const icon = (
+            <img
+              src={iconUrl}
+              alt=""
+              className="size-4 rounded-sm object-cover"
+            />
+          )
+
+          // Show toast with custom icon
           switch (notificationType) {
             case 'success':
-              toast.success(title, { description })
+              toast.success(title, { description, icon })
               break
             case 'error':
-              toast.error(title, { description })
+              toast.error(title, { description, icon })
               break
             case 'warning':
-              toast.warning(title, { description })
+              toast.warning(title, { description, icon })
               break
             case 'info':
             default:
-              toast.info(title, { description })
+              toast.info(title, { description, icon })
               break
+          }
+
+          // Show browser notification (skip in iframe - desktop app handles natively)
+          if ('Notification' in window && window.parent === window && Notification.permission === 'granted') {
+            new Notification(title, {
+              body: description,
+              icon: iconUrl,
+              tag: id,
+            })
           }
 
           // Play notification sound if enabled
@@ -96,7 +127,7 @@ export function useTaskSync() {
         // Ignore parse errors
       }
     },
-    [queryClient]
+    [queryClient, resolvedTheme]
   )
 
   const connect = useCallback(() => {
@@ -134,6 +165,13 @@ export function useTaskSync() {
 
   // Keep connectRef in sync with connect
   connectRef.current = connect
+
+  // Request browser notification permission on first load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
 
   useEffect(() => {
     connect()

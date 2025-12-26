@@ -627,12 +627,21 @@ export function getClaudeConfig(): Record<string, unknown> {
   }
 }
 
+// Promise-based lock to serialize writes to ~/.claude.json
+// Prevents race conditions when multiple tabs trigger concurrent updates
+let claudeConfigLock: Promise<void> = Promise.resolve()
+
 // Update Claude Code config (merges with existing)
+// Uses promise chaining to ensure sequential writes and prevent corruption
 export function updateClaudeConfig(updates: Record<string, unknown>): void {
-  const configPath = getClaudeConfigPath()
-  const current = getClaudeConfig()
-  const merged = { ...current, ...updates }
-  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), 'utf-8')
+  claudeConfigLock = claudeConfigLock.then(() => {
+    const configPath = getClaudeConfigPath()
+    const current = getClaudeConfig()
+    const merged = { ...current, ...updates }
+    fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), 'utf-8')
+  }).catch((err) => {
+    log.settings.error('Failed to update Claude config', { error: String(err) })
+  })
 }
 
 // Update Claude Code theme if sync is enabled
