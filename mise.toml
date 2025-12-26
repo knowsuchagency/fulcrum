@@ -588,9 +588,16 @@ rm -rf desktop/bundle
 echo "Desktop build artifacts cleaned"
 """
 
+[tasks."desktop:clean-packages"]
+description = "Remove old DMG and AppImage packages"
+run = """
+rm -f desktop/dist/*.dmg desktop/dist/*.AppImage
+echo "Removed old packages from desktop/dist/"
+"""
+
 [tasks."desktop:package-appimage"]
 description = "Package desktop app as AppImage (Linux)"
-depends = ["desktop:build"]
+depends = ["desktop:build", "desktop:clean-packages"]
 usage = 'arg "[arch]" help="Architecture: x64 or arm64" default="x64"'
 run = """
 ./desktop/scripts/package-appimage.sh "${usage_arch}"
@@ -598,7 +605,7 @@ run = """
 
 [tasks."desktop:package-dmg"]
 description = "Package desktop app as DMG (macOS)"
-depends = ["desktop:build"]
+depends = ["desktop:build", "desktop:clean-packages"]
 usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
 run = """
 ./desktop/scripts/package-dmg.sh "${usage_arch}"
@@ -606,7 +613,7 @@ run = """
 
 [tasks."desktop:package-dmg:debug"]
 description = "Package desktop app as DMG with debug logging (macOS)"
-depends = ["desktop:build:debug"]
+depends = ["desktop:build:debug", "desktop:clean-packages"]
 usage = 'arg "[arch]" help="Architecture: x64 or arm64" default=""'
 run = """
 ./desktop/scripts/package-dmg.sh "${usage_arch}"
@@ -614,7 +621,7 @@ run = """
 
 [tasks."desktop:package"]
 description = "Package desktop app for current platform"
-depends = ["desktop:build"]
+depends = ["desktop:build", "desktop:clean-packages"]
 run = """
 set -e
 
