@@ -114,7 +114,7 @@ declare function openFile(path: string): Promise<number>;
 declare function createWatcher(path: string): Promise<number>;
 declare function removeWatcher(id: number): Promise<number>;
 declare function getWatchers(): Promise<Watcher[]>;
-declare function updateOpenedFile(id: number, event: string, data?: any): Promise<void>;
+declare function updateOpenedFile(id: number, event: string, data?: unknown): Promise<void>;
 declare function getOpenedFileInfo(id: number): Promise<OpenedFile>;
 declare function readDirectory(path: string, options?: DirectoryReaderOptions): Promise<DirectoryEntry[]>;
 declare function copy(source: string, destination: string, options?: CopyOptions): Promise<void>;
@@ -180,7 +180,7 @@ export interface TrayMenuItem {
 export type KnownPath = "config" | "data" | "cache" | "documents" | "pictures" | "music" | "video" | "downloads" | "savedGames1" | "savedGames2" | "temp";
 declare function execCommand(command: string, options?: ExecCommandOptions): Promise<ExecCommandResult>;
 declare function spawnProcess(command: string, options?: SpawnedProcessOptions): Promise<SpawnedProcess>;
-declare function updateSpawnedProcess(id: number, event: string, data?: any): Promise<void>;
+declare function updateSpawnedProcess(id: number, event: string, data?: unknown): Promise<void>;
 declare function getSpawnedProcesses(): Promise<SpawnedProcess[]>;
 declare function getEnv(key: string): Promise<string>;
 declare function getEnvs(): Promise<Envs>;
@@ -257,8 +257,8 @@ export interface RestartOptions {
 declare function exit(code?: number): Promise<void>;
 declare function killProcess(): Promise<void>;
 declare function restartProcess(options?: RestartOptions): Promise<void>;
-declare function getConfig(): Promise<any>;
-declare function broadcast(event: string, data?: any): Promise<void>;
+declare function getConfig(): Promise<unknown>;
+declare function broadcast(event: string, data?: unknown): Promise<void>;
 declare function readProcessInput(readAll?: boolean): Promise<string>;
 declare function writeProcessOutput(data: string): Promise<void>;
 declare function writeProcessError(data: string): Promise<void>;
@@ -293,8 +293,7 @@ export interface WindowPosOptions {
 	x: number;
 	y: number;
 }
-export interface WindowMenu extends Array<WindowMenuItem> {
-}
+export type WindowMenu = WindowMenuItem[];
 export interface WindowMenuItem {
 	id?: string;
 	text: string;
@@ -353,14 +352,14 @@ interface Response$1 {
 export type Builtin = "ready" | "trayMenuItemClicked" | "windowClose" | "serverOffline" | "clientConnect" | "clientDisconnect" | "appClientConnect" | "appClientDisconnect" | "extClientConnect" | "extClientDisconnect" | "extensionReady" | "neuDev_reloadApp";
 declare function on(event: string, handler: (ev: CustomEvent) => void): Promise<Response$1>;
 declare function off(event: string, handler: (ev: CustomEvent) => void): Promise<Response$1>;
-declare function dispatch(event: string, data?: any): Promise<Response$1>;
-declare function broadcast$1(event: string, data?: any): Promise<void>;
+declare function dispatch(event: string, data?: unknown): Promise<Response$1>;
+declare function broadcast$1(event: string, data?: unknown): Promise<void>;
 export interface ExtensionStats {
 	loaded: string[];
 	connected: string[];
 }
-declare function dispatch$1(extensionId: string, event: string, data?: any): Promise<void>;
-declare function broadcast$2(event: string, data?: any): Promise<void>;
+declare function dispatch$1(extensionId: string, event: string, data?: unknown): Promise<void>;
+declare function broadcast$2(event: string, data?: unknown): Promise<void>;
 declare function getStats$1(): Promise<ExtensionStats>;
 export interface Manifest {
 	applicationId: string;
@@ -458,7 +457,7 @@ declare global {
 		NL_CMETHODS: string[];
 	}
 	/** Neutralino global object for custom methods **/
-	const Neutralino: any;
+	const Neutralino: unknown;
 }
 
 declare namespace custom {
