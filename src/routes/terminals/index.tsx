@@ -138,6 +138,7 @@ function TerminalsView() {
       worktreePath: string
       baseBranch: string
       branch: string | null
+      prUrl: string | null
     }>()
     for (const task of tasks) {
       if (task.worktreePath) {
@@ -150,6 +151,7 @@ function TerminalsView() {
           worktreePath: task.worktreePath,
           baseBranch: task.baseBranch,
           branch: task.branch,
+          prUrl: task.prUrl,
         })
       }
     }

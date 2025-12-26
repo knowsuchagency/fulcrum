@@ -25,6 +25,7 @@ interface TaskInfo {
   worktreePath: string
   baseBranch: string
   branch: string | null
+  prUrl?: string | null
 }
 
 interface TerminalGridProps {
@@ -90,6 +91,7 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
                 worktreePath={taskInfo.worktreePath}
                 baseBranch={taskInfo.baseBranch}
                 taskId={taskInfo.taskId}
+                hasPR={!!taskInfo.prUrl}
                 isMobile={isMobile}
                 terminalId={terminal.id}
                 sendInputToTerminal={sendInputToTerminal}

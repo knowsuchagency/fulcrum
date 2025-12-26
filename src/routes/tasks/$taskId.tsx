@@ -11,6 +11,7 @@ import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
+import { useGitPush } from '@/hooks/use-git-push'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
 import { useEditorApp, useEditorHost, useEditorSshPort, usePort } from '@/hooks/use-config'
@@ -96,6 +97,7 @@ function TaskView() {
   const { tab, setTab } = useTaskTab(taskId)
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
+  const gitPush = useGitPush()
   const gitSyncParent = useGitSyncParent()
   const killClaude = useKillClaudeInTask()
   const { data: editorApp } = useEditorApp()
@@ -181,6 +183,27 @@ function TaskView() {
           label: 'Resolve with Claude',
           onClick: () => resolveWithClaude(
             `Merge this worktree's branch into the parent repo's ${branch}. Error: "${errorMessage}". Steps: 1) Ensure all changes in worktree are committed, 2) In parent repo at ${task.repoPath}, checkout ${branch} and pull latest from origin, 3) Merge the worktree branch into ${branch}, 4) Resolve any conflicts carefully - do not lose functionality or introduce regressions, 5) Push ${branch} to origin. Worktree: ${task.worktreePath}, Parent repo: ${task.repoPath}.`
+          ),
+        } : undefined,
+      })
+    }
+  }
+
+  const handlePush = async () => {
+    if (!task?.worktreePath) return
+
+    try {
+      await gitPush.mutateAsync({
+        worktreePath: task.worktreePath,
+      })
+      toast.success('Pushed to origin')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Push failed'
+      toast.error(errorMessage, {
+        action: taskTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Push this worktree's branch to origin. Error: "${errorMessage}". Steps: 1) Check for uncommitted changes and commit them, 2) If push is rejected, pull the latest changes first and resolve any conflicts, 3) Push to origin again. Worktree: ${task.worktreePath}.`
           ),
         } : undefined,
       })
@@ -393,20 +416,20 @@ function TaskView() {
           />
         </Button>
 
-        {/* Merge to Main Button */}
+        {/* Push / Merge to Main Button */}
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={handleMergeToMain}
-          disabled={gitMerge.isPending || !task.worktreePath}
+          onClick={task.prUrl ? handlePush : handleMergeToMain}
+          disabled={(task.prUrl ? gitPush.isPending : gitMerge.isPending) || !task.worktreePath}
           className="text-muted-foreground hover:text-foreground"
-          title="Merge to main"
+          title={task.prUrl ? 'Push to origin' : 'Merge to main'}
         >
           <HugeiconsIcon
             icon={ArrowUp03Icon}
             size={16}
             strokeWidth={2}
-            className={gitMerge.isPending ? 'animate-pulse' : ''}
+            className={(task.prUrl ? gitPush.isPending : gitMerge.isPending) ? 'animate-pulse' : ''}
           />
         </Button>
 

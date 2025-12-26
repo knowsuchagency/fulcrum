@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
+import { useGitPush } from '@/hooks/use-git-push'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useUpdateTask } from '@/hooks/use-tasks'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
@@ -19,6 +20,7 @@ interface GitActionsButtonsProps {
   worktreePath: string
   baseBranch: string
   taskId: string
+  hasPR?: boolean
   isMobile?: boolean
   terminalId?: string
   sendInputToTerminal?: (terminalId: string, text: string) => void
@@ -29,12 +31,14 @@ export function GitActionsButtons({
   worktreePath,
   baseBranch,
   taskId,
+  hasPR,
   isMobile,
   terminalId,
   sendInputToTerminal,
 }: GitActionsButtonsProps) {
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
+  const gitPush = useGitPush()
   const gitSyncParent = useGitSyncParent()
   const updateTask = useUpdateTask()
   const killClaude = useKillClaudeInTask()
@@ -99,6 +103,25 @@ export function GitActionsButtons({
     }
   }
 
+  const handlePush = async () => {
+    try {
+      await gitPush.mutateAsync({
+        worktreePath,
+      })
+      toast.success('Pushed to origin')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Push failed'
+      toast.error(errorMessage, {
+        action: terminalId && sendInputToTerminal ? {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Push this worktree's branch to origin. Error: "${errorMessage}". Steps: 1) Check for uncommitted changes and commit them, 2) If push is rejected, pull the latest changes first and resolve any conflicts, 3) Push to origin again. Worktree: ${worktreePath}.`
+          ),
+        } : undefined,
+      })
+    }
+  }
+
   const handleSyncParent = async () => {
     try {
       await gitSyncParent.mutateAsync({
@@ -126,7 +149,7 @@ export function GitActionsButtons({
     }
   }
 
-  const isPending = gitSync.isPending || gitMerge.isPending || gitSyncParent.isPending
+  const isPending = gitSync.isPending || gitMerge.isPending || gitPush.isPending || gitSyncParent.isPending
 
   if (isMobile) {
     return (
@@ -151,14 +174,14 @@ export function GitActionsButtons({
             />
             Pull from main
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleMergeToMain} disabled={gitMerge.isPending}>
+          <DropdownMenuItem onClick={hasPR ? handlePush : handleMergeToMain} disabled={hasPR ? gitPush.isPending : gitMerge.isPending}>
             <HugeiconsIcon
               icon={ArrowUp03Icon}
               size={12}
               strokeWidth={2}
-              className={gitMerge.isPending ? 'animate-pulse' : ''}
+              className={(hasPR ? gitPush.isPending : gitMerge.isPending) ? 'animate-pulse' : ''}
             />
-            Merge to main
+            {hasPR ? 'Push to origin' : 'Merge to main'}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleSyncParent} disabled={gitSyncParent.isPending}>
             <HugeiconsIcon
@@ -205,16 +228,16 @@ export function GitActionsButtons({
       <Button
         variant="ghost"
         size="icon-xs"
-        onClick={handleMergeToMain}
-        disabled={gitMerge.isPending}
+        onClick={hasPR ? handlePush : handleMergeToMain}
+        disabled={hasPR ? gitPush.isPending : gitMerge.isPending}
         className="h-5 w-5 text-muted-foreground hover:text-foreground"
-        title="Merge to main"
+        title={hasPR ? 'Push to origin' : 'Merge to main'}
       >
         <HugeiconsIcon
           icon={ArrowUp03Icon}
           size={12}
           strokeWidth={2}
-          className={gitMerge.isPending ? 'animate-pulse' : ''}
+          className={(hasPR ? gitPush.isPending : gitMerge.isPending) ? 'animate-pulse' : ''}
         />
       </Button>
 
