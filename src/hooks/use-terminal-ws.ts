@@ -135,6 +135,15 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
       switch (message.type) {
         // Terminal messages
         case 'terminals:list':
+          log.ws.info('terminals:list received', {
+            count: message.payload.terminals.length,
+            terminals: message.payload.terminals.map((t) => ({
+              id: t.id,
+              name: t.name,
+              cwd: t.cwd,
+              tabId: t.tabId,
+            })),
+          })
           setTerminals(message.payload.terminals)
           setTerminalsLoaded(true)
           break
@@ -408,6 +417,10 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
   const destroyTerminal = useCallback(
     (terminalId: string) => {
+      log.ws.warn('destroyTerminal called', {
+        terminalId,
+        stack: new Error().stack?.split('\n').slice(1, 8).join('\n'),
+      })
       send({
         type: 'terminal:destroy',
         payload: { terminalId },

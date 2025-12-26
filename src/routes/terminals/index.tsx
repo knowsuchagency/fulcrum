@@ -172,15 +172,44 @@ function TerminalsView() {
 
   // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
   useEffect(() => {
+    log.terminalsView.debug('Orphan cleanup effect running', {
+      worktreeBasePath,
+      tasksStatus,
+      terminalCount: terminals.length,
+      allTaskWorktreesSize: allTaskWorktrees.size,
+      allTaskWorktrees: Array.from(allTaskWorktrees),
+      terminals: terminals.map((t) => ({ id: t.id, name: t.name, cwd: t.cwd, tabId: t.tabId })),
+    })
+
     // Only run cleanup when tasks have successfully loaded
     // status === 'success' ensures we have valid data, not stale/empty cache from React Query
-    if (!worktreeBasePath || tasksStatus !== 'success') return
+    if (!worktreeBasePath || tasksStatus !== 'success') {
+      log.terminalsView.debug('Orphan cleanup skipped', {
+        reason: !worktreeBasePath ? 'no worktreeBasePath' : `tasksStatus=${tasksStatus}`,
+      })
+      return
+    }
 
     for (const terminal of terminals) {
       const isInWorktreesDir = terminal.cwd?.startsWith(worktreeBasePath)
       const isKnownTask = terminal.cwd && allTaskWorktrees.has(terminal.cwd)
 
+      log.terminalsView.debug('Checking terminal for orphan cleanup', {
+        terminalId: terminal.id,
+        name: terminal.name,
+        cwd: terminal.cwd,
+        tabId: terminal.tabId,
+        isInWorktreesDir,
+        isKnownTask,
+        willDestroy: isInWorktreesDir && !isKnownTask,
+      })
+
       if (isInWorktreesDir && !isKnownTask) {
+        log.terminalsView.warn('DESTROYING ORPHAN TERMINAL', {
+          terminalId: terminal.id,
+          name: terminal.name,
+          cwd: terminal.cwd,
+        })
         destroyTerminal(terminal.id)
       }
     }
@@ -242,11 +271,20 @@ function TerminalsView() {
   // Task-related terminals should not be in regular tabs - remove them if they are
   useEffect(() => {
     // Wait for tasks to load before determining which terminals are task-related
-    if (tasksStatus !== 'success') return
+    if (tasksStatus !== 'success') {
+      log.terminalsView.debug('Tab assignment effect skipped', { tasksStatus })
+      return
+    }
 
     for (const terminal of terminals) {
       const isTaskTerminal = terminal.cwd && allTaskWorktrees.has(terminal.cwd)
       if (isTaskTerminal && terminal.tabId) {
+        log.terminalsView.debug('Removing task terminal from regular tab', {
+          terminalId: terminal.id,
+          name: terminal.name,
+          cwd: terminal.cwd,
+          tabId: terminal.tabId,
+        })
         // Remove task terminals from regular tabs - they should only appear in All Tasks
         assignTerminalToTab(terminal.id, null)
       }

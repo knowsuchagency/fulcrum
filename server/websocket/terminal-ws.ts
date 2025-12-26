@@ -76,9 +76,15 @@ export const terminalWebSocketHandlers: WSEvents = {
     // Ensure at least one tab exists
     tabManager.ensureDefaultTab()
 
+    const terminalsList = ptyManager.listTerminals()
+    log.ws.debug('Sending terminals:list to new client', {
+      clientId: clientData.id,
+      terminalCount: terminalsList.length,
+      terminals: terminalsList.map((t) => ({ id: t.id, name: t.name, cwd: t.cwd, tabId: t.tabId })),
+    })
     sendTo(ws, {
       type: 'terminals:list',
-      payload: { terminals: ptyManager.listTerminals() },
+      payload: { terminals: terminalsList },
     })
     sendTo(ws, {
       type: 'tabs:list',
@@ -139,6 +145,10 @@ export const terminalWebSocketHandlers: WSEvents = {
         }
 
         case 'terminal:destroy': {
+          log.ws.info('terminal:destroy received', {
+            terminalId: message.payload.terminalId,
+            clientId: clientData.id,
+          })
           ptyManager.destroy(message.payload.terminalId)
           break
         }
