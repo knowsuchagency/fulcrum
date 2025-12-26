@@ -484,7 +484,7 @@ export function getDefaultValue(settingPath: string): unknown {
 // Notification settings types
 export interface SoundNotificationConfig {
   enabled: boolean
-  soundFile?: string
+  customSoundFile?: string // Path to user-uploaded sound file
 }
 
 export interface SlackNotificationConfig {

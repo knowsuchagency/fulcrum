@@ -61,10 +61,18 @@ export function useTaskSync() {
           }
 
           // Play notification sound if enabled
+          // Try custom sound first (/api/uploads/sound), fall back to default
           if (playSound) {
-            const audio = new Audio('/sounds/goat-bleat.mp3')
-            audio.play().catch(() => {
-              // Ignore autoplay errors (browser may block without user interaction)
+            const customAudio = new Audio('/api/uploads/sound')
+            customAudio.onerror = () => {
+              // Custom sound not available, use default
+              const defaultAudio = new Audio('/sounds/goat-bleat.mp3')
+              defaultAudio.play().catch(() => {})
+            }
+            customAudio.play().catch(() => {
+              // Custom sound failed, try default
+              const defaultAudio = new Audio('/sounds/goat-bleat.mp3')
+              defaultAudio.play().catch(() => {})
             })
           }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import {
   usePort,
@@ -123,6 +123,11 @@ function SettingsPage() {
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
 
+  // Custom sound upload state
+  const [hasCustomSound, setHasCustomSound] = useState(false)
+  const [isUploadingSound, setIsUploadingSound] = useState(false)
+  const soundInputRef = useRef<HTMLInputElement>(null)
+
   // Sync local form state with fetched server values
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
@@ -142,6 +147,7 @@ function SettingsPage() {
     if (notificationSettings) {
       setNotificationsEnabled(notificationSettings.enabled)
       setSoundEnabled(notificationSettings.sound?.enabled ?? false)
+      setHasCustomSound(!!notificationSettings.sound?.customSoundFile)
       setSlackEnabled(notificationSettings.slack?.enabled ?? false)
       setSlackWebhook(notificationSettings.slack?.webhookUrl ?? '')
       setDiscordEnabled(notificationSettings.discord?.enabled ?? false)
@@ -490,6 +496,49 @@ function SettingsPage() {
         toast.error(t('notifications.testFailed', { channel, error: error.message }))
       },
     })
+  }
+
+  const handleSoundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingSound(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/uploads/sound', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+
+      setHasCustomSound(true)
+      toast.success(t('notifications.soundUploaded'))
+    } catch (err) {
+      toast.error(t('notifications.soundUploadFailed', { error: err instanceof Error ? err.message : 'Unknown error' }))
+    } finally {
+      setIsUploadingSound(false)
+      // Reset input so same file can be uploaded again
+      if (soundInputRef.current) {
+        soundInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleDeleteCustomSound = async () => {
+    try {
+      const res = await fetch('/api/uploads/sound', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
+      setHasCustomSound(false)
+      toast.success(t('notifications.soundDeleted'))
+    } catch {
+      toast.error(t('notifications.soundDeleteFailed'))
+    }
   }
 
   return (
@@ -936,21 +985,64 @@ function SettingsPage() {
                         disabled={isLoading || !notificationsEnabled}
                       />
                       <label className="text-sm text-muted-foreground">{t('notifications.sound')}</label>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleTestChannel('sound')}
-                        disabled={isLoading || !notificationsEnabled || !soundEnabled || testChannel.isPending}
-                        title={t('notifications.sound')}
-                      >
-                        {testChannel.isPending ? (
-                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                        ) : (
-                          <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                      <div className="ml-auto flex items-center gap-1">
+                        {/* Upload custom sound */}
+                        <input
+                          ref={soundInputRef}
+                          type="file"
+                          accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg"
+                          className="hidden"
+                          onChange={handleSoundUpload}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => soundInputRef.current?.click()}
+                          disabled={isLoading || !notificationsEnabled || !soundEnabled || isUploadingSound}
+                          title={t('notifications.uploadSound')}
+                        >
+                          {isUploadingSound ? (
+                            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                          ) : (
+                            <HugeiconsIcon icon={Upload04Icon} size={14} strokeWidth={2} />
+                          )}
+                        </Button>
+                        {/* Delete custom sound (only shown if custom sound exists) */}
+                        {hasCustomSound && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={handleDeleteCustomSound}
+                            disabled={isLoading || !notificationsEnabled || !soundEnabled}
+                            title={t('notifications.deleteSound')}
+                          >
+                            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+                          </Button>
                         )}
-                      </Button>
+                        {/* Test sound */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleTestChannel('sound')}
+                          disabled={isLoading || !notificationsEnabled || !soundEnabled || testChannel.isPending}
+                          title={t('notifications.testSound')}
+                        >
+                          {testChannel.isPending ? (
+                            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                          ) : (
+                            <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                          )}
+                        </Button>
+                      </div>
                     </div>
+                    {hasCustomSound && (
+                      <p className="ml-10 text-xs text-muted-foreground">
+                        {t('notifications.customSoundActive')}
+                      </p>
+                    )}
                   </div>
 
                   {/* Slack */}

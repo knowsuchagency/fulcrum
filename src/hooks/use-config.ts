@@ -242,7 +242,7 @@ export function useResetConfig() {
 // Notification settings types
 export interface NotificationSettings {
   enabled: boolean
-  sound: { enabled: boolean; soundFile?: string }
+  sound: { enabled: boolean; customSoundFile?: string }
   slack: { enabled: boolean; webhookUrl: string }
   discord: { enabled: boolean; webhookUrl: string }
   pushover: { enabled: boolean; appToken: string; userKey: string }

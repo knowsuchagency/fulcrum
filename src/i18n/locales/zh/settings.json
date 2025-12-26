@@ -108,14 +108,22 @@
   },
   "notifications": {
     "enable": "启用通知",
-    "sound": "声音（仅限 macOS）",
+    "sound": "声音",
     "slack": "Slack",
     "discord": "Discord",
     "pushover": "Pushover",
     "appToken": "应用令牌",
     "userKey": "用户密钥",
     "testSuccess": "{{channel}} 测试成功",
-    "testFailed": "{{channel}} 测试失败：{{error}}"
+    "testFailed": "{{channel}} 测试失败：{{error}}",
+    "uploadSound": "上传自定义声音",
+    "deleteSound": "删除自定义声音",
+    "testSound": "测试声音",
+    "soundUploaded": "自定义声音已上传",
+    "soundUploadFailed": "上传声音失败：{{error}}",
+    "soundDeleted": "自定义声音已删除",
+    "soundDeleteFailed": "删除自定义声音失败",
+    "customSoundActive": "使用自定义声音"
   },
   "developer": {
     "restartButton": "重启 Vibora",

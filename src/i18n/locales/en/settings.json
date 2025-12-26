@@ -108,14 +108,22 @@
   },
   "notifications": {
     "enable": "Enable Notifications",
-    "sound": "Sound (macOS only)",
+    "sound": "Sound",
     "slack": "Slack",
     "discord": "Discord",
     "pushover": "Pushover",
     "appToken": "App Token",
     "userKey": "User Key",
     "testSuccess": "{{channel}} test successful",
-    "testFailed": "{{channel}} test failed: {{error}}"
+    "testFailed": "{{channel}} test failed: {{error}}",
+    "uploadSound": "Upload custom sound",
+    "deleteSound": "Remove custom sound",
+    "testSound": "Test sound",
+    "soundUploaded": "Custom sound uploaded",
+    "soundUploadFailed": "Failed to upload sound: {{error}}",
+    "soundDeleted": "Custom sound removed",
+    "soundDeleteFailed": "Failed to remove custom sound",
+    "customSoundActive": "Custom sound active"
   },
   "developer": {
     "restartButton": "Restart Vibora",
