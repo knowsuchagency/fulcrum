@@ -2,8 +2,13 @@
   "title": "Repositories",
   "total": "{{count}} total",
   "newTask": "New Task",
+  "viewTasks": "Tasks",
+  "terminal": "Terminal",
+  "editor": "Editor",
+  "settings": "Settings",
   "addRepository": "Add Repository",
   "openInTerminal": "Open in Terminal",
+  "openInEditor": "Open in {{editor}}",
   "card": {
     "openInVSCode": "Open in VS Code"
   },

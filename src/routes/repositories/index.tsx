@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   useRepositories,
@@ -39,10 +39,10 @@ import {
   Folder01Icon,
   Loading03Icon,
   Alert02Icon,
-  CommandLineIcon,
-  Copy01Icon,
   VisualStudioCodeIcon,
   ComputerTerminal01Icon,
+  GridViewIcon,
+  Settings05Icon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { useDefaultGitReposDir, useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
@@ -62,11 +62,13 @@ function RepositoryCard({
   onDelete,
   onStartTask,
   onOpenInTerminal,
+  onViewTasks,
 }: {
   repository: Repository
   onDelete: () => Promise<void>
   onStartTask: () => void
   onOpenInTerminal: () => void
+  onViewTasks: () => void
 }) {
   const { t } = useTranslation('repositories')
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -75,28 +77,12 @@ function RepositoryCard({
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
 
-  const handleOpenEditor = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleOpenEditor = () => {
     const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
     window.open(url, '_blank')
   }
 
-  const handleOpenInTerminal = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    onOpenInTerminal()
-  }
-
-  const handleStartTask = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    onStartTask()
-  }
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleDelete = async () => {
     setIsDeleting(true)
     try {
       await onDelete()
@@ -109,118 +95,123 @@ function RepositoryCard({
   }
 
   return (
-    <div className="relative h-full">
-      <Link to="/repositories/$repoId" params={{ repoId: repository.id }} className="block h-full">
-        <Card className="h-full transition-colors hover:border-border/80 cursor-pointer">
-          <CardContent className="flex h-full flex-col gap-2 py-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate font-medium">{repository.displayName}</span>
-            </div>
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col gap-3 py-4">
+        {/* Header: Name and path */}
+        <div className="space-y-1">
+          <span className="block truncate font-medium">{repository.displayName}</span>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
+            <span className="truncate font-mono">{repository.path}</span>
+          </div>
+        </div>
 
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
-                <span className="truncate font-mono">{repository.path}</span>
-              </div>
-
-              {repository.startupScript && (
-                <div className="flex items-center gap-1.5">
-                  <HugeiconsIcon
-                    icon={CommandLineIcon}
-                    size={12}
-                    strokeWidth={2}
-                    className="shrink-0"
-                  />
-                  <span className="truncate font-mono">{repository.startupScript}</span>
-                </div>
-              )}
-
-              {repository.copyFiles && (
-                <div className="flex items-center gap-1.5">
-                  <HugeiconsIcon icon={Copy01Icon} size={12} strokeWidth={2} className="shrink-0" />
-                  <span className="truncate font-mono">{repository.copyFiles}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-auto flex justify-end pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleStartTask}
-                className="border-primary text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={TaskAdd01Icon} size={16} strokeWidth={2} data-slot="icon" />
-                {t('newTask')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
-
-      <div className="absolute right-3 top-3 flex gap-1">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleOpenInTerminal}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-          title={t('openInTerminal')}
-        >
-          <HugeiconsIcon icon={ComputerTerminal01Icon} size={14} strokeWidth={2} />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleOpenEditor}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-          title={`Open in ${getEditorDisplayName(editorApp)}`}
-        >
-          <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
-        </Button>
-
-        <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <AlertDialogTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 text-muted-foreground hover:text-destructive"
-              />
-            }
+        {/* Action buttons row */}
+        <div className="mt-auto flex flex-wrap gap-1">
+          {/* New Task */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onStartTask}
+            className="text-muted-foreground hover:text-foreground"
           >
-            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t('delete.title')}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t('delete.description', { name: repository.displayName })}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>{t('addModal.cancel')}</AlertDialogCancel>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="gap-2"
-              >
-                {isDeleting && (
-                  <HugeiconsIcon
-                    icon={Loading03Icon}
-                    size={14}
-                    strokeWidth={2}
-                    className="animate-spin"
-                  />
-                )}
-                {isDeleting ? t('delete.deleting') : t('delete.button')}
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </div>
+            <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('newTask')}</span>
+          </Button>
+
+          {/* View Tasks */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onViewTasks}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <HugeiconsIcon icon={GridViewIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('viewTasks')}</span>
+          </Button>
+
+          {/* Terminal */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenInTerminal}
+            className="text-muted-foreground hover:text-foreground"
+            title={t('openInTerminal')}
+          >
+            <HugeiconsIcon icon={ComputerTerminal01Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('terminal')}</span>
+          </Button>
+
+          {/* Editor */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenEditor}
+            className="text-muted-foreground hover:text-foreground"
+            title={t('openInEditor', { editor: getEditorDisplayName(editorApp) })}
+          >
+            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('editor')}</span>
+          </Button>
+
+          {/* Settings (link to detail page) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            title={t('settings')}
+            render={<Link to="/repositories/$repoId" params={{ repoId: repository.id }} />}
+          >
+            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('settings')}</span>
+          </Button>
+
+          {/* Delete */}
+          <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  title={t('delete.button')}
+                />
+              }
+            >
+              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{t('delete.button')}</span>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('delete.title')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('delete.description', { name: repository.displayName })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>{t('addModal.cancel')}</AlertDialogCancel>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="gap-2"
+                >
+                  {isDeleting && (
+                    <HugeiconsIcon
+                      icon={Loading03Icon}
+                      size={14}
+                      strokeWidth={2}
+                      className="animate-spin"
+                    />
+                  )}
+                  {isDeleting ? t('delete.deleting') : t('delete.button')}
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -386,6 +377,7 @@ function CreateRepositoryDialog() {
 
 function RepositoriesView() {
   const { t } = useTranslation('repositories')
+  const navigate = useNavigate()
   const { data: repositories, isLoading, error } = useRepositories()
   const deleteRepository = useDeleteRepository()
   const [taskModalRepo, setTaskModalRepo] = useState<Repository | null>(null)
@@ -393,6 +385,10 @@ function RepositoriesView() {
 
   const handleDelete = async (id: string) => {
     await deleteRepository.mutateAsync(id)
+  }
+
+  const handleViewTasks = (repoName: string) => {
+    navigate({ to: '/tasks', search: { repo: repoName } })
   }
 
   return (
@@ -438,7 +434,7 @@ function RepositoriesView() {
           </div>
         )}
 
-        <div className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {repositories?.map((repo) => (
             <RepositoryCard
               key={repo.id}
@@ -446,6 +442,7 @@ function RepositoriesView() {
               onDelete={() => handleDelete(repo.id)}
               onStartTask={() => setTaskModalRepo(repo)}
               onOpenInTerminal={() => openInTerminal(repo.path, repo.displayName)}
+              onViewTasks={() => handleViewTasks(repo.displayName)}
             />
           ))}
         </div>
