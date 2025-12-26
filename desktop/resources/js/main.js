@@ -22,7 +22,7 @@ const UPDATE_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // Check daily (24 hours)
 let serverUrl = null;
 let isShuttingDown = false;
 let desktopSettings = null;
-let currentZoom = 1.0;
+let currentZoom = 1.2;
 let currentRoute = { pathname: '/', search: '' }; // Track current SPA route from iframe
 let isDevMode = false;
 let logFilePath = null;
@@ -344,7 +344,7 @@ function setZoom(level, skipSave = false) {
 // Global zoom functions for button onclick handlers
 window.zoomIn = () => setZoom(currentZoom + 0.1);
 window.zoomOut = () => setZoom(currentZoom - 0.1);
-window.zoomReset = () => setZoom(1.0);
+window.zoomReset = () => setZoom(1.2);
 
 /**
  * Load the Vibora app in an iframe
