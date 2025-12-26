@@ -1,8 +1,12 @@
 // Centralized logging for Vibora backend
 // Outputs JSON lines to stdout and vibora.log file
 
-import { appendFileSync } from 'fs'
+import { appendFileSync, statSync, renameSync, unlinkSync } from 'fs'
 import { join } from 'path'
+
+// Log rotation settings
+const MAX_LOG_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_LOG_BACKUPS = 2 // Keep .1 and .2 backups
 import { type LogEntry, type LogLevel, type Logger, LOG_LEVELS, formatLogEntry } from '../../shared/logger'
 import { getViboraDir, ensureViboraDir } from './settings'
 
@@ -33,6 +37,34 @@ function getLogFile(): string | null {
   }
 }
 
+// Rotate log file if it exceeds MAX_LOG_SIZE
+function rotateLogIfNeeded(logFile: string): void {
+  try {
+    const stats = statSync(logFile)
+    if (stats.size < MAX_LOG_SIZE) return
+
+    // Rotate: delete oldest, shift others, rename current
+    for (let i = MAX_LOG_BACKUPS; i >= 1; i--) {
+      const older = `${logFile}.${i}`
+      const newer = i === 1 ? logFile : `${logFile}.${i - 1}`
+      try {
+        if (i === MAX_LOG_BACKUPS) {
+          unlinkSync(older)
+        }
+      } catch {
+        // File doesn't exist, that's fine
+      }
+      try {
+        renameSync(newer, older)
+      } catch {
+        // Source doesn't exist, that's fine
+      }
+    }
+  } catch {
+    // File doesn't exist yet or other error, skip rotation
+  }
+}
+
 /**
  * Core logging function - writes a log entry to stdout and vibora.log
  * Used by both the Logger class and /api/logs endpoint
@@ -43,10 +75,11 @@ export function writeEntry(entry: LogEntry): void {
   // Write to stdout (captured by daemon/nohup)
   console.log(line)
 
-  // Write to log file
+  // Write to log file (with rotation)
   const logFile = getLogFile()
   if (logFile) {
     try {
+      rotateLogIfNeeded(logFile)
       appendFileSync(logFile, line + '\n')
     } catch {
       // Ignore file write errors
