@@ -63,8 +63,8 @@
     /* Keep current colors for contrast - NOT orange */
     --primary: #faf9f5;
     --primary-foreground: #2a2a27;
-    --accent: #faf9f5;
-    --accent-foreground: #2a2a27;
+    --accent: #0b7a75;                               /* Teal accent for dark mode */
+    --accent-foreground: #faf9f5;
     --destructive: #dd403a;
     --ring: oklch(0.985 0.001 106.423);
 

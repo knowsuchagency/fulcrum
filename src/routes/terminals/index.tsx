@@ -423,7 +423,7 @@ function TerminalsView() {
             size="sm"
             onClick={handleTerminalAdd}
             disabled={!connected || visibleTerminalCount >= 24 || activeTabId === ALL_TASKS_TAB_ID}
-            className="max-sm:px-2 border-accent text-accent hover:bg-accent hover:text-white"
+            className="max-sm:px-2 border-transparent text-primary"
           >
             <HugeiconsIcon
               icon={PlusSignIcon}

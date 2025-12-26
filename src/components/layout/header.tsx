@@ -92,22 +92,26 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
               className="h-8 w-8 rounded"
             />
           </Link>
-          {NAV_ITEMS.map((item) => (
-            <Link key={item.to} to={item.to}>
-              <Button
-                variant={isActive(item.to, item.matchPrefix) ? 'secondary' : 'ghost'}
-                size="sm"
-              >
-                <HugeiconsIcon
-                  icon={item.icon}
-                  size={16}
-                  strokeWidth={2}
-                  data-slot="icon"
-                />
-                {t(item.labelKey)}
-              </Button>
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.to, item.matchPrefix)
+            return (
+              <Link key={item.to} to={item.to}>
+                <Button
+                  variant={active ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={active ? 'dark:bg-transparent text-destructive' : undefined}
+                >
+                  <HugeiconsIcon
+                    icon={item.icon}
+                    size={16}
+                    strokeWidth={2}
+                    data-slot="icon"
+                  />
+                  {t(item.labelKey)}
+                </Button>
+              </Link>
+            )
+          })}
         </nav>
       </div>
 
@@ -125,6 +129,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
           <Button
             variant={pathname === '/settings' ? 'secondary' : 'ghost'}
             size="icon-sm"
+            className={pathname === '/settings' ? 'dark:bg-transparent text-destructive' : undefined}
           >
             <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />
           </Button>
