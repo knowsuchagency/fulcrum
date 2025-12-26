@@ -111,9 +111,8 @@ jobs:
             ### Desktop App (Recommended)
 
             Download the appropriate package for your platform:
-            - **macOS Apple Silicon**: `Vibora-${{ steps.version.outputs.version }}-macos-arm64.dmg`
-            - **macOS Intel**: `Vibora-${{ steps.version.outputs.version }}-macos-x64.dmg`
-            - **Linux**: `Vibora-${{ steps.version.outputs.version }}-linux-x64.AppImage`
+            - **macOS (Apple Silicon)**: `Vibora-${{ steps.version.outputs.version }}-macos-arm64.dmg`
+            - **Linux (x64)**: `Vibora-${{ steps.version.outputs.version }}-linux-x64.AppImage`
 
             ### CLI
 
@@ -134,11 +133,6 @@ jobs:
             platform: macos
             arch: arm64
             artifact: Vibora-${{ needs.publish.outputs.version }}-macos-arm64.dmg
-          # macOS Intel
-          - os: macos-13
-            platform: macos
-            arch: x64
-            artifact: Vibora-${{ needs.publish.outputs.version }}-macos-x64.dmg
           # Linux x64
           - os: ubuntu-latest
             platform: linux
@@ -226,9 +220,6 @@ jobs:
               "darwin-arm64": {
                 "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-macos-arm64.dmg"
               },
-              "darwin-x64": {
-                "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-macos-x64.dmg"
-              },
               "linux-x64": {
                 "url": "https://github.com/${REPO}/releases/download/${TAG}/Vibora-${VERSION}-linux-x64.AppImage"
               }
@@ -246,9 +237,27 @@ jobs:
           cp manifest.json release-assets/
           ls -la release-assets/
 
+      - name: Generate checksums
+        id: checksums
+        run: |
+          cd release-assets
+          sha256sum *.dmg *.AppImage > checksums.sha256
+          cat checksums.sha256
+          echo "checksums<<EOF" >> $GITHUB_OUTPUT
+          cat checksums.sha256 >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Upload assets to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.publish.outputs.tag }}
           draft: false
+          append_body: true
+          body: |
+
+            ### Checksums (SHA256)
+
+            ```
+            ${{ steps.checksums.outputs.checksums }}
+            ```
           files: release-assets/*

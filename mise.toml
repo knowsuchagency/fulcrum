@@ -660,9 +660,6 @@ cat > desktop/dist/manifest.json << EOF
     "darwin-arm64": {
       "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-macos-arm64.dmg"
     },
-    "darwin-x64": {
-      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-macos-x64.dmg"
-    },
     "linux-x64": {
       "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-linux-x64.AppImage"
     }
@@ -681,12 +678,11 @@ run = """
 set -e
 case "$(uname -s)" in
   Darwin*)
-    echo "Building macOS packages..."
+    echo "Building macOS package..."
     ./desktop/scripts/package-dmg.sh arm64
-    ./desktop/scripts/package-dmg.sh x64
     ;;
   Linux*)
-    echo "Building Linux packages..."
+    echo "Building Linux package..."
     ./desktop/scripts/package-appimage.sh x64
     ;;
 esac
