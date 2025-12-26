@@ -17,8 +17,7 @@ export const CONFIG_KEYS = {
   DEFAULT_GIT_REPOS_DIR: 'paths.defaultGitReposDir',
   BASIC_AUTH_USERNAME: 'authentication.username',
   BASIC_AUTH_PASSWORD: 'authentication.password',
-  REMOTE_HOST: 'remoteVibora.host',
-  REMOTE_PORT: 'remoteVibora.port',
+  REMOTE_URL: 'remoteVibora.url',
   EDITOR_APP: 'editor.app',
   EDITOR_HOST: 'editor.host',
   EDITOR_SSH_PORT: 'editor.sshPort',
@@ -75,22 +74,12 @@ export function useDefaultGitReposDir() {
   }
 }
 
-export function useRemoteHost() {
-  const query = useConfig(CONFIG_KEYS.REMOTE_HOST)
+export function useRemoteUrl() {
+  const query = useConfig(CONFIG_KEYS.REMOTE_URL)
 
   return {
     ...query,
     data: (query.data?.value as string) ?? '',
-    isDefault: query.data?.isDefault ?? true,
-  }
-}
-
-export function useRemotePort() {
-  const query = useConfig(CONFIG_KEYS.REMOTE_PORT)
-
-  return {
-    ...query,
-    data: (query.data?.value as number) ?? DEFAULT_PORT,
     isDefault: query.data?.isDefault ?? true,
   }
 }
@@ -175,7 +164,7 @@ export function useSyncClaudeCodeTheme() {
 
   return {
     ...query,
-    data: (query.data?.value as boolean) ?? false,
+    data: Boolean(query.data?.value) ?? false,
     isDefault: query.data?.isDefault ?? true,
   }
 }
@@ -228,7 +217,7 @@ export function useUpdateConfig() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ key, value }: { key: string; value: string | number | null }) =>
+    mutationFn: ({ key, value }: { key: string; value: string | number | boolean | null }) =>
       fetchJSON<ConfigResponse>(`${API_BASE}/api/config/${key}`, {
         method: 'PUT',
         body: JSON.stringify({ value }),

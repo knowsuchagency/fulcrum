@@ -11,7 +11,7 @@
 // Configuration
 const SERVER_EXTENSION_ID = 'io.vibora.server';
 const DEFAULT_PORT = 7777;
-const CURRENT_SCHEMA_VERSION = 2;
+const CURRENT_SCHEMA_VERSION = 3;
 const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
 const MAX_HEALTH_RETRIES = 10;
 const DEV_PORT = 5173;
@@ -25,6 +25,55 @@ let desktopSettings = null;
 let currentZoom = 1.0;
 let currentRoute = { pathname: '/', search: '' }; // Track current SPA route from iframe
 let isDevMode = false;
+let logFilePath = null;
+
+// =============================================================================
+// Centralized JSONL Logger (writes to ~/.vibora/desktop.log)
+// =============================================================================
+
+/**
+ * Initialize the log file path
+ */
+async function initLogger() {
+  const home = NL_OS === 'Windows'
+    ? await Neutralino.os.getEnv('USERPROFILE')
+    : await Neutralino.os.getEnv('HOME');
+  logFilePath = `${home}/.vibora/desktop.log`;
+}
+
+/**
+ * Desktop logger - writes JSONL to desktop.log
+ */
+const log = {
+  _write: async function(level, msg, ctx) {
+    const entry = {
+      ts: new Date().toISOString(),
+      lvl: level,
+      src: 'Desktop/UI',
+      msg,
+      ...(ctx && Object.keys(ctx).length > 0 ? { ctx } : {}),
+    };
+
+    // Always log to console
+    const consoleMethod = level === 'debug' ? 'log' : level;
+    console[consoleMethod](`[Desktop/UI]`, msg, ctx ?? '');
+
+    // Write to log file if path is initialized
+    if (logFilePath) {
+      try {
+        await Neutralino.filesystem.appendFile(logFilePath, JSON.stringify(entry) + '\n');
+      } catch (err) {
+        // Silently fail if we can't write to log file
+        console.error('Failed to write to log file:', err);
+      }
+    }
+  },
+
+  debug: function(msg, ctx) { this._write('debug', msg, ctx); },
+  info: function(msg, ctx) { this._write('info', msg, ctx); },
+  warn: function(msg, ctx) { this._write('warn', msg, ctx); },
+  error: function(msg, ctx) { this._write('error', msg, ctx); },
+};
 
 /**
  * Get the path to settings file
@@ -57,63 +106,83 @@ function getSettingValue(key) {
 }
 
 /**
- * Check if this is a first launch (no schema version = never used before)
+ * Helper: Construct URL from host and port
  */
-function isFirstLaunch() {
-  return !desktopSettings || desktopSettings._schemaVersion === undefined;
+function constructRemoteUrl(host, port) {
+  if (!host) return '';
+  const effectivePort = port || DEFAULT_PORT;
+  // Omit port for standard HTTP/HTTPS ports
+  const portSuffix = effectivePort === 80 || effectivePort === 443 ? '' : `:${effectivePort}`;
+  return `http://${host}${portSuffix}`;
 }
 
 /**
  * Migrate settings from flat to nested format
  */
 function migrateSettings(settings) {
-  if (settings._schemaVersion >= CURRENT_SCHEMA_VERSION) {
+  const version = settings._schemaVersion || 1;
+  if (version >= CURRENT_SCHEMA_VERSION) {
     return settings; // Already migrated
   }
 
-  console.log('[Vibora] Migrating settings to nested format...');
-
-  // Migration map from flat keys to nested paths
-  const migrationMap = {
-    port: ['server', 'port'],
-    defaultGitReposDir: ['paths', 'defaultGitReposDir'],
-    basicAuthUsername: ['authentication', 'username'],
-    basicAuthPassword: ['authentication', 'password'],
-    remoteHost: ['remoteVibora', 'host'],
-    hostname: ['remoteVibora', 'host'], // Legacy key
-    remotePort: ['remoteVibora', 'port'],
-    sshPort: ['editor', 'sshPort'],
-    linearApiKey: ['integrations', 'linearApiKey'],
-    githubPat: ['integrations', 'githubPat'],
-    language: ['appearance', 'language'],
-  };
+  console.log('[Vibora] Migrating settings from version', version, 'to', CURRENT_SCHEMA_VERSION);
 
   const migrated = {
     _schemaVersion: CURRENT_SCHEMA_VERSION,
     server: { port: DEFAULT_PORT },
-    remoteVibora: { host: '', port: DEFAULT_PORT },
+    remoteVibora: { url: '' },
     editor: { app: 'vscode', host: '', sshPort: 22 },
   };
 
-  // Copy existing nested groups if present
-  for (const key of ['server', 'paths', 'authentication', 'remoteVibora', 'editor', 'integrations', 'appearance', 'notifications', 'zai']) {
+  // Copy existing nested groups if present (except remoteVibora which needs special handling)
+  for (const key of ['server', 'paths', 'authentication', 'editor', 'integrations', 'appearance', 'notifications', 'zai']) {
     if (settings[key] && typeof settings[key] === 'object') {
       migrated[key] = { ...migrated[key], ...settings[key] };
     }
   }
 
-  // Migrate flat keys
-  for (const [flatKey, [group, prop]] of Object.entries(migrationMap)) {
-    if (settings[flatKey] !== undefined && settings[flatKey] !== null) {
-      // Don't migrate old default port (3333) - let user get new default
-      if (flatKey === 'port' && settings[flatKey] === 3333) {
-        continue;
+  // Schema 1 → 2: Migrate flat keys to nested structure
+  if (version < 2) {
+    const migrationMap = {
+      port: ['server', 'port'],
+      defaultGitReposDir: ['paths', 'defaultGitReposDir'],
+      basicAuthUsername: ['authentication', 'username'],
+      basicAuthPassword: ['authentication', 'password'],
+      sshPort: ['editor', 'sshPort'],
+      linearApiKey: ['integrations', 'linearApiKey'],
+      githubPat: ['integrations', 'githubPat'],
+      language: ['appearance', 'language'],
+    };
+
+    for (const [flatKey, [group, prop]] of Object.entries(migrationMap)) {
+      if (settings[flatKey] !== undefined && settings[flatKey] !== null) {
+        // Don't migrate old default port (3333) - let user get new default
+        if (flatKey === 'port' && settings[flatKey] === 3333) {
+          continue;
+        }
+        if (!migrated[group]) migrated[group] = {};
+        if (migrated[group][prop] === undefined || migrated[group][prop] === null || migrated[group][prop] === '') {
+          migrated[group][prop] = settings[flatKey];
+        }
       }
-      // Only migrate if not already set in nested format
-      if (!migrated[group]) migrated[group] = {};
-      if (migrated[group][prop] === undefined || migrated[group][prop] === null || migrated[group][prop] === '') {
-        migrated[group][prop] = settings[flatKey];
-      }
+    }
+
+    // Handle flat remoteHost/hostname → remoteVibora.url
+    const flatHost = settings.remoteHost || settings.hostname || '';
+    if (flatHost) {
+      migrated.remoteVibora = { url: constructRemoteUrl(flatHost, DEFAULT_PORT) };
+    }
+  }
+
+  // Schema 2 → 3: Migrate remoteVibora.host + remoteVibora.port → remoteVibora.url
+  if (version < 3 && settings.remoteVibora) {
+    if ('host' in settings.remoteVibora) {
+      const host = settings.remoteVibora.host || '';
+      const port = settings.remoteVibora.port || DEFAULT_PORT;
+      migrated.remoteVibora = { url: constructRemoteUrl(host, port) };
+    } else if ('url' in settings.remoteVibora) {
+      // Already has url format
+      migrated.remoteVibora = { url: settings.remoteVibora.url || '' };
     }
   }
 
@@ -136,21 +205,21 @@ async function loadSettings() {
     const settingsPath = await getSettingsPath();
     const content = await Neutralino.filesystem.readFile(settingsPath);
     let settings = JSON.parse(content);
-    console.log('[Vibora] Loaded settings:', settings);
+    log.debug('Loaded settings', settings);
 
     // Migrate if needed
     if (!settings._schemaVersion || settings._schemaVersion < CURRENT_SCHEMA_VERSION) {
       settings = migrateSettings(settings);
       // Save migrated settings
       await Neutralino.filesystem.writeFile(settingsPath, JSON.stringify(settings, null, 2));
-      console.log('[Vibora] Saved migrated settings');
+      log.info('Saved migrated settings');
     }
 
     desktopSettings = settings;
     return desktopSettings;
   } catch (err) {
     // File doesn't exist or is invalid, use defaults
-    console.log('[Vibora] No existing settings, using defaults');
+    log.info('No existing settings, using defaults');
     desktopSettings = {};
     return desktopSettings;
   }
@@ -176,9 +245,9 @@ async function saveSettings(settings) {
 
     await Neutralino.filesystem.writeFile(settingsPath, JSON.stringify(settings, null, 2));
     desktopSettings = settings;
-    console.log('[Vibora] Settings saved:', settings);
+    log.debug('Settings saved', settings);
   } catch (err) {
-    console.error('[Vibora] Failed to save settings:', err);
+    log.error('Failed to save settings', { error: String(err) });
   }
 }
 
@@ -208,138 +277,22 @@ function showError(title, message) {
 }
 
 /**
- * Prompt user for first-time onboarding choice
- * @returns {Promise<'local' | 'remote'>}
- */
-function promptOnboardingChoice() {
-  return new Promise((resolve) => {
-    const app = document.getElementById('app');
-    app.innerHTML = `
-      <img src="/icons/icon.png" alt="Vibora" class="logo" style="animation: none;">
-      <div class="prompt-container">
-        <div class="prompt-title">Welcome to Vibora</div>
-        <div class="prompt-description">
-          How would you like to run Vibora?
-        </div>
-        <div class="button-group vertical" style="margin-top: 1.5rem;">
-          <button class="primary-btn large" id="run-locally-btn">
-            <span class="btn-icon">💻</span>
-            <span class="btn-content">
-              <span class="btn-title">Run Locally</span>
-              <span class="btn-desc">Start a local server on this machine</span>
-            </span>
-          </button>
-          <button class="secondary-btn large" id="connect-remote-btn">
-            <span class="btn-icon">🌐</span>
-            <span class="btn-content">
-              <span class="btn-title">Connect to Remote Server</span>
-              <span class="btn-desc">Connect to Vibora running on another machine</span>
-            </span>
-          </button>
-        </div>
-      </div>
-    `;
-
-    document.getElementById('run-locally-btn').onclick = () => resolve('local');
-    document.getElementById('connect-remote-btn').onclick = () => resolve('remote');
-  });
-}
-
-/**
- * Prompt user to configure remote server connection
- * @returns {Promise<{host: string, port: number} | null>} null if cancelled
- */
-function promptRemoteConfig() {
-  return new Promise((resolve) => {
-    const app = document.getElementById('app');
-    app.innerHTML = `
-      <img src="/icons/icon.png" alt="Vibora" class="logo" style="animation: none;">
-      <div class="prompt-container">
-        <div class="prompt-title">Connect to Remote Server</div>
-        <div class="prompt-description">
-          Enter the hostname and port of your remote Vibora server.
-        </div>
-        <div id="remote-error" class="prompt-error" style="display: none;"></div>
-        <form class="prompt-form" id="remote-form">
-          <div class="input-group">
-            <label for="remote-host">Hostname</label>
-            <input type="text" id="remote-host" placeholder="example.com or 192.168.1.100" required autocomplete="off" />
-          </div>
-          <div class="input-group">
-            <label for="remote-port">Port</label>
-            <input type="number" id="remote-port" placeholder="${DEFAULT_PORT}" value="${DEFAULT_PORT}" min="1" max="65535" />
-          </div>
-          <div class="button-group">
-            <button type="button" class="secondary-btn" id="back-btn">Back</button>
-            <button type="submit" class="primary-btn" id="connect-btn">Connect</button>
-          </div>
-        </form>
-      </div>
-    `;
-
-    document.getElementById('back-btn').onclick = () => resolve(null);
-    document.getElementById('remote-form').onsubmit = (e) => {
-      e.preventDefault();
-      const host = document.getElementById('remote-host').value.trim();
-      const port = parseInt(document.getElementById('remote-port').value, 10) || DEFAULT_PORT;
-
-      if (!host) {
-        const errorEl = document.getElementById('remote-error');
-        errorEl.textContent = 'Please enter a hostname';
-        errorEl.style.display = 'block';
-        return;
-      }
-
-      resolve({ host, port });
-    };
-  });
-}
-
-/**
- * Prompt user to choose between local and remote server
- * Only shown when remoteHost is configured in settings
- * @returns {Promise<boolean>} true if user wants to connect to remote
- */
-function promptServerChoice(remoteHost, remotePort) {
-  return new Promise((resolve) => {
-    const app = document.getElementById('app');
-    const displayHost = remotePort !== DEFAULT_PORT ? `${remoteHost}:${remotePort}` : remoteHost;
-    app.innerHTML = `
-      <img src="/icons/icon.png" alt="Vibora" class="logo" style="animation: none;">
-      <div class="prompt-container">
-        <div class="prompt-title">Choose Server</div>
-        <div class="prompt-description">
-          You have a remote server configured at:<br>
-          <strong>${displayHost}</strong>
-        </div>
-        <div class="button-group" style="margin-top: 1.5rem;">
-          <button class="primary-btn" id="use-local-btn">Use Local Server</button>
-          <button class="secondary-btn" id="use-remote-btn">Connect to Remote</button>
-        </div>
-      </div>
-    `;
-
-    document.getElementById('use-local-btn').onclick = () => resolve(false);
-    document.getElementById('use-remote-btn').onclick = () => resolve(true);
-  });
-}
-
-/**
  * Check if a server is healthy
+ * Uses native HTTP request via curl to bypass WebView CORS restrictions
  */
 async function checkServerHealth(baseUrl) {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT);
-
-    const response = await fetch(`${baseUrl}/health`, {
-      method: 'GET',
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch {
+    // Use curl for health check to bypass WebView CORS restrictions
+    // -s: silent, -o /dev/null: discard output, -w "%{http_code}": print status code
+    // --max-time: timeout in seconds
+    const timeoutSec = Math.ceil(HEALTH_CHECK_TIMEOUT / 1000);
+    const result = await Neutralino.os.execCommand(
+      `curl -s -o /dev/null -w "%{http_code}" --max-time ${timeoutSec} "${baseUrl}/health"`
+    );
+    const statusCode = parseInt(result.stdOut.trim(), 10);
+    return statusCode >= 200 && statusCode < 300;
+  } catch (err) {
+    log.debug('Health check failed', { baseUrl, error: String(err) });
     return false;
   }
 }
@@ -348,13 +301,17 @@ async function checkServerHealth(baseUrl) {
  * Wait for server to be ready with retries
  */
 async function waitForServerReady(baseUrl) {
+  log.info('Waiting for server to be ready', { baseUrl, maxRetries: MAX_HEALTH_RETRIES });
   for (let i = 0; i < MAX_HEALTH_RETRIES; i++) {
     setStatus('Connecting to server...', `Attempt ${i + 1}/${MAX_HEALTH_RETRIES}`);
+    log.debug('Health check attempt', { attempt: i + 1, maxRetries: MAX_HEALTH_RETRIES, baseUrl });
     if (await checkServerHealth(baseUrl)) {
+      log.info('Server is ready', { baseUrl, attempts: i + 1 });
       return true;
     }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
+  log.warn('Server did not become ready after retries', { baseUrl, attempts: MAX_HEALTH_RETRIES });
   return false;
 }
 
@@ -403,19 +360,27 @@ async function loadViboraApp(url) {
   setStatus('Loading Vibora...', url);
   serverUrl = url;
 
-  console.log('[Vibora] Loading app from', url);
+  log.info('Loading app', { url });
 
-  // Use iframe to embed the app with zoom parameter
   const frame = document.getElementById('vibora-frame');
   const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
   frame.src = url + zoomParam;
 
+  // Set a timeout to detect if iframe fails to load
+  const loadTimeout = setTimeout(() => {
+    log.error('Iframe load timeout', { url });
+    showError('Connection Failed', `Could not load Vibora from ${url}.`);
+  }, 10000); // 10 second timeout
+
   frame.onload = () => {
+    clearTimeout(loadTimeout);
     document.body.classList.add('loaded');
-    console.log('[Vibora] App loaded successfully from', url);
+    log.info('App loaded successfully', { url });
   };
 
-  frame.onerror = () => {
+  frame.onerror = (err) => {
+    clearTimeout(loadTimeout);
+    log.error('Failed to load app (onerror)', { url, error: String(err) });
     showError('Load Failed', 'Could not load Vibora interface.');
   };
 }
@@ -461,12 +426,12 @@ async function startLocalServer() {
 
   // Check if server is already running
   if (await checkServerHealth(localUrl)) {
-    console.log('[Vibora] Server already running');
+    log.info('Server already running (startLocalServer)');
     return true;
   }
 
   setStatus('Starting local server...', `Port ${port}`);
-  console.log('[Vibora] Starting local server...');
+  log.info('Starting local server', { port });
 
   try {
     const bundleDir = await getBundlePath();
@@ -493,55 +458,24 @@ async function startLocalServer() {
       `VIBORA_PACKAGE_ROOT="${bundleDir}" BUN_PTY_LIB="${ptyLib}" ` +
       `"${serverBin}"`;
 
-    console.log('[Vibora] Server command:', cmd);
+    log.debug('Server command', { cmd });
 
     // Start server process in background
     const result = await Neutralino.os.spawnProcess(cmd);
-    console.log('[Vibora] Server process spawned:', result);
+    log.info('Server process spawned', { pid: result?.pid });
 
     // Wait for server to be ready
     if (await waitForServerReady(localUrl)) {
-      console.log('[Vibora] Server is ready');
+      log.info('Server is ready');
       return true;
     }
 
-    console.error('[Vibora] Server failed to become ready');
+    log.error('Server failed to become ready');
     return false;
   } catch (err) {
-    console.error('[Vibora] Failed to start server:', err);
+    log.error('Failed to start server', { error: String(err) });
     return false;
   }
-}
-
-/**
- * Get remote server config from settings (nested format)
- */
-function getRemoteConfig() {
-  const host = desktopSettings?.remoteVibora?.host?.trim() || '';
-  const port = desktopSettings?.remoteVibora?.port || DEFAULT_PORT;
-  return { host, port };
-}
-
-/**
- * Connect to remote server
- */
-async function connectToRemote(remoteHost, remotePort) {
-  const remoteUrl = `http://${remoteHost}:${remotePort}`;
-
-  setStatus('Connecting to remote server...', `${remoteHost}:${remotePort}`);
-  console.log('[Vibora] Connecting to remote:', remoteHost);
-
-  if (await waitForServerReady(remoteUrl)) {
-    await saveSettings({
-      ...desktopSettings,
-      lastConnectedHost: remoteHost
-    });
-    loadViboraApp(remoteUrl);
-    return true;
-  }
-
-  console.log('[Vibora] Remote server not available');
-  return false;
 }
 
 /**
@@ -553,11 +487,11 @@ async function connectToLocal() {
   const localUrl = `http://localhost:${localPort}`;
 
   setStatus('Connecting to local server...', `localhost:${localPort}${isDevMode ? ' (dev)' : ''}`);
-  console.log('[Vibora] Connecting to local server...');
+  log.info('Connecting to local server', { port: localPort, isDevMode });
 
   // Check if server is already running (launcher may have started it)
   if (await checkServerHealth(localUrl)) {
-    console.log('[Vibora] Server already running');
+    log.info('Server already running');
     await saveSettings({
       ...desktopSettings,
       lastConnectedHost: 'localhost'
@@ -567,7 +501,7 @@ async function connectToLocal() {
   }
 
   // Server not running - start it
-  console.log('[Vibora] Server not running, starting...');
+  log.info('Server not running, starting...');
   if (await startLocalServer()) {
     await saveSettings({
       ...desktopSettings,
@@ -577,6 +511,7 @@ async function connectToLocal() {
     return true;
   }
 
+  log.error('Could not start local server');
   showError('Server Failed', 'Could not start local server. Check ~/.vibora/desktop.log for details.');
   return false;
 }
@@ -584,78 +519,24 @@ async function connectToLocal() {
 /**
  * Main connection logic
  *
- * Flow:
- * 1. First launch (no settings): Show onboarding choice (local vs remote)
- * 2. Remote configured: Show server choice dialog
- * 3. Otherwise: Connect to local directly
+ * Simple flow:
+ * 1. Try localhost:7777 (or configured port)
+ * 2. If server responds, use it (local or SSH tunnel)
+ * 3. If not, start bundled server
  */
 async function tryConnect() {
+  log.info('tryConnect() called');
   await loadSettings();
-
-  const remote = getRemoteConfig();
-  const hasRemoteConfig = remote.host !== '';
-
-  // First launch - show onboarding
-  if (isFirstLaunch()) {
-    console.log('[Vibora] First launch detected, showing onboarding');
-
-    const choice = await promptOnboardingChoice();
-
-    if (choice === 'remote') {
-      // User wants to configure remote server
-      const config = await promptRemoteConfig();
-
-      if (config) {
-        // Save remote config
-        await saveSettings({
-          ...desktopSettings,
-          _schemaVersion: CURRENT_SCHEMA_VERSION,
-          server: { port: DEFAULT_PORT },
-          remoteVibora: { host: config.host, port: config.port },
-          editor: { app: 'vscode', host: '', sshPort: 22 },
-        });
-
-        // Try to connect to remote
-        if (await connectToRemote(config.host, config.port)) {
-          return;
-        }
-
-        // Remote failed - ask if they want to try local instead
-        showError('Connection Failed', `Could not connect to ${config.host}:${config.port}. Try running locally or check the server.`);
-        return;
-      }
-
-      // User went back - start onboarding again
-      await tryConnect();
-      return;
-    }
-
-    // User chose local - save default settings and continue
-    await saveSettings({
-      ...desktopSettings,
-      _schemaVersion: CURRENT_SCHEMA_VERSION,
-      server: { port: DEFAULT_PORT },
-      remoteVibora: { host: '', port: DEFAULT_PORT },
-      editor: { app: 'vscode', host: '', sshPort: 22 },
-    });
-  }
-
-  // Check if remoteHost is configured (returning user with remote setup)
-  if (hasRemoteConfig) {
-    // Ask user which server to use
-    const useRemote = await promptServerChoice(remote.host, remote.port);
-
-    if (useRemote) {
-      if (await connectToRemote(remote.host, remote.port)) {
-        return;
-      }
-      // Remote failed - fall through to local
-      console.log('[Vibora] Remote server not available, falling back to local');
-    }
-  }
-
-  // Connect to local server
   await connectToLocal();
+}
+
+/**
+ * Handle reconnection request from the React app (via postMessage)
+ * Simply reloads the app to reconnect
+ */
+async function handleReconnect() {
+  log.info('Reconnect requested, reloading');
+  location.reload();
 }
 
 /**
@@ -901,8 +782,10 @@ async function init() {
   try {
     // Initialize Neutralino
     Neutralino.init();
-    console.log('[Vibora] Neutralino initialized');
-    console.log('[Vibora] OS:', NL_OS);
+
+    // Initialize logger (needs Neutralino to be ready)
+    await initLogger();
+    log.info('Neutralino initialized', { os: NL_OS, version: NL_APPVERSION });
 
     // Set up native menu for macOS (required for Cmd+C/V/X/A shortcuts to work)
     if (NL_OS === 'Darwin') {
@@ -987,6 +870,10 @@ async function init() {
       } else if (event.data?.type === 'vibora:playSound') {
         // Play notification sound locally
         playNotificationSound();
+      } else if (event.data?.type === 'vibora:reconnect') {
+        // Handle reconnection request from Settings UI
+        const newUrl = event.data.url;
+        handleReconnect(newUrl);
       }
     });
 
@@ -997,7 +884,7 @@ async function init() {
     setTimeout(autoCheckForUpdates, 5000);
 
   } catch (err) {
-    console.error('[Vibora] Initialization error:', err);
+    log.error('Initialization error', { error: String(err), stack: err?.stack });
     showError('Initialization Failed', err.message || 'Could not initialize the application.');
   }
 }

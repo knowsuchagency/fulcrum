@@ -151,42 +151,16 @@ cleanup() {
 trap cleanup EXIT
 
 # Determine if we should start the server
-# Only start if settings indicate local mode with certainty
+# Start unless server is already running (e.g., via SSH tunnel or manual start)
 should_start_server() {
-  SETTINGS_FILE="$VIBORA_DIR/settings.json"
-
-  if [ ! -f "$SETTINGS_FILE" ]; then
-    # First launch - don't start server, let UI handle onboarding
-    log "No settings file found (first launch)"
+  # Check if server is already responding on the port
+  if curl -s --max-time 1 "http://localhost:$PORT/health" > /dev/null 2>&1; then
+    log "Server already running on port $PORT"
     return 1
   fi
 
-  # Check if jq is available
-  if ! command -v jq &> /dev/null; then
-    # Can't read JSON, assume local mode
-    log "jq not available, defaulting to local mode"
-    return 0
-  fi
-
-  # Check if user has remote configured
-  REMOTE_HOST=$(jq -r '.remoteVibora.host // .remoteHost // ""' "$SETTINGS_FILE" 2>/dev/null)
-  LAST_CONNECTED=$(jq -r '.lastConnectedHost // ""' "$SETTINGS_FILE" 2>/dev/null)
-
-  log "Remote host: '$REMOTE_HOST', Last connected: '$LAST_CONNECTED'"
-
-  if [ -z "$REMOTE_HOST" ] || [ "$REMOTE_HOST" = "null" ]; then
-    # No remote configured - definitely local mode
-    log "No remote configured, starting server"
-    return 0
-  elif [ "$LAST_CONNECTED" = "localhost" ]; then
-    # User last used local - likely local mode
-    log "Last connected to localhost, starting server"
-    return 0
-  else
-    # Remote configured and last connected to remote, don't start server
-    log "Remote mode detected, skipping server start"
-    return 1
-  fi
+  log "No server on port $PORT, will start bundled server"
+  return 0
 }
 
 # Main

@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import {
   usePort,
   useDefaultGitReposDir,
-  useRemoteHost,
+  useRemoteUrl,
   useEditorApp,
   useEditorHost,
   useEditorSshPort,
@@ -65,7 +65,7 @@ function SettingsPage() {
   const { t: tc } = useTranslation('common')
   const { data: port, isLoading: portLoading } = usePort()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
-  const { data: remoteHost, isLoading: remoteHostLoading } = useRemoteHost()
+  const { data: remoteUrl, isLoading: remoteUrlLoading } = useRemoteUrl()
   const { data: editorApp, isLoading: editorAppLoading } = useEditorApp()
   const { data: editorHost, isLoading: editorHostLoading } = useEditorHost()
   const { data: editorSshPort, isLoading: editorSshPortLoading } = useEditorSshPort()
@@ -89,7 +89,7 @@ function SettingsPage() {
 
   const [localPort, setLocalPort] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
-  const [localRemoteHost, setLocalRemoteHost] = useState('')
+  const [localRemoteUrl, setLocalRemoteUrl] = useState('')
   const [localEditorApp, setLocalEditorApp] = useState<EditorApp>('vscode')
   const [localEditorHost, setLocalEditorHost] = useState('')
   const [localEditorSshPort, setLocalEditorSshPort] = useState('')
@@ -130,7 +130,7 @@ function SettingsPage() {
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
-    if (remoteHost !== undefined) setLocalRemoteHost(remoteHost)
+    if (remoteUrl !== undefined) setLocalRemoteUrl(remoteUrl)
     if (editorApp !== undefined) setLocalEditorApp(editorApp)
     if (editorHost !== undefined) setLocalEditorHost(editorHost)
     if (editorSshPort !== undefined) setLocalEditorSshPort(String(editorSshPort))
@@ -139,7 +139,7 @@ function SettingsPage() {
     // For username, sync directly. For password, the server returns masked value - only update if empty (not yet loaded)
     if (basicAuthUsername !== undefined) setLocalBasicAuthUsername(basicAuthUsername)
     // Don't sync password from server since it's masked - user must re-enter to change
-  }, [port, defaultGitReposDir, remoteHost, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, basicAuthUsername])
+  }, [port, defaultGitReposDir, remoteUrl, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, basicAuthUsername])
 
   // Sync notification settings
   useEffect(() => {
@@ -175,7 +175,7 @@ function SettingsPage() {
   }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
 
   const isLoading =
-    portLoading || reposDirLoading || remoteHostLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
+    portLoading || reposDirLoading || remoteUrlLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -212,10 +212,12 @@ function SettingsPage() {
     localEditorHost !== editorHost ||
     localEditorSshPort !== String(editorSshPort)
 
+  const hasRemoteUrlChanges = localRemoteUrl !== remoteUrl
+
   const hasChanges =
     localPort !== String(port) ||
     localReposDir !== defaultGitReposDir ||
-    localRemoteHost !== remoteHost ||
+    hasRemoteUrlChanges ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
     hasAuthChanges ||
@@ -249,12 +251,26 @@ function SettingsPage() {
       )
     }
 
-    if (localRemoteHost !== remoteHost) {
+    if (hasRemoteUrlChanges) {
       promises.push(
         new Promise((resolve) => {
           updateConfig.mutate(
-            { key: CONFIG_KEYS.REMOTE_HOST, value: localRemoteHost },
-            { onSettled: resolve }
+            { key: CONFIG_KEYS.REMOTE_URL, value: localRemoteUrl },
+            {
+              onSettled: resolve,
+              onSuccess: () => {
+                // Notify desktop app to reconnect with new URL
+                if (window.parent !== window) {
+                  window.parent.postMessage(
+                    {
+                      type: 'vibora:reconnect',
+                      url: localRemoteUrl || null, // null means switch to local
+                    },
+                    '*'
+                  )
+                }
+              },
+            }
           )
         })
       )
@@ -493,6 +509,25 @@ function SettingsPage() {
     })
   }
 
+  const handleResetRemoteUrl = () => {
+    resetConfig.mutate(CONFIG_KEYS.REMOTE_URL, {
+      onSuccess: (data) => {
+        const newUrl = data.value !== null && data.value !== undefined ? String(data.value) : ''
+        setLocalRemoteUrl(newUrl)
+        // Notify desktop app to reconnect (switch to local since we're resetting to empty)
+        if (window.parent !== window) {
+          window.parent.postMessage(
+            {
+              type: 'vibora:reconnect',
+              url: newUrl || null,
+            },
+            '*'
+          )
+        }
+      },
+    })
+  }
+
   const handleTestChannel = async (channel: 'sound' | 'slack' | 'discord' | 'pushover') => {
     testChannel.mutate(channel, {
       onSuccess: (result) => {
@@ -655,6 +690,40 @@ function SettingsPage() {
 
                   <p className="text-xs text-muted-foreground">
                     {t('fields.auth.description')}
+                  </p>
+                </div>
+              </SettingsSection>
+
+              {/* Remote Server */}
+              <SettingsSection title={t('sections.remote')}>
+                <div className="space-y-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                      {t('fields.remote.url.label')}
+                    </label>
+                    <div className="flex flex-1 items-center gap-2">
+                      <Input
+                        type="url"
+                        value={localRemoteUrl}
+                        onChange={(e) => setLocalRemoteUrl(e.target.value)}
+                        placeholder="https://vibora.tailnet.ts.net"
+                        disabled={isLoading}
+                        className="flex-1 font-mono text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={handleResetRemoteUrl}
+                        disabled={isLoading || resetConfig.isPending}
+                        title={tc('buttons.reset')}
+                      >
+                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                    {t('fields.remote.url.description')}
                   </p>
                 </div>
               </SettingsSection>

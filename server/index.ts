@@ -13,6 +13,7 @@ import { startMetricsCollector, stopMetricsCollector } from './services/metrics-
 import { log } from './lib/logger'
 
 const PORT = getSettingByKey('port')
+const HOST = process.env.HOST || 'localhost'
 
 // Initialize PTY manager with broadcast callbacks
 const ptyManager = initPTYManager({
@@ -55,7 +56,7 @@ const server = serve(
   {
     fetch: app.fetch,
     port: PORT,
-    hostname: '0.0.0.0',
+    hostname: HOST,
   },
   (info) => {
     log.server.info('Vibora server running', {

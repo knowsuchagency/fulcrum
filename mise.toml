@@ -69,6 +69,7 @@ git commit -m "bump ${usage_type}"
 [tasks.dev]
 description = "Start frontend and backend dev servers (requires PORT and VIBORA_DIR env vars)"
 depends = ["install"]
+usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
 run = """
 if [ -z "$PORT" ]; then
   echo "Error: PORT env var is required. Example: PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev"
@@ -77,6 +78,12 @@ fi
 if [ -z "$VIBORA_DIR" ]; then
   echo "Error: VIBORA_DIR env var is required. Example: PORT=3222 VIBORA_DIR=~/.vibora/dev mise run dev"
   exit 1
+fi
+# Determine host binding
+if [ "$usage_host" = "true" ]; then
+  export HOST="0.0.0.0"
+else
+  export HOST="localhost"
 fi
 export VITE_BACKEND_PORT="$PORT"
 export DEBUG="1"
@@ -112,7 +119,15 @@ bunx tsc -b --force && DEBUG=1 bunx vite build
 [tasks.start]
 description = "Run production server"
 depends = ["build"]
-run = "NODE_ENV=production bun server/index.ts"
+usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
+run = """
+if [ "$usage_host" = "true" ]; then
+  HOST="0.0.0.0"
+else
+  HOST="localhost"
+fi
+NODE_ENV=production HOST="$HOST" bun server/index.ts
+"""
 
 [tasks.lint]
 description = "Run ESLint"
@@ -292,12 +307,20 @@ run = "npm publish --access public --otp=${usage_otp}"
 [tasks.up]
 description = "Build and start production server as daemon"
 depends = ["install", "build"]
+usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
 run = """
 set -e
 
 VIBORA_DIR="${VIBORA_DIR:-$HOME/.vibora}"
 PID_FILE="$VIBORA_DIR/vibora.pid"
 SETTINGS_FILE="$VIBORA_DIR/settings.json"
+
+# Determine host binding
+if [ "$usage_host" = "true" ]; then
+  HOST="0.0.0.0"
+else
+  HOST="localhost"
+fi
 
 # Determine port: env var > settings.json > default 7777
 if [ -z "$PORT" ]; then
@@ -324,7 +347,7 @@ bun run drizzle-kit push
 # Start server in background
 echo "Starting server..." >&2
 mkdir -p "$VIBORA_DIR"
-nohup env NODE_ENV=production PORT="$PORT" bun server/index.ts \
+nohup env NODE_ENV=production PORT="$PORT" HOST="$HOST" bun server/index.ts \
   > "$VIBORA_DIR/server.log" 2>&1 &
 PID=$!
 
