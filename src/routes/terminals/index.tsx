@@ -1,6 +1,7 @@
 import { createFileRoute, useSearch, useNavigate } from '@tanstack/react-router'
 import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { observer } from 'mobx-react-lite'
 import { TerminalGrid } from '@/components/terminal/terminal-grid'
 import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
 import { TabEditDialog } from '@/components/terminal/tab-edit-dialog'
@@ -14,14 +15,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useTerminalWS } from '@/hooks/use-terminal-ws'
+import { useTerminalStore } from '@/stores'
+import type { ITerminal, ITab } from '@/stores'
 import { useTasks } from '@/hooks/use-tasks'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useWorktreeBasePath } from '@/hooks/use-config'
 import { cn } from '@/lib/utils'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import type { TerminalTab, TaskStatus } from '@/types'
+import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import { log } from '@/lib/logger'
+
+/**
+ * Convert MST terminal to TerminalInfo for backward compatibility with components
+ */
+function toTerminalInfo(terminal: ITerminal): TerminalInfo {
+  return {
+    id: terminal.id,
+    name: terminal.name,
+    cwd: terminal.cwd,
+    status: terminal.status,
+    exitCode: terminal.exitCode ?? undefined,
+    cols: terminal.cols,
+    rows: terminal.rows,
+    createdAt: terminal.createdAt,
+    tabId: terminal.tabId ?? undefined,
+    positionInTab: terminal.positionInTab,
+  }
+}
+
+/**
+ * Convert MST tab to TerminalTab for backward compatibility with components
+ */
+function toTerminalTab(tab: ITab, index: number): TerminalTab {
+  return {
+    id: tab.id,
+    name: tab.name,
+    layout: 'single',
+    position: index,
+    directory: tab.directory ?? undefined,
+  }
+}
 
 const ALL_TASKS_TAB_ID = 'all-tasks'
 const ACTIVE_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW']
@@ -31,14 +65,11 @@ interface TerminalsSearch {
   tab?: string
 }
 
-export const Route = createFileRoute('/terminals/')({
-  component: TerminalsView,
-  validateSearch: (search: Record<string, unknown>): TerminalsSearch => ({
-    tab: typeof search.tab === 'string' ? search.tab : undefined,
-  }),
-})
-
-function TerminalsView() {
+/**
+ * Terminals view component wrapped with MobX observer for reactive state updates.
+ * Uses MST store for terminal and tab state management.
+ */
+const TerminalsView = observer(function TerminalsView() {
   const { t } = useTranslation('terminals')
   const navigate = useNavigate()
   const { tab: tabFromUrl } = useSearch({ from: '/terminals/' })
@@ -58,7 +89,7 @@ function TerminalsView() {
     setupImagePaste,
     writeToTerminal,
     sendInputToTerminal,
-  } = useTerminalWS()
+  } = useTerminalStore()
 
   // State for tab edit/create dialog
   const [editingTab, setEditingTab] = useState<TerminalTab | null>(null)
@@ -240,7 +271,7 @@ function TerminalsView() {
     }
   }, [terminals, allTaskWorktrees, worktreeBasePath, destroyTerminal, tasksStatus, tasks.length])
 
-  // Filter terminals for the active tab
+  // Filter terminals for the active tab and convert to TerminalInfo for component compatibility
   const visibleTerminals = useMemo(() => {
     if (activeTabId === ALL_TASKS_TAB_ID) {
       // Show terminals for active tasks, sorted by newest task first, with optional repo filter
@@ -257,11 +288,13 @@ function TerminalsView() {
           if (!taskA || !taskB) return 0
           return new Date(taskB.createdAt).getTime() - new Date(taskA.createdAt).getTime()
         })
+        .map(toTerminalInfo)
     }
     // Filter terminals by tabId, sorted by positionInTab
     return terminals
       .filter((t) => t.tabId === activeTabId)
-      .sort((a, b) => (a.positionInTab ?? 0) - (b.positionInTab ?? 0))
+      .sort((a, b) => a.positionInTab - b.positionInTab)
+      .map(toTerminalInfo)
   }, [activeTabId, terminals, activeTaskWorktrees, repoFilter, tasks])
 
   const handleTerminalAdd = useCallback(() => {
@@ -451,13 +484,7 @@ function TerminalsView() {
   )
 
   // Convert our tabs to the format TerminalTabBar expects
-  const tabBarTabs: TerminalTab[] = tabs.map((t, index) => ({
-    id: t.id,
-    name: t.name,
-    layout: 'single',
-    position: index,
-    directory: t.directory,
-  }))
+  const tabBarTabs: TerminalTab[] = tabs.map(toTerminalTab)
 
   const handleTabEdit = useCallback((tab: TerminalTab) => {
     setEditingTab(tab)
@@ -572,4 +599,11 @@ function TerminalsView() {
       />
     </div>
   )
-}
+})
+
+export const Route = createFileRoute('/terminals/')({
+  component: TerminalsView,
+  validateSearch: (search: Record<string, unknown>): TerminalsSearch => ({
+    tab: typeof search.tab === 'string' ? search.tab : undefined,
+  }),
+})
