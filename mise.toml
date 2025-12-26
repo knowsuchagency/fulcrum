@@ -99,6 +99,8 @@ run = "DEBUG=\"${DEBUG:-}\" vite --host --port \"${FRONTEND_PORT:-5173}\""
 
 [tasks.build]
 description = "Build for production"
+sources = ["src/**/*", "public/**/*", "index.html", "vite.config.ts", "tsconfig.json", "package.json"]
+outputs = ["dist/**/*"]
 run = """
 rm -rf dist
 bunx tsc -b --force && bunx vite build
@@ -106,6 +108,8 @@ bunx tsc -b --force && bunx vite build
 
 [tasks."build:debug"]
 description = "Build for production with debug logging enabled"
+sources = ["src/**/*", "public/**/*", "index.html", "vite.config.ts", "tsconfig.json", "package.json"]
+outputs = ["dist/**/*"]
 run = """
 rm -rf dist
 bunx tsc -b --force && DEBUG=1 bunx vite build
