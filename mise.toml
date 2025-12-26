@@ -404,11 +404,22 @@ if ! command -v neu &> /dev/null; then
   npm install -g @neutralinojs/neu
 fi
 
-# Download Neutralino binaries to desktop/
+# Download Neutralino binaries to desktop/ (with retry for flaky network)
 cd desktop
 if [ ! -f "bin/neutralino-linux_x64" ]; then
   echo "Downloading Neutralino binaries..." >&2
-  neu update
+  for attempt in 1 2 3; do
+    if neu update; then
+      break
+    fi
+    if [ "$attempt" -lt 3 ]; then
+      echo "neu update failed (attempt $attempt/3), retrying in 5s..." >&2
+      sleep 5
+    else
+      echo "neu update failed after 3 attempts" >&2
+      exit 1
+    fi
+  done
 fi
 
 echo "Neutralinojs setup complete"
