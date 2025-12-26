@@ -23,8 +23,9 @@ import {
   Loading03Icon,
   Alert02Icon,
   VisualStudioCodeIcon,
-  PlusSignIcon,
+  TaskAdd01Icon,
   ComputerTerminal01Icon,
+  Add02Icon,
 } from '@hugeicons/core-free-icons'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
@@ -143,14 +144,7 @@ function RepositoryDetailView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
-        <div className="flex items-center gap-2">
-          <Link to="/repositories" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <HugeiconsIcon icon={ArrowLeft02Icon} size={16} strokeWidth={2} />
-            Repositories
-          </Link>
-          <span className="text-muted-foreground">/</span>
-          <span className="text-sm font-medium">{repository.displayName}</span>
-        </div>
+        <span className="text-sm font-medium">{repository.displayName}</span>
 
         <div className="flex items-center gap-2">
           <Button
@@ -159,8 +153,8 @@ function RepositoryDetailView() {
             onClick={() => setTaskModalOpen(true)}
             className="text-muted-foreground hover:text-foreground"
           >
-            <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-            New Task
+            <HugeiconsIcon icon={TaskAdd01Icon} size={16} strokeWidth={2} data-slot="icon" className="-translate-y-px" />
+            <span className="max-sm:hidden">New Task</span>
           </Button>
 
           <Button
@@ -171,17 +165,18 @@ function RepositoryDetailView() {
             title="Open in Terminal"
           >
             <HugeiconsIcon icon={ComputerTerminal01Icon} size={16} strokeWidth={2} data-slot="icon" />
-            Terminal
+            <span className="max-sm:hidden">Terminal</span>
           </Button>
 
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="sm"
             onClick={handleOpenEditor}
             className="text-muted-foreground hover:text-foreground"
             title={`Open in ${getEditorDisplayName(editorApp)}`}
           >
-            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} />
+            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Editor</span>
           </Button>
 
           <AlertDialog>
@@ -195,7 +190,7 @@ function RepositoryDetailView() {
               }
             >
               <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-              Delete
+              <span className="max-sm:hidden">Delete</span>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -219,7 +214,8 @@ function RepositoryDetailView() {
             onClick={handleSave}
             disabled={!hasChanges || updateRepository.isPending}
           >
-            {updateRepository.isPending ? 'Saving...' : 'Save'}
+            <HugeiconsIcon icon={Add02Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{updateRepository.isPending ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
       </div>

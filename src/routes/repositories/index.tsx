@@ -35,6 +35,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
   PlusSignIcon,
+  TaskAdd01Icon,
   Folder01Icon,
   Loading03Icon,
   Alert02Icon,
@@ -149,7 +150,7 @@ function RepositoryCard({
                 onClick={handleStartTask}
                 className="border-primary text-muted-foreground hover:text-foreground"
               >
-                <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+                <HugeiconsIcon icon={TaskAdd01Icon} size={16} strokeWidth={2} data-slot="icon" />
                 {t('newTask')}
               </Button>
             </div>

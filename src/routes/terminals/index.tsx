@@ -6,7 +6,7 @@ import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
 import { TabEditDialog } from '@/components/terminal/tab-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PlusSignIcon, GridViewIcon, FilterIcon } from '@hugeicons/core-free-icons'
+import { PlusSignIcon, GridViewIcon, FilterIcon, ComputerTerminal01Icon } from '@hugeicons/core-free-icons'
 import {
   Select,
   SelectContent,
@@ -515,7 +515,7 @@ function TerminalsView() {
             className="max-sm:px-2 border-transparent text-primary"
           >
             <HugeiconsIcon
-              icon={PlusSignIcon}
+              icon={ComputerTerminal01Icon}
               size={14}
               strokeWidth={2}
               data-slot="icon"
