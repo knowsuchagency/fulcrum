@@ -64,7 +64,7 @@ export function TerminalTabBar({
           className={cn(
             'group relative flex items-center gap-1.5 rounded-t-md border-x border-t px-3 py-1.5 text-xs transition-colors max-sm:px-2 max-sm:py-1',
             tab.id === activeTabId
-              ? 'border-border bg-background text-foreground'
+              ? 'border-accent bg-background text-foreground'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >

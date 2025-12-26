@@ -25,29 +25,14 @@ export interface NotificationResult {
   error?: string
 }
 
-// Send sound notification (macOS only)
+// Play notification sound via frontend (web audio)
+// The server just signals to play; the frontend handles actual playback
 async function sendSoundNotification(
-  config: SoundNotificationConfig
+  _config: SoundNotificationConfig
 ): Promise<NotificationResult> {
-  if (process.platform !== 'darwin') {
-    return { channel: 'sound', success: false, error: 'Sound only supported on macOS' }
-  }
-
-  const soundFile = config.soundFile || '/System/Library/Sounds/Glass.aiff'
-
-  return new Promise((resolve) => {
-    const proc = spawn('afplay', [soundFile])
-    proc.on('close', (code) => {
-      if (code === 0) {
-        resolve({ channel: 'sound', success: true })
-      } else {
-        resolve({ channel: 'sound', success: false, error: `afplay exited with code ${code}` })
-      }
-    })
-    proc.on('error', (err) => {
-      resolve({ channel: 'sound', success: false, error: err.message })
-    })
-  })
+  // Sound is played by the frontend via WebSocket notification
+  // This function exists for the test endpoint
+  return { channel: 'sound', success: true }
 }
 
 // Send Slack notification via webhook

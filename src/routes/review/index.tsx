@@ -40,7 +40,7 @@ function ReviewPage() {
   if (!isUserLoading && !user) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex shrink-0 items-center border-b border-border px-4 py-2">
+        <div className="flex shrink-0 items-center border-b border-border bg-background px-4 py-2">
           <h1 className="text-sm font-medium">{t('title')}</h1>
         </div>
         <div className="flex flex-1 items-center justify-center p-8">
@@ -83,7 +83,7 @@ function ReviewPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 max-sm:px-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2 max-sm:px-2">
         <div className="flex items-center gap-4 max-sm:gap-2">
           <h1 className="text-sm font-medium max-sm:hidden">{t('title')}</h1>
         </div>
@@ -149,7 +149,7 @@ function ReviewPage() {
         onValueChange={(v) => setActiveTab(v as 'prs' | 'issues')}
         className="flex flex-1 flex-col overflow-hidden"
       >
-        <div className="shrink-0 border-b border-border px-4">
+        <div className="shrink-0 border-b border-border bg-background px-4">
           <TabsList variant="line">
             <TabsTrigger value="prs">{t('tabs.pullRequests')}</TabsTrigger>
             <TabsTrigger value="issues">{t('tabs.issues')}</TabsTrigger>

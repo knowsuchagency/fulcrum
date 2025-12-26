@@ -90,9 +90,9 @@ export function FilesViewer({ taskId, worktreePath }: FilesViewerProps) {
       <Tabs
         value={mobileTab}
         onValueChange={(v) => setMobileTab(v as 'tree' | 'content')}
-        className="flex h-full flex-col"
+        className="flex h-full flex-col bg-background"
       >
-        <div className="shrink-0 border-b border-border px-2 py-1">
+        <div className="shrink-0 border-b border-border bg-card px-2 py-1">
           <TabsList className="w-full">
             <TabsTrigger value="tree" className="flex-1">Files</TabsTrigger>
             <TabsTrigger value="content" className="flex-1">Content</TabsTrigger>
@@ -126,7 +126,7 @@ export function FilesViewer({ taskId, worktreePath }: FilesViewerProps) {
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full">
+    <ResizablePanelGroup direction="horizontal" className="h-full bg-background">
       {/* File Content Panel */}
       <ResizablePanel defaultSize={65} minSize={30} className="overflow-hidden">
         <FileContent

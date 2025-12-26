@@ -25,6 +25,7 @@ interface TaskInfo {
   worktreePath: string
   baseBranch: string
   branch: string | null
+  prUrl?: string | null
 }
 
 interface TerminalGridProps {
@@ -90,6 +91,7 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
                 worktreePath={taskInfo.worktreePath}
                 baseBranch={taskInfo.baseBranch}
                 taskId={taskInfo.taskId}
+                hasPR={!!taskInfo.prUrl}
                 isMobile={isMobile}
                 terminalId={terminal.id}
                 sendInputToTerminal={sendInputToTerminal}
@@ -128,7 +130,7 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
 
 function EmptyPane({ onAdd }: { onAdd?: () => void }) {
   return (
-    <div className="flex h-full items-center justify-center bg-[#0a0a0a]">
+    <div className="flex h-full items-center justify-center bg-terminal-background">
       {onAdd ? (
         <Button variant="outline" size="sm" onClick={onAdd} className="gap-2">
           <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2} />

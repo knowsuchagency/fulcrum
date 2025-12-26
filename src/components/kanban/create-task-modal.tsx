@@ -384,7 +384,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                       ) : repoPath && !selectedRepoId ? (
                         <span className="truncate">{repoPath}</span>
                       ) : (
-                        <span className="text-muted-foreground">{t('createModal.selectFolder')}</span>
+                        <span className="text-muted-foreground group-hover/button:text-accent-foreground">{t('createModal.selectFolder')}</span>
                       )}
                     </Button>
                   </TabsContent>
@@ -456,7 +456,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
             </FieldGroup>
 
             <DialogFooter className="mt-4 shrink-0">
-              <DialogClose render={<Button variant="outline" type="button" />}>
+              <DialogClose render={<Button variant="outline" type="button" className="border-destructive text-destructive hover:bg-destructive hover:text-white" />}>
                 {tc('buttons.cancel')}
               </DialogClose>
               <Button

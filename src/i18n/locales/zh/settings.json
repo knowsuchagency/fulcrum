@@ -5,7 +5,6 @@
     "serverDefaults": "服务器与默认设置",
     "paths": "路径",
     "authentication": "身份验证",
-    "remote": "远程服务器",
     "editor": "编辑器",
     "integrations": "集成",
     "zai": "z.ai",
@@ -81,23 +80,50 @@
         "zh": "简体中文"
       }
     },
-    "remote": {
-      "url": {
-        "label": "服务器地址",
-        "description": "远程 Vibora 服务器的 URL。支持 Tailscale Serve 的 HTTPS。"
+    "theme": {
+      "label": "主题",
+      "description": "界面颜色主题",
+      "options": {
+        "system": "跟随系统",
+        "light": "浅色",
+        "dark": "深色"
+      }
+    },
+    "syncClaudeTheme": {
+      "label": "同步 Claude Code",
+      "description": "当 Vibora 在浅色和深色模式之间切换时自动更新 Claude Code 的主题"
+    },
+    "claudeCodeTheme": {
+      "light": "浅色模式",
+      "dark": "深色模式",
+      "options": {
+        "light": "浅色",
+        "light-ansi": "浅色 ANSI",
+        "light-daltonized": "浅色（色盲友好）",
+        "dark": "深色",
+        "dark-ansi": "深色 ANSI",
+        "dark-daltonized": "深色（色盲友好）"
       }
     }
   },
   "notifications": {
     "enable": "启用通知",
-    "sound": "声音（仅限 macOS）",
+    "sound": "声音",
     "slack": "Slack",
     "discord": "Discord",
     "pushover": "Pushover",
     "appToken": "应用令牌",
     "userKey": "用户密钥",
     "testSuccess": "{{channel}} 测试成功",
-    "testFailed": "{{channel}} 测试失败：{{error}}"
+    "testFailed": "{{channel}} 测试失败：{{error}}",
+    "uploadSound": "上传自定义声音",
+    "deleteSound": "删除自定义声音",
+    "testSound": "测试声音",
+    "soundUploaded": "自定义声音已上传",
+    "soundUploadFailed": "上传声音失败：{{error}}",
+    "soundDeleted": "自定义声音已删除",
+    "soundDeleteFailed": "删除自定义声音失败",
+    "customSoundActive": "使用自定义声音"
   },
   "developer": {
     "restartButton": "重启 Vibora",
@@ -105,5 +131,11 @@
     "restartDescription": "重新构建并重启 Vibora 服务器。如果构建失败，服务器将继续运行。",
     "restartFailed": "重启失败",
     "checkLogs": "构建可能失败。运行 journalctl --user -u vibora-dev 查看详情。"
+  },
+  "unsavedChanges": {
+    "title": "未保存的更改",
+    "description": "您有未保存的更改，离开此页面将丢失这些更改。",
+    "stay": "留下",
+    "leave": "离开"
   }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
   NavigationMenu,
@@ -43,6 +44,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   const { location } = useRouterState()
   const pathname = location.pathname
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
+  const { resolvedTheme } = useTheme()
 
   const isActive = (to: string, matchPrefix: boolean) =>
     matchPrefix ? pathname.startsWith(to) : pathname === to
@@ -53,11 +55,8 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   }, [onNewTaskRef])
 
   return (
-    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-black px-4 max-sm:px-2">
+    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-4 max-sm:px-2">
       <div className="flex min-w-0 items-center gap-4 max-sm:gap-2">
-        <Link to="/tasks" className="flex items-center">
-          <img src="/vibora-logo.jpeg" alt="Vibora" className="h-7" />
-        </Link>
 
         {/* Mobile navigation menu */}
         <NavigationMenu className="lg:hidden">
@@ -86,22 +85,33 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
 
         {/* Desktop navigation */}
         <nav className="hidden items-center gap-1 lg:flex">
-          {NAV_ITEMS.map((item) => (
-            <Link key={item.to} to={item.to}>
-              <Button
-                variant={isActive(item.to, item.matchPrefix) ? 'secondary' : 'ghost'}
-                size="sm"
-              >
-                <HugeiconsIcon
-                  icon={item.icon}
-                  size={16}
-                  strokeWidth={2}
-                  data-slot="icon"
-                />
-                {t(item.labelKey)}
-              </Button>
-            </Link>
-          ))}
+          <Link to="/tasks" className="mr-2">
+            <img
+              src={resolvedTheme === 'dark' ? '/logo-dark.jpg' : '/logo-light.jpg'}
+              alt="Vibora"
+              className="h-8 w-8 rounded"
+            />
+          </Link>
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.to, item.matchPrefix)
+            return (
+              <Link key={item.to} to={item.to}>
+                <Button
+                  variant={active ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className={active ? 'dark:bg-transparent text-destructive' : undefined}
+                >
+                  <HugeiconsIcon
+                    icon={item.icon}
+                    size={16}
+                    strokeWidth={2}
+                    data-slot="icon"
+                  />
+                  {t(item.labelKey)}
+                </Button>
+              </Link>
+            )
+          })}
         </nav>
       </div>
 
@@ -119,6 +129,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
           <Button
             variant={pathname === '/settings' ? 'secondary' : 'ghost'}
             size="icon-sm"
+            className={pathname === '/settings' ? 'dark:bg-transparent text-destructive' : undefined}
           >
             <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />
           </Button>

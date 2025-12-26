@@ -1,0 +1,92 @@
+import { useEffect, useCallback, useRef } from 'react'
+import { useTheme as useNextTheme } from 'next-themes'
+import { useTheme, useSyncClaudeCodeTheme, useUpdateConfig, CONFIG_KEYS, type Theme } from './use-config'
+import { fetchJSON } from '@/lib/api'
+
+/**
+ * Hook to sync theme between next-themes and backend settings.
+ * - On mount: applies saved theme preference from backend
+ * - Provides changeTheme function to update both next-themes and backend
+ * - Optionally syncs theme to Claude Code config when enabled
+ */
+export function useThemeSync() {
+  const { setTheme, resolvedTheme, theme: currentTheme } = useNextTheme()
+  const { data: savedTheme, isSuccess } = useTheme()
+  const { data: syncClaudeCode } = useSyncClaudeCodeTheme()
+  const updateConfig = useUpdateConfig()
+  const prevResolvedTheme = useRef<string | undefined>(undefined)
+  const prevSyncClaudeCode = useRef<boolean | undefined>(undefined)
+  const hasInitialized = useRef(false)
+
+  // Apply saved theme on mount (if different from current)
+  useEffect(() => {
+    if (isSuccess && savedTheme && savedTheme !== currentTheme) {
+      setTheme(savedTheme)
+    }
+  }, [isSuccess, savedTheme, currentTheme, setTheme])
+
+  // Update favicon based on resolved theme
+  useEffect(() => {
+    if (!resolvedTheme) return
+
+    const favicon = resolvedTheme === 'dark' ? '/logo-dark.jpg' : '/logo-light.jpg'
+
+    // Update or create the favicon link element
+    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.appendChild(link)
+    }
+    link.type = 'image/jpeg'
+    link.href = favicon
+  }, [resolvedTheme])
+
+  // Sync to Claude Code when:
+  // 1. Resolved theme changes (if sync is enabled)
+  // 2. Sync setting is toggled on after initial load (immediate sync with current theme)
+  useEffect(() => {
+    const themeChanged = resolvedTheme && resolvedTheme !== prevResolvedTheme.current
+
+    // Only detect "just enabled" after initial render to avoid syncing on page load
+    const syncJustEnabled = hasInitialized.current && syncClaudeCode && prevSyncClaudeCode.current === false
+
+    // Update refs
+    prevResolvedTheme.current = resolvedTheme
+    prevSyncClaudeCode.current = syncClaudeCode
+    hasInitialized.current = true
+
+    // Sync if theme changed while sync is enabled, or if sync was just enabled
+    if (resolvedTheme && syncClaudeCode && (themeChanged || syncJustEnabled)) {
+      // Fire and forget - no need to await
+      fetchJSON('/api/config/sync-claude-theme', {
+        method: 'POST',
+        body: JSON.stringify({ resolvedTheme }),
+      }).catch(() => {
+        // Silently ignore sync errors
+      })
+    }
+  }, [resolvedTheme, syncClaudeCode])
+
+  // Function to change theme and persist to backend
+  const changeTheme = useCallback(
+    (theme: Theme) => {
+      setTheme(theme)
+      // Persist to backend (empty string for system/null)
+      updateConfig.mutate({
+        key: CONFIG_KEYS.THEME,
+        value: theme === 'system' ? '' : theme,
+      })
+    },
+    [setTheme, updateConfig]
+  )
+
+  return {
+    theme: (currentTheme as Theme) ?? 'system',
+    resolvedTheme: resolvedTheme as 'light' | 'dark' | undefined,
+    savedTheme,
+    syncClaudeCode,
+    changeTheme,
+    isUpdating: updateConfig.isPending,
+  }
+}

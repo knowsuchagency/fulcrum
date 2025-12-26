@@ -41,9 +41,9 @@ export function BrowserPreview({ taskId }: BrowserPreviewProps) {
   )
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-background">
       {/* Browser toolbar */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-border bg-muted/30 px-2 py-1.5">
+      <div className="flex shrink-0 items-center gap-1 border-b border-border bg-card px-2 py-1.5">
         <Button variant="ghost" size="icon-xs" disabled>
           <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={2} />
         </Button>

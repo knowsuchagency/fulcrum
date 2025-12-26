@@ -5,7 +5,6 @@
     "serverDefaults": "Server & Defaults",
     "paths": "Paths",
     "authentication": "Authentication",
-    "remote": "Remote Server",
     "editor": "Editor",
     "integrations": "Integrations",
     "zai": "z.ai",
@@ -81,23 +80,50 @@
         "zh": "Chinese (Simplified)"
       }
     },
-    "remote": {
-      "url": {
-        "label": "Server URL",
-        "description": "URL of a remote Vibora server. Supports HTTPS for Tailscale Serve."
+    "theme": {
+      "label": "Theme",
+      "description": "Color theme for the interface",
+      "options": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      }
+    },
+    "syncClaudeTheme": {
+      "label": "Sync Claude Code",
+      "description": "Automatically update Claude Code's theme when Vibora switches between light and dark mode"
+    },
+    "claudeCodeTheme": {
+      "light": "Light mode",
+      "dark": "Dark mode",
+      "options": {
+        "light": "Light",
+        "light-ansi": "Light ANSI",
+        "light-daltonized": "Light (colorblind)",
+        "dark": "Dark",
+        "dark-ansi": "Dark ANSI",
+        "dark-daltonized": "Dark (colorblind)"
       }
     }
   },
   "notifications": {
     "enable": "Enable Notifications",
-    "sound": "Sound (macOS only)",
+    "sound": "Sound",
     "slack": "Slack",
     "discord": "Discord",
     "pushover": "Pushover",
     "appToken": "App Token",
     "userKey": "User Key",
     "testSuccess": "{{channel}} test successful",
-    "testFailed": "{{channel}} test failed: {{error}}"
+    "testFailed": "{{channel}} test failed: {{error}}",
+    "uploadSound": "Upload custom sound",
+    "deleteSound": "Remove custom sound",
+    "testSound": "Test sound",
+    "soundUploaded": "Custom sound uploaded",
+    "soundUploadFailed": "Failed to upload sound: {{error}}",
+    "soundDeleted": "Custom sound removed",
+    "soundDeleteFailed": "Failed to remove custom sound",
+    "customSoundActive": "Custom sound active"
   },
   "developer": {
     "restartButton": "Restart Vibora",
@@ -105,5 +131,11 @@
     "restartDescription": "Rebuild and restart the Vibora server. If the build fails, the server will continue running.",
     "restartFailed": "Restart failed",
     "checkLogs": "Build may have failed. Check journalctl --user -u vibora-dev for details."
+  },
+  "unsavedChanges": {
+    "title": "Unsaved Changes",
+    "description": "You have unsaved changes that will be lost if you leave this page.",
+    "stay": "Stay",
+    "leave": "Leave"
   }
 }

@@ -92,7 +92,7 @@ export function FilesystemBrowser({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg overflow-hidden">
         <DialogHeader>
           <DialogTitle>Select Git Repository</DialogTitle>
           <DialogDescription>
@@ -143,12 +143,13 @@ export function FilesystemBrowser({
         </div>
 
         {/* Navigation bar */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <Button
             variant="outline"
             size="icon-sm"
             onClick={handleHome}
             title="Home"
+            className="shrink-0"
           >
             <HugeiconsIcon icon={Home01Icon} size={14} strokeWidth={2} />
           </Button>
@@ -158,10 +159,11 @@ export function FilesystemBrowser({
             onClick={handleParent}
             disabled={!data || data.parent === data.path}
             title="Parent directory"
+            className="shrink-0"
           >
             <HugeiconsIcon icon={ArrowUp01Icon} size={14} strokeWidth={2} />
           </Button>
-          <code className="min-w-0 flex-1 text-xs bg-muted/50 px-2 py-1 rounded truncate">
+          <code className="min-w-0 flex-1 text-xs bg-muted/50 px-2 py-1 rounded truncate overflow-hidden">
             {data?.path || '~'}
           </code>
           <Button
@@ -169,7 +171,7 @@ export function FilesystemBrowser({
             size="sm"
             onClick={() => data && handleSelect(data.path)}
             disabled={!data}
-            className="max-sm:px-2"
+            className="shrink-0 max-sm:px-2"
             title="Select current directory"
           >
             <HugeiconsIcon icon={FolderOpenIcon} size={14} strokeWidth={2} className="sm:hidden" />
@@ -207,8 +209,8 @@ export function FilesystemBrowser({
                           strokeWidth={2}
                           className={
                             entry.isGitRepo
-                              ? 'text-emerald-500'
-                              : 'text-blue-500'
+                              ? 'text-accent'
+                              : 'text-accent'
                           }
                         />
                         <button
@@ -218,7 +220,7 @@ export function FilesystemBrowser({
                           {entry.name}
                         </button>
                         {entry.isGitRepo && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-emerald-500/50 text-emerald-500 font-medium shrink-0">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-accent/50 text-accent font-medium shrink-0">
                             <span className="max-sm:hidden">git repo</span>
                             <span className="sm:hidden">git</span>
                           </span>

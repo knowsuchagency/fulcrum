@@ -35,10 +35,10 @@ import type { Worktree, TaskStatus } from '@/types'
 type StatusFilter = TaskStatus | 'ORPHANED'
 
 const STATUS_BADGE_COLORS: Record<StatusFilter, string> = {
-  IN_PROGRESS: 'bg-slate-400/20 text-slate-600 dark:text-slate-400',
-  IN_REVIEW: 'bg-violet-400/20 text-violet-600 dark:text-violet-400',
-  DONE: 'bg-emerald-400/20 text-emerald-600 dark:text-emerald-400',
-  CANCELED: 'bg-rose-400/20 text-rose-600 dark:text-rose-400',
+  IN_PROGRESS: 'bg-muted-foreground/20 text-muted-foreground',
+  IN_REVIEW: 'bg-primary/20 text-primary',
+  DONE: 'bg-accent/20 text-accent',
+  CANCELED: 'bg-destructive/20 text-destructive',
   ORPHANED: 'bg-destructive/20 text-destructive',
 }
 
@@ -333,7 +333,7 @@ function WorktreesView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-2">
+      <div className="flex shrink-0 flex-col gap-2 border-b border-border bg-background px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-sm font-medium">{tw('title')}</h1>
@@ -380,7 +380,7 @@ function WorktreesView() {
                       <p className="text-sm text-muted-foreground">
                         {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length > 0 && (
                           <span className="mr-3">
-                            <span className="font-medium text-emerald-600">
+                            <span className="font-medium text-accent">
                               {completedWorktrees.filter((w) => w.taskStatus === 'DONE').length}
                             </span>{' '}
                             {tw('cleanup.done')}
@@ -388,7 +388,7 @@ function WorktreesView() {
                         )}
                         {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length > 0 && (
                           <span>
-                            <span className="font-medium text-rose-600">
+                            <span className="font-medium text-destructive">
                               {completedWorktrees.filter((w) => w.taskStatus === 'CANCELED').length}
                             </span>{' '}
                             {tw('cleanup.canceled')}
@@ -460,7 +460,7 @@ function WorktreesView() {
         </div>
       </div>
 
-      <div className="pixel-grid flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4">
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <HugeiconsIcon

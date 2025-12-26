@@ -17,13 +17,16 @@ export const CONFIG_KEYS = {
   DEFAULT_GIT_REPOS_DIR: 'paths.defaultGitReposDir',
   BASIC_AUTH_USERNAME: 'authentication.username',
   BASIC_AUTH_PASSWORD: 'authentication.password',
-  REMOTE_URL: 'remoteVibora.url',
   EDITOR_APP: 'editor.app',
   EDITOR_HOST: 'editor.host',
   EDITOR_SSH_PORT: 'editor.sshPort',
   LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
   LANGUAGE: 'appearance.language',
+  THEME: 'appearance.theme',
+  SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
+  CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
+  CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
 } as const
 
 // Default values (client-side fallbacks)
@@ -65,16 +68,6 @@ export function useDefaultGitReposDir() {
   return {
     ...query,
     // Default to empty string which will make the browser use home directory
-    data: (query.data?.value as string) ?? '',
-    isDefault: query.data?.isDefault ?? true,
-  }
-}
-
-export function useRemoteUrl() {
-  const query = useConfig(CONFIG_KEYS.REMOTE_URL)
-
-  return {
-    ...query,
     data: (query.data?.value as string) ?? '',
     isDefault: query.data?.isDefault ?? true,
   }
@@ -142,6 +135,52 @@ export function useLanguage() {
   }
 }
 
+export type Theme = 'system' | 'light' | 'dark'
+
+export function useTheme() {
+  const query = useConfig(CONFIG_KEYS.THEME)
+
+  return {
+    ...query,
+    // null means system preference (default)
+    data: (query.data?.value as Theme | null) ?? 'system',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useSyncClaudeCodeTheme() {
+  const query = useConfig(CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME)
+
+  return {
+    ...query,
+    data: Boolean(query.data?.value) ?? false,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export type ClaudeCodeTheme = 'light' | 'light-ansi' | 'light-daltonized' | 'dark' | 'dark-ansi' | 'dark-daltonized'
+export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'light-daltonized', 'dark', 'dark-ansi', 'dark-daltonized']
+
+export function useClaudeCodeLightTheme() {
+  const query = useConfig(CONFIG_KEYS.CLAUDE_CODE_LIGHT_THEME)
+
+  return {
+    ...query,
+    data: (query.data?.value as ClaudeCodeTheme) ?? 'light-ansi',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useClaudeCodeDarkTheme() {
+  const query = useConfig(CONFIG_KEYS.CLAUDE_CODE_DARK_THEME)
+
+  return {
+    ...query,
+    data: (query.data?.value as ClaudeCodeTheme) ?? 'dark-ansi',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
 export function useBasicAuthUsername() {
   const query = useConfig(CONFIG_KEYS.BASIC_AUTH_USERNAME)
 
@@ -167,7 +206,7 @@ export function useUpdateConfig() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ key, value }: { key: string; value: string | number | null }) =>
+    mutationFn: ({ key, value }: { key: string; value: string | number | boolean | null }) =>
       fetchJSON<ConfigResponse>(`${API_BASE}/api/config/${key}`, {
         method: 'PUT',
         body: JSON.stringify({ value }),
@@ -203,7 +242,7 @@ export function useResetConfig() {
 // Notification settings types
 export interface NotificationSettings {
   enabled: boolean
-  sound: { enabled: boolean; soundFile?: string }
+  sound: { enabled: boolean; customSoundFile?: string }
   slack: { enabled: boolean; webhookUrl: string }
   discord: { enabled: boolean; webhookUrl: string }
   pushover: { enabled: boolean; appToken: string; userKey: string }

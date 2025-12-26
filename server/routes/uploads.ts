@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
-import { mkdir, writeFile, readFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile, unlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { getViboraDir } from '../lib/settings'
+import { getViboraDir, getNotificationSettings, updateNotificationSettings } from '../lib/settings'
 
 const mimeTypes: Record<string, string> = {
   png: 'image/png',
@@ -11,6 +11,9 @@ const mimeTypes: Record<string, string> = {
   gif: 'image/gif',
   webp: 'image/webp',
   svg: 'image/svg+xml',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
 }
 
 const app = new Hono()
@@ -88,6 +91,109 @@ app.get('/:filename', async (c) => {
   const contentType = mimeTypes[ext] || 'application/octet-stream'
 
   const content = await readFile(filePath)
+  return new Response(content, {
+    headers: { 'Content-Type': contentType },
+  })
+})
+
+// POST /api/uploads/sound
+// Upload a custom notification sound file
+// Saves to {viboraDir}/notification-sound.{ext} and updates settings
+app.post('/sound', async (c) => {
+  const body = await c.req.parseBody()
+  const file = body['file']
+
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: 'No file provided' }, 400)
+  }
+
+  // Validate it's an audio file
+  const audioMimeTypes: Record<string, string> = {
+    'audio/mpeg': 'mp3',
+    'audio/mp3': 'mp3',
+    'audio/wav': 'wav',
+    'audio/wave': 'wav',
+    'audio/ogg': 'ogg',
+  }
+
+  const extension = audioMimeTypes[file.type]
+  if (!extension) {
+    return c.json({ error: 'File must be an audio file (mp3, wav, or ogg)' }, 400)
+  }
+
+  // Save to viboraDir as notification-sound.{ext}
+  const viboraDir = getViboraDir()
+  const filename = `notification-sound.${extension}`
+  const filePath = join(viboraDir, filename)
+
+  // Delete any existing notification sound files
+  for (const ext of ['mp3', 'wav', 'ogg']) {
+    const oldPath = join(viboraDir, `notification-sound.${ext}`)
+    if (existsSync(oldPath)) {
+      try {
+        await unlink(oldPath)
+      } catch {
+        // Ignore errors
+      }
+    }
+  }
+
+  const arrayBuffer = await file.arrayBuffer()
+  await writeFile(filePath, Buffer.from(arrayBuffer))
+
+  // Update settings with the new sound file path
+  updateNotificationSettings({
+    sound: {
+      ...getNotificationSettings().sound,
+      customSoundFile: filePath,
+    },
+  })
+
+  return c.json({ path: filePath, filename })
+})
+
+// DELETE /api/uploads/sound
+// Remove custom notification sound and revert to default
+app.delete('/sound', async (c) => {
+  const viboraDir = getViboraDir()
+
+  // Delete any existing notification sound files
+  for (const ext of ['mp3', 'wav', 'ogg']) {
+    const filePath = join(viboraDir, `notification-sound.${ext}`)
+    if (existsSync(filePath)) {
+      try {
+        await unlink(filePath)
+      } catch {
+        // Ignore errors
+      }
+    }
+  }
+
+  // Clear the custom sound file from settings
+  updateNotificationSettings({
+    sound: {
+      ...getNotificationSettings().sound,
+      customSoundFile: undefined,
+    },
+  })
+
+  return c.json({ success: true })
+})
+
+// GET /api/uploads/sound
+// Serve the custom notification sound file
+app.get('/sound', async (c) => {
+  const settings = getNotificationSettings()
+  const customSoundFile = settings.sound?.customSoundFile
+
+  if (!customSoundFile || !existsSync(customSoundFile)) {
+    return c.notFound()
+  }
+
+  const ext = customSoundFile.split('.').pop()?.toLowerCase() || ''
+  const contentType = mimeTypes[ext] || 'audio/mpeg'
+
+  const content = await readFile(customSoundFile)
   return new Response(content, {
     headers: { 'Content-Type': contentType },
   })

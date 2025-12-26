@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { useState, useEffect, useRef } from 'react'
+import { createFileRoute, useBlocker } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,13 +12,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import {
   usePort,
   useDefaultGitReposDir,
-  useRemoteUrl,
   useEditorApp,
   useEditorHost,
   useEditorSshPort,
@@ -35,10 +44,15 @@ import {
   useUpdateZAiSettings,
   useDeveloperMode,
   useRestartVibora,
+  useClaudeCodeLightTheme,
+  useClaudeCodeDarkTheme,
   CONFIG_KEYS,
+  CLAUDE_CODE_THEMES,
   type EditorApp,
+  type ClaudeCodeTheme,
 } from '@/hooks/use-config'
 import { useLanguageSync } from '@/hooks/use-language-sync'
+import { useThemeSync } from '@/hooks/use-theme-sync'
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsPage,
@@ -60,7 +74,6 @@ function SettingsPage() {
   const { t: tc } = useTranslation('common')
   const { data: port, isLoading: portLoading } = usePort()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
-  const { data: remoteUrl, isLoading: remoteUrlLoading } = useRemoteUrl()
   const { data: editorApp, isLoading: editorAppLoading } = useEditorApp()
   const { data: editorHost, isLoading: editorHostLoading } = useEditorHost()
   const { data: editorSshPort, isLoading: editorSshPortLoading } = useEditorSshPort()
@@ -73,6 +86,9 @@ function SettingsPage() {
   const { data: developerMode } = useDeveloperMode()
   const restartVibora = useRestartVibora()
   const { savedLanguage, changeLanguage } = useLanguageSync()
+  const { theme, syncClaudeCode, changeTheme } = useThemeSync()
+  const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
+  const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -81,7 +97,6 @@ function SettingsPage() {
 
   const [localPort, setLocalPort] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
-  const [localRemoteUrl, setLocalRemoteUrl] = useState('')
   const [localEditorApp, setLocalEditorApp] = useState<EditorApp>('vscode')
   const [localEditorHost, setLocalEditorHost] = useState('')
   const [localEditorSshPort, setLocalEditorSshPort] = useState('')
@@ -110,14 +125,23 @@ function SettingsPage() {
   const [zAiSonnetModel, setZAiSonnetModel] = useState('glm-4.7')
   const [zAiOpusModel, setZAiOpusModel] = useState('glm-4.7')
 
+  // Claude Code theme sync local state
+  const [localSyncClaudeCode, setLocalSyncClaudeCode] = useState(false)
+  const [localClaudeCodeLightTheme, setLocalClaudeCodeLightTheme] = useState<ClaudeCodeTheme>('light-ansi')
+  const [localClaudeCodeDarkTheme, setLocalClaudeCodeDarkTheme] = useState<ClaudeCodeTheme>('dark-ansi')
+
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
+
+  // Custom sound upload state
+  const [hasCustomSound, setHasCustomSound] = useState(false)
+  const [isUploadingSound, setIsUploadingSound] = useState(false)
+  const soundInputRef = useRef<HTMLInputElement>(null)
 
   // Sync local form state with fetched server values
   useEffect(() => {
     if (port !== undefined) setLocalPort(String(port))
     if (defaultGitReposDir !== undefined) setLocalReposDir(defaultGitReposDir)
-    if (remoteUrl !== undefined) setLocalRemoteUrl(remoteUrl)
     if (editorApp !== undefined) setLocalEditorApp(editorApp)
     if (editorHost !== undefined) setLocalEditorHost(editorHost)
     if (editorSshPort !== undefined) setLocalEditorSshPort(String(editorSshPort))
@@ -126,13 +150,14 @@ function SettingsPage() {
     // For username, sync directly. For password, the server returns masked value - only update if empty (not yet loaded)
     if (basicAuthUsername !== undefined) setLocalBasicAuthUsername(basicAuthUsername)
     // Don't sync password from server since it's masked - user must re-enter to change
-  }, [port, defaultGitReposDir, remoteUrl, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, basicAuthUsername])
+  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, basicAuthUsername])
 
   // Sync notification settings
   useEffect(() => {
     if (notificationSettings) {
       setNotificationsEnabled(notificationSettings.enabled)
       setSoundEnabled(notificationSettings.sound?.enabled ?? false)
+      setHasCustomSound(!!notificationSettings.sound?.customSoundFile)
       setSlackEnabled(notificationSettings.slack?.enabled ?? false)
       setSlackWebhook(notificationSettings.slack?.webhookUrl ?? '')
       setDiscordEnabled(notificationSettings.discord?.enabled ?? false)
@@ -154,8 +179,15 @@ function SettingsPage() {
     }
   }, [zAiSettings])
 
+  // Sync Claude Code theme settings
+  useEffect(() => {
+    if (syncClaudeCode !== undefined) setLocalSyncClaudeCode(syncClaudeCode)
+    if (claudeCodeLightTheme !== undefined) setLocalClaudeCodeLightTheme(claudeCodeLightTheme)
+    if (claudeCodeDarkTheme !== undefined) setLocalClaudeCodeDarkTheme(claudeCodeDarkTheme)
+  }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
+
   const isLoading =
-    portLoading || reposDirLoading || remoteUrlLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || basicAuthUsernameLoading || basicAuthPasswordLoading || notificationsLoading || zAiLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -164,6 +196,11 @@ function SettingsPage() {
     zAiSonnetModel !== zAiSettings.sonnetModel ||
     zAiOpusModel !== zAiSettings.opusModel
   )
+
+  const hasClaudeCodeChanges =
+    localSyncClaudeCode !== (syncClaudeCode ?? false) ||
+    localClaudeCodeLightTheme !== claudeCodeLightTheme ||
+    localClaudeCodeDarkTheme !== claudeCodeDarkTheme
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -187,18 +224,22 @@ function SettingsPage() {
     localEditorHost !== editorHost ||
     localEditorSshPort !== String(editorSshPort)
 
-  const hasRemoteUrlChanges = localRemoteUrl !== remoteUrl
-
   const hasChanges =
     localPort !== String(port) ||
     localReposDir !== defaultGitReposDir ||
-    hasRemoteUrlChanges ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
     hasAuthChanges ||
     hasEditorChanges ||
     hasNotificationChanges ||
-    hasZAiChanges
+    hasZAiChanges ||
+    hasClaudeCodeChanges
+
+  // Block navigation when there are unsaved changes
+  const { proceed, reset, status } = useBlocker({
+    shouldBlockFn: () => hasChanges,
+    withResolver: true,
+  })
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -220,31 +261,6 @@ function SettingsPage() {
           updateConfig.mutate(
             { key: CONFIG_KEYS.DEFAULT_GIT_REPOS_DIR, value: localReposDir },
             { onSettled: resolve }
-          )
-        })
-      )
-    }
-
-    if (hasRemoteUrlChanges) {
-      promises.push(
-        new Promise((resolve) => {
-          updateConfig.mutate(
-            { key: CONFIG_KEYS.REMOTE_URL, value: localRemoteUrl },
-            {
-              onSettled: resolve,
-              onSuccess: () => {
-                // Notify desktop app to reconnect with new URL
-                if (window.parent !== window) {
-                  window.parent.postMessage(
-                    {
-                      type: 'vibora:reconnect',
-                      url: localRemoteUrl || null, // null means switch to local
-                    },
-                    '*'
-                  )
-                }
-              },
-            }
           )
         })
       )
@@ -370,6 +386,40 @@ function SettingsPage() {
       )
     }
 
+    // Save Claude Code theme settings
+    if (hasClaudeCodeChanges) {
+      if (localSyncClaudeCode !== (syncClaudeCode ?? false)) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME, value: localSyncClaudeCode },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localClaudeCodeLightTheme !== claudeCodeLightTheme) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.CLAUDE_CODE_LIGHT_THEME, value: localClaudeCodeLightTheme },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localClaudeCodeDarkTheme !== claudeCodeDarkTheme) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.CLAUDE_CODE_DARK_THEME, value: localClaudeCodeDarkTheme },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+    }
+
     await Promise.all(promises)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -449,25 +499,6 @@ function SettingsPage() {
     })
   }
 
-  const handleResetRemoteUrl = () => {
-    resetConfig.mutate(CONFIG_KEYS.REMOTE_URL, {
-      onSuccess: (data) => {
-        const newUrl = data.value !== null && data.value !== undefined ? String(data.value) : ''
-        setLocalRemoteUrl(newUrl)
-        // Notify desktop app to reconnect (switch to local since we're resetting to empty)
-        if (window.parent !== window) {
-          window.parent.postMessage(
-            {
-              type: 'vibora:reconnect',
-              url: newUrl || null,
-            },
-            '*'
-          )
-        }
-      },
-    })
-  }
-
   const handleTestChannel = async (channel: 'sound' | 'slack' | 'discord' | 'pushover') => {
     testChannel.mutate(channel, {
       onSuccess: (result) => {
@@ -483,13 +514,56 @@ function SettingsPage() {
     })
   }
 
+  const handleSoundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingSound(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/uploads/sound', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+
+      setHasCustomSound(true)
+      toast.success(t('notifications.soundUploaded'))
+    } catch (err) {
+      toast.error(t('notifications.soundUploadFailed', { error: err instanceof Error ? err.message : 'Unknown error' }))
+    } finally {
+      setIsUploadingSound(false)
+      // Reset input so same file can be uploaded again
+      if (soundInputRef.current) {
+        soundInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleDeleteCustomSound = async () => {
+    try {
+      const res = await fetch('/api/uploads/sound', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
+      setHasCustomSound(false)
+      toast.success(t('notifications.soundDeleted'))
+    } catch {
+      toast.error(t('notifications.soundDeleteFailed'))
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <h1 className="text-sm font-medium">{t('title')}</h1>
       </div>
 
-      <div className="pixel-grid flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-5xl space-y-4">
               {/* Server */}
               <SettingsSection title={t('sections.server')}>
@@ -630,40 +704,6 @@ function SettingsPage() {
 
                   <p className="text-xs text-muted-foreground">
                     {t('fields.auth.description')}
-                  </p>
-                </div>
-              </SettingsSection>
-
-              {/* Remote Server */}
-              <SettingsSection title={t('sections.remote')}>
-                <div className="space-y-1">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
-                      {t('fields.remote.url.label')}
-                    </label>
-                    <div className="flex flex-1 items-center gap-2">
-                      <Input
-                        type="url"
-                        value={localRemoteUrl}
-                        onChange={(e) => setLocalRemoteUrl(e.target.value)}
-                        placeholder="https://vibora.tailnet.ts.net"
-                        disabled={isLoading}
-                        className="flex-1 font-mono text-sm"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={handleResetRemoteUrl}
-                        disabled={isLoading || resetConfig.isPending}
-                        title={tc('buttons.reset')}
-                      >
-                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                    {t('fields.remote.url.description')}
                   </p>
                 </div>
               </SettingsSection>
@@ -961,21 +1001,64 @@ function SettingsPage() {
                         disabled={isLoading || !notificationsEnabled}
                       />
                       <label className="text-sm text-muted-foreground">{t('notifications.sound')}</label>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="ml-auto h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleTestChannel('sound')}
-                        disabled={isLoading || !notificationsEnabled || !soundEnabled || testChannel.isPending}
-                        title={t('notifications.sound')}
-                      >
-                        {testChannel.isPending ? (
-                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                        ) : (
-                          <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                      <div className="ml-auto flex items-center gap-1">
+                        {/* Upload custom sound */}
+                        <input
+                          ref={soundInputRef}
+                          type="file"
+                          accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg"
+                          className="hidden"
+                          onChange={handleSoundUpload}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => soundInputRef.current?.click()}
+                          disabled={isLoading || !notificationsEnabled || !soundEnabled || isUploadingSound}
+                          title={t('notifications.uploadSound')}
+                        >
+                          {isUploadingSound ? (
+                            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                          ) : (
+                            <HugeiconsIcon icon={Upload04Icon} size={14} strokeWidth={2} />
+                          )}
+                        </Button>
+                        {/* Delete custom sound (only shown if custom sound exists) */}
+                        {hasCustomSound && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={handleDeleteCustomSound}
+                            disabled={isLoading || !notificationsEnabled || !soundEnabled}
+                            title={t('notifications.deleteSound')}
+                          >
+                            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+                          </Button>
                         )}
-                      </Button>
+                        {/* Test sound */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleTestChannel('sound')}
+                          disabled={isLoading || !notificationsEnabled || !soundEnabled || testChannel.isPending}
+                          title={t('notifications.testSound')}
+                        >
+                          {testChannel.isPending ? (
+                            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                          ) : (
+                            <HugeiconsIcon icon={TestTube01Icon} size={14} strokeWidth={2} />
+                          )}
+                        </Button>
+                      </div>
                     </div>
+                    {hasCustomSound && (
+                      <p className="ml-10 text-xs text-muted-foreground">
+                        {t('notifications.customSoundActive')}
+                      </p>
+                    )}
                   </div>
 
                   {/* Slack */}
@@ -1100,28 +1183,122 @@ function SettingsPage() {
 
               {/* Appearance */}
               <SettingsSection title={t('sections.appearance')}>
-                <div className="space-y-1">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
-                      {t('fields.language.label')}
-                    </label>
-                    <Select
-                      value={savedLanguage ?? 'auto'}
-                      onValueChange={(v) => changeLanguage(v === 'auto' ? null : (v as 'en' | 'zh'))}
-                    >
-                      <SelectTrigger className="w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto">{t('fields.language.options.auto')}</SelectItem>
-                        <SelectItem value="en">{t('fields.language.options.en')}</SelectItem>
-                        <SelectItem value="zh">{t('fields.language.options.zh')}</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-4">
+                  {/* Language */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.language.label')}
+                      </label>
+                      <Select
+                        value={savedLanguage ?? 'auto'}
+                        onValueChange={(v) => changeLanguage(v === 'auto' ? null : (v as 'en' | 'zh'))}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">{t('fields.language.options.auto')}</SelectItem>
+                          <SelectItem value="en">{t('fields.language.options.en')}</SelectItem>
+                          <SelectItem value="zh">{t('fields.language.options.zh')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.language.description')}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                    {t('fields.language.description')}
-                  </p>
+
+                  {/* Theme */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.theme.label')}
+                      </label>
+                      <Select
+                        value={theme ?? 'system'}
+                        onValueChange={(v) => changeTheme(v as 'system' | 'light' | 'dark')}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="system">{t('fields.theme.options.system')}</SelectItem>
+                          <SelectItem value="light">{t('fields.theme.options.light')}</SelectItem>
+                          <SelectItem value="dark">{t('fields.theme.options.dark')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.theme.description')}
+                    </p>
+                  </div>
+
+                  {/* Sync Claude Code Theme */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.syncClaudeTheme.label')}
+                      </label>
+                      <Switch
+                        checked={localSyncClaudeCode}
+                        onCheckedChange={setLocalSyncClaudeCode}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.syncClaudeTheme.description')}
+                    </p>
+                  </div>
+
+                  {/* Claude Code Theme Options (shown when sync is enabled) */}
+                  {localSyncClaudeCode && (
+                    <div className="space-y-3 border-t border-border pt-4 sm:ml-32 sm:pl-2">
+                      {/* Light Theme */}
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-24 sm:shrink-0">
+                          {t('fields.claudeCodeTheme.light')}
+                        </label>
+                        <Select
+                          value={localClaudeCodeLightTheme}
+                          onValueChange={(v) => setLocalClaudeCodeLightTheme(v as ClaudeCodeTheme)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CLAUDE_CODE_THEMES.filter(thm => thm.startsWith('light')).map((thm) => (
+                              <SelectItem key={thm} value={thm}>
+                                {t(`fields.claudeCodeTheme.options.${thm}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Dark Theme */}
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-24 sm:shrink-0">
+                          {t('fields.claudeCodeTheme.dark')}
+                        </label>
+                        <Select
+                          value={localClaudeCodeDarkTheme}
+                          onValueChange={(v) => setLocalClaudeCodeDarkTheme(v as ClaudeCodeTheme)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CLAUDE_CODE_THEMES.filter(thm => thm.startsWith('dark')).map((thm) => (
+                              <SelectItem key={thm} value={thm}>
+                                {t(`fields.claudeCodeTheme.options.${thm}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </SettingsSection>
 
@@ -1197,25 +1374,43 @@ function SettingsPage() {
                   </div>
                 </SettingsSection>
               )}
-
-          {/* Save Button */}
-          <div className="flex items-center justify-end gap-2 pt-2">
-            {saved && (
-              <span className="flex items-center gap-1 text-xs text-emerald-500">
-                <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                {tc('status.saved')}
-              </span>
-            )}
-            <Button
-              size="sm"
-              onClick={handleSaveAll}
-              disabled={!hasChanges || isLoading || updateConfig.isPending}
-            >
-              {tc('buttons.save')}
-            </Button>
-          </div>
         </div>
       </div>
+
+      {/* Sticky Save Button Footer */}
+      <div className="shrink-0 border-t border-border bg-background px-6 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-end gap-2">
+          {saved && (
+            <span className="flex items-center gap-1 text-xs text-accent">
+              <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
+              {tc('status.saved')}
+            </span>
+          )}
+          <Button
+            size="sm"
+            onClick={handleSaveAll}
+            disabled={!hasChanges || isLoading || updateConfig.isPending}
+          >
+            {tc('buttons.save')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Unsaved changes confirmation dialog */}
+      <AlertDialog open={status === 'blocked'}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('unsavedChanges.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('unsavedChanges.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={reset}>{t('unsavedChanges.stay')}</AlertDialogCancel>
+            <AlertDialogAction onClick={proceed}>{t('unsavedChanges.leave')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <FilesystemBrowser
         open={reposDirBrowserOpen}

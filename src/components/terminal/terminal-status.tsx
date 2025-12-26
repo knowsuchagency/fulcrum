@@ -61,10 +61,9 @@ export function TerminalStatusBar({
       {/* Status indicator */}
       <span
         className={cn('h-2 w-2 shrink-0 rounded-full', {
-          'bg-green-500': status === 'running',
-          'bg-zinc-500': status === 'exited' && exitCode === 0,
-          'bg-red-500': status === 'exited' && exitCode !== 0,
-          'bg-yellow-500': status === 'error',
+          'bg-accent': status === 'running',
+          'bg-muted-foreground': status === 'exited' && exitCode === 0,
+          'bg-destructive': (status === 'exited' && exitCode !== 0) || status === 'error',
         })}
       />
 
@@ -99,7 +98,7 @@ export function TerminalStatusBar({
           <span
             className={cn({
               'text-muted-foreground': exitCode === 0,
-              'text-red-400': exitCode !== 0,
+              'text-destructive': exitCode !== 0,
             })}
           >
             exit {exitCode}

@@ -11,6 +11,8 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
+import { useTheme } from 'next-themes'
+import { lightTheme, darkTheme } from './terminal-theme'
 
 interface TaskTerminalProps {
   taskName: string
@@ -19,9 +21,10 @@ interface TaskTerminalProps {
   aiMode?: 'default' | 'plan'
   description?: string
   startupScript?: string | null
+  serverPort?: number
 }
 
-export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript, serverPort = 7777 }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -33,6 +36,9 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const startupRanForRef = useRef<string | null>(null)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermOpened, setXtermOpened] = useState(false)
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const terminalTheme = isDark ? darkTheme : lightTheme
 
   // Reset all terminal tracking refs when cwd changes (navigating to different task)
   // This MUST run before terminal creation logic to ensure refs are clean
@@ -80,29 +86,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       fontSize: Math.round(13 * desktopZoom),
       fontFamily: 'JetBrains Mono Variable, Menlo, Monaco, monospace',
       lineHeight: 1.2,
-      theme: {
-        background: '#0a0a0a',
-        foreground: '#e4e4e7',
-        cursor: '#e4e4e7',
-        cursorAccent: '#0a0a0a',
-        selectionBackground: '#3f3f46',
-        black: '#18181b',
-        red: '#ef4444',
-        green: '#22c55e',
-        yellow: '#eab308',
-        blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
-        white: '#e4e4e7',
-        brightBlack: '#52525b',
-        brightRed: '#f87171',
-        brightGreen: '#4ade80',
-        brightYellow: '#facc15',
-        brightBlue: '#60a5fa',
-        brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee',
-        brightWhite: '#fafafa',
-      },
+      theme: terminalTheme,
     })
 
     const fitAddon = new FitAddon()
@@ -152,6 +136,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       fitAddonRef.current = null
       setXtermOpened(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- terminalTheme excluded: theme updates handled by separate effect
   }, [setTerminalFocused])
 
   // Handle resize
@@ -317,10 +302,11 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         }
 
         // 2. Then run Claude with the task prompt
+        const portFlag = serverPort !== 7777 ? ` --port=${serverPort}` : ''
         const systemPrompt = 'You are working in a Vibora task worktree. ' +
-          'When you finish working and need user input, run: vibora current-task review. ' +
-          'When linking a PR: vibora current-task pr <url>. ' +
-          'For notifications: vibora notify "Title" "Message".'
+          `When you finish working and need user input, run: vibora current-task review${portFlag}. ` +
+          `When linking a PR: vibora current-task pr <url>${portFlag}. ` +
+          `For notifications: vibora notify "Title" "Message"${portFlag}.`
         const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
         const prompt = taskInfo.replace(/"/g, '\\"')
         const escapedSystemPrompt = systemPrompt.replace(/"/g, '\\"')
@@ -354,6 +340,12 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     }
   }, [terminalId, doFit, startupScript, aiMode, description, taskName])
 
+  // Update terminal theme when system theme changes
+  useEffect(() => {
+    if (!termRef.current) return
+    termRef.current.options.theme = terminalTheme
+  }, [terminalTheme])
+
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {
     if (terminalId) {
@@ -363,7 +355,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
 
   if (!cwd) {
     return (
-      <div className={cn('flex h-full items-center justify-center bg-[#0a0a0a] text-muted-foreground text-sm', className)}>
+      <div className={cn('flex h-full items-center justify-center text-muted-foreground text-sm bg-terminal-background', className)}>
         No worktree path configured for this task
       </div>
     )
@@ -373,12 +365,12 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     <div className="flex h-full min-h-0 flex-col">
       {/* Status bar */}
       {!connected && (
-        <div className="shrink-0 px-2 py-1 bg-yellow-500/20 text-yellow-500 text-xs">
+        <div className="shrink-0 px-2 py-1 bg-muted-foreground/20 text-muted-foreground text-xs">
           Connecting to terminal server...
         </div>
       )}
       {terminalStatus === 'error' && (
-        <div className="shrink-0 px-2 py-1 bg-red-500/20 text-red-500 text-xs">
+        <div className="shrink-0 px-2 py-1 bg-destructive/20 text-destructive text-xs">
           Terminal failed to start. The worktree directory may not exist.
         </div>
       )}
@@ -392,11 +384,11 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className={cn('h-full w-full overflow-hidden bg-[#0a0a0a] p-2', className)}
+          className={cn('h-full w-full overflow-hidden p-2 bg-terminal-background', className)}
         />
         <button
           onClick={() => termRef.current?.scrollToBottom()}
-          className="absolute top-2 right-5 p-1 text-white/50 hover:text-white/80 transition-colors"
+          className={cn('absolute top-2 right-5 p-1 transition-colors', isDark ? 'text-white/50 hover:text-white/80' : 'text-black/50 hover:text-black/80')}
         >
           <HugeiconsIcon icon={ArrowDownDoubleIcon} size={20} strokeWidth={2} />
         </button>

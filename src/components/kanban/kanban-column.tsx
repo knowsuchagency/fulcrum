@@ -7,10 +7,10 @@ import type { Task, TaskStatus } from '@/types'
 import { cn } from '@/lib/utils'
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  IN_PROGRESS: 'border-t-slate-400',
-  IN_REVIEW: 'border-t-violet-400',
-  DONE: 'border-t-emerald-400',
-  CANCELED: 'border-t-rose-500',
+  IN_PROGRESS: 'border-t-[#8d909b]',  // Lavender Grey - active
+  IN_REVIEW: 'border-t-[#2a2a27] dark:border-t-[#faf9f5]', // Graphite/Porcelain - waiting
+  DONE: 'border-t-[#0d5c63]',         // Stormy Teal - complete
+  CANCELED: 'border-t-[#dd403a]',     // Cinnabar - stopped
 }
 
 interface KanbanColumnProps {

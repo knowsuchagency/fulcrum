@@ -138,6 +138,7 @@ function TerminalsView() {
       worktreePath: string
       baseBranch: string
       branch: string | null
+      prUrl: string | null
     }>()
     for (const task of tasks) {
       if (task.worktreePath) {
@@ -150,6 +151,7 @@ function TerminalsView() {
           worktreePath: task.worktreePath,
           baseBranch: task.baseBranch,
           branch: task.branch,
+          prUrl: task.prUrl,
         })
       }
     }
@@ -371,7 +373,7 @@ function TerminalsView() {
   return (
     <div className="flex h-full max-w-full flex-col overflow-hidden">
       {/* Tab Bar + Actions */}
-      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-muted/30 px-2 py-1">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-background px-2 py-1">
         <div className="min-w-0 flex-1 overflow-x-auto">
           <TerminalTabBar
             tabs={tabBarTabs}
@@ -411,8 +413,8 @@ function TerminalsView() {
             className={cn(
               'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
               activeTabId === ALL_TASKS_TAB_ID
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                ? 'bg-destructive text-white'
+                : 'text-destructive hover:bg-destructive/10'
             )}
           >
             <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
@@ -423,7 +425,7 @@ function TerminalsView() {
             size="sm"
             onClick={handleTerminalAdd}
             disabled={!connected || visibleTerminalCount >= 24 || activeTabId === ALL_TASKS_TAB_ID}
-            className="max-sm:px-2"
+            className="max-sm:px-2 border-transparent text-primary"
           >
             <HugeiconsIcon
               icon={PlusSignIcon}
@@ -437,7 +439,7 @@ function TerminalsView() {
       </div>
 
       {/* Terminal Grid */}
-      <div className="pixel-grid min-w-0 flex-1 overflow-hidden">
+      <div className="min-w-0 flex-1 overflow-hidden">
         <TerminalGrid
           terminals={visibleTerminals}
           onTerminalClose={activeTabId === ALL_TASKS_TAB_ID ? undefined : handleTerminalClose}

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon } from '@hugeicons/core-free-icons'
-import { highlightCode, getLangFromPath } from '@/lib/shiki'
+import { highlightCode, getLangFromPath, type ShikiTheme } from '@/lib/shiki'
 import { cn } from '@/lib/utils'
 import type { FileContent as FileContentType } from '@/types'
+import { useTheme } from 'next-themes'
 
 interface FileContentProps {
   filePath: string | null
@@ -24,6 +25,8 @@ export function FileContent({
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
   const [isHighlighting, setIsHighlighting] = useState(false)
   const [wrap, setWrap] = useState(true)
+  const { resolvedTheme } = useTheme()
+  const shikiTheme: ShikiTheme = resolvedTheme === 'light' ? 'light' : 'dark'
 
   useEffect(() => {
     if (!content || !filePath) {
@@ -44,7 +47,7 @@ export function FileContent({
     setIsHighlighting(true)
     const lang = getLangFromPath(filePath)
 
-    highlightCode(content.content, lang)
+    highlightCode(content.content, lang, shikiTheme)
       .then((html) => {
         setHighlightedHtml(html)
         setIsHighlighting(false)
@@ -53,7 +56,7 @@ export function FileContent({
         setHighlightedHtml(null)
         setIsHighlighting(false)
       })
-  }, [content, filePath])
+  }, [content, filePath, shikiTheme])
 
   // No file selected
   if (!filePath) {
@@ -106,8 +109,8 @@ export function FileContent({
   // Image file
   if (content.mimeType.startsWith('image/')) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between px-2 py-1.5 bg-muted/50 border-b border-border text-xs">
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <div className="flex shrink-0 items-center justify-between px-2 py-1.5 bg-card border-b border-border text-xs">
           <span className="text-muted-foreground truncate" title={filePath}>
             {filePath.split('/').pop() || filePath}
           </span>
@@ -119,7 +122,7 @@ export function FileContent({
             <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
           </button>
         </div>
-        <div className="flex flex-1 items-center justify-center p-4 bg-[#0d1117]">
+        <div className="flex flex-1 items-center justify-center p-4 bg-muted">
           <img
             src={content.content}
             alt={filePath}
@@ -134,14 +137,14 @@ export function FileContent({
   const fileName = filePath.split('/').pop() || filePath
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center gap-3 px-2 py-1.5 bg-muted/50 border-b border-border text-xs">
+      <div className="flex shrink-0 items-center gap-3 px-2 py-1.5 bg-card border-b border-border text-xs">
         <span className="text-muted-foreground truncate flex-1" title={filePath}>
           {fileName}
         </span>
         {content.truncated && (
-          <span className="text-yellow-500">
+          <span className="text-destructive">
             Truncated ({content.lineCount.toLocaleString()} lines)
           </span>
         )}

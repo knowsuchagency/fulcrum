@@ -10,6 +10,10 @@ const CURRENT_SCHEMA_VERSION = 3
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed'
 
+// Claude Code theme types
+export type ClaudeCodeTheme = 'light' | 'light-ansi' | 'light-daltonized' | 'dark' | 'dark-ansi' | 'dark-daltonized'
+export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'light-daltonized', 'dark', 'dark-ansi', 'dark-daltonized']
+
 // Nested settings interface
 export interface Settings {
   _schemaVersion?: number
@@ -23,9 +27,6 @@ export interface Settings {
     username: string | null
     password: string | null
   }
-  remoteVibora: {
-    url: string
-  }
   editor: {
     app: EditorApp
     host: string
@@ -37,6 +38,10 @@ export interface Settings {
   }
   appearance: {
     language: 'en' | 'zh' | null
+    theme: 'system' | 'light' | 'dark' | null
+    syncClaudeCodeTheme: boolean
+    claudeCodeLightTheme: ClaudeCodeTheme
+    claudeCodeDarkTheme: ClaudeCodeTheme
   }
 }
 
@@ -53,9 +58,6 @@ const DEFAULT_SETTINGS: Settings = {
     username: null,
     password: null,
   },
-  remoteVibora: {
-    url: '',
-  },
   editor: {
     app: 'vscode',
     host: '',
@@ -67,6 +69,10 @@ const DEFAULT_SETTINGS: Settings = {
   },
   appearance: {
     language: null,
+    theme: null,
+    syncClaudeCodeTheme: false,
+    claudeCodeLightTheme: 'light-ansi',
+    claudeCodeDarkTheme: 'dark-ansi',
   },
 }
 
@@ -84,6 +90,10 @@ const MIGRATION_MAP: Record<string, string> = {
   linearApiKey: 'integrations.linearApiKey',
   githubPat: 'integrations.githubPat',
   language: 'appearance.language',
+  theme: 'appearance.theme',
+  syncClaudeCodeTheme: 'appearance.syncClaudeCodeTheme',
+  claudeCodeLightTheme: 'appearance.claudeCodeLightTheme',
+  claudeCodeDarkTheme: 'appearance.claudeCodeDarkTheme',
 }
 
 // Helper: Get nested value from object using dot notation
@@ -116,15 +126,6 @@ interface MigrationResult {
   migrated: boolean
   migratedKeys: string[]
   warnings: string[]
-}
-
-// Helper: Construct URL from host and port
-function constructRemoteUrl(host: string, port?: number): string {
-  if (!host) return ''
-  const effectivePort = port || 7777
-  // Omit port for standard HTTP/HTTPS ports
-  const portSuffix = effectivePort === 80 || effectivePort === 443 ? '' : `:${effectivePort}`
-  return `http://${host}${portSuffix}`
 }
 
 // Migrate flat settings to nested structure
@@ -169,29 +170,10 @@ function migrateSettings(parsed: Record<string, unknown>): MigrationResult {
       }
     }
 
-    // Handle flat remoteHost/hostname → remoteVibora.url
-    const flatHost = (parsed.remoteHost as string) || (parsed.hostname as string) || ''
-    if (flatHost) {
-      const url = constructRemoteUrl(flatHost, 7777)
-      setNestedValue(parsed, 'remoteVibora.url', url)
-      result.migratedKeys.push('remoteHost')
-      delete parsed.remoteHost
-      delete parsed.hostname
-      result.migrated = true
-    }
-  }
-
-  // Schema 2 → 3: Migrate remoteVibora.host + remoteVibora.port → remoteVibora.url
-  if (version < 3) {
-    const remoteVibora = parsed.remoteVibora as Record<string, unknown> | undefined
-    if (remoteVibora && 'host' in remoteVibora) {
-      const host = (remoteVibora.host as string) || ''
-      const port = (remoteVibora.port as number) || 7777
-      const url = constructRemoteUrl(host, port)
-      parsed.remoteVibora = { url }
-      result.migratedKeys.push('remoteVibora.host')
-      result.migrated = true
-    }
+    // Clean up old remote settings if present (no longer used)
+    delete parsed.remoteHost
+    delete parsed.hostname
+    delete parsed.remoteVibora
   }
 
   // Set schema version
@@ -324,9 +306,6 @@ export function getSettings(): Settings {
       username: ((parsed.authentication as Record<string, unknown>)?.username as string | null) ?? null,
       password: ((parsed.authentication as Record<string, unknown>)?.password as string | null) ?? null,
     },
-    remoteVibora: {
-      url: ((parsed.remoteVibora as Record<string, unknown>)?.url as string) ?? DEFAULT_SETTINGS.remoteVibora.url,
-    },
     editor: {
       app: ((parsed.editor as Record<string, unknown>)?.app as EditorApp) ?? DEFAULT_SETTINGS.editor.app,
       host: ((parsed.editor as Record<string, unknown>)?.host as string) ?? DEFAULT_SETTINGS.editor.host,
@@ -338,6 +317,10 @@ export function getSettings(): Settings {
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
+      theme: ((parsed.appearance as Record<string, unknown>)?.theme as 'system' | 'light' | 'dark' | null) ?? null,
+      syncClaudeCodeTheme: ((parsed.appearance as Record<string, unknown>)?.syncClaudeCodeTheme as boolean) ?? false,
+      claudeCodeLightTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeLightTheme as ClaudeCodeTheme) ?? 'light-ansi',
+      claudeCodeDarkTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeDarkTheme as ClaudeCodeTheme) ?? 'dark-ansi',
     },
   }
 
@@ -358,9 +341,6 @@ export function getSettings(): Settings {
     authentication: {
       username: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.authentication.username,
       password: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.authentication.password,
-    },
-    remoteVibora: {
-      url: process.env.VIBORA_REMOTE_URL ?? fileSettings.remoteVibora.url,
     },
     editor: {
       app: fileSettings.editor.app,
@@ -392,13 +372,16 @@ export function getSettingByKey<K extends keyof LegacySettings>(key: K): LegacyS
 export interface LegacySettings {
   port: number
   defaultGitReposDir: string
-  remoteUrl: string
   sshPort: number
   basicAuthUsername: string | null
   basicAuthPassword: string | null
   linearApiKey: string | null
   githubPat: string | null
   language: 'en' | 'zh' | null
+  theme: 'system' | 'light' | 'dark' | null
+  syncClaudeCodeTheme: boolean
+  claudeCodeLightTheme: ClaudeCodeTheme
+  claudeCodeDarkTheme: ClaudeCodeTheme
 }
 
 // Convert nested settings to legacy flat format
@@ -406,13 +389,16 @@ export function toLegacySettings(settings: Settings): LegacySettings {
   return {
     port: settings.server.port,
     defaultGitReposDir: settings.paths.defaultGitReposDir,
-    remoteUrl: settings.remoteVibora.url,
     sshPort: settings.editor.sshPort,
     basicAuthUsername: settings.authentication.username,
     basicAuthPassword: settings.authentication.password,
     linearApiKey: settings.integrations.linearApiKey,
     githubPat: settings.integrations.githubPat,
     language: settings.appearance.language,
+    theme: settings.appearance.theme,
+    syncClaudeCodeTheme: settings.appearance.syncClaudeCodeTheme,
+    claudeCodeLightTheme: settings.appearance.claudeCodeLightTheme,
+    claudeCodeDarkTheme: settings.appearance.claudeCodeDarkTheme,
   }
 }
 
@@ -498,7 +484,7 @@ export function getDefaultValue(settingPath: string): unknown {
 // Notification settings types
 export interface SoundNotificationConfig {
   enabled: boolean
-  soundFile?: string
+  customSoundFile?: string // Path to user-uploaded sound file
 }
 
 export interface SlackNotificationConfig {
@@ -526,8 +512,8 @@ export interface NotificationSettings {
 }
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  enabled: false,
-  sound: { enabled: false },
+  enabled: true,
+  sound: { enabled: true },
   slack: { enabled: false },
   discord: { enabled: false },
   pushover: { enabled: false },
@@ -620,6 +606,46 @@ export function updateClaudeSettings(updates: Record<string, unknown>): void {
   const current = getClaudeSettings()
   const merged = { ...current, ...updates }
   fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
+}
+
+// ==================== Claude Code Config ====================
+// These functions manage ~/.claude.json for Claude Code preferences (theme, etc.)
+
+// Get Claude config file path (~/.claude.json)
+function getClaudeConfigPath(): string {
+  return path.join(os.homedir(), '.claude.json')
+}
+
+// Read Claude Code config
+export function getClaudeConfig(): Record<string, unknown> {
+  const configPath = getClaudeConfigPath()
+  if (!fs.existsSync(configPath)) return {}
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  } catch {
+    return {}
+  }
+}
+
+// Update Claude Code config (merges with existing)
+export function updateClaudeConfig(updates: Record<string, unknown>): void {
+  const configPath = getClaudeConfigPath()
+  const current = getClaudeConfig()
+  const merged = { ...current, ...updates }
+  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), 'utf-8')
+}
+
+// Update Claude Code theme if sync is enabled
+// Uses user-configured themes for light/dark mode
+export function syncClaudeCodeTheme(resolvedTheme: 'light' | 'dark'): void {
+  const settings = getSettings()
+  if (!settings.appearance.syncClaudeCodeTheme) return
+
+  const claudeTheme = resolvedTheme === 'light'
+    ? settings.appearance.claudeCodeLightTheme
+    : settings.appearance.claudeCodeDarkTheme
+  updateClaudeConfig({ theme: claudeTheme })
+  log.settings.info('Synced Claude Code theme', { claudeTheme, resolvedTheme })
 }
 
 // ==================== z.ai Settings ====================

@@ -715,6 +715,73 @@ app.post('/merge-to-main', async (c) => {
   }
 })
 
+// POST /api/git/push - Push worktree branch to origin
+app.post('/push', async (c) => {
+  try {
+    const body = await c.req.json<{
+      worktreePath: string
+    }>()
+
+    const { worktreePath } = body
+
+    if (!worktreePath) {
+      return c.json({ error: 'Missing required field: worktreePath' }, 400)
+    }
+
+    // Verify path exists
+    if (!fs.existsSync(worktreePath)) {
+      return c.json({ error: 'Worktree path does not exist' }, 404)
+    }
+
+    // Get current branch
+    let branch: string
+    try {
+      branch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
+    } catch {
+      return c.json({ error: 'Failed to determine current branch' }, 500)
+    }
+
+    // Check for uncommitted changes
+    try {
+      const status = gitExec(worktreePath, 'status --porcelain')
+      if (status.trim()) {
+        return c.json({
+          error: 'Worktree has uncommitted changes. Please commit or stash changes before pushing.',
+          hasUncommittedChanges: true,
+        }, 409)
+      }
+    } catch {
+      // Continue with push
+    }
+
+    // Push to origin
+    try {
+      gitExec(worktreePath, `push origin ${branch}`)
+    } catch (pushErr) {
+      const errorMsg = pushErr instanceof Error ? pushErr.message : 'Unknown error'
+
+      // Check for common push errors
+      if (errorMsg.includes('rejected') || errorMsg.includes('non-fast-forward')) {
+        return c.json({
+          error: 'Push rejected. The remote has changes you do not have locally. Pull first.',
+          pushRejected: true,
+        }, 409)
+      }
+
+      return c.json({
+        error: `Failed to push: ${errorMsg}`,
+      }, 500)
+    }
+
+    return c.json({
+      success: true,
+      branch,
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to push' }, 500)
+  }
+})
+
 // POST /api/git/sync-parent - Sync parent repo's default branch with origin
 app.post('/sync-parent', async (c) => {
   try {
