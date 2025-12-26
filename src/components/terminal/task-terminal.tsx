@@ -338,7 +338,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, doFit, startupScript, aiMode, description, taskName])
+  }, [terminalId, doFit, startupScript, aiMode, description, taskName, serverPort])
 
   // Update terminal theme when system theme changes
   useEffect(() => {

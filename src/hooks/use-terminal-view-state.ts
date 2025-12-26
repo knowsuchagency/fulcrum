@@ -19,7 +19,6 @@ interface TerminalViewState {
 }
 
 interface PendingUpdates {
-  activeTabId?: string | null
   focusedTerminals?: FocusedTerminalsMap
   currentView?: string | null
   currentTaskId?: string | null
@@ -28,7 +27,7 @@ interface PendingUpdates {
 }
 
 const DEFAULT_VIEW_STATE: TerminalViewState = {
-  activeTabId: null,
+  activeTabId: null, // Deprecated: tab state is now stored in URL
   focusedTerminals: {},
   currentView: null,
   currentTaskId: null,
@@ -94,7 +93,7 @@ export function useTerminalViewState() {
       queryClient.setQueryData(['terminal-view-state'], (current: TerminalViewState | undefined) => {
         const currentState = current ?? DEFAULT_VIEW_STATE
         return {
-          activeTabId: merged.activeTabId !== undefined ? merged.activeTabId : currentState.activeTabId,
+          activeTabId: currentState.activeTabId, // Deprecated: tab state is now in URL
           focusedTerminals: {
             ...currentState.focusedTerminals,
             ...merged.focusedTerminals,
@@ -116,13 +115,6 @@ export function useTerminalViewState() {
       }, 500)
     },
     [queryClient]
-  )
-
-  const setActiveTab = useCallback(
-    (tabId: string | null) => {
-      updateViewState({ activeTabId: tabId })
-    },
-    [updateViewState]
   )
 
   const setFocusedTerminal = useCallback(
@@ -194,8 +186,6 @@ export function useTerminalViewState() {
   return {
     viewState,
     isLoading,
-    activeTabId: viewState.activeTabId,
-    setActiveTab,
     getFocusedTerminal,
     setFocusedTerminal,
     updateViewTracking,

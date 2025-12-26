@@ -1,8 +1,6 @@
-import { spawn } from 'child_process'
 import {
   getNotificationSettings,
   type NotificationSettings,
-  type SoundNotificationConfig,
   type SlackNotificationConfig,
   type DiscordNotificationConfig,
   type PushoverNotificationConfig,
@@ -27,9 +25,7 @@ export interface NotificationResult {
 
 // Play notification sound via frontend (web audio)
 // The server just signals to play; the frontend handles actual playback
-async function sendSoundNotification(
-  _config: SoundNotificationConfig
-): Promise<NotificationResult> {
+async function sendSoundNotification(): Promise<NotificationResult> {
   // Sound is played by the frontend via WebSocket notification
   // This function exists for the test endpoint
   return { channel: 'sound', success: true }
@@ -189,7 +185,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<No
   // Sound (macOS only)
   if (settings.sound?.enabled) {
     promises.push(
-      sendSoundNotification(settings.sound)
+      sendSoundNotification()
         .then((r) => results.push(r))
         .catch((e) => results.push({ channel: 'sound', success: false, error: e.message }))
     )
@@ -248,7 +244,7 @@ export async function testNotificationChannel(
 
   switch (channel) {
     case 'sound':
-      return sendSoundNotification(config.sound)
+      return sendSoundNotification()
     case 'slack':
       return sendSlackNotification(config.slack, testPayload)
     case 'discord':

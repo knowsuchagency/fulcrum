@@ -153,7 +153,7 @@ export function useSyncClaudeCodeTheme() {
 
   return {
     ...query,
-    data: Boolean(query.data?.value) ?? false,
+    data: Boolean(query.data?.value),
     isDefault: query.data?.isDefault ?? true,
   }
 }

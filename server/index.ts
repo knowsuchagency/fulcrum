@@ -31,8 +31,8 @@ const ptyManager = initPTYManager({
   },
 })
 
-// Restore terminals from database (reconnect to existing tmux sessions)
-ptyManager.restoreFromDatabase()
+// Restore terminals from database (reconnect to existing dtach sessions)
+await ptyManager.restoreFromDatabase()
 
 // Set up broadcast function for terminal destruction from task deletion
 setBroadcastDestroyed((terminalId) => {
