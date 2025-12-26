@@ -10,13 +10,13 @@
     /* Light mode: Porcelain background, Graphite foreground */
     --background: #faf9f5;                        /* Porcelain */
     --foreground: #2a2a27;                        /* Graphite */
-    --card: #ffffff;                              /* White card */
+    --card: #fdfcfa;                              /* Warm white card */
     --card-foreground: #2a2a27;                   /* Graphite */
-    --popover: #ffffff;                           /* White popover */
+    --popover: #fdfcfa;                           /* Warm white popover */
     --popover-foreground: #2a2a27;                /* Graphite */
     --primary: #2a2a27;                           /* Graphite - primary in light mode */
     --primary-foreground: #faf9f5;                /* Porcelain */
-    --secondary: #ffffff;                         /* White */
+    --secondary: #fdfcfa;                         /* Warm white */
     --secondary-foreground: #2a2a27;              /* Graphite */
     --muted: #faf9f5;                             /* Porcelain */
     --muted-foreground: #5c5c59;                  /* Darker grey for contrast */

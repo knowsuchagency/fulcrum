@@ -206,7 +206,7 @@ function RepositoryDetailView() {
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-xl space-y-6">
+        <div className="mx-auto max-w-xl space-y-6 bg-card rounded-lg p-6 border border-border">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
             <span className="font-mono">{repository.path}</span>
