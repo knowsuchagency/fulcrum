@@ -512,8 +512,8 @@ export interface NotificationSettings {
 }
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  enabled: false,
-  sound: { enabled: false },
+  enabled: true,
+  sound: { enabled: true },
   slack: { enabled: false },
   discord: { enabled: false },
   pushover: { enabled: false },
