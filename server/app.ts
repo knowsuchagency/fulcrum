@@ -142,7 +142,7 @@ export function createApp() {
     })
 
     // Serve specific static files
-    const staticFiles = ['favicon.ico', 'vibora-icon.png', 'vibora-logo.jpeg', 'vite.svg', 'logo-dark.jpg', 'logo-light.jpg']
+    const staticFiles = ['favicon.ico', 'vibora-icon.png', 'vibora-logo.jpeg', 'vite.svg', 'logo-dark.jpg', 'logo-light.jpg', 'goat.jpeg']
     for (const file of staticFiles) {
       app.get(`/${file}`, async () => {
         const filePath = join(distPath, file)
