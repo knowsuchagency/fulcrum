@@ -154,8 +154,18 @@ export class PTYManager {
   destroy(terminalId: string): boolean {
     const session = this.sessions.get(terminalId)
     if (!session) {
+      log.pty.warn('destroy called for non-existent terminal', { terminalId })
       return false
     }
+
+    const info = session.getInfo()
+    log.pty.info('Destroying terminal', {
+      terminalId,
+      name: info.name,
+      cwd: info.cwd,
+      tabId: info.tabId,
+      stack: new Error().stack?.split('\n').slice(1, 6).join('\n'),
+    })
 
     session.kill()
     this.sessions.delete(terminalId)
@@ -235,7 +245,12 @@ export class PTYManager {
   }
 
   listTerminals(): TerminalInfo[] {
-    return Array.from(this.sessions.values()).map((s) => s.getInfo())
+    const terminals = Array.from(this.sessions.values()).map((s) => s.getInfo())
+    log.pty.debug('listTerminals called', {
+      count: terminals.length,
+      terminals: terminals.map((t) => ({ id: t.id, name: t.name, cwd: t.cwd, tabId: t.tabId })),
+    })
+    return terminals
   }
 
   // Kill Claude processes in a specific terminal (but keep terminal running)

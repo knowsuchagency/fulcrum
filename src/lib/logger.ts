@@ -158,6 +158,7 @@ export function createLogger(component: string): Logger {
 // Pre-configured loggers for common components
 export const log = {
   terminal: createLogger('Terminal'),
+  terminalsView: createLogger('TerminalsView'),
   ws: createLogger('WebSocket'),
   taskTerminal: createLogger('TaskTerminal'),
   kanban: createLogger('Kanban'),
