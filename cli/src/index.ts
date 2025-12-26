@@ -96,7 +96,7 @@ Commands:
   tasks move <id>           Move task to different status
   tasks delete <id>         Delete a task
 
-  up                        Start Vibora server (daemon)
+  up [--host]               Start Vibora server (daemon)
   down                      Stop Vibora server
   status                    Check if server is running
 

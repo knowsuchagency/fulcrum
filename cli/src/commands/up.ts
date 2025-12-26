@@ -118,6 +118,7 @@ export async function handleUpCommand(flags: Record<string, string>) {
   }
 
   const port = getPort(flags.port)
+  const host = flags.host ? '0.0.0.0' : 'localhost'
   const packageRoot = getPackageRoot()
   const serverPath = join(packageRoot, 'server', 'index.js')
 
@@ -146,6 +147,7 @@ export async function handleUpCommand(flags: Record<string, string>) {
       ...process.env,
       NODE_ENV: 'production',
       PORT: port.toString(),
+      HOST: host,
       VIBORA_DIR: viboraDir,
       VIBORA_PACKAGE_ROOT: packageRoot,
       BUN_PTY_LIB: ptyLibPath,
