@@ -1,3 +1,6 @@
+[env]
+_.file = ".env"
+
 [tools]
 bun = "latest"
 
@@ -67,18 +70,10 @@ git commit -m "bump ${usage_type}"
 """
 
 [tasks.dev]
-description = "Start frontend and backend dev servers (requires PORT and VIBORA_DIR env vars)"
+description = "Start frontend and backend dev servers"
 depends = ["install"]
 usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
 run = """
-if [ -z "$PORT" ]; then
-  echo "Error: PORT env var is required. Example: PORT=6666 VIBORA_DIR=~/.vibora/dev mise run dev"
-  exit 1
-fi
-if [ -z "$VIBORA_DIR" ]; then
-  echo "Error: VIBORA_DIR env var is required. Example: PORT=6666 VIBORA_DIR=~/.vibora/dev mise run dev"
-  exit 1
-fi
 # Determine host binding
 if [ "$usage_host" = "true" ]; then
   export HOST="0.0.0.0"
@@ -100,7 +95,7 @@ bun --watch server/index.ts
 
 [tasks.client]
 description = "Start frontend dev server"
-run = "DEBUG=\"${DEBUG:-}\" vite --host"
+run = "DEBUG=\"${DEBUG:-}\" vite --host --port \"${FRONTEND_PORT:-5173}\""
 
 [tasks.build]
 description = "Build for production"
