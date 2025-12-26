@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
-import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { useTasks } from '@/hooks/use-tasks'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useWorktreeBasePath } from '@/hooks/use-config'
@@ -59,31 +58,26 @@ function TerminalsView() {
     sendInputToTerminal,
   } = useTerminalWS()
 
-  // Track active tab via server-persisted state
-  const { activeTabId, setActiveTab, isLoading: isViewStateLoading } = useTerminalViewState()
+  // URL is the source of truth for active tab
+  // Fall back to first tab if URL doesn't specify a valid tab
+  const tabIds = useMemo(() => tabs.map((t) => t.id), [tabs])
+  const isValidTab = tabFromUrl && (tabIds.includes(tabFromUrl) || tabFromUrl === ALL_TASKS_TAB_ID)
+  const activeTabId = isValidTab ? tabFromUrl : (tabs[0]?.id ?? null)
 
-  // Handle tab from URL search param (e.g., from cmd+i navigation)
-  // This runs before the fallback effect and clears the URL param
-  const hasAppliedUrlTab = useRef(false)
-  useEffect(() => {
-    if (tabFromUrl && !hasAppliedUrlTab.current) {
-      hasAppliedUrlTab.current = true
-      setActiveTab(tabFromUrl)
-      // Clear the search param from URL without adding to history
-      navigate({ to: '/terminals', search: {}, replace: true })
-    }
-  }, [tabFromUrl, setActiveTab, navigate])
+  // Navigate to update URL when changing tabs
+  const setActiveTab = useCallback(
+    (tabId: string) => {
+      navigate({ to: '/terminals', search: { tab: tabId }, replace: true })
+    },
+    [navigate]
+  )
 
-  // Ensure activeTabId is valid - set to first tab if invalid
-  // Skip if we just applied a tab from URL to avoid race condition
+  // Redirect to first tab if URL has no/invalid tab (once tabs are loaded)
   useEffect(() => {
-    if (tabs.length > 0 && !isViewStateLoading && !tabFromUrl) {
-      const tabIds = tabs.map((t) => t.id)
-      if (!activeTabId || (!tabIds.includes(activeTabId) && activeTabId !== ALL_TASKS_TAB_ID)) {
-        setActiveTab(tabs[0].id)
-      }
+    if (tabs.length > 0 && !isValidTab) {
+      navigate({ to: '/terminals', search: { tab: tabs[0].id }, replace: true })
     }
-  }, [tabs, activeTabId, isViewStateLoading, setActiveTab, tabFromUrl])
+  }, [tabs, isValidTab, navigate])
 
   const { data: tasks = [], isLoading: isTasksLoading } = useTasks()
   const { data: repositories = [] } = useRepositories()

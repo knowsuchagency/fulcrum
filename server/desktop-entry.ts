@@ -227,7 +227,7 @@ async function main() {
   })
 
   // Restore terminals from database
-  ptyManager.restoreFromDatabase()
+  await ptyManager.restoreFromDatabase()
 
   // Set up broadcast function for terminal destruction
   setBroadcastDestroyed((terminalId) => {
