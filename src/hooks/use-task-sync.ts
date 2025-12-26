@@ -60,17 +60,20 @@ export function useTaskSync() {
               break
           }
 
+          // Play notification sound if enabled
+          if (playSound) {
+            const audio = new Audio('/sounds/goat-bleat.mp3')
+            audio.play().catch(() => {
+              // Ignore autoplay errors (browser may block without user interaction)
+            })
+          }
+
           // Post to parent window for desktop native notifications
           if (window.parent !== window) {
             window.parent.postMessage(
               { type: 'vibora:notification', title, message: description, notificationType },
               '*'
             )
-
-            // Send sound request to desktop app if enabled
-            if (playSound) {
-              window.parent.postMessage({ type: 'vibora:playSound' }, '*')
-            }
           }
         }
       } catch {
