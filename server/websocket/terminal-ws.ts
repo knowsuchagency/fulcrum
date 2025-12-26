@@ -119,9 +119,10 @@ export const terminalWebSocketHandlers: WSEvents = {
 
           log.ws.debug('terminal:create request', { name, cwd: effectiveCwd, tabId, clientId: clientData.id })
 
-          // Prevent duplicate terminals for same cwd
-          if (effectiveCwd) {
-            const existing = ptyManager.listTerminals().find((t) => t.cwd === effectiveCwd)
+          // Prevent duplicate terminals for same cwd - but only for task terminals (no tabId)
+          // Regular tabs can have multiple terminals in the same directory
+          if (effectiveCwd && !tabId) {
+            const existing = ptyManager.listTerminals().find((t) => t.cwd === effectiveCwd && !t.tabId)
             if (existing) {
               // Return existing terminal instead of creating duplicate
               log.ws.debug('terminal:create returning existing', { terminalId: existing.id, isNew: false })

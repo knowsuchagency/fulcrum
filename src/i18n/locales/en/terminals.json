@@ -11,5 +11,9 @@
     "clearDirectory": "Clear directory",
     "cancel": "Cancel",
     "save": "Save"
+  },
+  "newTab": {
+    "title": "New Tab",
+    "create": "Create"
   }
 }

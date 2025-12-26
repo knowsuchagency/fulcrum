@@ -28,6 +28,10 @@ export function TerminalTabBar({
           key={tab.id}
           onClick={() => onTabSelect(tab.id)}
           onDoubleClick={() => onTabEdit(tab)}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            onTabEdit(tab)
+          }}
           className={cn(
             'group relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2 max-sm:py-1',
             tab.id === activeTabId

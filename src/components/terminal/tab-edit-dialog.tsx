@@ -21,6 +21,8 @@ interface TabEditDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (tabId: string, updates: { name?: string; directory?: string | null }) => void
+  onCreate?: (name: string, directory?: string) => void
+  defaultName?: string
 }
 
 export function TabEditDialog({
@@ -28,21 +30,39 @@ export function TabEditDialog({
   open,
   onOpenChange,
   onSave,
+  onCreate,
+  defaultName = '',
 }: TabEditDialogProps) {
   const { t } = useTranslation('terminals')
   const [name, setName] = useState('')
   const [directory, setDirectory] = useState<string | null>(null)
   const [browserOpen, setBrowserOpen] = useState(false)
 
-  // Reset form when dialog opens with a new tab
+  const isCreateMode = !tab && onCreate
+
+  // Reset form when dialog opens
   useEffect(() => {
-    if (open && tab) {
-      setName(tab.name)
-      setDirectory(tab.directory ?? null)
+    if (open) {
+      if (tab) {
+        // Edit mode - populate from existing tab
+        setName(tab.name)
+        setDirectory(tab.directory ?? null)
+      } else {
+        // Create mode - use defaults
+        setName(defaultName)
+        setDirectory(null)
+      }
     }
-  }, [open, tab])
+  }, [open, tab, defaultName])
 
   const handleSave = () => {
+    if (isCreateMode) {
+      // Create mode
+      onCreate(name.trim(), directory ?? undefined)
+      onOpenChange(false)
+      return
+    }
+
     if (!tab) return
 
     const updates: { name?: string; directory?: string | null } = {}
@@ -85,7 +105,9 @@ export function TabEditDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('editTab.title')}</DialogTitle>
+            <DialogTitle>
+              {isCreateMode ? t('newTab.title') : t('editTab.title')}
+            </DialogTitle>
           </DialogHeader>
 
           <FieldGroup className="mt-4">
@@ -142,7 +164,7 @@ export function TabEditDialog({
               {t('editTab.cancel')}
             </DialogClose>
             <Button onClick={handleSave} disabled={!name.trim()}>
-              {t('editTab.save')}
+              {isCreateMode ? t('newTab.create') : t('editTab.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

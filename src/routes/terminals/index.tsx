@@ -60,8 +60,9 @@ function TerminalsView() {
     sendInputToTerminal,
   } = useTerminalWS()
 
-  // State for tab edit dialog
+  // State for tab edit/create dialog
   const [editingTab, setEditingTab] = useState<TerminalTab | null>(null)
+  const [isCreatingTab, setIsCreatingTab] = useState(false)
 
   // URL is the source of truth for active tab
   // Fall back to first tab if URL doesn't specify a valid tab
@@ -256,6 +257,13 @@ function TerminalsView() {
   }, [activeTabId, terminals, activeTaskWorktrees, repoFilter, tasks])
 
   const handleTerminalAdd = useCallback(() => {
+    log.terminal.info('handleTerminalAdd called', {
+      activeTabId,
+      connected,
+      pendingTerminalCreate: pendingTerminalCreateRef.current,
+      terminalCount: terminals.length,
+    })
+
     // Prevent duplicate creations from double-clicks or React Strict Mode
     if (pendingTerminalCreateRef.current) {
       log.terminal.debug('Skipping terminal creation, already pending')
@@ -265,11 +273,18 @@ function TerminalsView() {
 
     terminalCountRef.current++
     const terminalName = `Terminal ${terminalCountRef.current}`
-    log.terminal.debug('Creating terminal', { name: terminalName })
 
     // Calculate position for new terminal (append to end)
     const terminalsInTab = terminals.filter((t) => t.tabId === activeTabId)
     const positionInTab = terminalsInTab.length
+
+    log.terminal.info('Creating terminal', {
+      name: terminalName,
+      tabId: activeTabId,
+      positionInTab,
+      terminalsInTabCount: terminalsInTab.length,
+    })
+
     createTerminal({
       name: terminalName,
       cols: 80,
@@ -282,7 +297,7 @@ function TerminalsView() {
     setTimeout(() => {
       pendingTerminalCreateRef.current = false
     }, 500)
-  }, [createTerminal, activeTabId, terminals])
+  }, [createTerminal, activeTabId, terminals, connected])
 
   // Task-related terminals should not be in regular tabs - remove them if they are
   useEffect(() => {
@@ -381,25 +396,32 @@ function TerminalsView() {
   )
 
   const handleTabCreate = useCallback(() => {
-    // Prevent duplicate creations from double-clicks or React Strict Mode
-    if (pendingTabCreateRef.current) {
-      log.terminal.debug('Skipping tab creation, already pending')
-      return
-    }
-    pendingTabCreateRef.current = true
+    // Open dialog to create a new tab
+    setIsCreatingTab(true)
+  }, [])
 
-    // Record current tab count to detect when new tab arrives
-    tabCountBeforeCreateRef.current = tabs.length
+  const handleTabCreateConfirm = useCallback(
+    (name: string, directory?: string) => {
+      // Prevent duplicate creations from double-clicks or React Strict Mode
+      if (pendingTabCreateRef.current) {
+        log.terminal.debug('Skipping tab creation, already pending')
+        return
+      }
+      pendingTabCreateRef.current = true
 
-    const tabName = `Tab ${tabs.length + 1}`
-    log.terminal.debug('Creating tab', { name: tabName })
-    createTab(tabName)
+      // Record current tab count to detect when new tab arrives
+      tabCountBeforeCreateRef.current = tabs.length
 
-    // Reset pending flag after a short delay to allow the creation to complete
-    setTimeout(() => {
-      pendingTabCreateRef.current = false
-    }, 500)
-  }, [createTab, tabs.length])
+      log.terminal.debug('Creating tab', { name, directory })
+      createTab(name, undefined, directory)
+
+      // Reset pending flag after a short delay to allow the creation to complete
+      setTimeout(() => {
+        pendingTabCreateRef.current = false
+      }, 500)
+    },
+    [createTab, tabs.length]
+  )
 
   const handleTabDelete = useCallback(
     (tabId: string) => {
@@ -519,12 +541,19 @@ function TerminalsView() {
         />
       </div>
 
-      {/* Tab Edit Dialog */}
+      {/* Tab Edit/Create Dialog */}
       <TabEditDialog
         tab={editingTab}
-        open={editingTab !== null}
-        onOpenChange={(open) => !open && setEditingTab(null)}
+        open={editingTab !== null || isCreatingTab}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingTab(null)
+            setIsCreatingTab(false)
+          }
+        }}
         onSave={handleTabUpdate}
+        onCreate={handleTabCreateConfirm}
+        defaultName={`Tab ${tabs.length + 1}`}
       />
     </div>
   )
