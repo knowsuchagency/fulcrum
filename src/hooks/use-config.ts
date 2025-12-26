@@ -17,7 +17,6 @@ export const CONFIG_KEYS = {
   DEFAULT_GIT_REPOS_DIR: 'paths.defaultGitReposDir',
   BASIC_AUTH_USERNAME: 'authentication.username',
   BASIC_AUTH_PASSWORD: 'authentication.password',
-  REMOTE_URL: 'remoteVibora.url',
   EDITOR_APP: 'editor.app',
   EDITOR_HOST: 'editor.host',
   EDITOR_SSH_PORT: 'editor.sshPort',
@@ -69,16 +68,6 @@ export function useDefaultGitReposDir() {
   return {
     ...query,
     // Default to empty string which will make the browser use home directory
-    data: (query.data?.value as string) ?? '',
-    isDefault: query.data?.isDefault ?? true,
-  }
-}
-
-export function useRemoteUrl() {
-  const query = useConfig(CONFIG_KEYS.REMOTE_URL)
-
-  return {
-    ...query,
     data: (query.data?.value as string) ?? '',
     isDefault: query.data?.isDefault ?? true,
   }

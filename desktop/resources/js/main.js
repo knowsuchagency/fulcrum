@@ -106,17 +106,6 @@ function getSettingValue(key) {
 }
 
 /**
- * Helper: Construct URL from host and port
- */
-function constructRemoteUrl(host, port) {
-  if (!host) return '';
-  const effectivePort = port || DEFAULT_PORT;
-  // Omit port for standard HTTP/HTTPS ports
-  const portSuffix = effectivePort === 80 || effectivePort === 443 ? '' : `:${effectivePort}`;
-  return `http://${host}${portSuffix}`;
-}
-
-/**
  * Migrate settings from flat to nested format
  */
 function migrateSettings(settings) {
@@ -130,11 +119,10 @@ function migrateSettings(settings) {
   const migrated = {
     _schemaVersion: CURRENT_SCHEMA_VERSION,
     server: { port: DEFAULT_PORT },
-    remoteVibora: { url: '' },
     editor: { app: 'vscode', host: '', sshPort: 22 },
   };
 
-  // Copy existing nested groups if present (except remoteVibora which needs special handling)
+  // Copy existing nested groups if present
   for (const key of ['server', 'paths', 'authentication', 'editor', 'integrations', 'appearance', 'notifications', 'zai']) {
     if (settings[key] && typeof settings[key] === 'object') {
       migrated[key] = { ...migrated[key], ...settings[key] };
@@ -167,23 +155,6 @@ function migrateSettings(settings) {
       }
     }
 
-    // Handle flat remoteHost/hostname → remoteVibora.url
-    const flatHost = settings.remoteHost || settings.hostname || '';
-    if (flatHost) {
-      migrated.remoteVibora = { url: constructRemoteUrl(flatHost, DEFAULT_PORT) };
-    }
-  }
-
-  // Schema 2 → 3: Migrate remoteVibora.host + remoteVibora.port → remoteVibora.url
-  if (version < 3 && settings.remoteVibora) {
-    if ('host' in settings.remoteVibora) {
-      const host = settings.remoteVibora.host || '';
-      const port = settings.remoteVibora.port || DEFAULT_PORT;
-      migrated.remoteVibora = { url: constructRemoteUrl(host, port) };
-    } else if ('url' in settings.remoteVibora) {
-      // Already has url format
-      migrated.remoteVibora = { url: settings.remoteVibora.url || '' };
-    }
   }
 
   // Preserve non-migrated keys (like lastUpdateCheck, lastConnectedHost)
@@ -531,15 +502,6 @@ async function tryConnect() {
 }
 
 /**
- * Handle reconnection request from the React app (via postMessage)
- * Simply reloads the app to reconnect
- */
-async function handleReconnect() {
-  log.info('Reconnect requested, reloading');
-  location.reload();
-}
-
-/**
  * Handle extension ready event (when running with local server extension)
  */
 function handleExtensionReady(port) {
@@ -870,10 +832,6 @@ async function init() {
       } else if (event.data?.type === 'vibora:playSound') {
         // Play notification sound locally
         playNotificationSound();
-      } else if (event.data?.type === 'vibora:reconnect') {
-        // Handle reconnection request from Settings UI
-        const newUrl = event.data.url;
-        handleReconnect(newUrl);
       }
     });
 

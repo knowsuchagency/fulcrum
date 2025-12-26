@@ -27,9 +27,6 @@ export interface Settings {
     username: string | null
     password: string | null
   }
-  remoteVibora: {
-    url: string
-  }
   editor: {
     app: EditorApp
     host: string
@@ -60,9 +57,6 @@ const DEFAULT_SETTINGS: Settings = {
   authentication: {
     username: null,
     password: null,
-  },
-  remoteVibora: {
-    url: '',
   },
   editor: {
     app: 'vscode',
@@ -134,15 +128,6 @@ interface MigrationResult {
   warnings: string[]
 }
 
-// Helper: Construct URL from host and port
-function constructRemoteUrl(host: string, port?: number): string {
-  if (!host) return ''
-  const effectivePort = port || 7777
-  // Omit port for standard HTTP/HTTPS ports
-  const portSuffix = effectivePort === 80 || effectivePort === 443 ? '' : `:${effectivePort}`
-  return `http://${host}${portSuffix}`
-}
-
 // Migrate flat settings to nested structure
 function migrateSettings(parsed: Record<string, unknown>): MigrationResult {
   const result: MigrationResult = { migrated: false, migratedKeys: [], warnings: [] }
@@ -185,29 +170,10 @@ function migrateSettings(parsed: Record<string, unknown>): MigrationResult {
       }
     }
 
-    // Handle flat remoteHost/hostname → remoteVibora.url
-    const flatHost = (parsed.remoteHost as string) || (parsed.hostname as string) || ''
-    if (flatHost) {
-      const url = constructRemoteUrl(flatHost, 7777)
-      setNestedValue(parsed, 'remoteVibora.url', url)
-      result.migratedKeys.push('remoteHost')
-      delete parsed.remoteHost
-      delete parsed.hostname
-      result.migrated = true
-    }
-  }
-
-  // Schema 2 → 3: Migrate remoteVibora.host + remoteVibora.port → remoteVibora.url
-  if (version < 3) {
-    const remoteVibora = parsed.remoteVibora as Record<string, unknown> | undefined
-    if (remoteVibora && 'host' in remoteVibora) {
-      const host = (remoteVibora.host as string) || ''
-      const port = (remoteVibora.port as number) || 7777
-      const url = constructRemoteUrl(host, port)
-      parsed.remoteVibora = { url }
-      result.migratedKeys.push('remoteVibora.host')
-      result.migrated = true
-    }
+    // Clean up old remote settings if present (no longer used)
+    delete parsed.remoteHost
+    delete parsed.hostname
+    delete parsed.remoteVibora
   }
 
   // Set schema version
@@ -340,9 +306,6 @@ export function getSettings(): Settings {
       username: ((parsed.authentication as Record<string, unknown>)?.username as string | null) ?? null,
       password: ((parsed.authentication as Record<string, unknown>)?.password as string | null) ?? null,
     },
-    remoteVibora: {
-      url: ((parsed.remoteVibora as Record<string, unknown>)?.url as string) ?? DEFAULT_SETTINGS.remoteVibora.url,
-    },
     editor: {
       app: ((parsed.editor as Record<string, unknown>)?.app as EditorApp) ?? DEFAULT_SETTINGS.editor.app,
       host: ((parsed.editor as Record<string, unknown>)?.host as string) ?? DEFAULT_SETTINGS.editor.host,
@@ -379,9 +342,6 @@ export function getSettings(): Settings {
       username: process.env.VIBORA_BASIC_AUTH_USERNAME ?? fileSettings.authentication.username,
       password: process.env.VIBORA_BASIC_AUTH_PASSWORD ?? fileSettings.authentication.password,
     },
-    remoteVibora: {
-      url: process.env.VIBORA_REMOTE_URL ?? fileSettings.remoteVibora.url,
-    },
     editor: {
       app: fileSettings.editor.app,
       host: process.env.VIBORA_EDITOR_HOST ?? fileSettings.editor.host,
@@ -412,7 +372,6 @@ export function getSettingByKey<K extends keyof LegacySettings>(key: K): LegacyS
 export interface LegacySettings {
   port: number
   defaultGitReposDir: string
-  remoteUrl: string
   sshPort: number
   basicAuthUsername: string | null
   basicAuthPassword: string | null
@@ -430,7 +389,6 @@ export function toLegacySettings(settings: Settings): LegacySettings {
   return {
     port: settings.server.port,
     defaultGitReposDir: settings.paths.defaultGitReposDir,
-    remoteUrl: settings.remoteVibora.url,
     sshPort: settings.editor.sshPort,
     basicAuthUsername: settings.authentication.username,
     basicAuthPassword: settings.authentication.password,
