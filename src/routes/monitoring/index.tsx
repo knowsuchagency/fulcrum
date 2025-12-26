@@ -806,49 +806,63 @@ function ClaudeUsageLimitsTab() {
   )
 }
 
+type MonitoringTab = 'system' | 'processes' | 'claude' | 'vibora' | 'usage'
+
 function MonitoringPage() {
   const { t } = useTranslation('monitoring')
   const { data: developerMode } = useDeveloperMode()
+  const [activeTab, setActiveTab] = useState<MonitoringTab>('system')
+
+  const tabs: { value: MonitoringTab; label: string; devOnly?: boolean }[] = [
+    { value: 'system', label: t('tabs.system') },
+    { value: 'processes', label: t('tabs.processes') },
+    { value: 'claude', label: t('tabs.claude') },
+    { value: 'vibora', label: t('tabs.vibora'), devOnly: true },
+    { value: 'usage', label: t('tabs.usage') },
+  ]
+
+  const visibleTabs = tabs.filter(tab => !tab.devOnly || developerMode?.enabled)
 
   return (
-    <div className="flex h-full flex-col overflow-hidden p-4">
-      <h1 className="mb-4 text-lg font-semibold">{t('title')}</h1>
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
+        <h1 className="text-sm font-medium">{t('title')}</h1>
 
-      <Tabs defaultValue="system" className="flex-1 flex flex-col min-h-0">
-        <div className="overflow-x-auto shrink-0">
-          <TabsList className="inline-flex w-auto">
-            <TabsTrigger value="system">{t('tabs.system')}</TabsTrigger>
-            <TabsTrigger value="processes">{t('tabs.processes')}</TabsTrigger>
-            <TabsTrigger value="claude">{t('tabs.claude')}</TabsTrigger>
-            {developerMode?.enabled && (
-              <TabsTrigger value="vibora">{t('tabs.vibora')}</TabsTrigger>
-            )}
-            <TabsTrigger value="usage">{t('tabs.usage')}</TabsTrigger>
-          </TabsList>
+        {/* Mobile: dropdown */}
+        <div className="sm:hidden">
+          <Select value={activeTab} onValueChange={(v) => setActiveTab(v as MonitoringTab)}>
+            <SelectTrigger size="sm" className="w-auto gap-2">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {visibleTabs.map(tab => (
+                <SelectItem key={tab.value} value={tab.value}>{tab.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <TabsContent value="system" className="flex-1 overflow-auto pt-4">
-          <SystemMetricsTab />
-        </TabsContent>
+        {/* Desktop: tabs */}
+        <div className="hidden sm:block">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as MonitoringTab)}>
+            <TabsList>
+              {visibleTabs.map(tab => (
+                <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
 
-        <TabsContent value="processes" className="flex-1 overflow-auto pt-4">
-          <ProcessesTab />
-        </TabsContent>
-
-        <TabsContent value="claude" className="flex-1 overflow-auto pt-4">
-          <ClaudeInstancesTab />
-        </TabsContent>
-
-        {developerMode?.enabled && (
-          <TabsContent value="vibora" className="flex-1 overflow-auto pt-4">
-            <ViboraInstancesTab />
-          </TabsContent>
-        )}
-
-        <TabsContent value="usage" className="flex-1 overflow-auto pt-4">
-          <ClaudeUsageLimitsTab />
-        </TabsContent>
-      </Tabs>
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-4">
+        {activeTab === 'system' && <SystemMetricsTab />}
+        {activeTab === 'processes' && <ProcessesTab />}
+        {activeTab === 'claude' && <ClaudeInstancesTab />}
+        {activeTab === 'vibora' && developerMode?.enabled && <ViboraInstancesTab />}
+        {activeTab === 'usage' && <ClaudeUsageLimitsTab />}
+      </div>
     </div>
   )
 }
