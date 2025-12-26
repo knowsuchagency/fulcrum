@@ -24,6 +24,7 @@ import { log } from '@/lib/logger'
 
 const ALL_TASKS_TAB_ID = 'all-tasks'
 const ACTIVE_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW']
+const LAST_TAB_STORAGE_KEY = 'vibora:lastTerminalTab'
 
 interface TerminalsSearch {
   tab?: string
@@ -72,12 +73,23 @@ function TerminalsView() {
     [navigate]
   )
 
-  // Redirect to first tab if URL has no/invalid tab (once tabs are loaded)
+  // Redirect to last tab (from localStorage) or first tab if URL has no/invalid tab
   useEffect(() => {
     if (tabs.length > 0 && !isValidTab) {
-      navigate({ to: '/terminals', search: { tab: tabs[0].id }, replace: true })
+      const lastTab = localStorage.getItem(LAST_TAB_STORAGE_KEY)
+      const targetTab = lastTab && (tabs.some(t => t.id === lastTab) || lastTab === ALL_TASKS_TAB_ID)
+        ? lastTab
+        : tabs[0].id
+      navigate({ to: '/terminals', search: { tab: targetTab }, replace: true })
     }
   }, [tabs, isValidTab, navigate])
+
+  // Persist active tab to localStorage
+  useEffect(() => {
+    if (activeTabId) {
+      localStorage.setItem(LAST_TAB_STORAGE_KEY, activeTabId)
+    }
+  }, [activeTabId])
 
   const { data: tasks = [], status: tasksStatus } = useTasks()
   const { data: repositories = [] } = useRepositories()
