@@ -125,7 +125,7 @@ function migrateSettings(settings) {
   };
 
   // Copy existing nested groups if present
-  for (const key of ['server', 'paths', 'authentication', 'editor', 'integrations', 'appearance', 'notifications', 'zai']) {
+  for (const key of ['server', 'paths', 'authentication', 'editor', 'integrations', 'appearance', 'notifications', 'zai', 'desktop']) {
     if (settings[key] && typeof settings[key] === 'object') {
       migrated[key] = { ...migrated[key], ...settings[key] };
     }
@@ -189,6 +189,18 @@ async function loadSettings() {
     }
 
     desktopSettings = settings;
+
+    // Restore zoom level if previously saved
+    if (settings.desktop?.zoomLevel) {
+      currentZoom = settings.desktop.zoomLevel;
+      // Update the zoom display
+      const zoomLevelEl = document.getElementById('zoom-level');
+      if (zoomLevelEl) {
+        zoomLevelEl.textContent = Math.round(currentZoom * 100) + '%';
+      }
+      log.debug('Restored zoom level', { zoomLevel: currentZoom });
+    }
+
     return desktopSettings;
   } catch (err) {
     // File doesn't exist or is invalid, use defaults
@@ -292,7 +304,7 @@ async function waitForServerReady(baseUrl) {
  * Set zoom level - reloads iframe with zoom query parameter
  * The Vibora frontend applies this as root font-size for native scaling
  */
-function setZoom(level) {
+function setZoom(level, skipSave = false) {
   currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
 
   // Update zoom level display
@@ -301,6 +313,14 @@ function setZoom(level) {
     zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
   }
   console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
+
+  // Persist zoom level to settings
+  if (!skipSave && desktopSettings) {
+    saveSettings({
+      ...desktopSettings,
+      desktop: { ...desktopSettings.desktop, zoomLevel: currentZoom }
+    });
+  }
 
   // Reload iframe with new zoom parameter, preserving current SPA route
   // Route is tracked via postMessage from the Vibora frontend
