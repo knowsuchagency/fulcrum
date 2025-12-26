@@ -8,6 +8,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
+import { useRepositories } from '@/hooks/use-repositories'
 import { useTaskTab } from '@/hooks/use-task-tab'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
@@ -37,6 +38,7 @@ import {
   Task01Icon,
   Settings05Icon,
   GitCommitIcon,
+  LibraryIcon,
 } from '@hugeicons/core-free-icons'
 import { TaskConfigModal } from '@/components/task-config-modal'
 import {
@@ -105,6 +107,10 @@ function TaskView() {
   const { data: editorSshPort } = useEditorSshPort()
   const { data: serverPort } = usePort()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
+  const { data: repositories = [] } = useRepositories()
+
+  // Find the repository matching this task's repo path
+  const repository = repositories.find((r) => r.path === task?.repoPath)
 
   // Read AI mode state from navigation (only set when coming from task creation)
   const navState = location.state as { aiMode?: 'default' | 'plan'; description?: string } | undefined
@@ -333,7 +339,21 @@ function TaskView() {
             </button>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{task.repoName}</span>
+            {repository ? (
+              <Link
+                to="/repositories/$repoId"
+                params={{ repoId: repository.id }}
+                className="flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                <span>{task.repoName}</span>
+              </Link>
+            ) : (
+              <span className="flex items-center gap-1">
+                <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                <span>{task.repoName}</span>
+              </span>
+            )}
             <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
             <span className="font-mono">{task.branch}</span>
             {task.prUrl && (
