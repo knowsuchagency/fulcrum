@@ -19,6 +19,18 @@ import type {
 const app = new Hono()
 
 /**
+ * Check if uv is installed
+ */
+function isUvInstalled(): boolean {
+  try {
+    execSync('uv --version', { stdio: 'pipe' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Infer the Copier question type from a default value
  */
 function inferType(value: unknown): CopierQuestionType {
@@ -211,6 +223,17 @@ app.post('/create', async (c) => {
   let answersFile: string | null = null
 
   try {
+    // Check if uv is installed
+    if (!isUvInstalled()) {
+      return c.json(
+        {
+          error:
+            'uv is not installed. Please install it first: https://docs.astral.sh/uv/getting-started/installation/',
+        },
+        400
+      )
+    }
+
     const body = await c.req.json<CreateProjectRequest>()
     const { templateSource, outputPath, answers, projectName } = body
 
@@ -231,14 +254,24 @@ app.post('/create', async (c) => {
       return c.json({ error: `Output directory already exists: ${fullOutputPath}` }, 400)
     }
 
+    // Filter out answers that are Jinja2 templates (copier will evaluate them)
+    const filteredAnswers: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(answers)) {
+      // Skip values that contain Jinja2 template syntax - copier will compute these
+      if (typeof value === 'string' && value.includes('{{')) {
+        continue
+      }
+      filteredAnswers[key] = value
+    }
+
     // Create answers file in temp directory
     answersFile = join(tmpdir(), `copier-answers-${crypto.randomUUID()}.json`)
-    writeFileSync(answersFile, JSON.stringify(answers))
+    writeFileSync(answersFile, JSON.stringify(filteredAnswers))
 
-    // Execute copier
+    // Execute copier via uvx
     try {
       execSync(
-        `copier copy --data-file "${answersFile}" --force --vcs-ref HEAD "${templatePath}" "${fullOutputPath}"`,
+        `uvx copier copy --data-file "${answersFile}" --force --vcs-ref HEAD "${templatePath}" "${fullOutputPath}"`,
         {
           encoding: 'utf-8',
           stdio: 'pipe',

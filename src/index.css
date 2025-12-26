@@ -145,3 +145,22 @@
     @apply font-sans;
     }
 }
+
+/* Always-visible scrollbar for scroll areas */
+.scrollbar-visible {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--accent);
+    border-radius: 4px;
+  }
+}

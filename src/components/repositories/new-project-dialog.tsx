@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
@@ -28,6 +28,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft02Icon,
   ArrowRight02Icon,
+  ArrowDownDoubleIcon,
   Loading03Icon,
   Folder01Icon,
   FolderAddIcon,
@@ -49,6 +50,8 @@ export function NewProjectDialog() {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<WizardStep>('template')
   const [browserOpen, setBrowserOpen] = useState(false)
+  const [hasMoreContent, setHasMoreContent] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // Form state
   const [templateSource, setTemplateSource] = useState('')
@@ -82,18 +85,41 @@ export function NewProjectDialog() {
     }
   }, [open, defaultGitReposDir])
 
-  // Initialize answers with defaults when questions load
+  // Initialize answers with defaults when questions load (only for questions not already answered)
   useEffect(() => {
     if (questionsData?.questions) {
-      const defaults: Record<string, unknown> = {}
-      for (const q of questionsData.questions) {
-        if (q.default !== undefined) {
-          defaults[q.name] = q.default
+      setAnswers((prev) => {
+        const merged = { ...prev }
+        for (const q of questionsData.questions) {
+          // Only set default if we don't already have an answer for this question
+          if (merged[q.name] === undefined && q.default !== undefined) {
+            merged[q.name] = q.default
+          }
         }
-      }
-      setAnswers(defaults)
+        return merged
+      })
     }
   }, [questionsData])
+
+  // Check if scroll area has more content
+  const checkScrollContent = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const hasMore = el.scrollHeight > el.clientHeight &&
+      el.scrollTop + el.clientHeight < el.scrollHeight - 10
+    setHasMoreContent(hasMore)
+  }, [])
+
+  // Re-check on step change or questions load
+  useEffect(() => {
+    // Small delay to let content render
+    const timer = setTimeout(checkScrollContent, 100)
+    return () => clearTimeout(timer)
+  }, [step, questionsData, checkScrollContent])
+
+  const handleScroll = useCallback(() => {
+    checkScrollContent()
+  }, [checkScrollContent])
 
   const handleNext = () => {
     if (step === 'template') {
@@ -138,13 +164,19 @@ export function NewProjectDialog() {
     const value = answers[question.name]
     const setValue = (v: unknown) => setAnswers((prev) => ({ ...prev, [question.name]: v }))
 
+    // Question is required if it has no default (or default is a Jinja2 template)
+    const isRequired = question.default === undefined ||
+      (typeof question.default === 'string' && question.default.includes('{{'))
+
+    const labelText = isRequired ? `${question.name} *` : question.name
+
     switch (question.type) {
       case 'bool':
         return (
           <Field key={question.name}>
             <div className="flex items-center gap-2">
               <Checkbox checked={value as boolean} onCheckedChange={setValue} />
-              <FieldLabel className="cursor-pointer">{question.name}</FieldLabel>
+              <FieldLabel className="cursor-pointer">{labelText}</FieldLabel>
             </div>
             {question.help && <FieldDescription>{question.help}</FieldDescription>}
           </Field>
@@ -154,7 +186,7 @@ export function NewProjectDialog() {
       case 'float':
         return (
           <Field key={question.name}>
-            <FieldLabel>{question.name}</FieldLabel>
+            <FieldLabel>{labelText}</FieldLabel>
             <Input
               type="number"
               value={value as number}
@@ -174,7 +206,7 @@ export function NewProjectDialog() {
         if (question.choices && question.choices.length > 0) {
           return (
             <Field key={question.name}>
-              <FieldLabel>{question.name}</FieldLabel>
+              <FieldLabel>{labelText}</FieldLabel>
               <Select value={String(value ?? '')} onValueChange={setValue}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -197,7 +229,7 @@ export function NewProjectDialog() {
 
         return (
           <Field key={question.name}>
-            <FieldLabel>{question.name}</FieldLabel>
+            <FieldLabel>{labelText}</FieldLabel>
             {isMultiline ? (
               <Textarea
                 value={String(value ?? '')}
@@ -215,7 +247,21 @@ export function NewProjectDialog() {
   }
 
   const canProceedFromTemplate = !!effectiveSource
-  const canProceedFromQuestions = questionsData && !questionsLoading
+
+  // Check if all required questions (those without defaults) have answers
+  const missingRequiredQuestions = questionsData?.questions.filter((q) => {
+    // Question is required if it has no default (or default is a Jinja2 template)
+    const hasDefault = q.default !== undefined &&
+      !(typeof q.default === 'string' && q.default.includes('{{'))
+    if (hasDefault) return false
+
+    // Check if we have a non-empty answer
+    const answer = answers[q.name]
+    if (answer === undefined || answer === null || answer === '') return true
+    return false
+  }) ?? []
+
+  const canProceedFromQuestions = questionsData && !questionsLoading && missingRequiredQuestions.length === 0
   const canCreate = projectName.trim() && outputPath.trim()
 
   return (
@@ -254,7 +300,11 @@ export function NewProjectDialog() {
           </div>
 
           {/* Step content */}
-          <div className="flex-1 overflow-y-auto min-h-0 py-4">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto min-h-0 py-4 scrollbar-visible"
+          >
             {step === 'template' && (
               <FieldGroup>
                 <Field>
@@ -387,6 +437,18 @@ export function NewProjectDialog() {
               </div>
             )}
           </div>
+
+          {/* Scroll indicator */}
+          {hasMoreContent && (
+            <div className="flex justify-center py-1">
+              <HugeiconsIcon
+                icon={ArrowDownDoubleIcon}
+                size={16}
+                strokeWidth={2}
+                className="text-muted-foreground animate-bounce"
+              />
+            </div>
+          )}
 
           <DialogFooter className="shrink-0">
             {step !== 'template' && step !== 'creating' && (
