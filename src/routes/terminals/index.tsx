@@ -6,7 +6,7 @@ import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
 import { TabEditDialog } from '@/components/terminal/tab-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PlusSignIcon, GridViewIcon, FilterIcon, ComputerTerminal01Icon } from '@hugeicons/core-free-icons'
+import { GridViewIcon, FilterIcon, ComputerTerminal01Icon } from '@hugeicons/core-free-icons'
 import {
   Select,
   SelectContent,

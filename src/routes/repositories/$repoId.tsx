@@ -26,6 +26,7 @@ import {
   TaskAdd01Icon,
   ComputerTerminal01Icon,
   Add02Icon,
+  GridViewIcon,
 } from '@hugeicons/core-free-icons'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
@@ -166,6 +167,17 @@ function RepositoryDetailView() {
           >
             <HugeiconsIcon icon={ComputerTerminal01Icon} size={16} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">Terminal</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate({ to: '/tasks', search: { repo: repository.displayName } })}
+            className="text-muted-foreground hover:text-foreground"
+            title="View Tasks"
+          >
+            <HugeiconsIcon icon={GridViewIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Tasks</span>
           </Button>
 
           <Button

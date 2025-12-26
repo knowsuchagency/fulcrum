@@ -33,9 +33,9 @@ interface HeaderProps {
 const NAV_ITEMS = [
   { to: '/tasks', icon: GridViewIcon, labelKey: 'header.tasks', matchPrefix: true },
   { to: '/terminals', icon: CommandLineIcon, labelKey: 'header.terminals', matchPrefix: false },
-  { to: '/worktrees', icon: FolderSyncIcon, labelKey: 'header.worktrees', matchPrefix: true },
   { to: '/repositories', icon: Database01Icon, labelKey: 'header.repositories', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
+  { to: '/worktrees', icon: FolderSyncIcon, labelKey: 'header.worktrees', matchPrefix: true },
   { to: '/monitoring', icon: ChartLineData01Icon, labelKey: 'header.monitoring', matchPrefix: true },
 ] as const
 
