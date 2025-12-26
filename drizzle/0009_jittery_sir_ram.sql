@@ -1,0 +1,1 @@
+ALTER TABLE `repositories` ADD `is_copier_template` integer DEFAULT false;

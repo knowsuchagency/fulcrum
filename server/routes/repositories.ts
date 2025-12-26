@@ -36,6 +36,7 @@ app.post('/', async (c) => {
       displayName: string
       startupScript?: string | null
       copyFiles?: string | null
+      isCopierTemplate?: boolean
     }>()
 
     if (!body.path) {
@@ -61,6 +62,7 @@ app.post('/', async (c) => {
       displayName,
       startupScript: body.startupScript || null,
       copyFiles: body.copyFiles || null,
+      isCopierTemplate: body.isCopierTemplate ?? false,
       createdAt: now,
       updatedAt: now,
     }
@@ -88,6 +90,7 @@ app.patch('/:id', async (c) => {
       displayName?: string
       startupScript?: string | null
       copyFiles?: string | null
+      isCopierTemplate?: boolean
     }>()
 
     // If path is changing, check for duplicates

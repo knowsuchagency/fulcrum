@@ -25,6 +25,7 @@ import {
   VisualStudioCodeIcon,
   PlusSignIcon,
 } from '@hugeicons/core-free-icons'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { buildEditorUrl, getEditorDisplayName } from '@/lib/editor-url'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
@@ -46,6 +47,7 @@ function RepositoryDetailView() {
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
   const [copyFiles, setCopyFiles] = useState('')
+  const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
 
@@ -55,6 +57,7 @@ function RepositoryDetailView() {
       setDisplayName(repository.displayName)
       setStartupScript(repository.startupScript || '')
       setCopyFiles(repository.copyFiles || '')
+      setIsCopierTemplate(repository.isCopierTemplate ?? false)
       setHasChanges(false)
     }
   }, [repository])
@@ -65,10 +68,11 @@ function RepositoryDetailView() {
       const changed =
         displayName !== repository.displayName ||
         startupScript !== (repository.startupScript || '') ||
-        copyFiles !== (repository.copyFiles || '')
+        copyFiles !== (repository.copyFiles || '') ||
+        isCopierTemplate !== (repository.isCopierTemplate ?? false)
       setHasChanges(changed)
     }
-  }, [displayName, startupScript, copyFiles, repository])
+  }, [displayName, startupScript, copyFiles, isCopierTemplate, repository])
 
   const handleSave = () => {
     if (!repository) return
@@ -79,6 +83,7 @@ function RepositoryDetailView() {
         displayName: displayName.trim() || repository.path.split('/').pop() || 'repo',
         startupScript: startupScript.trim() || null,
         copyFiles: copyFiles.trim() || null,
+        isCopierTemplate,
       },
     })
   }
@@ -242,6 +247,19 @@ function RepositoryDetailView() {
               />
               <FieldDescription>
                 Comma-separated glob patterns for files to copy into new worktrees.
+              </FieldDescription>
+            </Field>
+
+            <Field>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={isCopierTemplate}
+                  onCheckedChange={(checked) => setIsCopierTemplate(checked === true)}
+                />
+                <FieldLabel className="cursor-pointer">Use as Copier Template</FieldLabel>
+              </div>
+              <FieldDescription>
+                Mark as a template for creating new projects with Copier.
               </FieldDescription>
             </Field>
           </FieldGroup>

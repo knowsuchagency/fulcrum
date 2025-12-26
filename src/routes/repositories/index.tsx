@@ -47,6 +47,8 @@ import { useDefaultGitReposDir, useEditorApp, useEditorHost, useEditorSshPort } 
 import { buildEditorUrl, getEditorDisplayName } from '@/lib/editor-url'
 import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
+import { NewProjectDialog } from '@/components/repositories/new-project-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 
 export const Route = createFileRoute('/repositories/')({
   component: RepositoriesView,
@@ -209,6 +211,7 @@ function CreateRepositoryDialog() {
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
   const [copyFiles, setCopyFiles] = useState('')
+  const [isCopierTemplate, setIsCopierTemplate] = useState(false)
 
   const createRepository = useCreateRepository()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
@@ -231,6 +234,7 @@ function CreateRepositoryDialog() {
         displayName: displayName.trim() || path.split('/').pop() || 'repo',
         startupScript: startupScript.trim() || null,
         copyFiles: copyFiles.trim() || null,
+        isCopierTemplate,
       },
       {
         onSuccess: () => {
@@ -239,6 +243,7 @@ function CreateRepositoryDialog() {
           setDisplayName('')
           setStartupScript('')
           setCopyFiles('')
+          setIsCopierTemplate(false)
         },
       }
     )
@@ -321,6 +326,21 @@ function CreateRepositoryDialog() {
                   {t('addModal.fields.copyFilesDescription')}
                 </FieldDescription>
               </Field>
+
+              <Field>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={isCopierTemplate}
+                    onCheckedChange={(checked) => setIsCopierTemplate(checked === true)}
+                  />
+                  <FieldLabel className="cursor-pointer">
+                    {t('addModal.fields.isCopierTemplate')}
+                  </FieldLabel>
+                </div>
+                <FieldDescription>
+                  {t('addModal.fields.isCopierTemplateDescription')}
+                </FieldDescription>
+              </Field>
             </FieldGroup>
 
             <DialogFooter className="mt-4">
@@ -363,7 +383,10 @@ function RepositoriesView() {
           )}
         </div>
 
-        <CreateRepositoryDialog />
+        <div className="flex items-center gap-2">
+          <NewProjectDialog />
+          <CreateRepositoryDialog />
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4">

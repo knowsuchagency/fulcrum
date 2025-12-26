@@ -24,10 +24,44 @@
       "startupScriptDescription": "Command to run in the terminal when creating a worktree.",
       "copyFiles": "Copy Files",
       "copyFilesPlaceholder": ".env, config.local.json",
-      "copyFilesDescription": "Comma-separated glob patterns for files to copy into new worktrees."
+      "copyFilesDescription": "Comma-separated glob patterns for files to copy into new worktrees.",
+      "isCopierTemplate": "Use as Copier Template",
+      "isCopierTemplateDescription": "Mark as a template for creating new projects."
     },
     "adding": "Adding...",
     "cancel": "Cancel"
+  },
+  "newProject": {
+    "button": "New Project",
+    "title": "Create New Project",
+    "back": "Back",
+    "next": "Next",
+    "create": "Create Project",
+    "steps": {
+      "template": {
+        "description": "Select a template to create your project from.",
+        "savedTemplates": "Saved Templates",
+        "selectTemplate": "Select a template...",
+        "or": "or",
+        "customUrl": "Custom Template URL/Path",
+        "customUrlHelp": "Git URL or local path to a Copier template."
+      },
+      "questions": {
+        "description": "Configure your project.",
+        "noQuestions": "This template has no configuration questions."
+      },
+      "output": {
+        "description": "Choose where to create your project.",
+        "projectName": "Project Name",
+        "outputDirectory": "Output Directory",
+        "selectDirectory": "Select directory...",
+        "willCreate": "Will create"
+      },
+      "creating": {
+        "description": "Creating your project...",
+        "inProgress": "Running Copier..."
+      }
+    }
   },
   "empty": {
     "noRepositories": "No repositories added yet. Add a repository for quick access when creating tasks."

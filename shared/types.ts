@@ -130,8 +130,44 @@ export interface Repository {
   displayName: string
   startupScript: string | null
   copyFiles: string | null
+  isCopierTemplate: boolean
   createdAt: string
   updatedAt: string
+}
+
+// Copier template types
+export type CopierQuestionType = 'str' | 'bool' | 'int' | 'float' | 'yaml' | 'json'
+
+export interface CopierChoice {
+  label: string
+  value: string | number | boolean
+}
+
+export interface CopierQuestion {
+  name: string
+  type: CopierQuestionType
+  default?: unknown
+  help?: string
+  choices?: CopierChoice[]
+  multiselect?: boolean
+}
+
+export interface CopierQuestionsResponse {
+  questions: CopierQuestion[]
+  templatePath: string
+}
+
+export interface CreateProjectRequest {
+  templateSource: string // Repo ID, local path, or git URL
+  outputPath: string
+  answers: Record<string, unknown>
+  projectName: string
+}
+
+export interface CreateProjectResponse {
+  success: boolean
+  projectPath: string
+  repositoryId: string
 }
 
 // Git API response types
