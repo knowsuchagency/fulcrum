@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { createFileRoute, useBlocker } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,16 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
@@ -234,12 +224,6 @@ function SettingsPage() {
     hasNotificationChanges ||
     hasZAiChanges ||
     hasClaudeCodeChanges
-
-  // Block navigation when there are unsaved changes (but not during initial loading)
-  const { proceed, reset, status } = useBlocker({
-    shouldBlockFn: () => !isLoading && hasChanges,
-    withResolver: true,
-  })
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -1395,22 +1379,6 @@ function SettingsPage() {
           </Button>
         </div>
       </div>
-
-      {/* Unsaved changes confirmation dialog */}
-      <AlertDialog open={status === 'blocked'}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('unsavedChanges.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('unsavedChanges.description')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={reset}>{t('unsavedChanges.stay')}</AlertDialogCancel>
-            <AlertDialogAction onClick={proceed}>{t('unsavedChanges.leave')}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <FilesystemBrowser
         open={reposDirBrowserOpen}
