@@ -378,9 +378,12 @@ rm -f "$PID_FILE"
 
 [tasks.restart]
 description = "Restart vibora systemd service with migrations"
-depends = ["build"]
+depends = ["cli:build"]
 run = """
 set -e
+
+echo "Linking CLI..." >&2
+cd cli && bun link
 
 echo "Syncing database schema..." >&2
 bun run drizzle-kit push
