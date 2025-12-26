@@ -377,7 +377,7 @@ rm -f "$PID_FILE"
 """
 
 [tasks.restart]
-description = "Restart vibora-dev systemd service with migrations"
+description = "Restart vibora systemd service with migrations"
 depends = ["build"]
 run = """
 set -e
@@ -385,11 +385,11 @@ set -e
 echo "Syncing database schema..." >&2
 bun run drizzle-kit push
 
-echo "Restarting vibora-dev..." >&2
-systemctl --user restart vibora-dev
+echo "Restarting vibora..." >&2
+systemctl --user restart vibora
 
 echo "Done. Checking status..." >&2
-systemctl --user status vibora-dev --no-pager
+systemctl --user status vibora --no-pager
 """
 
 # Desktop app tasks (client-only, connects to local or remote Vibora server)
