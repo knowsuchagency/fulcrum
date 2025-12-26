@@ -458,10 +458,12 @@ function TerminalsView() {
           <button
             onClick={() => setActiveTab(ALL_TASKS_TAB_ID)}
             className={cn(
-              'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
+              'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
               activeTabId === ALL_TASKS_TAB_ID
-                ? 'bg-destructive text-white'
-                : 'text-destructive hover:bg-destructive/10'
+                ? 'bg-background text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+              'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
+              activeTabId === ALL_TASKS_TAB_ID ? 'after:opacity-100' : 'after:opacity-0'
             )}
           >
             <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
