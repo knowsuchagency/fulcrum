@@ -3,6 +3,7 @@
   "total": "{{count}} total",
   "newTask": "New Task",
   "addRepository": "Add Repository",
+  "openInTerminal": "Open in Terminal",
   "card": {
     "openInVSCode": "Open in VS Code"
   },

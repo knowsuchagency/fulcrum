@@ -25,6 +25,7 @@ export const terminalTabs = sqliteTable('terminal_tabs', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   position: integer('position').notNull().default(0), // Tab order in the UI
+  directory: text('directory'), // Optional default directory for terminals in this tab
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })

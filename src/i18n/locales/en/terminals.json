@@ -1,5 +1,15 @@
 {
   "taskTerminals": "Task Terminals",
   "newTerminal": "New Terminal",
-  "allRepos": "All Repos"
+  "allRepos": "All Repos",
+  "editTab": {
+    "title": "Edit Tab",
+    "name": "Name",
+    "namePlaceholder": "Tab name",
+    "directory": "Directory",
+    "directoryPlaceholder": "Select a directory...",
+    "clearDirectory": "Clear directory",
+    "cancel": "Cancel",
+    "save": "Save"
+  }
 }

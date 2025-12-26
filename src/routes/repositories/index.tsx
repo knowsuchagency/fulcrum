@@ -41,9 +41,11 @@ import {
   CommandLineIcon,
   Copy01Icon,
   VisualStudioCodeIcon,
+  ComputerTerminal01Icon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { useDefaultGitReposDir, useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { buildEditorUrl, getEditorDisplayName } from '@/lib/editor-url'
 import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
@@ -58,10 +60,12 @@ function RepositoryCard({
   repository,
   onDelete,
   onStartTask,
+  onOpenInTerminal,
 }: {
   repository: Repository
   onDelete: () => Promise<void>
   onStartTask: () => void
+  onOpenInTerminal: () => void
 }) {
   const { t } = useTranslation('repositories')
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -75,6 +79,12 @@ function RepositoryCard({
     e.stopPropagation()
     const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
     window.open(url, '_blank')
+  }
+
+  const handleOpenInTerminal = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onOpenInTerminal()
   }
 
   const handleStartTask = (e: React.MouseEvent) => {
@@ -148,6 +158,16 @@ function RepositoryCard({
       </Link>
 
       <div className="absolute right-3 top-3 flex gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleOpenInTerminal}
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+          title={t('openInTerminal')}
+        >
+          <HugeiconsIcon icon={ComputerTerminal01Icon} size={14} strokeWidth={2} />
+        </Button>
+
         <Button
           variant="ghost"
           size="icon-sm"
@@ -368,6 +388,7 @@ function RepositoriesView() {
   const { data: repositories, isLoading, error } = useRepositories()
   const deleteRepository = useDeleteRepository()
   const [taskModalRepo, setTaskModalRepo] = useState<Repository | null>(null)
+  const { openInTerminal } = useOpenInTerminal()
 
   const handleDelete = async (id: string) => {
     await deleteRepository.mutateAsync(id)
@@ -423,6 +444,7 @@ function RepositoriesView() {
               repository={repo}
               onDelete={() => handleDelete(repo.id)}
               onStartTask={() => setTaskModalRepo(repo)}
+              onOpenInTerminal={() => openInTerminal(repo.path, repo.displayName)}
             />
           ))}
         </div>

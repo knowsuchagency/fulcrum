@@ -3,6 +3,7 @@ import { useCallback, useRef, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TerminalGrid } from '@/components/terminal/terminal-grid'
 import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
+import { TabEditDialog } from '@/components/terminal/tab-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { PlusSignIcon, GridViewIcon, FilterIcon } from '@hugeicons/core-free-icons'
@@ -50,7 +51,7 @@ function TerminalsView() {
     renameTerminal,
     assignTerminalToTab,
     createTab,
-    renameTab,
+    updateTab,
     deleteTab,
     attachXterm,
     resizeTerminal,
@@ -58,6 +59,9 @@ function TerminalsView() {
     writeToTerminal,
     sendInputToTerminal,
   } = useTerminalWS()
+
+  // State for tab edit dialog
+  const [editingTab, setEditingTab] = useState<TerminalTab | null>(null)
 
   // URL is the source of truth for active tab
   // Fall back to first tab if URL doesn't specify a valid tab
@@ -415,7 +419,19 @@ function TerminalsView() {
     name: t.name,
     layout: 'single',
     position: index,
+    directory: t.directory,
   }))
+
+  const handleTabEdit = useCallback((tab: TerminalTab) => {
+    setEditingTab(tab)
+  }, [])
+
+  const handleTabUpdate = useCallback(
+    (tabId: string, updates: { name?: string; directory?: string | null }) => {
+      updateTab(tabId, updates)
+    },
+    [updateTab]
+  )
 
   return (
     <div className="flex h-full max-w-full flex-col overflow-hidden">
@@ -428,7 +444,7 @@ function TerminalsView() {
             onTabSelect={setActiveTab}
             onTabClose={handleTabDelete}
             onTabCreate={handleTabCreate}
-            onTabRename={renameTab}
+            onTabEdit={handleTabEdit}
           />
         </div>
         <div className="flex shrink-0 items-center gap-3 max-sm:gap-1">
@@ -502,6 +518,14 @@ function TerminalsView() {
           taskInfoByCwd={activeTabId === ALL_TASKS_TAB_ID ? taskInfoByCwd : undefined}
         />
       </div>
+
+      {/* Tab Edit Dialog */}
+      <TabEditDialog
+        tab={editingTab}
+        open={editingTab !== null}
+        onOpenChange={(open) => !open && setEditingTab(null)}
+        onSave={handleTabUpdate}
+      />
     </div>
   )
 }

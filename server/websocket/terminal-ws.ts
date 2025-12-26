@@ -107,11 +107,21 @@ export const terminalWebSocketHandlers: WSEvents = {
         // Terminal messages
         case 'terminal:create': {
           const { name, cols, rows, cwd, tabId, positionInTab } = message.payload
-          log.ws.debug('terminal:create request', { name, cwd, tabId, clientId: clientData.id })
+
+          // If tabId provided but no cwd, use the tab's directory as default
+          let effectiveCwd = cwd
+          if (tabId && !cwd) {
+            const tab = tabManager.get(tabId)
+            if (tab?.directory) {
+              effectiveCwd = tab.directory
+            }
+          }
+
+          log.ws.debug('terminal:create request', { name, cwd: effectiveCwd, tabId, clientId: clientData.id })
 
           // Prevent duplicate terminals for same cwd
-          if (cwd) {
-            const existing = ptyManager.listTerminals().find((t) => t.cwd === cwd)
+          if (effectiveCwd) {
+            const existing = ptyManager.listTerminals().find((t) => t.cwd === effectiveCwd)
             if (existing) {
               // Return existing terminal instead of creating duplicate
               log.ws.debug('terminal:create returning existing', { terminalId: existing.id, isNew: false })
@@ -124,7 +134,7 @@ export const terminalWebSocketHandlers: WSEvents = {
             }
           }
 
-          const terminal = ptyManager.create({ name, cols, rows, cwd, tabId, positionInTab })
+          const terminal = ptyManager.create({ name, cols, rows, cwd: effectiveCwd, tabId, positionInTab })
           log.ws.info('terminal:create created new', {
             terminalId: terminal.id,
             name,
@@ -241,10 +251,10 @@ export const terminalWebSocketHandlers: WSEvents = {
 
         // Tab messages
         case 'tab:create': {
-          const { name, position } = message.payload
-          log.ws.debug('tab:create request', { name, position, clientId: clientData.id })
-          const tab = tabManager.create({ name, position })
-          log.ws.info('tab:create created', { tabId: tab.id, name: tab.name })
+          const { name, position, directory } = message.payload
+          log.ws.debug('tab:create request', { name, position, directory, clientId: clientData.id })
+          const tab = tabManager.create({ name, position, directory })
+          log.ws.info('tab:create created', { tabId: tab.id, name: tab.name, directory: tab.directory })
           broadcast({
             type: 'tab:created',
             payload: { tab },
@@ -252,13 +262,13 @@ export const terminalWebSocketHandlers: WSEvents = {
           break
         }
 
-        case 'tab:rename': {
-          const { tabId, name } = message.payload
-          const success = tabManager.rename(tabId, name)
+        case 'tab:update': {
+          const { tabId, name, directory } = message.payload
+          const success = tabManager.update(tabId, { name, directory })
           if (success) {
             broadcast({
-              type: 'tab:renamed',
-              payload: { tabId, name },
+              type: 'tab:updated',
+              payload: { tabId, name, directory },
             })
           }
           break

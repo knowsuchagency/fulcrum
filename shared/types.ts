@@ -72,6 +72,7 @@ export interface TerminalTab {
   name: string
   layout: TerminalLayout
   position: number
+  directory?: string
 }
 
 export interface Terminal {

@@ -71,6 +71,13 @@
       "when": 1766775381762,
       "tag": "0009_jittery_sir_ram",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1766780922208,
+      "tag": "0010_secret_jasper_sitwell",
+      "breakpoints": true
     }
   ]
 }

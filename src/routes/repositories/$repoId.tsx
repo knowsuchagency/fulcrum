@@ -24,9 +24,11 @@ import {
   Alert02Icon,
   VisualStudioCodeIcon,
   PlusSignIcon,
+  ComputerTerminal01Icon,
 } from '@hugeicons/core-free-icons'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { buildEditorUrl, getEditorDisplayName } from '@/lib/editor-url'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 
@@ -43,6 +45,7 @@ function RepositoryDetailView() {
   const { data: editorApp } = useEditorApp()
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
+  const { openInTerminal } = useOpenInTerminal()
 
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
@@ -100,6 +103,11 @@ function RepositoryDetailView() {
     window.open(url, '_blank')
   }
 
+  const handleOpenInTerminal = () => {
+    if (!repository) return
+    openInTerminal(repository.path, repository.displayName)
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -153,6 +161,17 @@ function RepositoryDetailView() {
           >
             <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
             New Task
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleOpenInTerminal}
+            className="text-muted-foreground hover:text-foreground"
+            title="Open in Terminal"
+          >
+            <HugeiconsIcon icon={ComputerTerminal01Icon} size={16} strokeWidth={2} data-slot="icon" />
+            Terminal
           </Button>
 
           <Button

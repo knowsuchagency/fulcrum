@@ -10,6 +10,7 @@ export interface TabInfo {
   id: string
   name: string
   position: number
+  directory?: string
   createdAt: number
 }
 
@@ -38,7 +39,7 @@ type ServerMessage =
   | { type: 'terminal:destroyed'; payload: { terminalId: string } }
   | { type: 'terminal:tabAssigned'; payload: { terminalId: string; tabId: string | null; positionInTab: number } }
   | { type: 'tab:created'; payload: { tab: TabInfo } }
-  | { type: 'tab:renamed'; payload: { tabId: string; name: string } }
+  | { type: 'tab:updated'; payload: { tabId: string; name?: string; directory?: string | null } }
   | { type: 'tab:deleted'; payload: { tabId: string } }
   | { type: 'tab:reordered'; payload: { tabId: string; position: number } }
   | { type: 'tabs:list'; payload: { tabs: TabInfo[] } }
@@ -76,8 +77,8 @@ interface UseTerminalWSReturn {
   renameTerminal: (terminalId: string, name: string) => void
   clearTerminalBuffer: (terminalId: string) => void
   assignTerminalToTab: (terminalId: string, tabId: string | null, positionInTab?: number) => void
-  createTab: (name: string, position?: number) => void
-  renameTab: (tabId: string, name: string) => void
+  createTab: (name: string, position?: number, directory?: string) => void
+  updateTab: (tabId: string, updates: { name?: string; directory?: string | null }) => void
   deleteTab: (tabId: string) => void
   reorderTab: (tabId: string, position: number) => void
   attachXterm: (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => () => void
@@ -301,11 +302,18 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
           })
           break
 
-        case 'tab:renamed':
+        case 'tab:updated':
           setTabs((prev) =>
-            prev.map((t) =>
-              t.id === message.payload.tabId ? { ...t, name: message.payload.name } : t
-            )
+            prev.map((t) => {
+              if (t.id !== message.payload.tabId) return t
+              return {
+                ...t,
+                ...(message.payload.name !== undefined && { name: message.payload.name }),
+                ...(message.payload.directory !== undefined && {
+                  directory: message.payload.directory ?? undefined,
+                }),
+              }
+            })
           )
           break
 
@@ -507,20 +515,20 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
 
   // Tab operations
   const createTab = useCallback(
-    (name: string, position?: number) => {
+    (name: string, position?: number, directory?: string) => {
       send({
         type: 'tab:create',
-        payload: { name, position },
+        payload: { name, position, directory },
       })
     },
     [send]
   )
 
-  const renameTab = useCallback(
-    (tabId: string, name: string) => {
+  const updateTab = useCallback(
+    (tabId: string, updates: { name?: string; directory?: string | null }) => {
       send({
-        type: 'tab:rename',
-        payload: { tabId, name },
+        type: 'tab:update',
+        payload: { tabId, ...updates },
       })
     },
     [send]
@@ -653,7 +661,7 @@ export function useTerminalWS(options: UseTerminalWSOptions = {}): UseTerminalWS
     clearTerminalBuffer,
     assignTerminalToTab,
     createTab,
-    renameTab,
+    updateTab,
     deleteTab,
     reorderTab,
     attachXterm,

@@ -1,0 +1,1 @@
+ALTER TABLE `terminal_tabs` ADD `directory` text;
