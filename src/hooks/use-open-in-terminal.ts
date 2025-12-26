@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTerminalWS } from './use-terminal-ws'
+import { log } from '@/lib/logger'
 
 /**
  * Hook for opening a repository in a dedicated terminal tab.
@@ -23,14 +24,31 @@ export function useOpenInTerminal() {
 
   // Watch for new tabs matching our pending directory
   useEffect(() => {
+    log.ws.debug('useOpenInTerminal: tabs effect', {
+      hasPending: !!pendingRef.current,
+      pendingDirectory: pendingRef.current?.directory,
+      tabCount: tabs.length,
+      tabDirectories: tabs.map(t => t.directory),
+    })
+
     if (!pendingRef.current) return
 
     const { directory } = pendingRef.current
     const matchingTab = tabs.find((t) => t.directory === directory)
 
+    log.ws.debug('useOpenInTerminal: checking for matching tab', {
+      directory,
+      matchingTab: matchingTab ? { id: matchingTab.id, name: matchingTab.name } : null,
+    })
+
     if (matchingTab) {
       // Tab found - create terminal and navigate
       pendingRef.current = null
+
+      log.ws.info('useOpenInTerminal: creating terminal in tab', {
+        tabId: matchingTab.id,
+        directory,
+      })
 
       // Create terminal in the tab (server will use tab's directory as cwd)
       createTerminal({
@@ -48,18 +66,35 @@ export function useOpenInTerminal() {
 
   const openInTerminal = useCallback(
     (directory: string, name: string) => {
-      if (!connected) return
+      log.ws.info('useOpenInTerminal: openInTerminal called', {
+        directory,
+        name,
+        connected,
+        tabCount: tabs.length,
+      })
+
+      if (!connected) {
+        log.ws.warn('useOpenInTerminal: not connected, aborting')
+        return
+      }
 
       // Check if tab with this directory already exists
       const existingTab = tabs.find((t) => t.directory === directory)
 
+      log.ws.debug('useOpenInTerminal: existing tab check', {
+        directory,
+        existingTab: existingTab ? { id: existingTab.id, name: existingTab.name } : null,
+      })
+
       if (existingTab) {
         // Navigate to existing tab
+        log.ws.info('useOpenInTerminal: navigating to existing tab', { tabId: existingTab.id })
         navigate({ to: '/terminals', search: { tab: existingTab.id } })
         return
       }
 
       // Create new tab with directory - terminal will be created in useEffect when tab appears
+      log.ws.info('useOpenInTerminal: creating new tab', { name, directory })
       pendingRef.current = { directory, name }
       createTab(name, undefined, directory)
     },
