@@ -237,6 +237,10 @@ app.post('/restart', (c) => {
 })
 
 // POST /api/config/sync-theme - Sync theme to Claude Code config
+// Debounce to prevent rapid repeated syncs from multiple tabs
+let lastSyncedTheme: { theme: 'light' | 'dark'; timestamp: number } | null = null
+const SYNC_DEBOUNCE_MS = 1000
+
 app.post('/sync-claude-theme', async (c) => {
   try {
     const body = await c.req.json<{ resolvedTheme: 'light' | 'dark' }>()
@@ -246,7 +250,17 @@ app.post('/sync-claude-theme', async (c) => {
       return c.json({ error: 'resolvedTheme must be "light" or "dark"' }, 400)
     }
 
+    // Skip if same theme was synced recently (defense against multiple tabs)
+    const now = Date.now()
+    if (lastSyncedTheme &&
+        lastSyncedTheme.theme === resolvedTheme &&
+        now - lastSyncedTheme.timestamp < SYNC_DEBOUNCE_MS) {
+      return c.json({ success: true, resolvedTheme, skipped: true })
+    }
+
     syncClaudeCodeTheme(resolvedTheme)
+    lastSyncedTheme = { theme: resolvedTheme, timestamp: now }
+
     return c.json({ success: true, resolvedTheme })
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to sync theme' }, 400)
