@@ -62,18 +62,26 @@ export function useTaskSync() {
 
           // Play notification sound if enabled
           // Try custom sound first (/api/uploads/sound), fall back to default
+          // Use localStorage to prevent multiple tabs from playing the same sound
           if (playSound) {
-            const customAudio = new Audio('/api/uploads/sound')
-            customAudio.onerror = () => {
-              // Custom sound not available, use default
+            const SOUND_DEBOUNCE_MS = 1000
+            const lastPlayed = localStorage.getItem('vibora:lastSoundPlayed')
+            const now = Date.now()
+            if (lastPlayed && now - parseInt(lastPlayed) < SOUND_DEBOUNCE_MS) {
+              return // Another tab just played it
+            }
+            localStorage.setItem('vibora:lastSoundPlayed', String(now))
+
+            let fellBack = false
+            const playDefault = () => {
+              if (fellBack) return
+              fellBack = true
               const defaultAudio = new Audio('/sounds/goat-bleat.mp3')
               defaultAudio.play().catch(() => {})
             }
-            customAudio.play().catch(() => {
-              // Custom sound failed, try default
-              const defaultAudio = new Audio('/sounds/goat-bleat.mp3')
-              defaultAudio.play().catch(() => {})
-            })
+            const customAudio = new Audio('/api/uploads/sound')
+            customAudio.onerror = playDefault
+            customAudio.play().catch(playDefault)
           }
 
           // Post to parent window for desktop native notifications

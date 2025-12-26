@@ -111,6 +111,9 @@ export function createApp() {
         svg: 'image/svg+xml',
         woff: 'font/woff',
         woff2: 'font/woff2',
+        mp3: 'audio/mpeg',
+        wav: 'audio/wav',
+        ogg: 'audio/ogg',
       }
       const content = await readFile(filePath)
       return new Response(content, {
@@ -123,6 +126,15 @@ export function createApp() {
       const assetPath = join(distPath, c.req.path)
       if (existsSync(assetPath)) {
         return serveFile(assetPath)
+      }
+      return c.notFound()
+    })
+
+    // Serve sounds
+    app.get('/sounds/*', async (c) => {
+      const soundPath = join(distPath, c.req.path)
+      if (existsSync(soundPath)) {
+        return serveFile(soundPath)
       }
       return c.notFound()
     })
