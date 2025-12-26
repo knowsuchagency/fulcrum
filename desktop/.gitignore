@@ -1,5 +1,4 @@
-# Neutralino build outputs
-bin/
+# Neutralino build outputs (bin/ is committed as vendored fallback)
 dist/
 
 # Downloaded tools
