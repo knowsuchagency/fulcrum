@@ -31,8 +31,8 @@ import {
   Delete02Icon,
   Folder01Icon,
   GitPullRequestIcon,
-  ArrowRight02Icon,
-  ArrowLeft02Icon,
+  ArrowRight03Icon,
+  ArrowLeft03Icon,
   ArrowUp03Icon,
   Orbit01Icon,
   VisualStudioCodeIcon,
@@ -430,7 +430,7 @@ function TaskView() {
           title="Pull from main"
         >
           <HugeiconsIcon
-            icon={ArrowRight02Icon}
+            icon={ArrowRight03Icon}
             size={16}
             strokeWidth={2}
             className={gitSync.isPending ? 'animate-spin' : ''}
@@ -447,7 +447,7 @@ function TaskView() {
           title="Merge to main"
         >
           <HugeiconsIcon
-            icon={ArrowLeft02Icon}
+            icon={ArrowLeft03Icon}
             size={16}
             strokeWidth={2}
             className={gitMerge.isPending ? 'animate-pulse' : ''}
