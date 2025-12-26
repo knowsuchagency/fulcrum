@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useBlocker } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
@@ -224,6 +234,12 @@ function SettingsPage() {
     hasNotificationChanges ||
     hasZAiChanges ||
     hasClaudeCodeChanges
+
+  // Block navigation when there are unsaved changes
+  const { proceed, reset, status } = useBlocker({
+    shouldBlockFn: () => hasChanges,
+    withResolver: true,
+  })
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -1358,25 +1374,43 @@ function SettingsPage() {
                   </div>
                 </SettingsSection>
               )}
-
-          {/* Save Button */}
-          <div className="flex items-center justify-end gap-2 pt-2">
-            {saved && (
-              <span className="flex items-center gap-1 text-xs text-accent">
-                <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                {tc('status.saved')}
-              </span>
-            )}
-            <Button
-              size="sm"
-              onClick={handleSaveAll}
-              disabled={!hasChanges || isLoading || updateConfig.isPending}
-            >
-              {tc('buttons.save')}
-            </Button>
-          </div>
         </div>
       </div>
+
+      {/* Sticky Save Button Footer */}
+      <div className="shrink-0 border-t border-border bg-background px-6 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-end gap-2">
+          {saved && (
+            <span className="flex items-center gap-1 text-xs text-accent">
+              <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
+              {tc('status.saved')}
+            </span>
+          )}
+          <Button
+            size="sm"
+            onClick={handleSaveAll}
+            disabled={!hasChanges || isLoading || updateConfig.isPending}
+          >
+            {tc('buttons.save')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Unsaved changes confirmation dialog */}
+      <AlertDialog open={status === 'blocked'}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('unsavedChanges.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('unsavedChanges.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={reset}>{t('unsavedChanges.stay')}</AlertDialogCancel>
+            <AlertDialogAction onClick={proceed}>{t('unsavedChanges.leave')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <FilesystemBrowser
         open={reposDirBrowserOpen}

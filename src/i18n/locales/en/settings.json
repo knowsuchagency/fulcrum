@@ -131,5 +131,11 @@
     "restartDescription": "Rebuild and restart the Vibora server. If the build fails, the server will continue running.",
     "restartFailed": "Restart failed",
     "checkLogs": "Build may have failed. Check journalctl --user -u vibora-dev for details."
+  },
+  "unsavedChanges": {
+    "title": "Unsaved Changes",
+    "description": "You have unsaved changes that will be lost if you leave this page.",
+    "stay": "Stay",
+    "leave": "Leave"
   }
 }
