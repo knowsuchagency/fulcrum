@@ -84,6 +84,7 @@ const TerminalsView = observer(function TerminalsView() {
     createTab,
     updateTab,
     deleteTab,
+    reorderTab,
     attachXterm,
     resizeTerminal,
     setupImagePaste,
@@ -91,9 +92,8 @@ const TerminalsView = observer(function TerminalsView() {
     sendInputToTerminal,
   } = useTerminalStore()
 
-  // State for tab edit/create dialog
+  // State for tab edit dialog
   const [editingTab, setEditingTab] = useState<TerminalTab | null>(null)
-  const [isCreatingTab, setIsCreatingTab] = useState(false)
 
   // URL is the source of truth for active tab
   // Fall back to first tab if URL doesn't specify a valid tab
@@ -438,9 +438,34 @@ const TerminalsView = observer(function TerminalsView() {
   )
 
   const handleTabCreate = useCallback(() => {
-    // Open dialog to create a new tab
-    setIsCreatingTab(true)
-  }, [])
+    // Quick create: generate name and create tab immediately (no modal)
+    // Prevent duplicate creations from double-clicks or React Strict Mode
+    if (pendingTabCreateRef.current) {
+      log.terminal.debug('Skipping tab creation, already pending')
+      return
+    }
+    pendingTabCreateRef.current = true
+
+    // Record current tab count to detect when new tab arrives
+    tabCountBeforeCreateRef.current = tabs.length
+
+    const name = `Tab ${tabs.length + 1}`
+    log.terminal.debug('Quick creating tab', { name })
+    createTab(name, undefined, undefined) // No directory
+
+    // Reset pending flag after a short delay to allow the creation to complete
+    setTimeout(() => {
+      pendingTabCreateRef.current = false
+    }, 500)
+  }, [createTab, tabs.length])
+
+  const handleTabReorder = useCallback(
+    (tabId: string, newPosition: number) => {
+      log.terminal.debug('Reordering tab', { tabId, newPosition })
+      reorderTab(tabId, newPosition)
+    },
+    [reorderTab]
+  )
 
   const handleTabCreateConfirm = useCallback(
     (name: string, directory?: string) => {
@@ -509,6 +534,7 @@ const TerminalsView = observer(function TerminalsView() {
             onTabClose={handleTabDelete}
             onTabCreate={handleTabCreate}
             onTabEdit={handleTabEdit}
+            onTabReorder={handleTabReorder}
           />
         </div>
         <div className="flex shrink-0 items-center gap-3 max-sm:gap-1">
@@ -583,14 +609,13 @@ const TerminalsView = observer(function TerminalsView() {
         />
       </div>
 
-      {/* Tab Edit/Create Dialog */}
+      {/* Tab Edit Dialog */}
       <TabEditDialog
         tab={editingTab}
-        open={editingTab !== null || isCreatingTab}
+        open={editingTab !== null}
         onOpenChange={(open) => {
           if (!open) {
             setEditingTab(null)
-            setIsCreatingTab(false)
           }
         }}
         onSave={handleTabUpdate}
