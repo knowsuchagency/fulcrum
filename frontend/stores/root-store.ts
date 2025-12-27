@@ -658,14 +658,34 @@ export const RootStore = types
       },
 
       /** Request tab reorder */
-      reorderTab(tabId: string, position: number) {
+      reorderTab(tabId: string, newPosition: number) {
+        const tab = self.tabs.get(tabId)
+        if (!tab) return
+
+        const oldPosition = tab.position
+
         getWs().send({
           type: 'tab:reorder',
-          payload: { tabId, position },
+          payload: { tabId, position: newPosition },
         })
-        // Optimistic update
-        const tab = self.tabs.get(tabId)
-        tab?.setPosition(position)
+
+        // Optimistic update - mirror server logic by shifting other tabs
+        if (newPosition > oldPosition) {
+          // Moving down: shift tabs in between up
+          for (const t of self.tabs.items) {
+            if (t.position > oldPosition && t.position <= newPosition) {
+              t.setPosition(t.position - 1)
+            }
+          }
+        } else if (newPosition < oldPosition) {
+          // Moving up: shift tabs in between down
+          for (const t of self.tabs.items) {
+            if (t.position >= newPosition && t.position < oldPosition) {
+              t.setPosition(t.position + 1)
+            }
+          }
+        }
+        tab.setPosition(newPosition)
       },
 
       // ============ Sync Actions ============
@@ -975,11 +995,6 @@ export const RootStore = types
             break
           }
 
-          case 'tab:reordered': {
-            const { tabId, position } = payload as { tabId: string; position: number }
-            self.tabs.get(tabId)?.setPosition(position)
-            break
-          }
 
           case 'terminal:error': {
             const { error, requestId, tempId } = payload as {

@@ -427,9 +427,10 @@ export const terminalWebSocketHandlers: WSEvents = {
           const { tabId, position } = message.payload
           const success = tabManager.reorder(tabId, position)
           if (success) {
+            // Broadcast full tabs list since reorder shifts multiple tab positions
             broadcast({
-              type: 'tab:reordered',
-              payload: { tabId, position },
+              type: 'tabs:list',
+              payload: { tabs: tabManager.list() },
             })
           } else {
             // Tab doesn't exist

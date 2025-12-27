@@ -157,7 +157,7 @@ export function useTerminalStore(): UseTerminalStoreReturn {
         return store.initialized
       },
       get tabs() {
-        return [...store.tabs.items]
+        return [...store.tabs.sorted]
       },
       get connected() {
         return store.connected
