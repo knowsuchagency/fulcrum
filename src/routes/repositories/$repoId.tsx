@@ -25,9 +25,10 @@ import {
   VisualStudioCodeIcon,
   TaskAdd01Icon,
   ComputerTerminal01Icon,
-  Add02Icon,
+  Tick02Icon,
   GridViewIcon,
 } from '@hugeicons/core-free-icons'
+import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
@@ -82,15 +83,28 @@ function RepositoryDetailView() {
   const handleSave = () => {
     if (!repository) return
 
-    updateRepository.mutate({
-      id: repository.id,
-      updates: {
-        displayName: displayName.trim() || repository.path.split('/').pop() || 'repo',
-        startupScript: startupScript.trim() || null,
-        copyFiles: copyFiles.trim() || null,
-        isCopierTemplate,
+    updateRepository.mutate(
+      {
+        id: repository.id,
+        updates: {
+          displayName: displayName.trim() || repository.path.split('/').pop() || 'repo',
+          startupScript: startupScript.trim() || null,
+          copyFiles: copyFiles.trim() || null,
+          isCopierTemplate,
+        },
       },
-    })
+      {
+        onSuccess: () => {
+          toast.success('Repository saved')
+          setHasChanges(false)
+        },
+        onError: (error) => {
+          toast.error('Failed to save repository', {
+            description: error instanceof Error ? error.message : 'Unknown error',
+          })
+        },
+      }
+    )
   }
 
   const handleDelete = async () => {
@@ -226,7 +240,7 @@ function RepositoryDetailView() {
             onClick={handleSave}
             disabled={!hasChanges || updateRepository.isPending}
           >
-            <HugeiconsIcon icon={Add02Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">{updateRepository.isPending ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
