@@ -81,73 +81,71 @@ function ReviewPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-end border-b border-border bg-background px-4 py-2 max-sm:px-2">
-        <div className="flex items-center gap-4 max-sm:gap-2">
-          {/* Filter dropdown - different options for PRs vs Issues */}
-          {activeTab === 'prs' ? (
-            <Select value={prFilter} onValueChange={(v) => setPrFilter(v as PRFilter)}>
-              <SelectTrigger size="sm" className="max-sm:w-auto">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created">{t('filters.pr.created')}</SelectItem>
-                <SelectItem value="assigned">{t('filters.pr.assigned')}</SelectItem>
-                <SelectItem value="review_requested">{t('filters.pr.reviewRequested')}</SelectItem>
-                <SelectItem value="mentioned">{t('filters.pr.mentioned')}</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <Select value={issueFilter} onValueChange={(v) => setIssueFilter(v as IssueFilter)}>
-              <SelectTrigger size="sm" className="max-sm:w-auto">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="assigned">{t('filters.issue.assigned')}</SelectItem>
-                <SelectItem value="created">{t('filters.issue.created')}</SelectItem>
-                <SelectItem value="mentioned">{t('filters.issue.mentioned')}</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-
-          {/* Organization filter */}
-          <Select value={selectedOrg} onValueChange={(v) => setSelectedOrg(v || '')}>
-            <SelectTrigger size="sm" className="max-sm:w-auto">
-              <SelectValue>
-                {selectedOrg || t('filters.allOrgs')}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">{t('filters.allOrganizations')}</SelectItem>
-              {orgs.map((org) => (
-                <SelectItem key={org.login} value={org.login}>
-                  {org.login}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Repo scope toggle */}
-          <label className="flex cursor-pointer items-center gap-2 text-xs" title={t('filters.viboraReposOnly')}>
-            <Switch
-              checked={viboraReposOnly}
-              onCheckedChange={setViboraReposOnly}
-              disabled={!!selectedOrg}
-            />
-            <span className="text-muted-foreground max-sm:hidden">{t('filters.viboraReposOnly')}</span>
-          </label>
-        </div>
-      </div>
-
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as 'prs' | 'issues')}
         className="flex flex-1 flex-col overflow-hidden"
       >
-        <div className="shrink-0 border-b border-border bg-background px-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-1 max-sm:px-2">
           <TabsList variant="line">
             <TabsTrigger value="prs">{t('tabs.pullRequests')}</TabsTrigger>
             <TabsTrigger value="issues">{t('tabs.issues')}</TabsTrigger>
           </TabsList>
+
+          <div className="flex items-center gap-4 max-sm:gap-2">
+            {/* Filter dropdown - different options for PRs vs Issues */}
+            {activeTab === 'prs' ? (
+              <Select value={prFilter} onValueChange={(v) => setPrFilter(v as PRFilter)}>
+                <SelectTrigger size="sm" className="max-sm:w-auto">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created">{t('filters.pr.created')}</SelectItem>
+                  <SelectItem value="assigned">{t('filters.pr.assigned')}</SelectItem>
+                  <SelectItem value="review_requested">{t('filters.pr.reviewRequested')}</SelectItem>
+                  <SelectItem value="mentioned">{t('filters.pr.mentioned')}</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value={issueFilter} onValueChange={(v) => setIssueFilter(v as IssueFilter)}>
+                <SelectTrigger size="sm" className="max-sm:w-auto">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assigned">{t('filters.issue.assigned')}</SelectItem>
+                  <SelectItem value="created">{t('filters.issue.created')}</SelectItem>
+                  <SelectItem value="mentioned">{t('filters.issue.mentioned')}</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Organization filter */}
+            <Select value={selectedOrg} onValueChange={(v) => setSelectedOrg(v || '')}>
+              <SelectTrigger size="sm" className="max-sm:w-auto">
+                <SelectValue>
+                  {selectedOrg || t('filters.allOrgs')}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">{t('filters.allOrganizations')}</SelectItem>
+                {orgs.map((org) => (
+                  <SelectItem key={org.login} value={org.login}>
+                    {org.login}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Repo scope toggle */}
+            <label className="flex cursor-pointer items-center gap-2 text-xs" title={t('filters.viboraReposOnly')}>
+              <Switch
+                checked={viboraReposOnly}
+                onCheckedChange={setViboraReposOnly}
+                disabled={!!selectedOrg}
+              />
+              <span className="text-muted-foreground max-sm:hidden">{t('filters.viboraReposOnly')}</span>
+            </label>
+          </div>
         </div>
 
         <TabsContent value="prs" className="flex-1 overflow-auto p-4">
