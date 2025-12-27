@@ -75,12 +75,33 @@ export function MarkdownRenderer({ content, worktreePath, filePath }: MarkdownRe
             fontSize: '14px',
           }}
           rehypeRewrite={(node) => {
+            if (node.type !== 'element') return
+
             // Open links in new tab
-            if (node.type === 'element' && node.tagName === 'a') {
+            if (node.tagName === 'a') {
               node.properties = {
                 ...node.properties,
                 target: '_blank',
                 rel: 'noopener noreferrer',
+              }
+            }
+
+            // Transform image src to use local API
+            if (node.tagName === 'img' && node.properties?.src) {
+              const src = String(node.properties.src)
+              // Skip external URLs, data URIs, and already-transformed URLs
+              if (
+                !src.startsWith('http://') &&
+                !src.startsWith('https://') &&
+                !src.startsWith('data:') &&
+                !src.startsWith('/api/')
+              ) {
+                const resolvedPath = resolveImagePath(src, filePath)
+                const params = new URLSearchParams({
+                  path: resolvedPath,
+                  root: worktreePath,
+                })
+                node.properties.src = `/api/fs/image?${params}`
               }
             }
           }}
