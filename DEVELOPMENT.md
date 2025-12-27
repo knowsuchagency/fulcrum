@@ -158,16 +158,12 @@ For remote development scenarios (SSH + Tailscale), Vibora can be run as a syste
 
 ### Installation
 
+Create a systemd user service file at `~/.config/systemd/user/vibora.service`. The service should build the frontend, run migrations, and start the server. See [systemd documentation](https://www.freedesktop.org/software/systemd/man/systemd.service.html) for details.
+
 ```bash
-# Copy the service file
-mkdir -p ~/.config/systemd/user
-cp vibora-dev.service ~/.config/systemd/user/
-
-# Reload systemd
+# After creating the service file
 systemctl --user daemon-reload
-
-# Enable the service to start on login
-systemctl --user enable vibora-dev
+systemctl --user enable vibora
 ```
 
 ### First Start
@@ -175,50 +171,48 @@ systemctl --user enable vibora-dev
 The service builds before stopping the old instance, so if the build fails, the old instance keeps running:
 
 ```bash
-systemctl --user start vibora-dev
+systemctl --user start vibora
 ```
 
 This is safe to run even if Vibora is already running via `mise run up`.
 
 ### How Restart Works
 
-The systemd service runs these steps in order:
-1. `mise run build` - If this fails, the service stops here and the old instance keeps running
+The systemd service runs these steps in order via `ExecStartPre`:
+1. `mise run build:debug` - Build frontend with debug logging enabled
 2. `bun run drizzle-kit push` - Run any pending migrations
-3. `mise run down` - Stop the old instance (only after build succeeds)
+3. `mise run down` - Stop any daemon instance
 4. `bun server/index.ts` - Start the new instance
 
-This ensures you never end up with no Vibora running due to a build failure.
+If any `ExecStartPre` step fails, the service won't start and the old instance keeps running.
 
 ### Manual Operations
 
 ```bash
 # Start the server
-systemctl --user start vibora-dev
+systemctl --user start vibora
 
 # Stop the server
-systemctl --user stop vibora-dev
+systemctl --user stop vibora
 
 # Restart (rebuild and restart)
-systemctl --user restart vibora-dev
+systemctl --user restart vibora
 
 # Check status
-systemctl --user status vibora-dev
+systemctl --user status vibora
 
 # View logs
-journalctl --user -u vibora-dev -f
+journalctl --user -u vibora -f
 ```
 
 ### Restarting from the UI
 
 When running in developer mode, the Settings page shows a "Restart Vibora" button. Clicking it:
 
-1. **Triggers systemctl restart**: The button triggers `systemctl --user restart vibora-dev`
-2. **Build runs first**: Systemd builds the project before stopping the old instance
+1. **Triggers systemctl restart**: The button calls `systemctl --user restart vibora`
+2. **Systemd handles everything**: The service builds, migrates, and restarts
 3. **Fails safely**: If build fails, old instance keeps running (check logs with `journalctl`)
 4. **Auto-reloads**: The page polls for the new server and reloads when it's back
-
-This two-phase approach ensures you never accidentally take down the server with a broken build.
 
 ### Restarting from the CLI
 

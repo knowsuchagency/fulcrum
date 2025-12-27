@@ -130,7 +130,7 @@
     "restarting": "重启中...",
     "restartDescription": "重新构建并重启 Vibora 服务器。如果构建失败，服务器将继续运行。",
     "restartFailed": "重启失败",
-    "checkLogs": "构建可能失败。运行 journalctl --user -u vibora-dev 查看详情。"
+    "checkLogs": "构建可能失败。运行 journalctl --user -u vibora 查看详情。"
   },
   "unsavedChanges": {
     "title": "未保存的更改",
