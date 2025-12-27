@@ -393,17 +393,9 @@ function RepositoriesView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
-        <div className="flex items-center gap-2 sm:gap-4">
-          {repositories && (
-            <div className="text-xs text-muted-foreground">{t('total', { count: repositories.length })}</div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <NewProjectDialog />
-          <CreateRepositoryDialog />
-        </div>
+      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
+        <NewProjectDialog />
+        <CreateRepositoryDialog />
       </div>
 
       <div className="flex-1 overflow-auto p-4">
