@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Folder01Icon,
@@ -7,8 +7,10 @@ import {
   File01Icon,
   Image01Icon,
   MenuCollapseIcon,
+  Cancel01Icon,
 } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
+import { fuzzyScore } from '@/lib/fuzzy-search'
 import type { FileTreeEntry } from '@/types'
 
 interface FileTreeProps {
@@ -18,6 +20,22 @@ interface FileTreeProps {
   onSelectFile: (path: string) => void
   onToggleDir: (path: string) => void
   onCollapseAll: () => void
+}
+
+/** Flatten tree to get all file paths */
+function flattenFiles(entries: FileTreeEntry[]): { name: string; path: string }[] {
+  const files: { name: string; path: string }[] = []
+  function traverse(nodes: FileTreeEntry[]) {
+    for (const node of nodes) {
+      if (node.type === 'file') {
+        files.push({ name: node.name, path: node.path })
+      } else if (node.children) {
+        traverse(node.children)
+      }
+    }
+  }
+  traverse(entries)
+  return files
 }
 
 function getFileIcon(name: string) {
@@ -139,6 +157,26 @@ export function FileTree({
   onToggleDir,
   onCollapseAll,
 }: FileTreeProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const allFiles = useMemo(() => flattenFiles(entries), [entries])
+
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim()) return null
+    const query = searchQuery.trim()
+    return allFiles
+      .map((file) => ({
+        ...file,
+        score: Math.max(fuzzyScore(file.name, query), fuzzyScore(file.path, query)),
+      }))
+      .filter((file) => file.score > 0)
+      .sort((a, b) => b.score - a.score)
+  }, [allFiles, searchQuery])
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('')
+  }, [])
+
   if (entries.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
@@ -161,19 +199,72 @@ export function FileTree({
         </button>
       </div>
 
-      {/* Tree */}
-      <div className="py-1 flex-1 overflow-auto">
-        {entries.map((entry) => (
-          <TreeNode
-            key={entry.path}
-            entry={entry}
-            depth={0}
-            selectedFile={selectedFile}
-            expandedDirs={expandedDirs}
-            onSelectFile={onSelectFile}
-            onToggleDir={onToggleDir}
+      {/* Search */}
+      <div className="shrink-0 px-2 py-1.5 border-b border-border bg-card">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search files..."
+            className="w-full text-sm bg-muted/50 border border-border rounded px-2 py-1 pr-7 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-        ))}
+          {searchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Search Results or Tree */}
+      <div className="py-1 flex-1 overflow-auto">
+        {filteredFiles ? (
+          filteredFiles.length > 0 ? (
+            filteredFiles.map((file) => (
+              <div
+                key={file.path}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-0.5 cursor-pointer text-sm hover:bg-muted/50',
+                  selectedFile === file.path && 'bg-primary/10 text-primary'
+                )}
+                onClick={() => onSelectFile(file.path)}
+              >
+                <HugeiconsIcon
+                  icon={getFileIcon(file.name)}
+                  size={14}
+                  strokeWidth={2}
+                  className="shrink-0 text-muted-foreground"
+                />
+                <span className="truncate" title={file.path}>
+                  {file.name}
+                </span>
+                <span className="text-xs text-muted-foreground truncate ml-auto">
+                  {file.path.split('/').slice(0, -1).join('/')}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+              No matching files
+            </div>
+          )
+        ) : (
+          entries.map((entry) => (
+            <TreeNode
+              key={entry.path}
+              entry={entry}
+              depth={0}
+              selectedFile={selectedFile}
+              expandedDirs={expandedDirs}
+              onSelectFile={onSelectFile}
+              onToggleDir={onToggleDir}
+            />
+          ))
+        )}
       </div>
     </div>
   )
