@@ -93,6 +93,7 @@ src/
   routes/          # Pages (TanStack Router)
   components/      # React components by feature
   hooks/           # Custom hooks (use-tasks, use-terminal-ws, etc.)
+  stores/          # MobX State Tree stores for terminal/tab state
 server/
   routes/          # REST API handlers (/api/*)
   services/        # Business logic (pr-monitor, linear, task-status, notifications)
@@ -107,6 +108,16 @@ cli/
   dist/            # Frontend build (generated)
   drizzle/         # SQL migrations (generated)
 ```
+
+## Terminal Architecture
+
+For detailed documentation on the terminal implementation including:
+- MobX State Tree data model
+- WebSocket message protocol
+- Optimistic updates and tempId → realId transitions
+- Critical gotchas and race conditions
+
+See [src/stores/terminal-architecture.md](src/stores/terminal-architecture.md).
 
 ## CLI Package
 
