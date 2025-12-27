@@ -138,7 +138,8 @@ This document describes the MobX State Tree (MST) data model used for terminal a
 ┌─────────────────────────────────────────────────────────────┐
 │ Terminal Messages                                            │
 ├─────────────────────────────────────────────────────────────┤
-│ terminal:create    { name, cols, rows, cwd?, tabId? }       │
+│ terminal:create    { name, cols, rows, cwd?, tabId?,        │
+│                      requestId?, tempId? }                  │
 │ terminal:destroy   { terminalId, force?, reason? }          │
 │ terminal:input     { terminalId, data }                     │
 │ terminal:resize    { terminalId, cols, rows }               │
@@ -149,11 +150,16 @@ This document describes the MobX State Tree (MST) data model used for terminal a
 ├─────────────────────────────────────────────────────────────┤
 │ Tab Messages                                                 │
 ├─────────────────────────────────────────────────────────────┤
-│ tab:create         { name, position?, directory? }          │
+│ tab:create         { name, position?, directory?,           │
+│                      requestId?, tempId? }                  │
 │ tab:update         { tabId, name?, directory? }             │
 │ tab:delete         { tabId }                                │
 │ tab:reorder        { tabId, position }                      │
 └─────────────────────────────────────────────────────────────┘
+
+Note: requestId and tempId are used for optimistic update correlation.
+The server echoes these back in responses so the client can match
+responses to requests and replace temp IDs with real server IDs.
 ```
 
 ### Server → Client
@@ -163,7 +169,8 @@ This document describes the MobX State Tree (MST) data model used for terminal a
 │ Terminal Messages                                            │
 ├─────────────────────────────────────────────────────────────┤
 │ terminals:list     { terminals: [] }      ◄─── Initial sync │
-│ terminal:created   { terminal, isNew }                      │
+│ terminal:created   { terminal, isNew,                       │
+│                      requestId?, tempId? }                  │
 │ terminal:destroyed { terminalId }                           │
 │ terminal:output    { terminalId, data }                     │
 │ terminal:exit      { terminalId, exitCode }                 │
@@ -171,15 +178,22 @@ This document describes the MobX State Tree (MST) data model used for terminal a
 │ terminal:renamed   { terminalId, name }                     │
 │ terminal:tabAssigned { terminalId, tabId, position }        │
 │ terminal:bufferCleared { terminalId }                       │
-│ terminal:error     { terminalId?, error }                   │
+│ terminal:error     { terminalId?, error,                    │
+│                      requestId?, tempId? }                  │
 ├─────────────────────────────────────────────────────────────┤
 │ Tab Messages                                                 │
 ├─────────────────────────────────────────────────────────────┤
 │ tabs:list          { tabs: [] }           ◄─── Initial sync │
-│ tab:created        { tab }                                  │
+│ tab:created        { tab, requestId?, tempId? }             │
 │ tab:updated        { tabId, name?, directory? }             │
 │ tab:deleted        { tabId }                                │
 │ tab:reordered      { tabId, position }                      │
+├─────────────────────────────────────────────────────────────┤
+│ Sync Messages                                                │
+├─────────────────────────────────────────────────────────────┤
+│ sync:stale         { entityType, entityId, error,           │
+│                      requestId?, tempId? }                  │
+│                    ◄─── Operation on deleted entity         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -253,7 +267,7 @@ This document describes the MobX State Tree (MST) data model used for terminal a
 src/stores/
 ├── index.tsx              # StoreProvider, useStore hook
 ├── root-store.ts          # Root store composition
-├── DATA-MODEL.md          # This file
+├── terminal-data-model.md # This file
 │
 ├── models/
 │   ├── index.ts           # Model exports
@@ -261,18 +275,70 @@ src/stores/
 │   ├── tab.ts             # Tab model
 │   └── view-state.ts      # View state model
 │
-└── sync/                  # (Future) Sync utilities
-    ├── websocket-sync.ts  # WebSocket message handling
-    └── patch-utils.ts     # Patch recording/rollback
+├── hooks/
+│   ├── index.ts           # Hook exports
+│   └── use-terminal-store.ts  # useTerminalStore hook
+│
+└── sync/
+    └── index.ts           # Request ID generation, patch utilities
+```
+
+## Optimistic Update Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Client    │     │  MST Store  │     │   Server    │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │
+       │  createTerminal() │                   │
+       │──────────────────►│                   │
+       │                   │                   │
+       │                   │  1. Generate      │
+       │                   │     requestId     │
+       │                   │     tempId        │
+       │                   │                   │
+       │                   │  2. Create        │
+       │                   │     optimistic    │
+       │                   │     terminal      │
+       │                   │     (isPending)   │
+       │                   │                   │
+       │  UI shows new     │  3. Record        │
+       │  terminal         │     inverse       │
+       │◄──────────────────│     patches       │
+       │                   │                   │
+       │                   │  4. Send with     │
+       │                   │     requestId     │
+       │                   │──────────────────►│
+       │                   │                   │
+       │                   │                   │  Persist
+       │                   │                   │  Broadcast
+       │                   │                   │
+       │                   │  terminal:created │
+       │                   │  { requestId,     │
+       │                   │    tempId,        │
+       │                   │    terminal }     │
+       │                   │◄──────────────────│
+       │                   │                   │
+       │                   │  5. Match by      │
+       │                   │     requestId     │
+       │                   │                   │
+       │                   │  6. Replace temp  │
+       │                   │     with real ID  │
+       │                   │                   │
+       │  UI updates to    │                   │
+       │  real terminal    │                   │
+       │◄──────────────────│                   │
+       │                   │                   │
+       ▼                   ▼                   ▼
 ```
 
 ## Migration Status
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 0 | Bug fixes (protection, cascade) | Complete |
-| 1 | MST infrastructure setup | Complete |
-| 2 | Migrate WebSocket handler | Pending |
-| 3 | Migrate Terminals view | Pending |
-| 4 | Optimistic updates | Pending |
-| 5 | Multi-client sync | Pending |
+| 0 | Bug fixes (protection, cascade) | ✅ Complete |
+| 1 | MST infrastructure setup | ✅ Complete |
+| 2 | Migrate WebSocket handler | ✅ Complete |
+| 3 | Migrate Terminals view | ✅ Complete |
+| 4 | Optimistic updates with rollback | ✅ Complete |
+| 5 | Multi-client sync (stale detection) | ✅ Complete |
