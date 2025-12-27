@@ -41,6 +41,26 @@ function isPathWithinRoot(filePath: string, root: string): boolean {
   return resolvedPath.startsWith(resolvedRoot + path.sep) || resolvedPath === resolvedRoot
 }
 
+// Directories to exclude from tree traversal (large dependency/build directories)
+const EXCLUDED_DIRECTORIES = new Set([
+  'node_modules',
+  'vendor',
+  'dist',
+  'build',
+  'out',
+  '.next',
+  '.nuxt',
+  '__pycache__',
+  'target',
+  '.venv',
+  'venv',
+  'env',
+  '.tox',
+  'coverage',
+  '.cache',
+  'bower_components',
+])
+
 // Build recursive directory tree
 function buildTree(dirPath: string, root: string, depth: number = 0, maxDepth: number = 20): TreeEntry[] {
   if (depth >= maxDepth) return []
@@ -51,8 +71,8 @@ function buildTree(dirPath: string, root: string, depth: number = 0, maxDepth: n
     const items = fs.readdirSync(dirPath)
 
     for (const name of items) {
-      // Skip hidden files and .git directory
-      if (name.startsWith('.')) continue
+      // Skip hidden files/directories and excluded directories
+      if (name.startsWith('.') || EXCLUDED_DIRECTORIES.has(name)) continue
 
       try {
         const itemPath = path.join(dirPath, name)
