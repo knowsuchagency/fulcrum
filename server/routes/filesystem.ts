@@ -318,6 +318,51 @@ app.get('/read', (c) => {
   }
 })
 
+// POST /api/fs/write
+// Body: { path: string, root: string, content: string }
+app.post('/write', async (c) => {
+  const body = await c.req.json<{ path?: string; root?: string; content?: string }>()
+  const { path: filePath, root, content } = body
+
+  if (!filePath) {
+    return c.json({ error: 'path is required' }, 400)
+  }
+
+  if (!root) {
+    return c.json({ error: 'root is required' }, 400)
+  }
+
+  if (content === undefined) {
+    return c.json({ error: 'content is required' }, 400)
+  }
+
+  const resolvedRoot = path.resolve(root)
+  const resolvedPath = path.resolve(resolvedRoot, filePath)
+
+  // Security: validate path is within root
+  if (!isPathWithinRoot(resolvedPath, resolvedRoot)) {
+    return c.json({ error: 'Access denied: path outside root' }, 403)
+  }
+
+  try {
+    if (!fs.existsSync(resolvedPath)) {
+      return c.json({ error: 'File not found' }, 404)
+    }
+
+    const stat = fs.statSync(resolvedPath)
+    if (!stat.isFile()) {
+      return c.json({ error: 'Path is not a file' }, 400)
+    }
+
+    // Write the content
+    fs.writeFileSync(resolvedPath, content, 'utf-8')
+
+    return c.json({ success: true, size: Buffer.byteLength(content, 'utf-8') })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to write file' }, 500)
+  }
+})
+
 // GET /api/fs/is-git-repo?path=/path/to/check
 app.get('/is-git-repo', (c) => {
   let dirPath = c.req.query('path')
