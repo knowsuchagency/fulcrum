@@ -42,7 +42,6 @@ import {
   VisualStudioCodeIcon,
   ComputerTerminal01Icon,
   GridViewIcon,
-  Settings05Icon,
 } from '@hugeicons/core-free-icons'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { useDefaultGitReposDir, useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
@@ -95,16 +94,20 @@ function RepositoryCard({
   }
 
   return (
-    <Card className="h-full">
-      <CardContent className="flex h-full flex-col gap-3 py-4">
-        {/* Header: Name and path */}
-        <div className="space-y-1">
-          <span className="block truncate font-medium">{repository.displayName}</span>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
-            <span className="truncate font-mono">{repository.path}</span>
+    <Card className="h-full group transition-colors hover:border-foreground/20">
+      <Link to="/repositories/$repoId" params={{ repoId: repository.id }} className="block">
+        <CardContent className="flex flex-col gap-3 py-4">
+          {/* Header: Name and path */}
+          <div className="space-y-1">
+            <span className="block truncate font-medium group-hover:text-primary transition-colors">{repository.displayName}</span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
+              <span className="truncate font-mono">{repository.path}</span>
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Link>
+      <CardContent className="pt-0 pb-4 px-6">
 
         {/* Action buttons row */}
         <div className="mt-auto flex flex-wrap gap-1">
@@ -152,18 +155,6 @@ function RepositoryCard({
           >
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">{t('editor')}</span>
-          </Button>
-
-          {/* Settings (link to detail page) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            title={t('settings')}
-            render={<Link to="/repositories/$repoId" params={{ repoId: repository.id }} />}
-          >
-            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{t('settings')}</span>
           </Button>
 
           {/* Delete */}

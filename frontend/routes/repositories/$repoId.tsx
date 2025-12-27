@@ -278,9 +278,9 @@ function RepositoryDetailView() {
         className="flex flex-1 flex-col overflow-hidden"
       >
         <div className="shrink-0 border-b border-border px-4">
-          <TabsList>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="files">Files</TabsTrigger>
+          <TabsList variant="line">
+            <TabsTrigger value="settings" className="px-3 py-1.5">Settings</TabsTrigger>
+            <TabsTrigger value="files" className="px-3 py-1.5">Files</TabsTrigger>
           </TabsList>
         </div>
 
