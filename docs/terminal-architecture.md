@@ -101,16 +101,21 @@ This document describes the terminal implementation in Vibora, including the Mob
    │ Tab Terminal │           │Task Terminal │
    │              │           │              │
    │ tabId: set   │           │ tabId: null  │
-   │              │           │              │
-   │ Belongs to a │           │ Associated   │
-   │ regular tab  │           │ with a task  │
-   │              │           │ worktree     │
-   │ Protected by │           │              │
-   │ force flag   │           │ Subject to   │
-   │              │           │ orphan       │
-   │              │           │ cleanup      │
+   │              │           │ cwd: in      │
+   │ Belongs to a │           │ worktrees/   │
+   │ regular tab  │           │              │
+   │              │           │ Associated   │
+   │ Protected by │           │ with a task  │
+   │ force flag   │           │ worktree     │
+   │ (server-side)│           │              │
+   │              │           │ Protected by │
+   │              │           │ force flag   │
+   │              │           │ (server-side)│
    └──────────────┘           └──────────────┘
 ```
+
+**Key distinction**: Both terminal types are protected by a server-side `force` flag requirement.
+Task terminals are identified by having no `tabId` AND a `cwd` inside the worktrees directory.
 
 ## Data Flow
 
@@ -534,6 +539,38 @@ If you return first then delete later, a race condition can cause double executi
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Task Terminal Protection
+
+Task terminals (terminals in the worktrees directory without a tabId) are protected
+by the same force flag mechanism. This prevents accidental deletion from frontend bugs
+or stale state.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│               Task Terminal Protection                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Detection:                                                  │
+│    isTaskTerminal = !tabId && cwd.startsWith(worktreesDir)  │
+│                                                              │
+│  Legitimate deletion paths (bypass WebSocket):              │
+│    - Task deletion (destroyTerminalsForWorktree)            │
+│    - Worktree deletion (destroyTerminalsForWorktree)        │
+│                                                              │
+│  WebSocket protection (requires force: true):               │
+│    - User-initiated close from UI                           │
+│                                                              │
+│  Blocked (no force flag):                                   │
+│    - Accidental cleanup from frontend bugs                  │
+│    - Stale state race conditions                            │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why this matters**: Previously, a frontend "orphan cleanup" effect could incorrectly
+identify valid task terminals as orphaned due to React Query timing issues. The server-side
+protection ensures task terminals can only be deleted through explicit user actions.
+
 ### Tab Deletion Cascade
 
 ```
@@ -567,10 +604,12 @@ If you return first then delete later, a race condition can cause double executi
 ## File Structure
 
 ```
-src/stores/
+docs/
+└── terminal-architecture.md   # This file
+
+frontend/stores/
 ├── index.tsx                  # StoreProvider, useStore hook
 ├── root-store.ts              # Root store composition + actions
-├── terminal-architecture.md   # This file
 │
 ├── models/
 │   ├── index.ts               # Model exports
@@ -585,13 +624,16 @@ src/stores/
 └── sync/
     └── index.ts               # Request ID generation, patch utilities
 
-src/hooks/
+frontend/hooks/
 └── use-terminal-ws.ts         # Legacy compatibility wrapper
 
-src/components/terminal/
+frontend/components/terminal/
 ├── task-terminal.tsx          # Task terminal with auto-Claude startup
 ├── terminal-panel.tsx         # Tab terminal panel
 └── ...
+
+server/websocket/
+└── terminal-ws.ts             # WebSocket handlers with protection logic
 ```
 
 ---
@@ -608,3 +650,4 @@ src/components/terminal/
 | 5 | Multi-client sync (stale detection) | ✅ Complete |
 | 6 | Task terminal startup fix | ✅ Complete |
 | 7 | TempId→RealId race conditions | ✅ Complete |
+| 8 | Task terminal protection (force flag) | ✅ Complete |

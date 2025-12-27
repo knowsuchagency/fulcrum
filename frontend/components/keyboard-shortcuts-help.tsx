@@ -43,9 +43,17 @@ const shortcutGroups: ShortcutGroup[] = [
     ],
   },
   {
+    titleKey: 'terminals',
+    items: [
+      { labelKey: 'newTerminal', shortcut: 'meta+d' },
+      { labelKey: 'closeTerminal', shortcut: 'meta+w' },
+    ],
+  },
+  {
     titleKey: 'general',
     items: [
       { labelKey: 'closeModal', shortcut: 'escape' },
+      { labelKey: 'submitForm', shortcut: 'meta+enter' },
     ],
   },
 ]

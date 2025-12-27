@@ -2,6 +2,7 @@ import type { WSContext, WSEvents } from 'hono/ws'
 import type { ClientMessage, ServerMessage } from '../types'
 import { getPTYManager } from '../terminal/pty-instance'
 import { getTabManager } from '../terminal/tab-manager'
+import { getWorktreeBasePath } from '../lib/settings'
 import { log } from '../lib/logger'
 
 interface ClientData {
@@ -175,6 +176,28 @@ export const terminalWebSocketHandlers: WSEvents = {
               payload: {
                 terminalId,
                 error: 'Tab terminals require explicit force flag to destroy',
+              },
+            })
+            break
+          }
+
+          // Protection: Task terminals (no tabId, in worktrees dir) require force flag
+          // This prevents accidental deletion from frontend bugs or stale state
+          const worktreeBasePath = getWorktreeBasePath()
+          const isTaskTerminal = !terminalInfo?.tabId && terminalInfo?.cwd?.startsWith(worktreeBasePath)
+          if (isTaskTerminal && !force) {
+            log.ws.warn('terminal:destroy BLOCKED - task terminal requires force flag', {
+              terminalId,
+              cwd: terminalInfo?.cwd,
+              name: terminalInfo?.name,
+              clientId: clientData.id,
+              reason,
+            })
+            sendTo(ws, {
+              type: 'terminal:error',
+              payload: {
+                terminalId,
+                error: 'Task terminals require explicit force flag to destroy',
               },
             })
             break

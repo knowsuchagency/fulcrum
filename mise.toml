@@ -697,3 +697,9 @@ esac
 mise run desktop:manifest
 echo "Desktop release packages ready in desktop/dist/"
 """
+
+# Worker tasks
+[tasks."worker:deploy"]
+description = "Deploy vibora-utils Cloudflare worker"
+dir = "vibora-utils"
+run = "bun run deploy"
