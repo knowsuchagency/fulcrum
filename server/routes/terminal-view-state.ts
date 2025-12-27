@@ -68,7 +68,8 @@ app.patch('/', async (c) => {
 
   if (body.activeTabId !== undefined) {
     // Validate that the tab exists (if not null)
-    if (body.activeTabId !== null) {
+    // 'all-tasks' is a virtual tab, not stored in database
+    if (body.activeTabId !== null && body.activeTabId !== 'all-tasks') {
       const tab = db.select().from(terminalTabs).where(eq(terminalTabs.id, body.activeTabId)).get()
       if (!tab) {
         return c.json({ error: 'Tab not found' }, 404)

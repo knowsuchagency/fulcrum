@@ -39,16 +39,20 @@ function ViewTracking() {
     const path = location.pathname
     let currentView = 'other'
     let currentTaskId: string | null = null
+    let activeTabId: string | null = null
 
     if (path.startsWith('/tasks/')) {
       currentView = 'task-detail'
       currentTaskId = path.split('/')[2] || null
     } else if (path === '/terminals') {
       currentView = 'terminals'
+      // Extract the active terminal tab from URL search params
+      const params = new URLSearchParams(location.search)
+      activeTabId = params.get('tab')
     }
 
-    updateViewTracking(currentView, currentTaskId)
-  }, [location.pathname, updateViewTracking])
+    updateViewTracking(currentView, currentTaskId, activeTabId)
+  }, [location.pathname, location.search, updateViewTracking])
 
   return null
 }

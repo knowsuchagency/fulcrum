@@ -19,6 +19,7 @@ interface TerminalViewState {
 }
 
 interface PendingUpdates {
+  activeTabId?: string | null
   focusedTerminals?: FocusedTerminalsMap
   currentView?: string | null
   currentTaskId?: string | null
@@ -93,7 +94,7 @@ export function useTerminalViewState() {
       queryClient.setQueryData(['terminal-view-state'], (current: TerminalViewState | undefined) => {
         const currentState = current ?? DEFAULT_VIEW_STATE
         return {
-          activeTabId: currentState.activeTabId, // Deprecated: tab state is now in URL
+          activeTabId: merged.activeTabId !== undefined ? merged.activeTabId : currentState.activeTabId,
           focusedTerminals: {
             ...currentState.focusedTerminals,
             ...merged.focusedTerminals,
@@ -173,10 +174,11 @@ export function useTerminalViewState() {
 
   // Update view tracking (for route changes)
   const updateViewTracking = useCallback(
-    (currentView: string, currentTaskId: string | null) => {
+    (currentView: string, currentTaskId: string | null, activeTabId?: string | null) => {
       updateViewState({
         currentView,
         currentTaskId,
+        activeTabId,
         viewUpdatedAt: new Date().toISOString(),
       })
     },
