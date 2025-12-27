@@ -8,7 +8,7 @@ import { desktopZoom } from '@/main'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
+import { ArrowDownDoubleIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
 import { useTheme } from 'next-themes'
@@ -31,6 +31,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
   const [xtermOpened, setXtermOpened] = useState(false)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
@@ -43,6 +44,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     createdTerminalRef.current = false
     attachedRef.current = false
     setTerminalId(null)
+    setIsCreating(false)
   }, [cwd])
 
   const { setTerminalFocused } = useKeyboardContext()
@@ -214,6 +216,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
+      setIsCreating(true)
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
@@ -241,6 +244,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     const newTerminal = terminals.find((t) => t.cwd === cwd)
     if (newTerminal) {
       setTerminalId(newTerminal.id)
+      setIsCreating(false)
     }
   }, [terminals, cwd, terminalId])
 
@@ -380,6 +384,24 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           ref={containerRef}
           className={cn('h-full w-full overflow-hidden p-2 bg-terminal-background', className)}
         />
+
+        {/* Loading overlay - shown while terminal is being created */}
+        {isCreating && !terminalId && (
+          <div className="absolute inset-0 flex items-center justify-center bg-terminal-background">
+            <div className="flex flex-col items-center gap-3">
+              <HugeiconsIcon
+                icon={Loading03Icon}
+                size={24}
+                strokeWidth={2}
+                className={cn('animate-spin', isDark ? 'text-white/50' : 'text-black/50')}
+              />
+              <span className={cn('font-mono text-sm', isDark ? 'text-white/50' : 'text-black/50')}>
+                Initializing terminal...
+              </span>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={() => termRef.current?.scrollToBottom()}
           className={cn('absolute top-2 right-5 p-1 transition-colors', isDark ? 'text-white/50 hover:text-white/80' : 'text-black/50 hover:text-black/80')}
