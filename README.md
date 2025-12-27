@@ -11,7 +11,7 @@ The Vibe Engineer's Cockpit. Orchestrate Claude Code across parallel workstreams
 - **Task Terminals View** — See and control all your Claude Code sessions across every worktree in one parallel view. The killer feature for orchestrating multiple agents simultaneously.
 - **Run Local or Remote** — Client/server architecture lets you run agents on your machine or a remote server. Launch tasks, close your laptop, and your agents keep working.
 - **Git Worktree Isolation** — Each task runs in its own worktree. Your main branch stays clean until you're ready to merge.
-- **Automatic Status Sync** — The Claude Code plugin syncs task status as you work. When Claude stops and waits for input, the task moves to "In Review". When you respond, it's back "In Progress".
+- **Deep Claude Integration** — Plugin for automatic status sync and slash commands. MCP server lets Claude manage tasks, list repositories, and send notifications directly.
 - **Persistent Terminals** — Named terminal tabs that survive restarts for ongoing work that doesn't fit into task worktrees.
 
 ## Key Features
@@ -20,6 +20,7 @@ The Vibe Engineer's Cockpit. Orchestrate Claude Code across parallel workstreams
 - **Local or Remote Execution** — Run on your machine or a remote server; agents continue working when you disconnect
 - **Git Worktree Isolation** — Safe experimentation without touching your main branch
 - **Claude Code Plugin** — Automatic status sync, slash commands, session continuity
+- **MCP Server** — Let Claude manage tasks, list repositories, and send notifications
 - **Kanban Task Management** — Visual task tracking from planning to done
 - **PR Monitoring** — Track pull requests across repositories
 - **Linear Integration** — Sync task status with Linear tickets
