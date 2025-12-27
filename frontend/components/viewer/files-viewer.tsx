@@ -1,6 +1,5 @@
 import { useCallback, createContext, useContext } from 'react'
 import { observer } from 'mobx-react-lite'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   FilesStoreContext,
   useCreateFilesStore,
@@ -83,16 +82,14 @@ const FilesViewerInner = observer(function FilesViewerInner() {
   }
 
   return (
-    <ScrollArea className="h-full bg-background">
-      <FileTree
-        entries={fileTree || []}
-        selectedFile={selectedFile}
-        expandedDirs={expandedDirs}
-        onSelectFile={handleSelectFile}
-        onToggleDir={handleToggleDir}
-        onCollapseAll={collapseAll}
-      />
-    </ScrollArea>
+    <FileTree
+      entries={fileTree || []}
+      selectedFile={selectedFile}
+      expandedDirs={expandedDirs}
+      onSelectFile={handleSelectFile}
+      onToggleDir={handleToggleDir}
+      onCollapseAll={collapseAll}
+    />
   )
 })
 
