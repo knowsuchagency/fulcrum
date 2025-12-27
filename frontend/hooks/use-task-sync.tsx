@@ -93,26 +93,44 @@ export function useTaskSync() {
 
           // Play notification sound if enabled
           // Try custom sound first (/api/uploads/sound), fall back to default
-          // Use localStorage to prevent multiple tabs from playing the same sound
+          // Use localStorage claim mechanism to prevent multiple tabs from playing
           if (playSound) {
             const SOUND_DEBOUNCE_MS = 1000
-            const lastPlayed = localStorage.getItem('vibora:lastSoundPlayed')
+            const CLAIM_SETTLE_MS = 50
+            const storageKey = 'vibora:lastSoundPlayed'
             const now = Date.now()
-            if (lastPlayed && now - parseInt(lastPlayed) < SOUND_DEBOUNCE_MS) {
-              return // Another tab just played it
-            }
-            localStorage.setItem('vibora:lastSoundPlayed', String(now))
 
-            let fellBack = false
-            const playDefault = () => {
-              if (fellBack) return
-              fellBack = true
-              const defaultAudio = new Audio('/sounds/goat-bleat.mp3')
-              defaultAudio.play().catch(() => {})
+            // Parse existing claim (format: "timestamp:randomId")
+            const existing = localStorage.getItem(storageKey)
+            if (existing) {
+              const ts = parseInt(existing.split(':')[0])
+              if (now - ts < SOUND_DEBOUNCE_MS) {
+                return // Recent play, skip
+              }
             }
-            const customAudio = new Audio('/api/uploads/sound')
-            customAudio.onerror = playDefault
-            customAudio.play().catch(playDefault)
+
+            // Make our claim with timestamp:randomId for uniqueness
+            const myClaim = `${now}:${Math.random().toString(36).slice(2)}`
+            localStorage.setItem(storageKey, myClaim)
+
+            // Wait for all tabs to write their claims, then check if we won
+            setTimeout(() => {
+              if (localStorage.getItem(storageKey) !== myClaim) {
+                return // Another tab won the race
+              }
+
+              // We won - play the sound
+              let fellBack = false
+              const playDefault = () => {
+                if (fellBack) return
+                fellBack = true
+                const defaultAudio = new Audio('/sounds/goat-bleat.mp3')
+                defaultAudio.play().catch(() => {})
+              }
+              const customAudio = new Audio('/api/uploads/sound')
+              customAudio.onerror = playDefault
+              customAudio.play().catch(playDefault)
+            }, CLAIM_SETTLE_MS)
           }
 
           // Post to parent window for desktop native notifications
