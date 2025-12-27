@@ -10,6 +10,18 @@ export type { ITerminal, ITerminalSnapshot, ITab, ITabSnapshot, IViewState } fro
 export { useTerminalStore } from './hooks'
 export type { UseTerminalStoreReturn } from './hooks'
 
+export {
+  useFilesStore,
+  useFilesStoreActions,
+  useCreateFilesStore,
+  FilesStoreContext,
+} from './hooks'
+export type { UseFilesStoreReturn } from './hooks'
+
+// Re-export files store for direct use
+export { FilesStore, createFilesStore } from './files-store'
+export type { IFilesStore, IFile } from './files-store'
+
 /**
  * React context for the MST store
  */

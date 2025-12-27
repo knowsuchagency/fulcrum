@@ -7,6 +7,7 @@ import {
   File01Icon,
   Image01Icon,
   MenuCollapseIcon,
+  SidebarRight01Icon,
 } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
 import type { FileTreeEntry } from '@/types'
@@ -18,6 +19,7 @@ interface FileTreeProps {
   onSelectFile: (path: string) => void
   onToggleDir: (path: string) => void
   onCollapseAll: () => void
+  onCollapsePanel?: () => void
 }
 
 function getFileIcon(name: string) {
@@ -138,6 +140,7 @@ export function FileTree({
   onSelectFile,
   onToggleDir,
   onCollapseAll,
+  onCollapsePanel,
 }: FileTreeProps) {
   if (entries.length === 0) {
     return (
@@ -152,13 +155,24 @@ export function FileTree({
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between px-2 py-1 border-b border-border bg-card">
         <span className="text-xs text-muted-foreground">Files</span>
-        <button
-          onClick={onCollapseAll}
-          className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted/50"
-          title="Collapse all"
-        >
-          <HugeiconsIcon icon={MenuCollapseIcon} size={14} strokeWidth={2} />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={onCollapseAll}
+            className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted/50"
+            title="Collapse all folders"
+          >
+            <HugeiconsIcon icon={MenuCollapseIcon} size={14} strokeWidth={2} />
+          </button>
+          {onCollapsePanel && (
+            <button
+              onClick={onCollapsePanel}
+              className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted/50"
+              title="Hide file tree"
+            >
+              <HugeiconsIcon icon={SidebarRight01Icon} size={14} strokeWidth={2} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tree */}

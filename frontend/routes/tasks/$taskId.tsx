@@ -625,7 +625,7 @@ function TaskView() {
               </TabsContent>
 
               <TabsContent value="files" className="flex-1 overflow-hidden">
-                <FilesViewer taskId={task.id} worktreePath={task.worktreePath} />
+                <FilesViewer worktreePath={task.worktreePath} />
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -691,7 +691,7 @@ function TaskView() {
               </TabsContent>
 
               <TabsContent value="files" className="flex-1 overflow-hidden">
-                <FilesViewer taskId={task.id} worktreePath={task.worktreePath} />
+                <FilesViewer worktreePath={task.worktreePath} />
               </TabsContent>
             </Tabs>
           </ResizablePanel>
