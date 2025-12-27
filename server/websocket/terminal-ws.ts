@@ -225,12 +225,22 @@ export const terminalWebSocketHandlers: WSEvents = {
           })
           if (buffer !== null) {
             clientData.attachedTerminals.add(terminalId)
+            log.ws.debug('terminal:attach sending terminal:attached', {
+              terminalId,
+              bufferLength: buffer.length,
+              clientId: clientData.id,
+            })
             sendTo(ws, {
               type: 'terminal:attached',
               payload: {
                 terminalId,
                 buffer,
               },
+            })
+          } else {
+            log.ws.warn('terminal:attach buffer is null, not sending terminal:attached', {
+              terminalId,
+              clientId: clientData.id,
             })
           }
           break

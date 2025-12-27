@@ -52,13 +52,13 @@ mise run bump         # Bump patch version (or: bump major, bump minor)
 
 ## Architecture
 
-### Frontend (`src/`)
-- **React 19** with TanStack Router (file-based routing in `src/routes/`)
+### Frontend (`frontend/`)
+- **React 19** with TanStack Router (file-based routing in `frontend/routes/`)
 - **TanStack React Query** for server state
 - **shadcn/ui** (v4 with baseui support) for UI components
 - **xterm.js** for terminal emulation
 - Components organized by feature: `kanban/`, `terminal/`, `viewer/`, `ui/`
-- Path alias: `@` → `./src/`
+- Path alias: `@` → `./frontend/`
 
 ### Backend (`server/`)
 - **Hono.js** framework on Bun runtime
@@ -89,10 +89,11 @@ Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 ## File Organization
 
 ```
-src/
+frontend/
   routes/          # Pages (TanStack Router)
   components/      # React components by feature
   hooks/           # Custom hooks (use-tasks, use-terminal-ws, etc.)
+  stores/          # MobX State Tree stores for terminal/tab state
 server/
   routes/          # REST API handlers (/api/*)
   services/        # Business logic (pr-monitor, linear, task-status, notifications)
@@ -107,6 +108,16 @@ cli/
   dist/            # Frontend build (generated)
   drizzle/         # SQL migrations (generated)
 ```
+
+## Terminal Architecture
+
+For detailed documentation on the terminal implementation including:
+- MobX State Tree data model
+- WebSocket message protocol
+- Optimistic updates and tempId → realId transitions
+- Critical gotchas and race conditions
+
+See [frontend/stores/terminal-architecture.md](frontend/stores/terminal-architecture.md).
 
 ## CLI Package
 
