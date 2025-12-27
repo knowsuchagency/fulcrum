@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo } from 'react'
-import { createFilesStore, type IFilesStore } from '../files-store'
+import { createFilesStore, type IFilesStore, type IFile } from '../files-store'
+import type { FileTreeEntry } from '@/types'
 
 /**
  * Context for the files store
@@ -46,9 +47,9 @@ export interface UseFilesStoreReturn {
   worktreePath: string | null
   readOnly: boolean
   selectedFile: string | null
-  currentFile: ReturnType<IFilesStore['currentFile']>
+  currentFile: IFile | undefined
   expandedDirs: string[]
-  fileTree: ReturnType<IFilesStore['fileTree']>
+  fileTree: FileTreeEntry[] | null
   isLoading: boolean
   isSaving: boolean
   isLoadingTree: boolean

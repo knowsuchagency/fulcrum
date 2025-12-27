@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
+  ArrowLeft02Icon,
   Delete02Icon,
   Folder01Icon,
   Loading03Icon,
