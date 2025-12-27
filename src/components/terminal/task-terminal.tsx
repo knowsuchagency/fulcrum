@@ -30,10 +30,6 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const fitAddonRef = useRef<FitAddon | null>(null)
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
-  // Track if THIS component instance created the terminal (for startup command decision)
-  const createdByMeRef = useRef(false)
-  // Track which terminal we've run startup commands for (prevents re-running on effect re-runs)
-  const startupRanForRef = useRef<string | null>(null)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [xtermOpened, setXtermOpened] = useState(false)
   const { resolvedTheme } = useTheme()
@@ -45,9 +41,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   useEffect(() => {
     log.taskTerminal.debug('cwd changed, resetting refs', { cwd })
     createdTerminalRef.current = false
-    createdByMeRef.current = false
     attachedRef.current = false
-    startupRanForRef.current = null
     setTerminalId(null)
   }, [cwd])
 
@@ -62,16 +56,19 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     resizeTerminal,
     setupImagePaste,
     writeToTerminal,
+    consumePendingStartup,
   } = useTerminalWS()
 
   // Store callbacks in refs to avoid effect re-runs when they change
   const attachXtermRef = useRef(attachXterm)
   const setupImagePasteRef = useRef(setupImagePaste)
   const writeToTerminalRef = useRef(writeToTerminal)
+  const consumePendingStartupRef = useRef(consumePendingStartup)
 
   useEffect(() => { attachXtermRef.current = attachXterm }, [attachXterm])
   useEffect(() => { setupImagePasteRef.current = setupImagePaste }, [setupImagePaste])
   useEffect(() => { writeToTerminalRef.current = writeToTerminal }, [writeToTerminal])
+  useEffect(() => { consumePendingStartupRef.current = consumePendingStartup }, [consumePendingStartup])
 
   // Get the current terminal's status
   const currentTerminal = terminalId ? terminals.find((t) => t.id === terminalId) : null
@@ -217,15 +214,24 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     // Create terminal only once
     if (!createdTerminalRef.current && termRef.current) {
       createdTerminalRef.current = true
-      createdByMeRef.current = true  // Mark that THIS component created the terminal
       const { cols, rows } = termRef.current
       createTerminal({
         name: taskName,
         cols,
         rows,
         cwd,
+        // Include startup info - this is stored in the MST store to survive
+        // component unmount/remount (fixes race condition with React strict mode)
+        startup: {
+          startupScript,
+          aiMode,
+          description,
+          taskName,
+          serverPort,
+        },
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startup props are captured once at creation time
   }, [connected, cwd, xtermOpened, terminalsLoaded, terminals, taskName, createTerminal])
 
   // Update terminalId when terminal appears in list
@@ -252,47 +258,31 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
 
     log.taskTerminal.debug('attach effect passed guards, calling attachXterm', { terminalId })
 
-    // Capture current values for use in callbacks
+    // Capture current terminal ID for use in callbacks
     const currentTerminalId = terminalId
-    const currentStartupScript = startupScript
-    const currentAiMode = aiMode
-    const currentDescription = description
-    const currentTaskName = taskName
 
     // Callback when terminal is fully attached (buffer received from server)
     const onAttached = () => {
       // Trigger a resize after attaching
       requestAnimationFrame(doFit)
 
-      // SYNCHRONOUS guard: Check and set atomically to prevent race conditions
-      // This must happen BEFORE any async operations
-      if (startupRanForRef.current === currentTerminalId) {
-        log.taskTerminal.debug('onAttached: startup already ran, returning', { terminalId: currentTerminalId })
-        return
-      }
+      // Check if this terminal has pending startup commands.
+      // This is stored in the MST store (not a component ref) so it survives
+      // component unmount/remount (fixes React strict mode race condition).
+      // consumePendingStartup returns the startup info AND removes it from the store
+      // to prevent duplicate execution.
+      const pendingStartup = consumePendingStartupRef.current(currentTerminalId)
 
-      // Use createdByMeRef to determine if THIS component created the terminal
-      // This avoids cross-instance issues with multiple useTerminalWS hooks
-      const isNewTerminal = createdByMeRef.current
-
-      // Clear the flag BEFORE any async operations (synchronous)
-      createdByMeRef.current = false
-
-      // Mark that we've run startup for this terminal IMMEDIATELY (before async operations)
-      // This prevents duplicate execution from React Strict Mode or effect re-runs
-      if (isNewTerminal) {
-        startupRanForRef.current = currentTerminalId
-      }
-
-      log.taskTerminal.debug('onAttached checking isNewTerminal', {
+      log.taskTerminal.debug('onAttached checking pending startup', {
         terminalId: currentTerminalId,
-        isNewTerminal,
-        startupRanFor: startupRanForRef.current,
+        hasPendingStartup: !!pendingStartup,
       })
 
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
-      if (isNewTerminal) {
+      if (pendingStartup) {
         log.taskTerminal.info('onAttached: running startup commands', { terminalId: currentTerminalId })
+        const { startupScript: currentStartupScript, aiMode: currentAiMode, description: currentDescription, taskName: currentTaskName, serverPort: currentServerPort } = pendingStartup
+
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
         if (currentStartupScript) {
           setTimeout(() => {
@@ -302,7 +292,8 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         }
 
         // 2. Then run Claude with the task prompt
-        const portFlag = serverPort !== 7777 ? ` --port=${serverPort}` : ''
+        const effectivePort = currentServerPort ?? 7777
+        const portFlag = effectivePort !== 7777 ? ` --port=${effectivePort}` : ''
         const systemPrompt = 'You are working in a Vibora task worktree. ' +
           'Commit after completing each logical unit of work (feature, fix, refactor) to preserve progress. ' +
           `When you finish working and need user input, run: vibora current-task review${portFlag}. ` +
@@ -339,7 +330,9 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       cleanupPaste()
       attachedRef.current = false
     }
-  }, [terminalId, doFit, startupScript, aiMode, description, taskName, serverPort])
+    // Note: startup info is now stored in MST store and retrieved via consumePendingStartup,
+    // so we don't need startupScript, aiMode, description, taskName, serverPort as dependencies
+  }, [terminalId, doFit])
 
   // Update terminal theme when system theme changes
   useEffect(() => {

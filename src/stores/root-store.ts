@@ -174,6 +174,18 @@ export const RootStore = types
     onAttachedCallbacks: new Map<string, () => void>(),
     /** Last focused terminal ID (for reconnection focus restoration) */
     lastFocusedTerminalId: null as string | null,
+    /**
+     * Terminals pending startup commands.
+     * Maps terminal ID (temp or real) to startup info.
+     * Survives component unmount/remount unlike component refs.
+     */
+    terminalsPendingStartup: new Map<string, {
+      startupScript?: string | null
+      aiMode?: 'default' | 'plan'
+      description?: string
+      taskName: string
+      serverPort?: number
+    }>(),
   }))
   .views((self) => ({
     /** Whether the store is ready for use */
@@ -241,6 +253,20 @@ export const RootStore = types
         self.lastFocusedTerminalId = terminalId
       },
 
+      /**
+       * Get and consume pending startup info for a terminal.
+       * Returns the startup info if pending, or undefined if not.
+       * The entry is deleted after retrieval (consume).
+       */
+      consumePendingStartup(terminalId: string) {
+        const startup = self.terminalsPendingStartup.get(terminalId)
+        if (startup) {
+          self.terminalsPendingStartup.delete(terminalId)
+          getWs().log.ws.debug('consumed pending startup', { terminalId, taskName: startup.taskName })
+        }
+        return startup
+      },
+
       // ============ Terminal Actions ============
 
       /**
@@ -260,6 +286,14 @@ export const RootStore = types
         cwd?: string
         tabId?: string
         positionInTab?: number
+        /** Startup info for task terminals - stored in volatile to survive component unmount */
+        startup?: {
+          startupScript?: string | null
+          aiMode?: 'default' | 'plan'
+          description?: string
+          taskName: string
+          serverPort?: number
+        }
       }) {
         const requestId = generateRequestId()
         const tempId = generateTempId()
@@ -298,11 +332,19 @@ export const RootStore = types
         // Add to newTerminalIds for auto-focus
         self.newTerminalIds.add(tempId)
 
-        // Send request to server
+        // Register startup info if provided (survives component unmount/remount)
+        if (options.startup) {
+          self.terminalsPendingStartup.set(tempId, options.startup)
+          getWs().log.ws.debug('createTerminal registered startup', { tempId, taskName: options.startup.taskName })
+        }
+
+        // Send request to server (don't include startup in payload - it's client-side only)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { startup, ...serverOptions } = options
         getWs().send({
           type: 'terminal:create',
           payload: {
-            ...options,
+            ...serverOptions,
             requestId,
             tempId,
           },
@@ -627,11 +669,20 @@ export const RootStore = types
                     self.newTerminalIds.delete(tempId)
                     self.newTerminalIds.add(terminal.id)
 
+                    // Transfer pending startup from temp ID to real ID
+                    const pendingStartup = self.terminalsPendingStartup.get(tempId)
+                    if (pendingStartup) {
+                      self.terminalsPendingStartup.delete(tempId)
+                      self.terminalsPendingStartup.set(terminal.id, pendingStartup)
+                      getWs().log.ws.debug('transferred pending startup', { tempId, realId: terminal.id })
+                    }
+
                     getWs().log.ws.debug('terminal:created confirmed', {
                       requestId,
                       tempId,
                       realId: terminal.id,
                       xtermReattached: !!xterm,
+                      hasPendingStartup: !!pendingStartup,
                     })
                   } else {
                     // Server returned existing terminal - rollback our optimistic and use existing
@@ -642,12 +693,17 @@ export const RootStore = types
                     }
                     self.newTerminalIds.delete(tempId)
 
+                    // Clear pending startup for temp ID - existing terminal doesn't need startup
+                    self.terminalsPendingStartup.delete(tempId)
+
                     // Add the existing terminal if we don't have it
                     if (!self.terminals.has(terminal.id)) {
                       self.terminals.add(terminal)
                     }
 
                     // Re-attach xterm to the existing terminal with correct ID
+                    // Note: we pass onAttachedCallback but the startup won't run
+                    // because terminalsPendingStartup doesn't have an entry for this terminal
                     const existingTerminal = self.terminals.get(terminal.id)
                     if (existingTerminal && xterm) {
                       // Re-attach sets up new handlers bound to the real terminal ID
@@ -832,8 +888,9 @@ export const RootStore = types
                   applyPatch(self.terminals, pendingUpdate.inversePatches[i])
                 }
 
-                // Clean up newTerminalIds
+                // Clean up newTerminalIds and pending startup
                 self.newTerminalIds.delete(tempId)
+                self.terminalsPendingStartup.delete(tempId)
 
                 getWs().log.ws.warn('terminal:error rollback', {
                   requestId,
@@ -872,6 +929,7 @@ export const RootStore = types
                     self.terminals.remove(tempId)
                   }
                   self.newTerminalIds.delete(tempId)
+                  self.terminalsPendingStartup.delete(tempId)
                 } else if (pendingUpdate.entityType === 'tab') {
                   self.tabs.remove(tempId)
                 }
@@ -888,6 +946,7 @@ export const RootStore = types
                   self.terminals.remove(entityId)
                 }
               }
+              self.terminalsPendingStartup.delete(entityId)
             } else if (entityType === 'tab') {
               if (self.tabs.has(entityId)) {
                 self.tabs.remove(entityId)
@@ -911,6 +970,7 @@ export const RootStore = types
         self.initialized = false
         self.newTerminalIds.clear()
         self.pendingUpdates.clear()
+        self.terminalsPendingStartup.clear()
       },
     }
   })

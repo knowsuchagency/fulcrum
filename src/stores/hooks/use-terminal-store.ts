@@ -32,6 +32,25 @@ interface CreateTerminalOptions {
   cwd?: string
   tabId?: string
   positionInTab?: number
+  /** Startup info for task terminals - stored in volatile to survive component unmount */
+  startup?: {
+    startupScript?: string | null
+    aiMode?: 'default' | 'plan'
+    description?: string
+    taskName: string
+    serverPort?: number
+  }
+}
+
+/**
+ * Startup info returned by consumePendingStartup
+ */
+export interface PendingStartupInfo {
+  startupScript?: string | null
+  aiMode?: 'default' | 'plan'
+  description?: string
+  taskName: string
+  serverPort?: number
 }
 
 /**
@@ -64,6 +83,9 @@ export interface UseTerminalStoreReturn {
   // Xterm attachment
   attachXterm: (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => () => void
   setupImagePaste: (container: HTMLElement, terminalId: string) => () => void
+
+  // Startup management
+  consumePendingStartup: (terminalId: string) => PendingStartupInfo | undefined
 }
 
 /**
@@ -155,6 +177,9 @@ export function useTerminalStore(): UseTerminalStoreReturn {
       // Xterm attachment
       attachXterm: store.attachXterm.bind(store),
       setupImagePaste,
+
+      // Startup management
+      consumePendingStartup: store.consumePendingStartup.bind(store),
     }
   }, [store])
 }

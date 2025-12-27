@@ -50,6 +50,22 @@ interface CreateTerminalOptions {
   cwd?: string
   tabId?: string
   positionInTab?: number
+  /** Startup info for task terminals - stored in volatile to survive component unmount */
+  startup?: {
+    startupScript?: string | null
+    aiMode?: 'default' | 'plan'
+    description?: string
+    taskName: string
+    serverPort?: number
+  }
+}
+
+interface PendingStartupInfo {
+  startupScript?: string | null
+  aiMode?: 'default' | 'plan'
+  description?: string
+  taskName: string
+  serverPort?: number
 }
 
 interface AttachXtermOptions {
@@ -83,6 +99,7 @@ interface UseTerminalWSReturn {
   reorderTab: (tabId: string, position: number) => void
   attachXterm: (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => () => void
   setupImagePaste: (container: HTMLElement, terminalId: string) => () => void
+  consumePendingStartup: (terminalId: string) => PendingStartupInfo | undefined
 }
 
 /**
@@ -160,5 +177,6 @@ export function useTerminalWS(_options: UseTerminalWSOptions = {}): UseTerminalW
     reorderTab: store.reorderTab,
     attachXterm: store.attachXterm,
     setupImagePaste: store.setupImagePaste,
+    consumePendingStartup: store.consumePendingStartup,
   }
 }
