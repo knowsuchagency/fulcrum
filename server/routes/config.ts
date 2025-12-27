@@ -218,22 +218,23 @@ app.get('/developer-mode', (c) => {
 })
 
 // POST /api/config/restart - Restart Vibora via systemd (developer mode only)
-// Build first, then restart only if build succeeds
+// Build with debug mode first (enables frontend logs to central log), then restart only if build succeeds
 app.post('/restart', (c) => {
   if (!isDeveloperMode()) {
     return c.json({ error: 'Restart only available in developer mode' }, 403)
   }
 
-  // Build first in the background, then restart only if successful
+  // Build with debug mode first in the background, then restart only if successful
+  // Using build:debug ensures DEBUG=1 is set at build time, enabling frontend logs to ~/.vibora/vibora.log
   // This prevents stopping the old instance if build fails
   setTimeout(() => {
-    spawn('bash', ['-c', 'cd ~/projects/vibora && mise run build && bun run drizzle-kit push && systemctl --user restart vibora'], {
+    spawn('bash', ['-c', 'cd ~/projects/vibora && mise run build:debug && bun run drizzle-kit push && systemctl --user restart vibora'], {
       detached: true,
       stdio: 'ignore',
     }).unref()
   }, 100)
 
-  return c.json({ success: true, message: 'Restart initiated (build + migrate + restart)' })
+  return c.json({ success: true, message: 'Restart initiated (build:debug + migrate + restart)' })
 })
 
 // POST /api/config/sync-theme - Sync theme to Claude Code config

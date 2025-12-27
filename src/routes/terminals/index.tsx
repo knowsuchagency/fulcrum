@@ -223,6 +223,9 @@ const TerminalsView = observer(function TerminalsView() {
   // 1. Only runs when tasks are loaded AND we have at least one task (empty tasks = likely error)
   // 2. Only affects terminals without a tabId (task terminals, not regular tab terminals)
   // 3. Only affects terminals in the worktrees directory
+  // 4. Skips terminals created within the last 30 seconds (grace period for React Query sync)
+  const TERMINAL_GRACE_PERIOD_MS = 30000 // 30 seconds grace period for new terminals
+
   useEffect(() => {
     log.terminalsView.debug('Orphan cleanup effect running', {
       worktreeBasePath,
@@ -254,6 +257,19 @@ const TerminalsView = observer(function TerminalsView() {
     for (const terminal of terminals) {
       // Skip terminals that belong to regular tabs - they're not orphans
       if (terminal.tabId) {
+        continue
+      }
+
+      // Guard 4: Skip terminals created within the grace period
+      // This prevents destroying terminals before React Query refetches the updated tasks list
+      const terminalAge = Date.now() - terminal.createdAt
+      if (terminalAge < TERMINAL_GRACE_PERIOD_MS) {
+        log.terminalsView.debug('Orphan cleanup skipped: terminal too new', {
+          terminalId: terminal.id,
+          name: terminal.name,
+          ageMs: terminalAge,
+          gracePeriodMs: TERMINAL_GRACE_PERIOD_MS,
+        })
         continue
       }
 

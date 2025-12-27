@@ -311,13 +311,15 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           ? `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTerminalId}" --allow-dangerously-skip-permissions --permission-mode plan`
           : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${currentTerminalId}" --dangerously-skip-permissions`
 
+        // Wait longer for startup script to complete before sending Claude command
+        // 5 seconds should be enough for most scripts (mise trust, mkdir, export, etc.)
         setTimeout(() => {
           log.taskTerminal.debug('writing claude command to terminal', {
             terminalId: currentTerminalId,
             taskCommand: taskCommand.substring(0, 50) + '...',
           })
           writeToTerminalRef.current(currentTerminalId, taskCommand + '\r')
-        }, currentStartupScript ? 300 : 100)
+        }, currentStartupScript ? 5000 : 100)
       }
     }
 
