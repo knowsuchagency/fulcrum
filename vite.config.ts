@@ -14,7 +14,7 @@ export default defineConfig({
   define: {
     __VIBORA_DEBUG__: isDebug,
   },
-  plugins: [TanStackRouterVite({ routesDirectory: './frontend/routes' }), react(), tailwindcss()],
+  plugins: [TanStackRouterVite({ routesDirectory: './frontend/routes', generatedRouteTree: './frontend/routeTree.gen.ts' }), react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./frontend"),
