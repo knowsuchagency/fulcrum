@@ -544,21 +544,23 @@ const TerminalsView = observer(function TerminalsView() {
       <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-background px-2 py-1">
         <div className="min-w-0 flex-1 overflow-x-auto">
           <div className="flex items-center">
-            {/* Task Terminals system tab - always first */}
+            {/* Tasks system tab - always first, visually distinct */}
             <button
               onClick={() => setActiveTab(ALL_TASKS_TAB_ID)}
               className={cn(
-                'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
+                'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors max-sm:px-2',
                 activeTabId === ALL_TASKS_TAB_ID
-                  ? 'bg-background text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-                'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-primary hover:bg-primary/5',
+                'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary after:transition-opacity',
                 activeTabId === ALL_TASKS_TAB_ID ? 'after:opacity-100' : 'after:opacity-0'
               )}
             >
               <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
               <span className="max-sm:hidden">{t('taskTerminals')}</span>
             </button>
+            {/* Separator between Tasks and regular tabs */}
+            <div className="mx-2 h-4 w-px bg-border" />
             <TerminalTabBar
               tabs={tabBarTabs}
               activeTabId={activeTabId ?? ''}

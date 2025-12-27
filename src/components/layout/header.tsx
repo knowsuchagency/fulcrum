@@ -13,7 +13,7 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   GridViewIcon,
-  CommandLineIcon,
+  ComputerTerminal01Icon,
   Settings01Icon,
   LibraryIcon,
   GitPullRequestIcon,
@@ -31,7 +31,7 @@ interface HeaderProps {
 
 const NAV_ITEMS = [
   { to: '/tasks', icon: GridViewIcon, labelKey: 'header.tasks', matchPrefix: true },
-  { to: '/terminals', icon: CommandLineIcon, labelKey: 'header.terminals', matchPrefix: false },
+  { to: '/terminals', icon: ComputerTerminal01Icon, labelKey: 'header.terminals', matchPrefix: false },
   { to: '/repositories', icon: LibraryIcon, labelKey: 'header.repositories', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
   { to: '/monitoring', icon: ChartLineData01Icon, labelKey: 'header.monitoring', matchPrefix: true },
