@@ -80,6 +80,7 @@ export const FilesStore = types
   })
   .volatile(() => ({
     worktreePath: null as string | null,
+    readOnly: false,
     isLoading: false,
     isSaving: false,
     loadError: null as string | null,
@@ -114,6 +115,10 @@ export const FilesStore = types
         self.openFiles.clear()
         self.fileTree = null
       }
+    },
+
+    setReadOnly(value: boolean) {
+      self.readOnly = value
     },
 
     selectFile(path: string | null) {

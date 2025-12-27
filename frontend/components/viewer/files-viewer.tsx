@@ -20,6 +20,7 @@ import { FileContent } from './file-content'
 
 interface FilesViewerProps {
   worktreePath: string | null
+  readOnly?: boolean
 }
 
 /**
@@ -179,8 +180,8 @@ const FilesViewerInner = observer(function FilesViewerInner() {
 /**
  * FilesViewer component with its own MST store context
  */
-export function FilesViewer({ worktreePath }: FilesViewerProps) {
-  const store = useCreateFilesStore(worktreePath)
+export function FilesViewer({ worktreePath, readOnly = false }: FilesViewerProps) {
+  const store = useCreateFilesStore(worktreePath, readOnly)
 
   if (!worktreePath) {
     return (

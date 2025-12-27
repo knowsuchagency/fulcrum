@@ -10,15 +10,19 @@ export const FilesStoreContext = createContext<IFilesStore | null>(null)
 /**
  * Create a files store for a specific worktree
  */
-export function useCreateFilesStore(worktreePath: string | null): IFilesStore {
+export function useCreateFilesStore(
+  worktreePath: string | null,
+  readOnly: boolean = false
+): IFilesStore {
   const store = useMemo(() => createFilesStore(), [])
 
   useEffect(() => {
     store.setWorktreePath(worktreePath)
+    store.setReadOnly(readOnly)
     if (worktreePath) {
       store.loadFileTree()
     }
-  }, [store, worktreePath])
+  }, [store, worktreePath, readOnly])
 
   return store
 }
@@ -40,6 +44,7 @@ export function useFilesStore(): IFilesStore {
 export interface UseFilesStoreReturn {
   // State
   worktreePath: string | null
+  readOnly: boolean
   selectedFile: string | null
   currentFile: ReturnType<IFilesStore['currentFile']>
   expandedDirs: string[]
@@ -76,6 +81,7 @@ export function useFilesStoreActions(): UseFilesStoreReturn {
   return {
     // State (these are already observable via MST)
     worktreePath: store.worktreePath,
+    readOnly: store.readOnly,
     selectedFile: store.selectedFile,
     currentFile: store.currentFile,
     expandedDirs: [...store.expandedDirs],

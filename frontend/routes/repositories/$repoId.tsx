@@ -15,6 +15,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft02Icon,
@@ -34,6 +40,7 @@ import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-confi
 import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
+import { FilesViewer } from '@/components/viewer/files-viewer'
 
 export const Route = createFileRoute('/repositories/$repoId')({
   component: RepositoryDetailView,
@@ -246,66 +253,80 @@ function RepositoryDetailView() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-xl space-y-6 bg-card rounded-lg p-6 border border-border">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
-            <span className="font-mono">{repository.path}</span>
-          </div>
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        {/* Settings Panel */}
+        <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
+          <ScrollArea className="h-full">
+            <div className="p-4">
+              <div className="space-y-6 bg-card rounded-lg p-6 border border-border">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} />
+                  <span className="font-mono break-all">{repository.path}</span>
+                </div>
 
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="displayName">Display Name</FieldLabel>
-              <Input
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder={repository.path.split('/').pop() || 'My Project'}
-              />
-            </Field>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="displayName">Display Name</FieldLabel>
+                    <Input
+                      id="displayName"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder={repository.path.split('/').pop() || 'My Project'}
+                    />
+                  </Field>
 
-            <Field>
-              <FieldLabel htmlFor="startupScript">Startup Script</FieldLabel>
-              <Textarea
-                id="startupScript"
-                value={startupScript}
-                onChange={(e) => setStartupScript(e.target.value)}
-                placeholder="npm install && npm run dev"
-                rows={3}
-              />
-              <FieldDescription>
-                Command to run in the terminal when creating a worktree.
-              </FieldDescription>
-            </Field>
+                  <Field>
+                    <FieldLabel htmlFor="startupScript">Startup Script</FieldLabel>
+                    <Textarea
+                      id="startupScript"
+                      value={startupScript}
+                      onChange={(e) => setStartupScript(e.target.value)}
+                      placeholder="npm install && npm run dev"
+                      rows={3}
+                    />
+                    <FieldDescription>
+                      Command to run in the terminal when creating a worktree.
+                    </FieldDescription>
+                  </Field>
 
-            <Field>
-              <FieldLabel htmlFor="copyFiles">Copy Files</FieldLabel>
-              <Input
-                id="copyFiles"
-                value={copyFiles}
-                onChange={(e) => setCopyFiles(e.target.value)}
-                placeholder=".env, config.local.json"
-              />
-              <FieldDescription>
-                Comma-separated glob patterns for files to copy into new worktrees.
-              </FieldDescription>
-            </Field>
+                  <Field>
+                    <FieldLabel htmlFor="copyFiles">Copy Files</FieldLabel>
+                    <Input
+                      id="copyFiles"
+                      value={copyFiles}
+                      onChange={(e) => setCopyFiles(e.target.value)}
+                      placeholder=".env, config.local.json"
+                    />
+                    <FieldDescription>
+                      Comma-separated glob patterns for files to copy into new worktrees.
+                    </FieldDescription>
+                  </Field>
 
-            <Field>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={isCopierTemplate}
-                  onCheckedChange={(checked) => setIsCopierTemplate(checked === true)}
-                />
-                <FieldLabel className="cursor-pointer">Use as Copier Template</FieldLabel>
+                  <Field>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={isCopierTemplate}
+                        onCheckedChange={(checked) => setIsCopierTemplate(checked === true)}
+                      />
+                      <FieldLabel className="cursor-pointer">Use as Copier Template</FieldLabel>
+                    </div>
+                    <FieldDescription>
+                      Mark as a template for creating new projects with Copier.
+                    </FieldDescription>
+                  </Field>
+                </FieldGroup>
               </div>
-              <FieldDescription>
-                Mark as a template for creating new projects with Copier.
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
-        </div>
-      </div>
+            </div>
+          </ScrollArea>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+
+        {/* Files Panel */}
+        <ResizablePanel defaultSize={65} minSize={30}>
+          <FilesViewer worktreePath={repository.path} readOnly />
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       <CreateTaskModal
         open={taskModalOpen}

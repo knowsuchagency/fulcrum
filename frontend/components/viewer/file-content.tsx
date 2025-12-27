@@ -12,6 +12,7 @@ const AUTO_SAVE_DELAY = 1000 // 1 second debounce
 export const FileContent = observer(function FileContent() {
   const {
     worktreePath,
+    readOnly,
     selectedFile,
     currentFile,
     isLoading,
@@ -37,7 +38,7 @@ export const FileContent = observer(function FileContent() {
 
   const handleContentChange = useCallback(
     (newValue: string) => {
-      if (!selectedFile) return
+      if (!selectedFile || readOnly) return
 
       updateContent(selectedFile, newValue)
 
@@ -53,7 +54,7 @@ export const FileContent = observer(function FileContent() {
         })
       }, AUTO_SAVE_DELAY)
     },
-    [selectedFile, updateContent, saveFile]
+    [selectedFile, readOnly, updateContent, saveFile]
   )
 
   const handleClose = useCallback(() => {
@@ -160,8 +161,8 @@ export const FileContent = observer(function FileContent() {
           title={selectedFile}
         >
           {fileName}
-          {isDirty && <span className="text-amber-500">*</span>}
-          {isSaving && (
+          {!readOnly && isDirty && <span className="text-amber-500">*</span>}
+          {!readOnly && isSaving && (
             <span className="text-muted-foreground italic">(saving...)</span>
           )}
         </span>
@@ -218,7 +219,7 @@ export const FileContent = observer(function FileContent() {
             filePath={selectedFile}
             content={currentFile.content}
             onChange={handleContentChange}
-            readOnly={!currentFile.isEditable}
+            readOnly={readOnly || !currentFile.isEditable}
           />
         )}
       </div>
