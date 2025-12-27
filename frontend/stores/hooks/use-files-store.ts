@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef } from 'react'
 import { createFilesStore, type IFilesStore, type IFile } from '../files-store'
 import type { FileTreeEntry } from '@/types'
 
@@ -13,17 +13,27 @@ export const FilesStoreContext = createContext<IFilesStore | null>(null)
  */
 export function useCreateFilesStore(
   worktreePath: string | null,
-  readOnly: boolean = false
+  readOnly: boolean = false,
+  initialSelectedFile?: string | null
 ): IFilesStore {
   const store = useMemo(() => createFilesStore(), [])
+  const initialFileLoadedRef = useRef(false)
 
   useEffect(() => {
     store.setWorktreePath(worktreePath)
     store.setReadOnly(readOnly)
+    initialFileLoadedRef.current = false // Reset when worktree changes
     if (worktreePath) {
-      store.loadFileTree()
+      store.loadFileTree().then(() => {
+        // After tree loads, select and load the initial file if provided (only once)
+        if (initialSelectedFile && !initialFileLoadedRef.current) {
+          initialFileLoadedRef.current = true
+          store.selectFile(initialSelectedFile)
+          store.loadFile(initialSelectedFile)
+        }
+      })
     }
-  }, [store, worktreePath, readOnly])
+  }, [store, worktreePath, readOnly, initialSelectedFile])
 
   return store
 }

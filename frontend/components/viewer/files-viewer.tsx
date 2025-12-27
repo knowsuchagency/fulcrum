@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, createContext, useContext } from 'react'
 import { observer } from 'mobx-react-lite'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -12,12 +12,18 @@ import { FileContent } from './file-content'
 interface FilesViewerProps {
   worktreePath: string | null
   readOnly?: boolean
+  initialSelectedFile?: string | null
+  onFileChange?: (file: string | null) => void
 }
+
+// Context to pass onFileChange callback to inner component
+const FileChangeContext = createContext<((file: string | null) => void) | undefined>(undefined)
 
 /**
  * Inner component that uses the files store context
  */
 const FilesViewerInner = observer(function FilesViewerInner() {
+  const onFileChange = useContext(FileChangeContext)
   const {
     selectedFile,
     expandedDirs,
@@ -34,8 +40,9 @@ const FilesViewerInner = observer(function FilesViewerInner() {
     (path: string) => {
       selectFile(path)
       loadFile(path)
+      onFileChange?.(path)
     },
-    [selectFile, loadFile]
+    [selectFile, loadFile, onFileChange]
   )
 
   const handleToggleDir = useCallback(
@@ -47,7 +54,8 @@ const FilesViewerInner = observer(function FilesViewerInner() {
 
   const handleBack = useCallback(() => {
     selectFile(null)
-  }, [selectFile])
+    onFileChange?.(null)
+  }, [selectFile, onFileChange])
 
   if (isLoadingTree) {
     return (
@@ -91,8 +99,13 @@ const FilesViewerInner = observer(function FilesViewerInner() {
 /**
  * FilesViewer component with its own MST store context
  */
-export function FilesViewer({ worktreePath, readOnly = false }: FilesViewerProps) {
-  const store = useCreateFilesStore(worktreePath, readOnly)
+export function FilesViewer({
+  worktreePath,
+  readOnly = false,
+  initialSelectedFile,
+  onFileChange,
+}: FilesViewerProps) {
+  const store = useCreateFilesStore(worktreePath, readOnly, initialSelectedFile)
 
   if (!worktreePath) {
     return (
@@ -104,7 +117,9 @@ export function FilesViewer({ worktreePath, readOnly = false }: FilesViewerProps
 
   return (
     <FilesStoreContext.Provider value={store}>
-      <FilesViewerInner />
+      <FileChangeContext.Provider value={onFileChange}>
+        <FilesViewerInner />
+      </FileChangeContext.Provider>
     </FilesStoreContext.Provider>
   )
 }

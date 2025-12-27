@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useLocation } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useRepositories } from '@/hooks/use-repositories'
-import { useTaskTab } from '@/hooks/use-task-tab'
+import { useTaskViewState } from '@/hooks/use-task-view-state'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitPush } from '@/hooks/use-git-push'
@@ -73,8 +73,21 @@ import { Checkbox } from '@/components/ui/checkbox'
 import type { TaskStatus } from '@/types'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 
+type TabType = 'diff' | 'browser' | 'files'
+
+interface TaskViewSearch {
+  tab?: TabType
+  file?: string
+}
+
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskView,
+  validateSearch: (search: Record<string, unknown>): TaskViewSearch => ({
+    tab: ['diff', 'browser', 'files'].includes(search.tab as string)
+      ? (search.tab as TabType)
+      : undefined,
+    file: typeof search.file === 'string' ? search.file : undefined,
+  }),
 })
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -93,12 +106,13 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 
 function TaskView() {
   const { taskId } = Route.useParams()
+  const searchParams = Route.useSearch()
   const navigate = useNavigate()
   const location = useLocation()
   const { data: task, isLoading } = useTask(taskId)
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
-  const { tab, setTab } = useTaskTab(taskId)
+  const { viewState, setActiveTab, setFilesViewState } = useTaskViewState(taskId)
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
   const gitPush = useGitPush()
@@ -125,6 +139,69 @@ function TaskView() {
   const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
   const isMobile = useIsMobile()
+
+  // Determine the active tab - URL takes precedence, then database state
+  const activeTab = searchParams.tab ?? viewState.activeTab
+  const activeFile = searchParams.file ?? viewState.filesViewState.selectedFile
+
+  // Track if we've synced the URL for this task
+  const urlSyncedRef = useRef<string | null>(null)
+
+  // Sync URL with persisted state on mount (only if URL has no tab param)
+  useEffect(() => {
+    // Only sync once per task, and only if URL doesn't have tab param
+    if (urlSyncedRef.current === taskId || searchParams.tab) {
+      return
+    }
+    urlSyncedRef.current = taskId
+
+    if (viewState.activeTab) {
+      navigate({
+        to: '/tasks/$taskId',
+        params: { taskId },
+        search: {
+          tab: viewState.activeTab === 'diff' ? undefined : viewState.activeTab,
+          file: viewState.filesViewState.selectedFile || undefined,
+        },
+        replace: true,
+      })
+    }
+  }, [taskId, searchParams.tab, viewState.activeTab, viewState.filesViewState.selectedFile, navigate])
+
+  // Handle tab change - update both URL and database
+  const handleTabChange = useCallback(
+    (newTab: string) => {
+      const tab = newTab as TabType
+      setActiveTab(tab) // Persist to database
+      navigate({
+        to: '/tasks/$taskId',
+        params: { taskId },
+        search: {
+          tab: tab === 'diff' ? undefined : tab,
+          file: tab === 'files' ? activeFile || undefined : undefined,
+        },
+        replace: true,
+      })
+    },
+    [taskId, navigate, setActiveTab, activeFile]
+  )
+
+  // Handle file selection change from FilesViewer
+  const handleFileChange = useCallback(
+    (file: string | null) => {
+      setFilesViewState({ selectedFile: file }) // Persist to database
+      navigate({
+        to: '/tasks/$taskId',
+        params: { taskId },
+        search: {
+          tab: 'files',
+          file: file || undefined,
+        },
+        replace: true,
+      })
+    },
+    [taskId, navigate, setFilesViewState]
+  )
 
   // Get terminal functions for sending commands
   const { terminals, sendInputToTerminal } = useTerminalWS()
@@ -597,7 +674,7 @@ function TaskView() {
           </TabsContent>
 
           <TabsContent value="details" className="flex-1 min-h-0 bg-background">
-            <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="flex h-full flex-col">
               <div className="flex items-center justify-between shrink-0 border-b border-border bg-background px-2 py-1">
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
@@ -625,7 +702,11 @@ function TaskView() {
               </TabsContent>
 
               <TabsContent value="files" className="flex-1 overflow-hidden">
-                <FilesViewer worktreePath={task.worktreePath} />
+                <FilesViewer
+                  worktreePath={task.worktreePath}
+                  initialSelectedFile={activeFile}
+                  onFileChange={handleFileChange}
+                />
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -648,7 +729,7 @@ function TaskView() {
 
           {/* Right: Diff/Browser Toggle */}
           <ResizablePanel defaultSize={50} minSize={30} className="bg-background">
-            <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="flex h-full flex-col">
               <div className="flex items-center justify-between shrink-0 border-b border-border bg-background px-2 py-1">
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
@@ -691,7 +772,11 @@ function TaskView() {
               </TabsContent>
 
               <TabsContent value="files" className="flex-1 overflow-hidden">
-                <FilesViewer worktreePath={task.worktreePath} />
+                <FilesViewer
+                  worktreePath={task.worktreePath}
+                  initialSelectedFile={activeFile}
+                  onFileChange={handleFileChange}
+                />
               </TabsContent>
             </Tabs>
           </ResizablePanel>
