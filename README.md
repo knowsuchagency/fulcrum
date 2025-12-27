@@ -103,12 +103,38 @@ The Vibora plugin for Claude Code enables seamless integration:
 - **Automatic Status Sync** — Task moves to "In Review" when Claude stops, "In Progress" when you respond
 - **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`
 - **Session Continuity** — Claude sessions are tied to task IDs
+- **MCP Server** — Task management tools available directly to Claude
 
 The plugin is automatically installed in task worktrees when tasks are created. To install globally:
 
 ```bash
 claude plugin marketplace add knowsuchagency/vibora
 claude plugin install vibora@vibora --scope user
+```
+
+### MCP Tools
+
+The plugin includes an MCP server that exposes task management tools:
+
+- `list_tasks` — List all tasks with optional status/repo filter
+- `get_task` — Get task details by ID
+- `create_task` — Create a new task with git worktree
+- `update_task` — Update task title/description
+- `delete_task` — Delete a task
+- `move_task` — Change task status
+- `get_current_task` — Get task for current working directory
+
+For Claude Desktop, add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "vibora": {
+      "command": "vibora",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
 ## Remote Server Setup
@@ -174,6 +200,7 @@ vibora up                        # Start server daemon
 vibora down                      # Stop server
 vibora status                    # Check server status
 vibora health                    # Check server health
+vibora mcp                       # Start MCP server (stdio)
 ```
 
 ### Current Task (auto-detected from worktree)
@@ -229,38 +256,6 @@ vibora notifications enable      # Enable notifications
 vibora notifications disable     # Disable notifications
 vibora notifications test <ch>   # Test a channel
 vibora notify <title> [message]  # Send a notification
-```
-
-### MCP Server
-
-Vibora exposes an MCP (Model Context Protocol) server for integration with Claude Code and Claude Desktop.
-
-```bash
-vibora mcp                       # Start MCP server (stdio transport)
-```
-
-**Available Tools:**
-- `list_tasks` — List all tasks with optional status/repo filter
-- `get_task` — Get task details by ID
-- `create_task` — Create a new task with git worktree
-- `update_task` — Update task title/description
-- `delete_task` — Delete a task
-- `move_task` — Change task status
-- `get_current_task` — Get task for current working directory
-
-**Claude Code:** The Vibora plugin includes MCP server configuration. When installed, the MCP tools are available automatically.
-
-**Claude Desktop:** Add to your `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "vibora": {
-      "command": "vibora",
-      "args": ["mcp"]
-    }
-  }
-}
 ```
 
 ### Global Options
