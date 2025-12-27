@@ -178,6 +178,8 @@ export function DiffViewer({ taskId, worktreePath }: DiffViewerProps) {
 
   const allFilePaths = useMemo(() => files.map(f => f.path), [files])
   const allCollapsed = files.length > 0 && collapsedFiles.length === files.length
+  const totalAdditions = useMemo(() => files.reduce((sum, f) => sum + f.additions, 0), [files])
+  const totalDeletions = useMemo(() => files.reduce((sum, f) => sum + f.deletions, 0), [files])
 
   // Keyboard shortcut: Shift+C to toggle collapse/expand all
   useEffect(() => {
@@ -278,6 +280,13 @@ export function DiffViewer({ taskId, worktreePath }: DiffViewerProps) {
           <span className="text-muted-foreground">
             {data.branch}
             {data.isBranchDiff && <span className="opacity-70"> (vs master)</span>}
+          </span>
+        )}
+        {(totalAdditions > 0 || totalDeletions > 0) && (
+          <span className="text-muted-foreground">
+            <span className="text-accent">+{totalAdditions}</span>
+            {' '}
+            <span className="text-destructive">-{totalDeletions}</span>
           </span>
         )}
         <div className="flex-1" />
