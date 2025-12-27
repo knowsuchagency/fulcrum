@@ -502,14 +502,31 @@ const TerminalsView = observer(function TerminalsView() {
       {/* Tab Bar + Actions */}
       <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-background px-2 py-1">
         <div className="min-w-0 flex-1 overflow-x-auto">
-          <TerminalTabBar
-            tabs={tabBarTabs}
-            activeTabId={activeTabId ?? ''}
-            onTabSelect={setActiveTab}
-            onTabClose={handleTabDelete}
-            onTabCreate={handleTabCreate}
-            onTabEdit={handleTabEdit}
-          />
+          <div className="flex items-center">
+            {/* Task Terminals system tab - always first */}
+            <button
+              onClick={() => setActiveTab(ALL_TASKS_TAB_ID)}
+              className={cn(
+                'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
+                activeTabId === ALL_TASKS_TAB_ID
+                  ? 'bg-background text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+                'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
+                activeTabId === ALL_TASKS_TAB_ID ? 'after:opacity-100' : 'after:opacity-0'
+              )}
+            >
+              <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
+              <span className="max-sm:hidden">{t('taskTerminals')}</span>
+            </button>
+            <TerminalTabBar
+              tabs={tabBarTabs}
+              activeTabId={activeTabId ?? ''}
+              onTabSelect={setActiveTab}
+              onTabClose={handleTabDelete}
+              onTabCreate={handleTabCreate}
+              onTabEdit={handleTabEdit}
+            />
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-3 max-sm:gap-1">
           {/* Repo filter (only when Task Terminals is active and multiple repos exist) */}
@@ -534,21 +551,6 @@ const TerminalsView = observer(function TerminalsView() {
               </SelectContent>
             </Select>
           )}
-          {/* Task Terminals system tab */}
-          <button
-            onClick={() => setActiveTab(ALL_TASKS_TAB_ID)}
-            className={cn(
-              'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors max-sm:px-2',
-              activeTabId === ALL_TASKS_TAB_ID
-                ? 'bg-background text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
-              'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
-              activeTabId === ALL_TASKS_TAB_ID ? 'after:opacity-100' : 'after:opacity-0'
-            )}
-          >
-            <HugeiconsIcon icon={GridViewIcon} size={12} strokeWidth={2} />
-            <span className="max-sm:hidden">{t('taskTerminals')}</span>
-          </button>
           <Button
             variant="outline"
             size="sm"
