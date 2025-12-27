@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -90,13 +90,20 @@ function ClaudeInstancesTab() {
 
   const totalRam = instances?.reduce((sum, i) => sum + i.ramMB, 0) || 0
 
+  // Clear killingPid when the instance is no longer in the list
+  useEffect(() => {
+    if (killingPid !== null && instances && !instances.some((i) => i.pid === killingPid)) {
+      setKillingPid(null)
+    }
+  }, [killingPid, instances])
+
   const handleKill = (instance: ClaudeInstance) => {
     setKillingPid(instance.pid)
     const payload = instance.isViboraManaged && instance.terminalId
       ? { terminalId: instance.terminalId }
       : { pid: instance.pid }
     killInstance.mutate(payload, {
-      onSettled: () => setKillingPid(null),
+      onError: () => setKillingPid(null),
     })
   }
 
@@ -179,8 +186,8 @@ function ClaudeInstancesTab() {
                       variant="ghost"
                       size="xs"
                       onClick={() => handleKill(instance)}
-                      disabled={killingPid === instance.pid}
-                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid === instance.pid ? 'opacity-50' : ''}`}
+                      disabled={killingPid !== null}
+                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid !== null ? 'opacity-50' : ''}`}
                     >
                       <HugeiconsIcon icon={killingPid === instance.pid ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${killingPid === instance.pid ? 'animate-spin' : ''}`} />
                     </Button>
@@ -223,8 +230,8 @@ function ClaudeInstancesTab() {
                     variant="ghost"
                     size="xs"
                     onClick={() => handleKill(instance)}
-                    disabled={killingPid === instance.pid}
-                    className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid === instance.pid ? 'opacity-50' : ''}`}
+                    disabled={killingPid !== null}
+                    className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid !== null ? 'opacity-50' : ''}`}
                   >
                     <HugeiconsIcon icon={killingPid === instance.pid ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${killingPid === instance.pid ? 'animate-spin' : ''}`} />
                     {killingPid === instance.pid ? t('claude.killing') : t('claude.kill')}
@@ -540,12 +547,19 @@ function ViboraInstancesTab() {
   const { data: instances, isLoading, error } = useViboraInstances()
   const killInstance = useKillViboraInstance()
 
+  // Clear killingPid when the instance is no longer in the list
+  useEffect(() => {
+    if (killingPid !== null && instances && !instances.some((g) => g.backend?.pid === killingPid)) {
+      setKillingPid(null)
+    }
+  }, [killingPid, instances])
+
   const handleKill = (group: ViboraInstanceGroup) => {
     if (!group.backend) return
     setKillingPid(group.backend.pid)
     killInstance.mutate(
       { backendPid: group.backend.pid },
-      { onSettled: () => setKillingPid(null) }
+      { onError: () => setKillingPid(null) }
     )
   }
 
@@ -593,6 +607,7 @@ function ViboraInstancesTab() {
 
           {instances.map((group) => {
             const isKilling = killingPid === group.backend?.pid
+            const isAnyKilling = killingPid !== null
             return (
               <Card key={group.backend?.pid || group.port} className="px-3 py-2">
                 {/* Mobile: stacked layout */}
@@ -611,8 +626,8 @@ function ViboraInstancesTab() {
                         variant="ghost"
                         size="xs"
                         onClick={() => handleKill(group)}
-                        disabled={isKilling || !group.backend}
-                        className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isKilling ? 'opacity-50' : ''}`}
+                        disabled={isAnyKilling || !group.backend}
+                        className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isAnyKilling ? 'opacity-50' : ''}`}
                       >
                         <HugeiconsIcon icon={isKilling ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${isKilling ? 'animate-spin' : ''}`} />
                       </Button>
@@ -641,8 +656,8 @@ function ViboraInstancesTab() {
                       variant="ghost"
                       size="xs"
                       onClick={() => handleKill(group)}
-                      disabled={isKilling || !group.backend}
-                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isKilling ? 'opacity-50' : ''}`}
+                      disabled={isAnyKilling || !group.backend}
+                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isAnyKilling ? 'opacity-50' : ''}`}
                     >
                       <HugeiconsIcon icon={isKilling ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${isKilling ? 'animate-spin' : ''}`} />
                       {isKilling ? t('vibora.killing') : t('vibora.kill')}
