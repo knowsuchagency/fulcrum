@@ -231,6 +231,38 @@ vibora notifications test <ch>   # Test a channel
 vibora notify <title> [message]  # Send a notification
 ```
 
+### MCP Server
+
+Vibora exposes an MCP (Model Context Protocol) server for integration with Claude Code and Claude Desktop.
+
+```bash
+vibora mcp                       # Start MCP server (stdio transport)
+```
+
+**Available Tools:**
+- `list_tasks` — List all tasks with optional status/repo filter
+- `get_task` — Get task details by ID
+- `create_task` — Create a new task with git worktree
+- `update_task` — Update task title/description
+- `delete_task` — Delete a task
+- `move_task` — Change task status
+- `get_current_task` — Get task for current working directory
+
+**Claude Code:** The Vibora plugin includes MCP server configuration. When installed, the MCP tools are available automatically.
+
+**Claude Desktop:** Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "vibora": {
+      "command": "vibora",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
 ### Global Options
 
 ```bash

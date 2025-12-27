@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { handleCurrentTaskCommand } from './commands/current-task'
+import { handleMcpCommand } from './commands/mcp'
 import { handleTasksCommand } from './commands/tasks'
 import { handleUpCommand } from './commands/up'
 import { handleDownCommand } from './commands/down'
@@ -124,6 +125,8 @@ Commands:
   dev restart               Build and restart Vibora (developer mode)
   dev status                Check if developer mode is enabled
 
+  mcp                       Start MCP server (stdio transport)
+
 Global Options:
   --port=<port>     Server port (default: 7777)
   --url=<url>       Override full server URL
@@ -206,6 +209,11 @@ Examples:
       case 'dev': {
         const [action] = rest
         await handleDevCommand(action, flags)
+        break
+      }
+
+      case 'mcp': {
+        await handleMcpCommand(flags)
         break
       }
 
