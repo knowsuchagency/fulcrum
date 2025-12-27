@@ -23,6 +23,7 @@ import { TaskTerminal } from '@/components/terminal/task-terminal'
 import { DiffViewer } from '@/components/viewer/diff-viewer'
 import { BrowserPreview } from '@/components/viewer/browser-preview'
 import { FilesViewer } from '@/components/viewer/files-viewer'
+import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   CodeIcon,
@@ -597,7 +598,7 @@ function TaskView() {
 
           <TabsContent value="details" className="flex-1 min-h-0 bg-background">
             <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
-              <div className="shrink-0 border-b border-border bg-background px-2 py-1">
+              <div className="flex items-center justify-between shrink-0 border-b border-border bg-background px-2 py-1">
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
                     <HugeiconsIcon icon={CodeIcon} size={14} strokeWidth={2} data-slot="icon" />
@@ -612,6 +613,7 @@ function TaskView() {
                     Files
                   </TabsTrigger>
                 </TabsList>
+                <GitStatusBadge worktreePath={task.worktreePath} />
               </div>
 
               <TabsContent value="diff" className="flex-1 overflow-hidden">
@@ -647,7 +649,7 @@ function TaskView() {
           {/* Right: Diff/Browser Toggle */}
           <ResizablePanel defaultSize={50} minSize={30} className="bg-background">
             <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
-              <div className="shrink-0 border-b border-border bg-background px-2 py-1">
+              <div className="flex items-center justify-between shrink-0 border-b border-border bg-background px-2 py-1">
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
                     <HugeiconsIcon
@@ -677,6 +679,7 @@ function TaskView() {
                     Files
                   </TabsTrigger>
                 </TabsList>
+                <GitStatusBadge worktreePath={task.worktreePath} />
               </div>
 
               <TabsContent value="diff" className="flex-1 overflow-hidden">
