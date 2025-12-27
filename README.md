@@ -102,11 +102,12 @@ Keep an eye on system resources while your agents work. CPU, memory, and disk us
 The Vibora plugin for Claude Code enables seamless integration:
 
 - **Automatic Status Sync** — Task moves to "In Review" when Claude stops, "In Progress" when you respond
+- **Vibora Skill** — CLI documentation for task management (see `plugins/vibora/skills/`)
 - **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`
 - **Session Continuity** — Claude sessions are tied to task IDs
 - **MCP Server** — Task management tools available directly to Claude
 
-The plugin is automatically installed in task worktrees when tasks are created. To install globally:
+The plugin is automatically installed when Vibora starts. To install manually:
 
 ```bash
 claude plugin marketplace add knowsuchagency/vibora
