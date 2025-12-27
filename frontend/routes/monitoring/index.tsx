@@ -1277,9 +1277,9 @@ function MonitoringPage() {
         {/* Desktop: tabs */}
         <div className="hidden sm:block">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as MonitoringTab)}>
-            <TabsList>
+            <TabsList variant="line">
               {visibleTabs.map(tab => (
-                <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+                <TabsTrigger key={tab.value} value={tab.value} className="px-3 py-1.5">{tab.label}</TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
