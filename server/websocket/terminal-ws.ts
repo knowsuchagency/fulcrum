@@ -106,7 +106,7 @@ export const terminalWebSocketHandlers: WSEvents = {
       switch (message.type) {
         // Terminal messages
         case 'terminal:create': {
-          const { name, cols, rows, cwd, tabId, positionInTab } = message.payload
+          const { name, cols, rows, cwd, tabId, positionInTab, requestId, tempId } = message.payload
 
           // If tabId provided but no cwd, use the tab's directory as default
           let effectiveCwd = cwd
@@ -117,7 +117,7 @@ export const terminalWebSocketHandlers: WSEvents = {
             }
           }
 
-          log.ws.debug('terminal:create request', { name, cwd: effectiveCwd, tabId, clientId: clientData.id })
+          log.ws.debug('terminal:create request', { name, cwd: effectiveCwd, tabId, clientId: clientData.id, requestId, tempId })
 
           // Prevent duplicate terminals for same cwd - but only for task terminals (no tabId)
           // Regular tabs can have multiple terminals in the same directory
@@ -125,11 +125,11 @@ export const terminalWebSocketHandlers: WSEvents = {
             const existing = ptyManager.listTerminals().find((t) => t.cwd === effectiveCwd && !t.tabId)
             if (existing) {
               // Return existing terminal instead of creating duplicate
-              log.ws.debug('terminal:create returning existing', { terminalId: existing.id, isNew: false })
+              log.ws.debug('terminal:create returning existing', { terminalId: existing.id, isNew: false, requestId, tempId })
               clientData.attachedTerminals.add(existing.id)
               sendTo(ws, {
                 type: 'terminal:created',
-                payload: { terminal: existing, isNew: false },
+                payload: { terminal: existing, isNew: false, requestId, tempId },
               })
               break
             }
@@ -141,6 +141,8 @@ export const terminalWebSocketHandlers: WSEvents = {
             name,
             cwd,
             clientId: clientData.id,
+            requestId,
+            tempId,
           })
           clientData.attachedTerminals.add(terminal.id)
           log.ws.info('terminal:create added to attachedTerminals', {
@@ -150,7 +152,7 @@ export const terminalWebSocketHandlers: WSEvents = {
           })
           broadcast({
             type: 'terminal:created',
-            payload: { terminal, isNew: true },
+            payload: { terminal, isNew: true, requestId, tempId },
           })
           break
         }
@@ -287,13 +289,13 @@ export const terminalWebSocketHandlers: WSEvents = {
 
         // Tab messages
         case 'tab:create': {
-          const { name, position, directory } = message.payload
-          log.ws.debug('tab:create request', { name, position, directory, clientId: clientData.id })
+          const { name, position, directory, requestId, tempId } = message.payload
+          log.ws.debug('tab:create request', { name, position, directory, clientId: clientData.id, requestId, tempId })
           const tab = tabManager.create({ name, position, directory })
-          log.ws.info('tab:create created', { tabId: tab.id, name: tab.name, directory: tab.directory })
+          log.ws.info('tab:create created', { tabId: tab.id, name: tab.name, directory: tab.directory, requestId, tempId })
           broadcast({
             type: 'tab:created',
-            payload: { tab },
+            payload: { tab, requestId, tempId },
           })
           break
         }

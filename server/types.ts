@@ -25,6 +25,17 @@ export interface TerminalInfo {
   positionInTab?: number // Order within the tab
 }
 
+/**
+ * Base interface for messages that support request correlation.
+ * The server echoes requestId back in responses for optimistic update confirmation.
+ */
+interface RequestCorrelation {
+  /** Client-generated ID for correlating request with response */
+  requestId?: string
+  /** Temporary client-side ID for optimistic entity creation */
+  tempId?: string
+}
+
 // Client -> Server messages
 
 // Terminal messages
@@ -37,7 +48,7 @@ export interface TerminalCreateMessage {
     cwd?: string
     tabId?: string // Assign to tab on creation
     positionInTab?: number
-  }
+  } & RequestCorrelation
 }
 
 export interface TerminalDestroyMessage {
@@ -116,7 +127,7 @@ export interface TabCreateMessage {
     name: string
     position?: number
     directory?: string
-  }
+  } & RequestCorrelation
 }
 
 export interface TabUpdateMessage {
@@ -170,6 +181,10 @@ export interface TerminalCreatedMessage {
   payload: {
     terminal: TerminalInfo
     isNew: boolean // true if newly created, false if returning existing terminal
+    /** Echo of client requestId for optimistic update confirmation */
+    requestId?: string
+    /** Client's temporary ID that should be replaced with terminal.id */
+    tempId?: string
   }
 }
 
@@ -209,6 +224,10 @@ export interface TerminalErrorMessage {
   payload: {
     terminalId?: string
     error: string
+    /** Echo of client requestId for optimistic update rollback */
+    requestId?: string
+    /** Client's temporary ID that should be rolled back */
+    tempId?: string
   }
 }
 
@@ -248,6 +267,10 @@ export interface TabCreatedMessage {
   type: 'tab:created'
   payload: {
     tab: TabInfo
+    /** Echo of client requestId for optimistic update confirmation */
+    requestId?: string
+    /** Client's temporary ID that should be replaced with tab.id */
+    tempId?: string
   }
 }
 

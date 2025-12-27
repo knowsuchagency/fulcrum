@@ -1,9 +1,10 @@
-import { types, getEnv, destroy } from 'mobx-state-tree'
-import type { Instance, SnapshotIn } from 'mobx-state-tree'
+import { types, getEnv, destroy, applyPatch, recordPatches } from 'mobx-state-tree'
+import type { Instance, SnapshotIn, IJsonPatch } from 'mobx-state-tree'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { TerminalModel, TabModel, ViewStateModel } from './models'
 import type { ITerminal, ITerminalSnapshot, ITab, ITabSnapshot } from './models'
 import { log } from '@/lib/logger'
+import { generateRequestId, generateTempId, type PendingUpdate } from './sync'
 
 /**
  * Environment injected into the store.
@@ -167,8 +168,8 @@ export const RootStore = types
     initialized: false,
     /** Set of newly created terminal IDs (for auto-focus) */
     newTerminalIds: new Set<string>(),
-    /** Pending optimistic updates awaiting server confirmation */
-    pendingUpdates: new Map<string, { inverse: unknown }>(),
+    /** Pending optimistic updates awaiting server confirmation, keyed by requestId */
+    pendingUpdates: new Map<string, PendingUpdate>(),
     /** Callbacks to invoke when terminal:attached is received */
     onAttachedCallbacks: new Map<string, () => void>(),
     /** Last focused terminal ID (for reconnection focus restoration) */
@@ -210,7 +211,16 @@ export const RootStore = types
 
       // ============ Terminal Actions ============
 
-      /** Request terminal creation from server */
+      /**
+       * Create a terminal with optimistic update.
+       *
+       * 1. Generate temp ID and requestId
+       * 2. Create optimistic terminal locally (marked as pending)
+       * 3. Record patches for potential rollback
+       * 4. Send request to server
+       * 5. On server confirm: replace temp ID with real ID
+       * 6. On server reject: apply inverse patches to rollback
+       */
       createTerminal(options: {
         name: string
         cols: number
@@ -219,10 +229,54 @@ export const RootStore = types
         tabId?: string
         positionInTab?: number
       }) {
+        const requestId = generateRequestId()
+        const tempId = generateTempId()
+
+        // Create optimistic terminal snapshot
+        // For cwd, use provided value or placeholder - server will set the real cwd
+        const optimisticTerminal: ITerminalSnapshot = {
+          id: tempId,
+          name: options.name,
+          cwd: options.cwd ?? '~',
+          status: 'running',
+          cols: options.cols,
+          rows: options.rows,
+          createdAt: Date.now(),
+          tabId: options.tabId ?? null,
+          positionInTab: options.positionInTab ?? 0,
+        }
+
+        // Record patches while adding the terminal
+        const recorder = recordPatches(self.terminals)
+        self.terminals.add(optimisticTerminal)
+        recorder.stop()
+
+        // Mark terminal as pending
+        const terminal = self.terminals.get(tempId)
+        terminal?.setPending(true, tempId)
+
+        // Store inverse patches for rollback
+        self.pendingUpdates.set(requestId, {
+          entityType: 'terminal',
+          tempId,
+          inversePatches: recorder.inversePatches as IJsonPatch[],
+          createdAt: Date.now(),
+        })
+
+        // Add to newTerminalIds for auto-focus
+        self.newTerminalIds.add(tempId)
+
+        // Send request to server
         getWs().send({
           type: 'terminal:create',
-          payload: options,
+          payload: {
+            ...options,
+            requestId,
+            tempId,
+          },
         })
+
+        getWs().log.ws.debug('createTerminal optimistic', { requestId, tempId, name: options.name })
       },
 
       /** Request terminal destruction from server */
@@ -387,12 +441,56 @@ export const RootStore = types
 
       // ============ Tab Actions ============
 
-      /** Request tab creation from server */
+      /**
+       * Create a tab with optimistic update.
+       *
+       * 1. Generate temp ID and requestId
+       * 2. Create optimistic tab locally (marked as pending)
+       * 3. Record patches for potential rollback
+       * 4. Send request to server
+       * 5. On server confirm: replace temp ID with real ID
+       * 6. On server reject: apply inverse patches to rollback
+       */
       createTab(name: string, position?: number, directory?: string) {
+        const requestId = generateRequestId()
+        const tempId = generateTempId()
+
+        // Calculate position if not provided (append to end)
+        const effectivePosition = position ?? self.tabs.items.length
+
+        // Create optimistic tab snapshot
+        const optimisticTab: ITabSnapshot = {
+          id: tempId,
+          name,
+          position: effectivePosition,
+          directory: directory ?? null,
+          createdAt: Date.now(),
+        }
+
+        // Record patches while adding the tab
+        const recorder = recordPatches(self.tabs)
+        self.tabs.add(optimisticTab)
+        recorder.stop()
+
+        // Mark tab as pending
+        const tab = self.tabs.get(tempId)
+        tab?.setPending(true)
+
+        // Store inverse patches for rollback
+        self.pendingUpdates.set(requestId, {
+          entityType: 'tab',
+          tempId,
+          inversePatches: recorder.inversePatches as IJsonPatch[],
+          createdAt: Date.now(),
+        })
+
+        // Send request to server
         getWs().send({
           type: 'tab:create',
-          payload: { name, position, directory },
+          payload: { name, position, directory, requestId, tempId },
         })
+
+        getWs().log.ws.debug('createTab optimistic', { requestId, tempId, name })
       },
 
       /** Request tab update */
@@ -440,7 +538,64 @@ export const RootStore = types
             break
 
           case 'terminal:created': {
-            const { terminal, isNew } = payload as { terminal: ITerminalSnapshot; isNew: boolean }
+            const { terminal, isNew, requestId, tempId } = payload as {
+              terminal: ITerminalSnapshot
+              isNew: boolean
+              requestId?: string
+              tempId?: string
+            }
+
+            // Check if this is a confirmation of an optimistic update
+            if (requestId && tempId) {
+              const pendingUpdate = self.pendingUpdates.get(requestId)
+
+              if (pendingUpdate && pendingUpdate.tempId === tempId) {
+                // This confirms our optimistic update
+                self.pendingUpdates.delete(requestId)
+
+                // Get the optimistic terminal
+                const optimisticTerminal = self.terminals.get(tempId)
+
+                if (optimisticTerminal) {
+                  if (isNew) {
+                    // Server created a new terminal - update our optimistic terminal with real data
+                    // We need to remove the temp and add the real one since ID is an identifier
+                    optimisticTerminal.cleanup()
+                    self.terminals.remove(tempId)
+                    self.terminals.add(terminal)
+
+                    // Update newTerminalIds to use real ID
+                    self.newTerminalIds.delete(tempId)
+                    self.newTerminalIds.add(terminal.id)
+
+                    getWs().log.ws.debug('terminal:created confirmed', {
+                      requestId,
+                      tempId,
+                      realId: terminal.id,
+                    })
+                  } else {
+                    // Server returned existing terminal - rollback our optimistic and use existing
+                    optimisticTerminal.cleanup()
+                    self.terminals.remove(tempId)
+                    self.newTerminalIds.delete(tempId)
+
+                    // Add the existing terminal if we don't have it
+                    if (!self.terminals.has(terminal.id)) {
+                      self.terminals.add(terminal)
+                    }
+
+                    getWs().log.ws.debug('terminal:created deduplicated', {
+                      requestId,
+                      tempId,
+                      existingId: terminal.id,
+                    })
+                  }
+                }
+                break
+              }
+            }
+
+            // Standard terminal creation (from another client or non-optimistic)
             self.terminals.add(terminal)
             if (isNew) {
               self.newTerminalIds.add(terminal.id)
@@ -522,7 +677,40 @@ export const RootStore = types
             break
 
           case 'tab:created': {
-            const { tab } = payload as { tab: ITabSnapshot }
+            const { tab, requestId, tempId } = payload as {
+              tab: ITabSnapshot
+              requestId?: string
+              tempId?: string
+            }
+
+            // Check if this is a confirmation of an optimistic update
+            if (requestId && tempId) {
+              const pendingUpdate = self.pendingUpdates.get(requestId)
+
+              if (pendingUpdate && pendingUpdate.tempId === tempId) {
+                // This confirms our optimistic update
+                self.pendingUpdates.delete(requestId)
+
+                // Get the optimistic tab
+                const optimisticTab = self.tabs.get(tempId)
+
+                if (optimisticTab) {
+                  // Server created the tab - update with real data
+                  // We need to remove the temp and add the real one since ID is an identifier
+                  self.tabs.remove(tempId)
+                  self.tabs.add(tab)
+
+                  getWs().log.ws.debug('tab:created confirmed', {
+                    requestId,
+                    tempId,
+                    realId: tab.id,
+                  })
+                }
+                break
+              }
+            }
+
+            // Standard tab creation (from another client or non-optimistic)
             self.tabs.add(tab)
             break
           }
@@ -551,7 +739,38 @@ export const RootStore = types
           }
 
           case 'terminal:error': {
-            const { error } = payload as { terminalId?: string; error: string }
+            const { error, requestId, tempId } = payload as {
+              terminalId?: string
+              error: string
+              requestId?: string
+              tempId?: string
+            }
+
+            // Check if this is a rejection of an optimistic update
+            if (requestId && tempId) {
+              const pendingUpdate = self.pendingUpdates.get(requestId)
+
+              if (pendingUpdate && pendingUpdate.tempId === tempId) {
+                // Rollback the optimistic update
+                self.pendingUpdates.delete(requestId)
+
+                // Apply inverse patches to undo the optimistic terminal creation
+                for (let i = pendingUpdate.inversePatches.length - 1; i >= 0; i--) {
+                  applyPatch(self.terminals, pendingUpdate.inversePatches[i])
+                }
+
+                // Clean up newTerminalIds
+                self.newTerminalIds.delete(tempId)
+
+                getWs().log.ws.warn('terminal:error rollback', {
+                  requestId,
+                  tempId,
+                  error,
+                })
+                break
+              }
+            }
+
             log.ws.error('Terminal error from server', { error })
             break
           }
