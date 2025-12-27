@@ -314,10 +314,11 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         const { startupScript: currentStartupScript, aiMode: currentAiMode, description: currentDescription, taskName: currentTaskName, serverPort: currentServerPort } = pendingStartup
 
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
+        // Wrap in heredoc so it executes as a single script (supports shebangs)
         if (currentStartupScript) {
           setTimeout(() => {
-            // Write the script as-is - newlines act as Enter presses in terminals
-            writeToTerminalRef.current(actualTerminalId, currentStartupScript + '\r')
+            const wrappedScript = `bash <<'VIBORA_STARTUP'\n${currentStartupScript}\nVIBORA_STARTUP`
+            writeToTerminalRef.current(actualTerminalId, wrappedScript + '\r')
           }, 100)
         }
 
