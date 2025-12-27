@@ -10,7 +10,7 @@ interface PendingUpdates {
   filesViewState?: Partial<FilesViewState>
 }
 
-const getDefaultBrowserUrl = () => `${window.location.protocol}//${window.location.hostname}:5173`
+const getDefaultBrowserUrl = () => 'http://localhost:3000'
 
 const DEFAULT_VIEW_STATE: ViewState = {
   activeTab: 'diff',
