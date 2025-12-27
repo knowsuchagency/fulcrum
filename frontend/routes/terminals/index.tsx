@@ -19,7 +19,6 @@ import { useTerminalStore } from '@/stores'
 import type { ITerminal, ITab } from '@/stores'
 import { useTasks } from '@/hooks/use-tasks'
 import { useRepositories } from '@/hooks/use-repositories'
-import { useWorktreeBasePath } from '@/hooks/use-config'
 import { cn } from '@/lib/utils'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import type { TerminalTab, TaskStatus } from '@/types'
@@ -129,7 +128,6 @@ const TerminalsView = observer(function TerminalsView() {
 
   const { data: tasks = [], status: tasksStatus } = useTasks()
   const { data: repositories = [] } = useRepositories()
-  const { data: worktreeBasePath } = useWorktreeBasePath()
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
 
   // Map repository path to repository id for linking
@@ -217,75 +215,6 @@ const TerminalsView = observer(function TerminalsView() {
   const pendingTabCreateRef = useRef(false)
   // Track the number of tabs when we initiated a tab creation to detect new tabs
   const tabCountBeforeCreateRef = useRef<number | null>(null)
-
-  // Destroy orphaned worktree terminals (terminals in worktrees dir but no matching task)
-  // This cleanup is intentionally conservative to avoid accidental destruction:
-  // 1. Only runs when tasks are loaded AND we have at least one task (empty tasks = likely error)
-  // 2. Only affects terminals without a tabId (task terminals, not regular tab terminals)
-  // 3. Only affects terminals in the worktrees directory
-  // 4. Skips terminals created within the last 30 seconds (grace period for React Query sync)
-  const TERMINAL_GRACE_PERIOD_MS = 30000 // 30 seconds grace period for new terminals
-
-  useEffect(() => {
-    log.terminalsView.debug('Orphan cleanup effect running', {
-      worktreeBasePath,
-      tasksStatus,
-      taskCount: tasks.length,
-      terminalCount: terminals.length,
-      allTaskWorktreesSize: allTaskWorktrees.size,
-    })
-
-    // Guard 1: Need worktreeBasePath to know which terminals are in worktrees dir
-    if (!worktreeBasePath) {
-      log.terminalsView.debug('Orphan cleanup skipped: no worktreeBasePath')
-      return
-    }
-
-    // Guard 2: Tasks must be successfully loaded
-    if (tasksStatus !== 'success') {
-      log.terminalsView.debug('Orphan cleanup skipped', { reason: `tasksStatus=${tasksStatus}` })
-      return
-    }
-
-    // Guard 3: If tasks array is empty, this likely indicates an error or the user has no tasks
-    // In either case, we should NOT destroy terminals - better to be safe
-    if (tasks.length === 0) {
-      log.terminalsView.debug('Orphan cleanup skipped: no tasks loaded (likely error or empty state)')
-      return
-    }
-
-    for (const terminal of terminals) {
-      // Skip terminals that belong to regular tabs - they're not orphans
-      if (terminal.tabId) {
-        continue
-      }
-
-      // Guard 4: Skip terminals created within the grace period
-      // This prevents destroying terminals before React Query refetches the updated tasks list
-      const terminalAge = Date.now() - terminal.createdAt
-      if (terminalAge < TERMINAL_GRACE_PERIOD_MS) {
-        log.terminalsView.debug('Orphan cleanup skipped: terminal too new', {
-          terminalId: terminal.id,
-          name: terminal.name,
-          ageMs: terminalAge,
-          gracePeriodMs: TERMINAL_GRACE_PERIOD_MS,
-        })
-        continue
-      }
-
-      const isInWorktreesDir = terminal.cwd?.startsWith(worktreeBasePath)
-      const isKnownTask = terminal.cwd && allTaskWorktrees.has(terminal.cwd)
-
-      if (isInWorktreesDir && !isKnownTask) {
-        log.terminalsView.warn('DESTROYING ORPHAN TERMINAL', {
-          terminalId: terminal.id,
-          name: terminal.name,
-          cwd: terminal.cwd,
-        })
-        destroyTerminal(terminal.id)
-      }
-    }
-  }, [terminals, allTaskWorktrees, worktreeBasePath, destroyTerminal, tasksStatus, tasks.length])
 
   // Filter terminals for the active tab and convert to TerminalInfo for component compatibility
   const visibleTerminals = useMemo(() => {
