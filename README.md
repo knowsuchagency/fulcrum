@@ -2,7 +2,7 @@
 
 The Vibe Engineer's Cockpit. Orchestrate Claude Code across parallel workstreams from a terminal-first command center.
 
-![Vibora Task Terminals View](./screenshots/terminals-view-with-tests.png)
+![Vibora Kanban Board](./screenshots/tasks-kanban-board.png)
 
 ## What It Does
 
@@ -67,17 +67,17 @@ Open http://localhost:7777 in your browser.
 
 ## Features
 
-### Task Terminals View
-
-The killer feature. See all your Claude Code sessions across every task and worktree in a single parallel view. Each task runs in an isolated git worktree, and you can monitor and interact with all of them simultaneously.
-
-![Task Terminals View](./screenshots/terminals-view-with-tests.png)
-
 ### Kanban Board
 
 Track tasks from planning to done. Create tasks that automatically spin up isolated git worktrees, and watch their status update in real-time as you work with Claude Code.
 
 ![Kanban Board](./screenshots/tasks-kanban-board.png)
+
+### Task Terminals View
+
+See all your Claude Code sessions across every task and worktree in a single parallel view. Each task runs in an isolated git worktree, and you can monitor and interact with all of them simultaneously.
+
+![Task Terminals View](./screenshots/terminals-view-with-tests.png)
 
 ### Repositories
 
@@ -283,4 +283,9 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, architecture, and co
 
 [PolyForm Shield 1.0.0](LICENSE)
 
-**In plain English:** You can use Vibora for any purpose—personal or commercial. KNOWSUCHAGENCY CORP has no claim over the software you build using Vibora. What's prohibited is reselling or redistributing Vibora itself for profit. The software is provided as-is with no warranty.
+**In plain English:**
+
+- **Allowed:** Use Vibora for any purpose—personal or commercial
+- **Allowed:** Build and sell software using Vibora (we have no claim over your work)
+- **Not allowed:** Resell or redistribute Vibora itself for profit
+- **No warranty:** The software is provided as-is
