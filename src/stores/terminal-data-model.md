@@ -24,7 +24,8 @@ This document describes the MobX State Tree (MST) data model used for terminal a
 │  │    connected: boolean                                          │  │
 │  │    initialized: boolean                                        │  │
 │  │    newTerminalIds: Set<string>                                 │  │
-│  │    pendingUpdates: Map<string, inverse>                        │  │
+│  │    pendingUpdates: Map<string, PendingUpdate>                  │  │
+│  │    terminalsPendingStartup: Map<string, StartupInfo>           │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 │                                                                      │
 │  Environment (injected):                                             │
@@ -332,6 +333,99 @@ src/stores/
        ▼                   ▼                   ▼
 ```
 
+## Task Terminal Startup Flow
+
+Task terminals automatically launch Claude Code with the task prompt. The startup
+info is stored in the MST store (not component refs) to survive React component
+unmount/remount cycles (e.g., React strict mode, navigation).
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                   Task Terminal Startup Flow                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  TaskTerminal              MST Store                   Server        │
+│       │                        │                          │         │
+│       │  createTerminal({      │                          │         │
+│       │    name, cwd,          │                          │         │
+│       │    startup: {          │                          │         │
+│       │      startupScript,    │                          │         │
+│       │      aiMode,           │                          │         │
+│       │      description,      │                          │         │
+│       │      taskName          │                          │         │
+│       │    }                   │                          │         │
+│       │  })                    │                          │         │
+│       │───────────────────────►│                          │         │
+│       │                        │                          │         │
+│       │                        │  1. Create optimistic    │         │
+│       │                        │     terminal (tempId)    │         │
+│       │                        │                          │         │
+│       │                        │  2. Store startup in     │         │
+│       │                        │     terminalsPending-    │         │
+│       │                        │     Startup[tempId]      │         │
+│       │                        │                          │         │
+│       │                        │  3. Send terminal:create │         │
+│       │                        │─────────────────────────►│         │
+│       │                        │                          │         │
+│       │                        │     terminal:created     │         │
+│       │                        │     { realId, tempId }   │         │
+│       │                        │◄─────────────────────────│         │
+│       │                        │                          │         │
+│       │                        │  4. Transfer startup     │         │
+│       │                        │     from tempId → realId │         │
+│       │                        │                          │         │
+│       │                        │  5. Re-attach xterm      │         │
+│       │                        │     with onAttached cb   │         │
+│       │                        │                          │         │
+│       │                        │     terminal:attached    │         │
+│       │                        │◄─────────────────────────│         │
+│       │                        │                          │         │
+│       │   onAttached()         │  6. Call onAttached      │         │
+│       │◄───────────────────────│     callback             │         │
+│       │                        │                          │         │
+│       │  consumePending-       │                          │         │
+│       │  Startup(terminalId)   │                          │         │
+│       │───────────────────────►│                          │         │
+│       │                        │                          │         │
+│       │  ◄── Returns startup   │  7. Delete from map      │         │
+│       │      info & deletes    │     (prevents re-run)    │         │
+│       │                        │                          │         │
+│       │  8. Run startupScript  │                          │         │
+│       │     + Claude command   │                          │         │
+│       │                        │                          │         │
+│       ▼                        ▼                          ▼         │
+└─────────────────────────────────────────────────────────────────────┘
+
+Key: terminalsPendingStartup survives component unmount/remount because
+it's stored in MST volatile state, not React component refs.
+```
+
+### StartupInfo Structure
+
+```typescript
+interface StartupInfo {
+  startupScript?: string | null  // e.g., "mise trust && npm install"
+  aiMode?: 'default' | 'plan'    // Claude permission mode
+  description?: string           // Task description for prompt
+  taskName: string               // Task name for prompt
+  serverPort?: number            // Vibora server port for CLI commands
+}
+```
+
+### Why Store-Based Startup Tracking?
+
+Previous implementation used React refs (`createdByMeRef`), which failed when:
+
+1. Component creates terminal, sets `createdByMeRef = true`
+2. Component unmounts (React strict mode, navigation)
+3. Component remounts → **new ref** with `createdByMeRef = false`
+4. `onAttached` fires → reads `false` → skips startup
+
+With MST store:
+- Startup info persists in `terminalsPendingStartup` across component lifecycle
+- `consumePendingStartup()` atomically gets AND deletes (prevents double-run)
+- Cleanup on error, disconnect, and terminal destruction
+
 ## Migration Status
 
 | Phase | Description | Status |
@@ -342,3 +436,4 @@ src/stores/
 | 3 | Migrate Terminals view | ✅ Complete |
 | 4 | Optimistic updates with rollback | ✅ Complete |
 | 5 | Multi-client sync (stale detection) | ✅ Complete |
+| 6 | Task terminal startup fix | ✅ Complete |
