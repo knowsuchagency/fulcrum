@@ -20,6 +20,8 @@ import type { ITerminal, ITab } from '@/stores'
 import { useTasks } from '@/hooks/use-tasks'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useWorktreeBasePath } from '@/hooks/use-config'
+import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
+import { useHotkeys } from '@/hooks/use-hotkeys'
 import { cn } from '@/lib/utils'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import type { TerminalTab, TaskStatus } from '@/types'
@@ -94,6 +96,9 @@ const TerminalsView = observer(function TerminalsView() {
 
   // State for tab edit dialog
   const [editingTab, setEditingTab] = useState<TerminalTab | null>(null)
+
+  // View state for tracking focused terminals
+  const { getFocusedTerminal } = useTerminalViewState()
 
   // URL is the source of truth for active tab
   // Fall back to first tab if URL doesn't specify a valid tab
@@ -537,6 +542,26 @@ const TerminalsView = observer(function TerminalsView() {
     },
     [updateTab]
   )
+
+  // Keyboard shortcuts (Cmd+D/W only work on desktop - browser intercepts on web)
+  useHotkeys('meta+d', handleTerminalAdd, {
+    enabled: activeTabId !== ALL_TASKS_TAB_ID && connected,
+    allowInTerminal: true,
+    deps: [handleTerminalAdd, activeTabId, connected],
+  })
+
+  useHotkeys('meta+w', () => {
+    if (activeTabId && activeTabId !== ALL_TASKS_TAB_ID) {
+      const focusedId = getFocusedTerminal(activeTabId)
+      if (focusedId) {
+        handleTerminalClose(focusedId)
+      }
+    }
+  }, {
+    enabled: activeTabId !== ALL_TASKS_TAB_ID,
+    allowInTerminal: true,
+    deps: [activeTabId, getFocusedTerminal, handleTerminalClose],
+  })
 
   return (
     <div className="flex h-full max-w-full flex-col overflow-hidden">

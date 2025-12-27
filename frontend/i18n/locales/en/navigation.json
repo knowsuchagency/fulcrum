@@ -32,6 +32,7 @@
     "groups": {
       "navigation": "Navigation",
       "actions": "Actions",
+      "terminals": "Terminals (Desktop)",
       "general": "General"
     },
     "labels": {
@@ -44,7 +45,10 @@
       "commandPalette": "Command Palette",
       "newTask": "New Task",
       "keyboardShortcuts": "Keyboard Shortcuts",
-      "closeModal": "Close Modal"
+      "closeModal": "Close Modal",
+      "newTerminal": "New Terminal",
+      "closeTerminal": "Close Terminal",
+      "submitForm": "Submit Form"
     }
   }
 }
