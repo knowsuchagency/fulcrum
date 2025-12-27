@@ -32,6 +32,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const attachedRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [isStartingClaude, setIsStartingClaude] = useState(false)
   const [xtermOpened, setXtermOpened] = useState(false)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
@@ -309,6 +310,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
       if (pendingStartup) {
         log.taskTerminal.info('onAttached: running startup commands', { terminalId: actualTerminalId })
+        setIsStartingClaude(true)
         const { startupScript: currentStartupScript, aiMode: currentAiMode, description: currentDescription, taskName: currentTaskName, serverPort: currentServerPort } = pendingStartup
 
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
@@ -343,6 +345,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
             taskCommand: taskCommand.substring(0, 50) + '...',
           })
           writeToTerminalRef.current(actualTerminalId, taskCommand + '\r')
+          setIsStartingClaude(false)
         }, currentStartupScript ? 5000 : 100)
       }
     }
@@ -423,6 +426,23 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
               />
               <span className={cn('font-mono text-sm', isDark ? 'text-white/50' : 'text-black/50')}>
                 Initializing terminal...
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Loading overlay - shown while Claude is starting */}
+        {isStartingClaude && (
+          <div className="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center bg-terminal-background/90">
+            <div className="flex flex-col items-center gap-3">
+              <HugeiconsIcon
+                icon={Loading03Icon}
+                size={24}
+                strokeWidth={2}
+                className={cn('animate-spin', isDark ? 'text-white/60' : 'text-black/60')}
+              />
+              <span className={cn('font-mono text-sm', isDark ? 'text-white/60' : 'text-black/60')}>
+                Starting Claude Code...
               </span>
             </div>
           </div>
