@@ -4,6 +4,8 @@
 @import "@fontsource-variable/jetbrains-mono";
 @import "@xterm/xterm/css/xterm.css";
 
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
