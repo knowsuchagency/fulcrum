@@ -121,7 +121,7 @@ function TaskView() {
 
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteLinkedWorktree, setDeleteLinkedWorktree] = useState(false)
+  const [deleteLinkedWorktree, setDeleteLinkedWorktree] = useState(true)
   const [vscodeModalOpen, setVscodeModalOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
   const isMobile = useIsMobile()
