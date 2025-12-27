@@ -206,6 +206,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
       {
         title: title.trim(),
         description: description.trim(),
+        aiMode,
         repoPath,
         repoName,
         baseBranch: baseBranch || 'main',

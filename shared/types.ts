@@ -56,6 +56,7 @@ export interface Task {
   linearTicketId: string | null
   linearTicketUrl: string | null
   startupScript: string | null
+  aiMode: 'default' | 'plan' | null
   createdAt: string
   updatedAt: string
 }

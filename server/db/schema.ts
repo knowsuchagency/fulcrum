@@ -16,6 +16,7 @@ export const tasks = sqliteTable('tasks', {
   linearTicketId: text('linear_ticket_id'), // e.g., "TEAM-123"
   linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
   startupScript: text('startup_script'), // Command to run after worktree creation
+  aiMode: text('ai_mode'), // 'default' | 'plan' | null - AI mode for Claude startup
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })

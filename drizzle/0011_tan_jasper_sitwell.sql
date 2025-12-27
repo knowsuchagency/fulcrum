@@ -1,0 +1,1 @@
+ALTER TABLE `tasks` ADD `ai_mode` text;

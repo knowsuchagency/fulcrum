@@ -27,6 +27,7 @@ export function useCreateTask() {
     mutationFn: (data: {
       title: string
       description: string
+      aiMode?: 'default' | 'plan'
       repoPath: string
       repoName: string
       baseBranch: string

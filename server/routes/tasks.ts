@@ -161,6 +161,7 @@ app.post('/', async (c) => {
       branch: body.branch || null,
       worktreePath: body.worktreePath || null,
       startupScript: body.startupScript || null,
+      aiMode: body.aiMode || null,
       createdAt: now,
       updatedAt: now,
     }

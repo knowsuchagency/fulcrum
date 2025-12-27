@@ -128,10 +128,10 @@ function TaskView() {
   // Find the repository matching this task's repo path
   const repository = repositories.find((r) => r.path === task?.repoPath)
 
-  // Read AI mode state from navigation (only set when coming from task creation)
+  // Read AI mode state - prefer persisted task data, fall back to navigation state for backward compat
   const navState = location.state as { aiMode?: 'default' | 'plan'; description?: string } | undefined
-  const aiMode = navState?.aiMode
-  const aiModeDescription = navState?.description
+  const aiMode = (task?.aiMode as 'default' | 'plan' | undefined) ?? navState?.aiMode
+  const aiModeDescription = task?.description ?? navState?.description
 
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
