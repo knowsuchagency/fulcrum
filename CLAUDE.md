@@ -55,13 +55,13 @@ The built CLI package includes:
 
 ## Architecture
 
-### Frontend (`src/`)
-- **React 19** with TanStack Router (file-based routing in `src/routes/`)
+### Frontend (`frontend/`)
+- **React 19** with TanStack Router (file-based routing in `frontend/routes/`)
 - **TanStack React Query** for server state
 - **shadcn/ui** (v4 with baseui support) for UI components
 - **xterm.js** for terminal emulation
 - Components organized by feature: `kanban/`, `terminal/`, `viewer/`, `ui/`
-- Path alias: `@` → `./src/`
+- Path alias: `@` → `./frontend/`
 
 ### Backend (`server/`)
 - **Hono.js** framework on Bun runtime
@@ -92,7 +92,7 @@ Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 ## File Organization
 
 ```
-src/
+frontend/
   routes/          # Pages (TanStack Router)
   components/      # React components by feature
   hooks/           # Custom hooks (use-tasks, use-terminal-ws, etc.)
@@ -192,7 +192,7 @@ log.pty.info('Restored terminal', { terminalId: id, name })
 log.ws.error('Connection failed', { error: String(err) })
 ```
 
-**Frontend** (`src/lib/logger.ts`):
+**Frontend** (`frontend/lib/logger.ts`):
 ```typescript
 import { log } from '@/lib/logger'
 

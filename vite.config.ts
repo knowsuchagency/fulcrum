@@ -14,10 +14,10 @@ export default defineConfig({
   define: {
     __VIBORA_DEBUG__: isDebug,
   },
-  plugins: [TanStackRouterVite(), react(), tailwindcss()],
+  plugins: [TanStackRouterVite({ routesDirectory: './frontend/routes' }), react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./frontend"),
     },
   },
   server: {
