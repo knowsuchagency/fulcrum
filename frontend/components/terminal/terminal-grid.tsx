@@ -349,9 +349,10 @@ export function TerminalGrid({
   }
 
   // Single terminal - no resizable panels needed
+  // Key is critical: forces React to unmount/remount Terminal when switching tabs
   if (terminals.length === 1) {
     return withMobileControls(
-      <div className="h-full w-full max-w-full min-w-0 overflow-hidden">{renderTerminalPane(terminals[0])}</div>
+      <div key={terminals[0].id} className="h-full w-full max-w-full min-w-0 overflow-hidden">{renderTerminalPane(terminals[0])}</div>
     )
   }
 
