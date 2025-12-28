@@ -8,6 +8,7 @@ import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { KeyboardProvider } from '@/contexts/keyboard-context'
 import { CommandPalette } from '@/components/command-palette/command-palette'
 import { PageBackground } from '@/components/layout/page-background'
+import { ConnectionStatusBanner } from '@/components/layout/connection-status-banner'
 import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -103,6 +104,7 @@ function RootLayout() {
         <ThemeSync />
         <ViewTracking />
         <DesktopBridge />
+        <ConnectionStatusBanner />
         <Header onNewTaskRef={handleNewTaskRef} onOpenCommandPalette={handleOpenCommandPalette} />
         <main className="isolate flex-1 overflow-hidden relative">
           <PageBackground />

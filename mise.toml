@@ -95,7 +95,7 @@ bun --watch server/index.ts
 
 [tasks.client]
 description = "Start frontend dev server"
-run = "DEBUG=\"${DEBUG:-}\" vite --host --port \"${FRONTEND_PORT:-5173}\""
+run = "DEBUG=\"${DEBUG:-}\" bunx vite --host --port \"${FRONTEND_PORT:-5173}\""
 
 [tasks.build]
 description = "Build for production"
@@ -205,7 +205,7 @@ echo "All versions in sync: $VERSION"
 
 [tasks.preview]
 description = "Preview production build"
-run = "vite preview"
+run = "bunx vite preview"
 
 [tasks."db:push"]
 description = "Sync schema to database"

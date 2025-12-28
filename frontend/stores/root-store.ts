@@ -166,6 +166,12 @@ export const RootStore = types
     connected: false,
     /** Whether initial sync has completed */
     initialized: false,
+    /** Whether initial connection has ever been established (prevents banner flash on page load) */
+    hasEverConnected: false,
+    /** Current reconnection attempt number (0 when connected) */
+    reconnectAttempt: 0,
+    /** Maximum reconnection attempts (exposed for UI) */
+    maxReconnectAttempts: 10,
     /** Set of newly created terminal IDs (for auto-focus) */
     newTerminalIds: new Set<string>(),
     /** Pending optimistic updates awaiting server confirmation, keyed by requestId */
@@ -227,6 +233,10 @@ export const RootStore = types
           // Disconnected - mark as uninitialized
           self.initialized = false
         } else if (!wasConnected && connected) {
+          // Just connected - mark as having connected and reset reconnect counter
+          self.hasEverConnected = true
+          self.reconnectAttempt = 0
+
           // Just reconnected - clear stale pending updates
           // These were in-flight when we disconnected and may have been
           // processed or rejected by the server
@@ -256,6 +266,16 @@ export const RootStore = types
       /** Mark as initialized after initial sync */
       setInitialized(initialized: boolean) {
         self.initialized = initialized
+      },
+
+      /** Set current reconnection attempt (called by StoreProvider) */
+      setReconnectAttempt(attempt: number) {
+        self.reconnectAttempt = attempt
+      },
+
+      /** Set max reconnection attempts (called by StoreProvider on mount) */
+      setMaxReconnectAttempts(max: number) {
+        self.maxReconnectAttempts = max
       },
 
       /** Mark a terminal as newly created (for auto-focus) */

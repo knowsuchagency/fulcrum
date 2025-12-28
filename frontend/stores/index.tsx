@@ -97,6 +97,11 @@ export function StoreProvider({
   }
   const store = storeRef.current
 
+  // Sync maxReconnectAttempts to store for UI access
+  useEffect(() => {
+    store.setMaxReconnectAttempts(maxReconnectAttempts)
+  }, [store, maxReconnectAttempts])
+
   // WebSocket connection management
   useEffect(() => {
     let mounted = true
@@ -141,6 +146,7 @@ export function StoreProvider({
         // Attempt reconnection
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++
+          store.setReconnectAttempt(reconnectAttemptsRef.current)
           const delay = reconnectInterval * Math.pow(1.5, reconnectAttemptsRef.current - 1)
           log.ws.info('Scheduling reconnect', {
             attempt: reconnectAttemptsRef.current,
@@ -149,6 +155,7 @@ export function StoreProvider({
           reconnectTimeoutRef.current = setTimeout(connect, delay)
         } else {
           log.ws.warn('Max reconnect attempts reached')
+          store.setReconnectAttempt(reconnectAttemptsRef.current)
         }
       }
 
