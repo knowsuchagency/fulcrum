@@ -101,6 +101,7 @@ interface UseTerminalWSReturn {
   attachXterm: (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => () => void
   setupImagePaste: (container: HTMLElement, terminalId: string) => () => void
   consumePendingStartup: (terminalId: string) => PendingStartupInfo | undefined
+  clearStartingUp: (terminalId: string) => void
 }
 
 /**
@@ -179,5 +180,6 @@ export function useTerminalWS(_options: UseTerminalWSOptions = {}): UseTerminalW
     attachXterm: store.attachXterm,
     setupImagePaste: store.setupImagePaste,
     consumePendingStartup: store.consumePendingStartup,
+    clearStartingUp: store.clearStartingUp,
   }
 }

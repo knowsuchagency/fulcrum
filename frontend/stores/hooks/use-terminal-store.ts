@@ -91,6 +91,7 @@ export interface UseTerminalStoreReturn {
 
   // Startup management
   consumePendingStartup: (terminalId: string) => PendingStartupInfo | undefined
+  clearStartingUp: (terminalId: string) => void
 
   // Tab creation navigation
   clearLastCreatedTabId: () => void
@@ -194,6 +195,7 @@ export function useTerminalStore(): UseTerminalStoreReturn {
 
       // Startup management
       consumePendingStartup: store.consumePendingStartup.bind(store),
+      clearStartingUp: store.clearStartingUp.bind(store),
 
       // Tab creation navigation
       clearLastCreatedTabId: store.clearLastCreatedTabId.bind(store),

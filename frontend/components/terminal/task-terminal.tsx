@@ -60,6 +60,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     setupImagePaste,
     writeToTerminal,
     consumePendingStartup,
+    clearStartingUp,
   } = useTerminalWS()
 
   // Store callbacks in refs to avoid effect re-runs when they change
@@ -67,11 +68,13 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const setupImagePasteRef = useRef(setupImagePaste)
   const writeToTerminalRef = useRef(writeToTerminal)
   const consumePendingStartupRef = useRef(consumePendingStartup)
+  const clearStartingUpRef = useRef(clearStartingUp)
 
   useEffect(() => { attachXtermRef.current = attachXterm }, [attachXterm])
   useEffect(() => { setupImagePasteRef.current = setupImagePaste }, [setupImagePaste])
   useEffect(() => { writeToTerminalRef.current = writeToTerminal }, [writeToTerminal])
   useEffect(() => { consumePendingStartupRef.current = consumePendingStartup }, [consumePendingStartup])
+  useEffect(() => { clearStartingUpRef.current = clearStartingUp }, [clearStartingUp])
 
   // Get the current terminal's status
   const currentTerminal = terminalId ? terminals.find((t) => t.id === terminalId) : null
@@ -347,6 +350,8 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           })
           writeToTerminalRef.current(actualTerminalId, taskCommand + '\r')
           setIsStartingClaude(false)
+          // Clear the MST store's isStartingUp flag (for /terminals view)
+          clearStartingUpRef.current(actualTerminalId)
         }, currentStartupScript ? 5000 : 100)
       }
     }

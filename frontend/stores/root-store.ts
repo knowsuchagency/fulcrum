@@ -276,12 +276,23 @@ export const RootStore = types
         const startup = self.terminalsPendingStartup.get(terminalId)
         if (startup) {
           self.terminalsPendingStartup.delete(terminalId)
-          // Clear the observable isStartingUp flag on the terminal model
-          const terminal = self.terminals.get(terminalId)
-          terminal?.setStartingUp(false)
-          getWs().log.ws.info('consumed pending startup', { terminalId, taskName: startup.taskName, isStartingUp: terminal?.isStartingUp })
+          // Note: We do NOT clear isStartingUp here. The consumer (TaskTerminal)
+          // is responsible for clearing it after the startup commands are sent.
+          getWs().log.ws.info('consumed pending startup', { terminalId, taskName: startup.taskName })
         }
         return startup
+      },
+
+      /**
+       * Clear the isStartingUp flag on a terminal.
+       * Called by TaskTerminal after startup commands are sent.
+       */
+      clearStartingUp(terminalId: string) {
+        const terminal = self.terminals.get(terminalId)
+        if (terminal) {
+          terminal.setStartingUp(false)
+          getWs().log.ws.info('cleared isStartingUp', { terminalId })
+        }
       },
 
       /** Set pending tab creation (for tracking optimistic tab creates) */
