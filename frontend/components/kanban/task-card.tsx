@@ -7,7 +7,9 @@ import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/eleme
 import { attachClosestEdge, extractClosestEdge, type Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useDrag } from './drag-context'
+import { useSelection } from './selection-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -21,7 +23,9 @@ interface TaskCardProps {
 
 export function TaskCard({ task, isDragPreview }: TaskCardProps) {
   const { setActiveTask } = useDrag()
+  const { isSelected, toggleSelection } = useSelection()
   const navigate = useNavigate()
+  const selected = isSelected(task.id)
 
   const ref = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -106,34 +110,60 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
 
   const handleClick = () => {
     // Only navigate if we didn't drag
-    if (!hasDragged.current) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
+    if (hasDragged.current) {
+      hasDragged.current = false
+      return
     }
+
+    // Normal click: navigate
+    navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
     hasDragged.current = false
   }
 
+
   const cardContent = (
-    <Card
-      ref={isDragPreview ? undefined : ref}
-      onPointerDown={handlePointerDown}
-      onClick={handleClick}
-      className={cn(
-        'transition-shadow hover:shadow-md relative cursor-grab active:cursor-grabbing',
-        isDragging && 'opacity-50'
-      )}
-    >
-      {/* Drop indicator line */}
-      {closestEdge && (
+    <div className="group/card relative">
+      {/* Selection checkbox - OUTSIDE the draggable Card */}
+      {!isDragPreview && (
         <div
           className={cn(
-            'absolute left-0 right-0 h-0.5 bg-primary z-10',
-            closestEdge === 'top' && '-top-1',
-            closestEdge === 'bottom' && '-bottom-1'
+            'absolute left-2 top-2 z-20 transition-opacity',
+            selected ? 'opacity-100' : 'opacity-0 group-hover/card:opacity-100'
           )}
-        />
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => toggleSelection(task.id)}
+          />
+        </div>
       )}
 
-      <CardHeader className="p-3 pb-1 flex flex-row items-start justify-between gap-2">
+      <Card
+        ref={isDragPreview ? undefined : ref}
+        onPointerDown={handlePointerDown}
+        onClick={handleClick}
+        className={cn(
+          'transition-shadow hover:shadow-md relative cursor-grab active:cursor-grabbing',
+          isDragging && 'opacity-50',
+          selected && 'ring-2 ring-primary bg-primary/5'
+        )}
+      >
+        {/* Drop indicator line */}
+        {closestEdge && (
+          <div
+            className={cn(
+              'absolute left-0 right-0 h-0.5 bg-primary z-10',
+              closestEdge === 'top' && '-top-1',
+              closestEdge === 'bottom' && '-bottom-1'
+            )}
+          />
+        )}
+
+        <CardHeader className={cn(
+          'p-3 pb-1 flex flex-row items-start justify-between gap-2',
+          !isDragPreview && 'pl-8' // Make room for checkbox
+        )}>
         <CardTitle className="text-sm font-medium leading-tight flex-1">
           {task.title}
         </CardTitle>
@@ -174,7 +204,8 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
           )}
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   )
 
   return (

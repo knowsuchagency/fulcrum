@@ -5,6 +5,8 @@ import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/clo
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { KanbanColumn } from './kanban-column'
 import { DragProvider, useDrag } from './drag-context'
+import { SelectionProvider, useSelection } from './selection-context'
+import { BulkActionsToolbar } from './bulk-actions-toolbar'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTasks, useUpdateTaskStatus } from '@/hooks/use-tasks'
 import { cn } from '@/lib/utils'
@@ -63,7 +65,19 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
   const { data: allTasks = [], isLoading } = useTasks()
   const updateStatus = useUpdateTaskStatus()
   const { activeTask } = useDrag()
+  const { clearSelection, selectedIds } = useSelection()
   const [activeTab, setActiveTab] = useState<TaskStatus>('IN_PROGRESS')
+
+  // Escape key clears selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedIds.size > 0) {
+        clearSelection()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [clearSelection, selectedIds.size])
 
   // Filter tasks by repo and search query, sort by latest first
   const tasks = useMemo(() => {
@@ -229,14 +243,19 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
           ))}
         </div>
       )}
+
+      {/* Bulk actions toolbar - shown when tasks are selected */}
+      <BulkActionsToolbar />
     </div>
   )
 }
 
 export function KanbanBoard(props: KanbanBoardProps) {
   return (
-    <DragProvider>
-      <KanbanBoardInner {...props} />
-    </DragProvider>
+    <SelectionProvider>
+      <DragProvider>
+        <KanbanBoardInner {...props} />
+      </DragProvider>
+    </SelectionProvider>
   )
 }
