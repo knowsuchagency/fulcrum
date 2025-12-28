@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import { createNodeWebSocket } from '@hono/node-ws'
+import { createServer } from 'net'
 import { createApp } from './app'
 import { initPTYManager, setBroadcastDestroyed } from './terminal/pty-instance'
 import {
@@ -14,6 +15,25 @@ import { log } from './lib/logger'
 
 const PORT = getSettingByKey('port')
 const HOST = process.env.HOST || 'localhost'
+
+// Check if port is already in use before starting
+async function checkPortAvailable(port: number, host: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer()
+    server.once('error', () => resolve(false))
+    server.once('listening', () => {
+      server.close(() => resolve(true))
+    })
+    server.listen(port, host)
+  })
+}
+
+const portAvailable = await checkPortAvailable(PORT, HOST)
+if (!portAvailable) {
+  log.server.error('Port already in use', { port: PORT, host: HOST })
+  console.error(`Error: Port ${PORT} is already in use. Another server may be running.`)
+  process.exit(1)
+}
 
 // Initialize PTY manager with broadcast callbacks
 const ptyManager = initPTYManager({
