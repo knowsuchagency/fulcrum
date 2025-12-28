@@ -1,5 +1,6 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
+import { observer } from 'mobx-react-lite'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -9,13 +10,16 @@ import { Terminal } from './terminal'
 import { TerminalStatusBar } from './terminal-status'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { GitActionsButtons } from './git-actions-buttons'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
+import { useStore } from '@/stores'
+import { useTheme } from 'next-themes'
+import { cn } from '@/lib/utils'
 
 interface TaskInfo {
   taskId: string
@@ -57,7 +61,40 @@ interface TerminalPaneProps {
   onFocus?: () => void
 }
 
-function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
+const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
+  const store = useStore()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const [isStartingClaude, setIsStartingClaude] = useState(false)
+
+  // Poll for pending startup status (only for task terminals)
+  // We use polling because terminalsPendingStartup is a volatile Map that isn't observable by MobX
+  useEffect(() => {
+    if (!taskInfo) return // Only for task terminals
+
+    const checkPendingStartup = () => {
+      const isPending = store.terminalsPendingStartup.has(terminal.id)
+      setIsStartingClaude(isPending)
+    }
+
+    // Initial check
+    checkPendingStartup()
+
+    // Poll every 100ms
+    const interval = setInterval(checkPendingStartup, 100)
+
+    // Stop polling after 10 seconds (max reasonable startup time)
+    const timeout = setTimeout(() => {
+      clearInterval(interval)
+      setIsStartingClaude(false)
+    }, 10000)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [terminal.id, taskInfo, store])
+
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
@@ -126,12 +163,28 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
           </>
         )}
       </div>
-      <div className="min-h-0 min-w-0 flex-1">
+      <div className="relative min-h-0 min-w-0 flex-1">
         <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} terminalId={terminal.id} setupImagePaste={setupImagePaste} onFocus={onFocus} />
+        {/* Loading overlay - shown while Claude is starting */}
+        {isStartingClaude && (
+          <div className="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center bg-terminal-background/90">
+            <div className="flex flex-col items-center gap-3">
+              <HugeiconsIcon
+                icon={Loading03Icon}
+                size={24}
+                strokeWidth={2}
+                className={cn('animate-spin', isDark ? 'text-white/60' : 'text-black/60')}
+              />
+              <span className={cn('font-mono text-sm', isDark ? 'text-white/60' : 'text-black/60')}>
+                Starting Claude Code...
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
-}
+})
 
 function EmptyPane({ onAdd }: { onAdd?: () => void }) {
   return (
