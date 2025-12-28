@@ -90,8 +90,8 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
                 )}
               </>
             )}
-            <GitStatusBadge worktreePath={taskInfo.worktreePath} />
-            <div className="ml-auto flex items-center gap-0.5">
+            <div className="ml-auto flex items-center gap-1">
+              <GitStatusBadge worktreePath={taskInfo.worktreePath} />
               <GitActionsButtons
                 repoPath={taskInfo.repoPath}
                 worktreePath={taskInfo.worktreePath}
