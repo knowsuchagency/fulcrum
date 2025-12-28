@@ -11,7 +11,7 @@ import { Terminal } from './terminal'
 import { TerminalStatusBar } from './terminal-status'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon, Loading03Icon, Delete02Icon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon, Loading03Icon, Delete02Icon, Maximize02Icon, ArrowShrink02Icon } from '@hugeicons/core-free-icons'
 import { GitActionsButtons } from './git-actions-buttons'
 import {
   AlertDialog,
@@ -73,9 +73,13 @@ interface TerminalPaneProps {
   onContainerReady?: (container: HTMLDivElement) => void
   setupImagePaste?: (container: HTMLElement, terminalId: string) => () => void
   onFocus?: () => void
+  isMaximized?: boolean
+  onMaximize?: () => void
+  onMinimize?: () => void
+  canMaximize?: boolean
 }
 
-const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
+const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal, isMaximized, onMaximize, onMinimize, canMaximize }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
   const store = useStore()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
@@ -192,16 +196,33 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
               className="flex-1 border-b-0"
               onRename={onRename}
             />
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onClose}
-                className="mr-1 h-5 w-5 text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
-              </Button>
-            )}
+            <div className="flex items-center gap-1 mr-1">
+              {canMaximize && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={isMaximized ? onMinimize : onMaximize}
+                  className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                  title={isMaximized ? "Restore" : "Maximize"}
+                >
+                  <HugeiconsIcon
+                    icon={isMaximized ? ArrowShrink02Icon : Maximize02Icon}
+                    size={12}
+                    strokeWidth={2}
+                  />
+                </Button>
+              )}
+              {onClose && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={onClose}
+                  className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+                </Button>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -271,6 +292,8 @@ export function TerminalGrid({
   )
   // Track active terminal index for mobile single-terminal view
   const [mobileActiveIndex, setMobileActiveIndex] = useState(0)
+  // Track maximized terminal (only for regular terminals, not task terminals)
+  const [maximizedTerminalId, setMaximizedTerminalId] = useState<string | null>(null)
 
   // Keep mobile active index in bounds when terminals change
   useEffect(() => {
@@ -278,6 +301,13 @@ export function TerminalGrid({
       setMobileActiveIndex(terminals.length - 1)
     }
   }, [terminals.length, mobileActiveIndex])
+
+  // Clear maximized state when terminal is removed
+  useEffect(() => {
+    if (maximizedTerminalId && !terminals.find(t => t.id === maximizedTerminalId)) {
+      setMaximizedTerminalId(null)
+    }
+  }, [terminals, maximizedTerminalId])
 
   if (terminals.length === 0) {
     return <EmptyPane onAdd={onTerminalAdd} />
@@ -305,21 +335,30 @@ export function TerminalGrid({
     }
   }
 
-  const renderTerminalPane = (terminal: TerminalInfo) => (
-    <TerminalPane
-      terminal={terminal}
-      taskInfo={terminal.cwd ? taskInfoByCwd?.get(terminal.cwd) : undefined}
-      isMobile={isMobile}
-      onClose={onTerminalClose ? () => onTerminalClose(terminal.id) : undefined}
-      onReady={onTerminalReady ? (xterm) => onTerminalReady(terminal.id, xterm) : undefined}
-      onResize={onTerminalResize ? (c, r) => onTerminalResize(terminal.id, c, r) : undefined}
-      onRename={onTerminalRename ? (name) => onTerminalRename(terminal.id, name) : undefined}
-      onContainerReady={onTerminalContainerReady ? (container) => onTerminalContainerReady(terminal.id, container) : undefined}
-      setupImagePaste={setupImagePaste}
-      onFocus={() => setFocusedTerminalId(terminal.id)}
-      sendInputToTerminal={sendInputToTerminal}
-    />
-  )
+  const renderTerminalPane = (terminal: TerminalInfo) => {
+    const taskInfo = terminal.cwd ? taskInfoByCwd?.get(terminal.cwd) : undefined
+    // Only regular terminals (not task terminals) can be maximized when there are multiple terminals
+    const canMaximize = !taskInfo && terminals.length > 1
+    return (
+      <TerminalPane
+        terminal={terminal}
+        taskInfo={taskInfo}
+        isMobile={isMobile}
+        onClose={onTerminalClose ? () => onTerminalClose(terminal.id) : undefined}
+        onReady={onTerminalReady ? (xterm) => onTerminalReady(terminal.id, xterm) : undefined}
+        onResize={onTerminalResize ? (c, r) => onTerminalResize(terminal.id, c, r) : undefined}
+        onRename={onTerminalRename ? (name) => onTerminalRename(terminal.id, name) : undefined}
+        onContainerReady={onTerminalContainerReady ? (container) => onTerminalContainerReady(terminal.id, container) : undefined}
+        setupImagePaste={setupImagePaste}
+        onFocus={() => setFocusedTerminalId(terminal.id)}
+        sendInputToTerminal={sendInputToTerminal}
+        isMaximized={maximizedTerminalId === terminal.id}
+        onMaximize={() => setMaximizedTerminalId(terminal.id)}
+        onMinimize={() => setMaximizedTerminalId(null)}
+        canMaximize={canMaximize}
+      />
+    )
+  }
 
   // Wrapper to add shared mobile controls
   const withMobileControls = (content: React.ReactNode) => (
@@ -354,6 +393,16 @@ export function TerminalGrid({
     return withMobileControls(
       <div key={terminals[0].id} className="h-full w-full max-w-full min-w-0 overflow-hidden">{renderTerminalPane(terminals[0])}</div>
     )
+  }
+
+  // Maximized terminal - show only that terminal at full size
+  if (maximizedTerminalId) {
+    const maximizedTerminal = terminals.find(t => t.id === maximizedTerminalId)
+    if (maximizedTerminal) {
+      return withMobileControls(
+        <div key={maximizedTerminal.id} className="h-full w-full max-w-full min-w-0 overflow-hidden">{renderTerminalPane(maximizedTerminal)}</div>
+      )
+    }
   }
 
   // Two terminals - vertical on mobile, horizontal on desktop
