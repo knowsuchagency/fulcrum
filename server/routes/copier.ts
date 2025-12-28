@@ -7,6 +7,7 @@ import { execSync } from 'node:child_process'
 import { db, repositories, type NewRepository } from '../db'
 import { eq } from 'drizzle-orm'
 import { log } from '../lib/logger'
+import { isGitUrl } from '../lib/git-utils'
 import type {
   CopierQuestion,
   CopierQuestionType,
@@ -101,19 +102,6 @@ function parseCopierQuestions(yamlContent: string): CopierQuestion[] {
   return questions
 }
 
-/**
- * Check if a string looks like a git URL
- */
-function isGitUrl(source: string): boolean {
-  return (
-    source.startsWith('git@') ||
-    source.startsWith('https://') ||
-    source.startsWith('http://') ||
-    source.startsWith('gh:') ||
-    source.startsWith('gl:') ||
-    source.startsWith('bb:')
-  )
-}
 
 /**
  * Fetch copier.yml from a git URL by shallow cloning

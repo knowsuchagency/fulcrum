@@ -20,7 +20,18 @@
   },
   "addModal": {
     "title": "Add Repository",
-    "description": "Add a git repository for quick access when creating tasks.",
+    "description": "Add a git repository from a URL or local path.",
+    "inputLabel": "Repository URL or path",
+    "inputPlaceholder": "https://github.com/user/repo or /local/path",
+    "browse": "Browse...",
+    "willCloneTo": "Will clone to",
+    "cloning": "Cloning repository...",
+    "adding": "Adding...",
+    "cloneFailed": "Failed to clone repository",
+    "createFailed": "Failed to add repository",
+    "cancel": "Cancel",
+    "add": "Add",
+    "retry": "Retry",
     "fields": {
       "path": "Repository Path",
       "pathPlaceholder": "Select repository...",
@@ -33,9 +44,7 @@
       "copyFilesDescription": "Comma-separated glob patterns for files to copy into new worktrees.",
       "isCopierTemplate": "Use as Copier Template",
       "isCopierTemplateDescription": "Mark as a template for creating new projects."
-    },
-    "adding": "Adding...",
-    "cancel": "Cancel"
+    }
   },
   "newProject": {
     "button": "New Project",

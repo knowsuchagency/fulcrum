@@ -3,7 +3,6 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   useRepositories,
-  useCreateRepository,
   useDeleteRepository,
 } from '@/hooks/use-repositories'
 import { Button } from '@/components/ui/button'
@@ -30,13 +29,13 @@ import {
   ComputerTerminal01Icon,
   GridViewIcon,
 } from '@hugeicons/core-free-icons'
-import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
-import { useDefaultGitReposDir, useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { NewProjectDialog } from '@/components/repositories/new-project-dialog'
+import { AddRepositoryDialog } from '@/components/repositories/add-repository-dialog'
 
 export const Route = createFileRoute('/repositories/')({
   component: RepositoriesView,
@@ -195,39 +194,21 @@ function RepositoryCard({
 function AddRepositoryButton() {
   const { t } = useTranslation('repositories')
   const navigate = useNavigate()
-  const [browserOpen, setBrowserOpen] = useState(false)
-
-  const createRepository = useCreateRepository()
-  const { data: defaultGitReposDir } = useDefaultGitReposDir()
-
-  const handlePathSelect = (selectedPath: string) => {
-    const displayName = selectedPath.split('/').pop() || 'repo'
-
-    createRepository.mutate(
-      {
-        path: selectedPath,
-        displayName,
-      },
-      {
-        onSuccess: (repo) => {
-          navigate({ to: '/repositories/$repoId', params: { repoId: repo.id } })
-        },
-      }
-    )
-  }
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
     <>
-      <Button size="sm" onClick={() => setBrowserOpen(true)} disabled={createRepository.isPending}>
+      <Button size="sm" onClick={() => setDialogOpen(true)}>
         <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
         {t('addRepository')}
       </Button>
 
-      <FilesystemBrowser
-        open={browserOpen}
-        onOpenChange={setBrowserOpen}
-        onSelect={handlePathSelect}
-        initialPath={defaultGitReposDir || undefined}
+      <AddRepositoryDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={(repoId) => {
+          navigate({ to: '/repositories/$repoId', params: { repoId } })
+        }}
       />
     </>
   )

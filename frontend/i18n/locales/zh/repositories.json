@@ -14,7 +14,18 @@
   },
   "addModal": {
     "title": "添加仓库",
-    "description": "添加一个 Git 仓库，以便在创建任务时快速访问。",
+    "description": "从 URL 或本地路径添加 Git 仓库。",
+    "inputLabel": "仓库 URL 或路径",
+    "inputPlaceholder": "https://github.com/user/repo 或 /local/path",
+    "browse": "浏览...",
+    "willCloneTo": "将克隆到",
+    "cloning": "正在克隆仓库...",
+    "adding": "添加中...",
+    "cloneFailed": "克隆仓库失败",
+    "createFailed": "添加仓库失败",
+    "cancel": "取消",
+    "add": "添加",
+    "retry": "重试",
     "fields": {
       "path": "仓库路径",
       "pathPlaceholder": "选择仓库...",
@@ -25,9 +36,7 @@
       "copyFiles": "复制文件",
       "copyFilesPlaceholder": ".env, config.local.json",
       "copyFilesDescription": "用逗号分隔的 glob 模式，用于复制文件到新的工作树。"
-    },
-    "adding": "添加中...",
-    "cancel": "取消"
+    }
   },
   "empty": {
     "noRepositories": "尚未添加任何仓库。添加一个仓库以便在创建任务时快速访问。"

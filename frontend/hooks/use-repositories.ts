@@ -40,6 +40,21 @@ export function useCreateRepository() {
   })
 }
 
+export function useCloneRepository() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { url: string; displayName?: string }) =>
+      fetchJSON<Repository>(`${API_BASE}/api/repositories/clone`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['repositories'] })
+    },
+  })
+}
+
 export function useUpdateRepository() {
   const queryClient = useQueryClient()
 

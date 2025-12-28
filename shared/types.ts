@@ -132,6 +132,7 @@ export interface Repository {
   displayName: string
   startupScript: string | null
   copyFiles: string | null
+  remoteUrl: string | null
   isCopierTemplate: boolean
   createdAt: string
   updatedAt: string
