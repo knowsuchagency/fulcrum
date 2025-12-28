@@ -1,7 +1,7 @@
 {
   "name": "vibora",
   "private": true,
-  "version": "3.6.1",
+  "version": "3.7.0",
   "description": "The Vibe Engineer's Cockpit",
   "license": "PolyForm-Shield-1.0.0",
   "type": "module",
