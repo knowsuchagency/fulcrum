@@ -11,8 +11,20 @@ import { Terminal } from './terminal'
 import { TerminalStatusBar } from './terminal-status'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon, Loading03Icon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon, Loading03Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { GitActionsButtons } from './git-actions-buttons'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { useDeleteTask } from '@/hooks/use-tasks'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { useIsMobile } from '@/hooks/use-is-mobile'
@@ -66,11 +78,17 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
   const store = useStore()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
+  const deleteTask = useDeleteTask()
 
   // Get the observable isStartingUp state from the terminal model (only for task terminals)
   // This is reactive because TerminalPane is wrapped with observer()
   const terminalModel = taskInfo ? store.terminals.get(terminal.id) : null
   const isStartingClaude = terminalModel?.isStartingUp ?? false
+
+  const handleDeleteTask = () => {
+    if (!taskInfo) return
+    deleteTask.mutate({ taskId: taskInfo.taskId, deleteLinkedWorktree: true })
+  }
 
   // Debug logging to trace isStartingUp state
   useEffect(() => {
@@ -128,6 +146,39 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
                 terminalId={terminal.id}
                 sendInputToTerminal={sendInputToTerminal}
               />
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                      title="Delete task"
+                      disabled={deleteTask.isPending}
+                    />
+                  }
+                >
+                  <HugeiconsIcon icon={Delete02Icon} size={12} strokeWidth={2} />
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete this task and its worktree.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteTask}
+                      variant="destructive"
+                      disabled={deleteTask.isPending}
+                    >
+                      {deleteTask.isPending ? 'Deleting...' : 'Delete'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         ) : (

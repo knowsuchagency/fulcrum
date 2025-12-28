@@ -219,15 +219,16 @@ function RepositoryDetailView() {
             <span className="max-sm:hidden">Tasks</span>
           </Button>
 
+          {/* Editor - hidden on mobile */}
           <Button
             variant="ghost"
             size="sm"
             onClick={handleOpenEditor}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground max-sm:hidden"
             title={`Open in ${getEditorDisplayName(editorApp)}`}
           >
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">Editor</span>
+            <span>Editor</span>
           </Button>
         </div>
 
@@ -307,7 +308,7 @@ function RepositoryDetailView() {
                   </Field>
                 </FieldGroup>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border">
+                <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
                   <AlertDialog>
                     <AlertDialogTrigger
                       render={

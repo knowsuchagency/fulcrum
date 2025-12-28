@@ -41,6 +41,7 @@ import {
   Settings05Icon,
   GitCommitIcon,
   LibraryIcon,
+  More03Icon,
 } from '@hugeicons/core-free-icons'
 import { TaskConfigModal } from '@/components/task-config-modal'
 import {
@@ -65,6 +66,7 @@ import { toast } from 'sonner'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -402,12 +404,117 @@ function TaskView() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Task Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border bg-background px-4 py-2">
-        <div className="flex-1">
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-sm font-medium">
+      <div className="shrink-0 border-b border-border bg-background px-4 py-2">
+        {/* Mobile: Two-row layout */}
+        <div className="flex flex-col gap-1 sm:hidden">
+          {/* Row 1: Title + status + operations + delete */}
+          <div className="flex items-center gap-2">
+            <h1 className="min-w-0 flex-1 truncate text-sm font-medium">
               {task.title}
             </h1>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button
+                    type="button"
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[task.status]}`}
+                  />
+                }
+              >
+                {STATUS_LABELS[task.status]}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup
+                  value={task.status}
+                  onValueChange={handleStatusChange}
+                >
+                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                    <DropdownMenuRadioItem key={value} value={value}>
+                      {label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground" />
+                }
+              >
+                <HugeiconsIcon icon={More03Icon} size={16} strokeWidth={2} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleSync} disabled={gitSync.isPending || !task.worktreePath}>
+                  <HugeiconsIcon icon={ArrowRight03Icon} size={14} strokeWidth={2} />
+                  Pull from main
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleMergeToMain} disabled={gitMerge.isPending || !task.worktreePath}>
+                  <HugeiconsIcon icon={ArrowLeft03Icon} size={14} strokeWidth={2} />
+                  Merge to main
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handlePush} disabled={gitPush.isPending || !task.worktreePath}>
+                  <HugeiconsIcon icon={ArrowUp03Icon} size={14} strokeWidth={2} />
+                  Push to origin
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSyncParent} disabled={gitSyncParent.isPending || !task.repoPath}>
+                  <HugeiconsIcon icon={Orbit01Icon} size={14} strokeWidth={2} />
+                  Sync parent
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCommit} disabled={!taskTerminal}>
+                  <HugeiconsIcon icon={GitCommitIcon} size={14} strokeWidth={2} />
+                  Commit
+                </DropdownMenuItem>
+                {!task.prUrl && (
+                  <DropdownMenuItem onClick={handleCreatePR} disabled={!taskTerminal}>
+                    <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
+                    Create PR
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+              <AlertDialogTrigger
+                render={
+                  <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" />
+                }
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete "{task.title}" and close its terminal.
+                    {deleteLinkedWorktree && task.worktreePath && ' The linked worktree will also be removed.'}
+                    {' '}This action cannot be undone.
+                  </AlertDialogDescription>
+                  {task.worktreePath && (
+                    <label className="flex items-center gap-2 text-sm text-foreground">
+                      <Checkbox
+                        checked={deleteLinkedWorktree}
+                        onCheckedChange={(checked) => setDeleteLinkedWorktree(checked === true)}
+                        disabled={deleteTask.isPending}
+                      />
+                      Also delete linked worktree
+                    </label>
+                  )}
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleteTask.isPending}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    variant="destructive"
+                    disabled={deleteTask.isPending}
+                  >
+                    {deleteTask.isPending ? 'Deleting...' : 'Delete'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+          {/* Row 2: Settings + repo + git status badge */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <button
               type="button"
               className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -416,8 +523,6 @@ function TaskView() {
             >
               <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
             </button>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {repository ? (
               <Link
                 to="/repositories/$repoId"
@@ -433,179 +538,220 @@ function TaskView() {
                 <span>{task.repoName}</span>
               </span>
             )}
-            <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
-            <span className="font-mono">{task.branch}</span>
-            {task.prUrl && (
-              <>
-                <span className="text-muted-foreground/50">•</span>
-                <a
-                  href={task.prUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
-                  <span>#{task.prUrl.match(/\/pull\/(\d+)/)?.[1] ?? 'PR'}</span>
-                </a>
-              </>
-            )}
-            {task.linearTicketUrl && (
-              <>
-                <span className="text-muted-foreground/50">•</span>
-                <a
-                  href={linearTicket?.url ?? task.linearTicketUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
-                  onClick={(e) => e.stopPropagation()}
-                  title={linearTicket?.title}
-                >
-                  <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
-                  <span>{task.linearTicketId}</span>
-                  {linearTicket?.status && (
-                    <span className="text-muted-foreground text-xs">({linearTicket.status})</span>
-                  )}
-                </a>
-              </>
-            )}
+            <div className="ml-auto">
+              <GitStatusBadge worktreePath={task.worktreePath} />
+            </div>
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="sm"
-                className={STATUS_COLORS[task.status]}
-              />
-            }
-          >
-            {STATUS_LABELS[task.status]}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuRadioGroup
-              value={task.status}
-              onValueChange={handleStatusChange}
+        {/* Desktop: Single-row layout */}
+        <div className="hidden items-center gap-3 sm:flex">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm font-medium">
+                {task.title}
+              </h1>
+              <button
+                type="button"
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                onClick={() => setConfigModalOpen(true)}
+                title="Task settings"
+              >
+                <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
+              </button>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {repository ? (
+                <Link
+                  to="/repositories/$repoId"
+                  params={{ repoId: repository.id }}
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                  <span>{task.repoName}</span>
+                </Link>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                  <span>{task.repoName}</span>
+                </span>
+              )}
+              <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
+              <span className="font-mono">{task.branch}</span>
+              {task.prUrl && (
+                <>
+                  <span className="text-muted-foreground/50">•</span>
+                  <a
+                    href={task.prUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
+                    <span>#{task.prUrl.match(/\/pull\/(\d+)/)?.[1] ?? 'PR'}</span>
+                  </a>
+                </>
+              )}
+              {task.linearTicketUrl && (
+                <>
+                  <span className="text-muted-foreground/50">•</span>
+                  <a
+                    href={linearTicket?.url ?? task.linearTicketUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
+                    onClick={(e) => e.stopPropagation()}
+                    title={linearTicket?.title}
+                  >
+                    <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
+                    <span>{task.linearTicketId}</span>
+                    {linearTicket?.status && (
+                      <span className="text-muted-foreground text-xs">({linearTicket.status})</span>
+                    )}
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Task status dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[task.status]}`}
+                />
+              }
             >
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <DropdownMenuRadioItem key={value} value={value}>
-                  {label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {STATUS_LABELS[task.status]}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup
+                value={task.status}
+                onValueChange={handleStatusChange}
+              >
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <DropdownMenuRadioItem key={value} value={value}>
+                    {label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        {/* Pull from Main Button */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleSync}
-          disabled={gitSync.isPending || !task.worktreePath}
-          className="text-muted-foreground hover:text-foreground"
-          title="Pull from main"
-        >
-          <HugeiconsIcon
-            icon={ArrowRight03Icon}
-            size={16}
-            strokeWidth={2}
-            className={gitSync.isPending ? 'animate-spin' : ''}
-          />
-        </Button>
-
-        {/* Merge to Main Button */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleMergeToMain}
-          disabled={gitMerge.isPending || !task.worktreePath}
-          className="text-muted-foreground hover:text-foreground"
-          title="Merge to main"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft03Icon}
-            size={16}
-            strokeWidth={2}
-            className={gitMerge.isPending ? 'animate-pulse' : ''}
-          />
-        </Button>
-
-        {/* Push to Origin Button */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handlePush}
-          disabled={gitPush.isPending || !task.worktreePath}
-          className="text-muted-foreground hover:text-foreground"
-          title="Push to origin"
-        >
-          <HugeiconsIcon
-            icon={ArrowUp03Icon}
-            size={16}
-            strokeWidth={2}
-            className={gitPush.isPending ? 'animate-pulse' : ''}
-          />
-        </Button>
-
-        {/* Sync Parent with Origin Button */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleSyncParent}
-          disabled={gitSyncParent.isPending || !task.repoPath}
-          className="text-muted-foreground hover:text-foreground"
-          title="Sync parent with origin"
-        >
-          <HugeiconsIcon
-            icon={Orbit01Icon}
-            size={16}
-            strokeWidth={2}
-            className={gitSyncParent.isPending ? 'animate-spin' : ''}
-          />
-        </Button>
-
-        {/* Commit Button */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleCommit}
-          disabled={!taskTerminal}
-          className="text-muted-foreground hover:text-foreground"
-          title="Commit"
-        >
-          <HugeiconsIcon
-            icon={GitCommitIcon}
-            size={16}
-            strokeWidth={2}
-          />
-        </Button>
-
-        {/* Create PR Button */}
-        {!task.prUrl && (
+          {/* Desktop: Individual git operation buttons */}
+          <div className="flex items-center gap-0">
+          {/* Pull from Main Button */}
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={handleCreatePR}
+            onClick={handleSync}
+            disabled={gitSync.isPending || !task.worktreePath}
+            className="text-muted-foreground hover:text-foreground"
+            title="Pull from main"
+          >
+            <HugeiconsIcon
+              icon={ArrowRight03Icon}
+              size={16}
+              strokeWidth={2}
+              className={gitSync.isPending ? 'animate-spin' : ''}
+            />
+          </Button>
+
+          {/* Merge to Main Button */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleMergeToMain}
+            disabled={gitMerge.isPending || !task.worktreePath}
+            className="text-muted-foreground hover:text-foreground"
+            title="Merge to main"
+          >
+            <HugeiconsIcon
+              icon={ArrowLeft03Icon}
+              size={16}
+              strokeWidth={2}
+              className={gitMerge.isPending ? 'animate-pulse' : ''}
+            />
+          </Button>
+
+          {/* Push to Origin Button */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handlePush}
+            disabled={gitPush.isPending || !task.worktreePath}
+            className="text-muted-foreground hover:text-foreground"
+            title="Push to origin"
+          >
+            <HugeiconsIcon
+              icon={ArrowUp03Icon}
+              size={16}
+              strokeWidth={2}
+              className={gitPush.isPending ? 'animate-pulse' : ''}
+            />
+          </Button>
+
+          {/* Sync Parent with Origin Button */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleSyncParent}
+            disabled={gitSyncParent.isPending || !task.repoPath}
+            className="text-muted-foreground hover:text-foreground"
+            title="Sync parent with origin"
+          >
+            <HugeiconsIcon
+              icon={Orbit01Icon}
+              size={16}
+              strokeWidth={2}
+              className={gitSyncParent.isPending ? 'animate-spin' : ''}
+            />
+          </Button>
+
+          {/* Commit Button */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleCommit}
             disabled={!taskTerminal}
             className="text-muted-foreground hover:text-foreground"
-            title="Create Pull Request"
+            title="Commit"
           >
-            <HugeiconsIcon icon={GitPullRequestIcon} size={16} strokeWidth={2} />
+            <HugeiconsIcon
+              icon={GitCommitIcon}
+              size={16}
+              strokeWidth={2}
+            />
           </Button>
-        )}
 
-        {/* VS Code Button */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={handleOpenVSCodeModal}
-          className="text-muted-foreground hover:text-foreground"
-          title="Open in VS Code"
-        >
-          <HugeiconsIcon icon={VisualStudioCodeIcon} size={16} strokeWidth={2} />
-        </Button>
+          {/* Create PR Button */}
+          {!task.prUrl && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleCreatePR}
+              disabled={!taskTerminal}
+              className="text-muted-foreground hover:text-foreground"
+              title="Create Pull Request"
+            >
+              <HugeiconsIcon icon={GitPullRequestIcon} size={16} strokeWidth={2} />
+            </Button>
+          )}
+
+          {/* VS Code Button */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleOpenVSCodeModal}
+            className="text-muted-foreground hover:text-foreground"
+            title="Open in VS Code"
+          >
+            <HugeiconsIcon icon={VisualStudioCodeIcon} size={16} strokeWidth={2} />
+          </Button>
+        </div>
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
           <AlertDialogTrigger
@@ -646,6 +792,7 @@ function TaskView() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </div>
       </div>
 
       {/* Main Content - Mobile tabs or Desktop split */}

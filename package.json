@@ -20,6 +20,7 @@
   "dependencies": {
     "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "^1.1.0",
+    "@azurity/pure-nerd-font": "^3.0.5",
     "@base-ui/react": "^1.0.0",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@hono/node-server": "^1.19.7",

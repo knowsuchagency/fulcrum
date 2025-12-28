@@ -2,8 +2,6 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowUp01Icon,
   ArrowDown01Icon,
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
   Cancel01Icon,
 } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
@@ -17,8 +15,6 @@ const KEYS = [
   { label: 'Esc', icon: Cancel01Icon, data: '\x1b' },
   { label: 'Up', icon: ArrowUp01Icon, data: '\x1b[A' },
   { label: 'Down', icon: ArrowDown01Icon, data: '\x1b[B' },
-  { label: 'Left', icon: ArrowLeft01Icon, data: '\x1b[D' },
-  { label: 'Right', icon: ArrowRight01Icon, data: '\x1b[C' },
   { label: 'Enter', icon: null, data: '\r' },
 ] as const
 

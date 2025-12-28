@@ -269,7 +269,7 @@ export function NewProjectDialog() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button variant="outline" size="sm" />}>
           <HugeiconsIcon icon={FolderAddIcon} size={16} strokeWidth={2} data-slot="icon" />
-          <span className="max-sm:hidden">{t('newProject.button')}</span>
+          {t('newProject.button')}
         </DialogTrigger>
         <DialogContent className="sm:max-w-lg max-h-[80dvh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">

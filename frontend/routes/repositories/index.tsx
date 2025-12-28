@@ -131,16 +131,16 @@ function RepositoryCard({
             <span className="max-sm:hidden">{t('terminal')}</span>
           </Button>
 
-          {/* Editor */}
+          {/* Editor - hidden on mobile */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleOpenEditor}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground max-sm:hidden"
             title={t('openInEditor', { editor: getEditorDisplayName(editorApp) })}
           >
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{t('editor')}</span>
+            <span>{t('editor')}</span>
           </Button>
 
           {/* Delete */}
@@ -220,7 +220,7 @@ function AddRepositoryButton() {
     <>
       <Button size="sm" onClick={() => setBrowserOpen(true)} disabled={createRepository.isPending}>
         <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-        <span className="max-sm:hidden">{t('addRepository')}</span>
+        {t('addRepository')}
       </Button>
 
       <FilesystemBrowser
@@ -252,8 +252,8 @@ function RepositoriesView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
-        <NewProjectDialog />
         <AddRepositoryButton />
+        <NewProjectDialog />
       </div>
 
       <div className="flex-1 overflow-auto p-4">

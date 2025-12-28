@@ -7,6 +7,7 @@
       "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
         "@atlaskit/pragmatic-drag-and-drop-hitbox": "^1.1.0",
+        "@azurity/pure-nerd-font": "^3.0.5",
         "@base-ui/react": "^1.0.0",
         "@fontsource-variable/jetbrains-mono": "^5.2.8",
         "@hono/node-server": "^1.19.7",
@@ -76,6 +77,8 @@
     "@atlaskit/pragmatic-drag-and-drop": ["@atlaskit/pragmatic-drag-and-drop@1.7.7", "", { "dependencies": { "@babel/runtime": "^7.0.0", "bind-event-listener": "^3.0.0", "raf-schd": "^4.0.3" } }, "sha512-jX+68AoSTqO/fhCyJDTZ38Ey6/wyL2Iq+J/moanma0YyktpnoHxevjY1UNJHYp0NCburdQDZSL1ZFac1mO1osQ=="],
 
     "@atlaskit/pragmatic-drag-and-drop-hitbox": ["@atlaskit/pragmatic-drag-and-drop-hitbox@1.1.0", "", { "dependencies": { "@atlaskit/pragmatic-drag-and-drop": "^1.6.0", "@babel/runtime": "^7.0.0" } }, "sha512-JWt6eVp6Br2FPHRM8s0dUIHQk/jFInGP1f3ti5CdtM1Ji5/pt8Akm44wDC063Gv2i5RGseixtbW0z/t6RYtbdg=="],
+
+    "@azurity/pure-nerd-font": ["@azurity/pure-nerd-font@3.0.5", "", {}, "sha512-/uiaszK8TN9hf5OG+UUiijXkxykjgKEh4+b937jdOWwfXIelgAjYOOS/o1X1+SYD4DwTvgFsW5iHxE7PqlEkqA=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.27.1", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.27.1", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg=="],
 

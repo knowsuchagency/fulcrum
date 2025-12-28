@@ -264,7 +264,21 @@ function SystemMetricsTab() {
   return (
     <div className="space-y-6">
       {/* Time window selector */}
-      <div className="flex gap-1">
+      {/* Mobile: dropdown */}
+      <div className="sm:hidden">
+        <Select value={window} onValueChange={(v) => setWindow(v as TimeWindow)}>
+          <SelectTrigger size="sm" className="w-auto gap-2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TIME_WINDOWS.map((tw) => (
+              <SelectItem key={tw} value={tw}>{formatTimeWindow(tw)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {/* Desktop: buttons */}
+      <div className="hidden sm:flex gap-1">
         {TIME_WINDOWS.map((tw) => (
           <Button
             key={tw}

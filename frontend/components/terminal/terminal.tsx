@@ -67,7 +67,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
     const term = new XTerm({
       cursorBlink: true,
       fontSize: Math.round(13 * desktopZoom),
-      fontFamily: 'JetBrains Mono Variable, Menlo, Monaco, monospace',
+      fontFamily: 'JetBrains Mono Variable, PureNerdFont, Menlo, Monaco, monospace',
       lineHeight: 1.2,
       theme: terminalTheme,
     })

@@ -86,17 +86,28 @@ function ReviewPage() {
         onValueChange={(v) => setActiveTab(v as 'prs' | 'issues')}
         className="flex flex-1 flex-col overflow-hidden"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-1 max-sm:px-2">
-          <TabsList variant="line">
-            <TabsTrigger value="prs">{t('tabs.pullRequests')}</TabsTrigger>
-            <TabsTrigger value="issues">{t('tabs.issues')}</TabsTrigger>
-          </TabsList>
+        <div className="flex shrink-0 flex-col border-b border-border bg-background sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between px-4 py-1 max-sm:px-2">
+            <TabsList variant="line">
+              <TabsTrigger value="prs">{t('tabs.pullRequests')}</TabsTrigger>
+              <TabsTrigger value="issues">{t('tabs.issues')}</TabsTrigger>
+            </TabsList>
 
-          <div className="flex items-center gap-4 max-sm:gap-2">
+            {/* Vibora repos toggle - shown inline with tabs on mobile */}
+            <label className="flex cursor-pointer items-center gap-2 text-xs sm:hidden" title={t('filters.viboraReposOnly')}>
+              <Switch
+                checked={viboraReposOnly}
+                onCheckedChange={setViboraReposOnly}
+                disabled={!!selectedOrg}
+              />
+            </label>
+          </div>
+
+          <div className="flex items-center gap-2 border-t border-border px-4 py-1.5 sm:gap-4 sm:border-t-0 sm:px-4 sm:py-1">
             {/* Filter dropdown - different options for PRs vs Issues */}
             {activeTab === 'prs' ? (
               <Select value={prFilter} onValueChange={(v) => setPrFilter(v as PRFilter)}>
-                <SelectTrigger size="sm" className="max-sm:w-auto">
+                <SelectTrigger size="sm" className="flex-1 sm:flex-initial">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -108,7 +119,7 @@ function ReviewPage() {
               </Select>
             ) : (
               <Select value={issueFilter} onValueChange={(v) => setIssueFilter(v as IssueFilter)}>
-                <SelectTrigger size="sm" className="max-sm:w-auto">
+                <SelectTrigger size="sm" className="flex-1 sm:flex-initial">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -121,7 +132,7 @@ function ReviewPage() {
 
             {/* Organization filter */}
             <Select value={selectedOrg} onValueChange={(v) => setSelectedOrg(v || '')}>
-              <SelectTrigger size="sm" className="max-sm:w-auto">
+              <SelectTrigger size="sm" className="flex-1 sm:flex-initial">
                 <SelectValue>
                   {selectedOrg || t('filters.allOrgs')}
                 </SelectValue>
@@ -136,14 +147,14 @@ function ReviewPage() {
               </SelectContent>
             </Select>
 
-            {/* Repo scope toggle */}
-            <label className="flex cursor-pointer items-center gap-2 text-xs" title={t('filters.viboraReposOnly')}>
+            {/* Repo scope toggle - hidden on mobile, shown on desktop */}
+            <label className="hidden cursor-pointer items-center gap-2 text-xs sm:flex" title={t('filters.viboraReposOnly')}>
               <Switch
                 checked={viboraReposOnly}
                 onCheckedChange={setViboraReposOnly}
                 disabled={!!selectedOrg}
               />
-              <span className="text-muted-foreground max-sm:hidden">{t('filters.viboraReposOnly')}</span>
+              <span className="text-muted-foreground">{t('filters.viboraReposOnly')}</span>
             </label>
           </div>
         </div>
