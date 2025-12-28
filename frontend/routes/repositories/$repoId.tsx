@@ -229,45 +229,6 @@ function RepositoryDetailView() {
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">Editor</span>
           </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                />
-              }
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="max-sm:hidden">Delete</span>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Repository</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove "{repository.displayName}" from Vibora. The actual repository
-                  files will not be affected.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <Button variant="destructive" onClick={handleDelete}>
-                  Delete
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!hasChanges || updateRepository.isPending}
-          >
-            <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{updateRepository.isPending ? 'Saving...' : 'Save'}</span>
-          </Button>
         </div>
 
         <span className="text-sm font-medium">{repository.displayName}</span>
@@ -345,6 +306,47 @@ function RepositoryDetailView() {
                     </FieldDescription>
                   </Field>
                 </FieldGroup>
+
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive"
+                        />
+                      }
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+                      Delete
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Repository</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will remove "{repository.displayName}" from Vibora. The actual repository
+                          files will not be affected.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button variant="destructive" onClick={handleDelete}>
+                          Delete
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={!hasChanges || updateRepository.isPending}
+                  >
+                    <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} data-slot="icon" />
+                    {updateRepository.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
               </div>
             </div>
           </ScrollArea>
