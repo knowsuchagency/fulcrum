@@ -57,6 +57,40 @@
     "cancel": "取消",
     "addSelected": "添加 {{count}} 个选中项"
   },
+  "newProject": {
+    "button": "新建项目",
+    "title": "创建新项目",
+    "back": "返回",
+    "next": "下一步",
+    "create": "创建项目",
+    "steps": {
+      "template": {
+        "description": "选择一个模板来创建您的项目。",
+        "help": "Copier 从模板生成新项目，让您可以使用预配置的设置快速搭建应用程序。",
+        "learnMore": "了解更多关于 Copier",
+        "savedTemplates": "已保存的模板",
+        "selectTemplate": "选择模板...",
+        "or": "或",
+        "customUrl": "自定义模板 URL/路径",
+        "customUrlHelp": "Copier 模板的 Git URL 或本地路径。"
+      },
+      "questions": {
+        "description": "配置您的项目。",
+        "noQuestions": "此模板没有配置问题。"
+      },
+      "output": {
+        "description": "选择项目创建位置。",
+        "projectName": "项目名称",
+        "outputDirectory": "输出目录",
+        "selectDirectory": "选择目录...",
+        "willCreate": "将创建"
+      },
+      "creating": {
+        "description": "正在创建您的项目...",
+        "inProgress": "正在运行 Copier..."
+      }
+    }
+  },
   "empty": {
     "noRepositories": "尚未添加任何仓库。添加一个仓库以便在创建任务时快速访问。"
   },

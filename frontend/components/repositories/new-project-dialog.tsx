@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft02Icon,
@@ -32,6 +33,7 @@ import {
   Loading03Icon,
   Folder01Icon,
   FolderAddIcon,
+  HelpCircleIcon,
 } from '@hugeicons/core-free-icons'
 import {
   useCopierTemplates,
@@ -273,7 +275,27 @@ export function NewProjectDialog() {
         </DialogTrigger>
         <DialogContent className="sm:max-w-lg max-h-[80dvh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
-            <DialogTitle>{t('newProject.title')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {t('newProject.title')}
+              <Tooltip>
+                <TooltipTrigger className="text-muted-foreground hover:text-foreground transition-colors">
+                  <HugeiconsIcon icon={HelpCircleIcon} size={16} strokeWidth={2} />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="start" className="max-w-xs">
+                  <p>
+                    {t('newProject.steps.template.help')}{' '}
+                    <a
+                      href="https://copier.readthedocs.io/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:opacity-80"
+                    >
+                      {t('newProject.steps.template.learnMore')}
+                    </a>
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </DialogTitle>
             <DialogDescription>
               {step === 'template' && t('newProject.steps.template.description')}
               {step === 'questions' && t('newProject.steps.questions.description')}

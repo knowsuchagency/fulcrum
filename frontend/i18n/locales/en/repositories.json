@@ -56,6 +56,8 @@
     "steps": {
       "template": {
         "description": "Select a template to create your project from.",
+        "help": "Copier generates new projects from templates, letting you scaffold applications with pre-configured settings.",
+        "learnMore": "Learn more about Copier",
         "savedTemplates": "Saved Templates",
         "selectTemplate": "Select a template...",
         "or": "or",
