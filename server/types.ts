@@ -158,6 +158,14 @@ export interface TabsListMessage {
   type: 'tabs:list'
 }
 
+// Theme sync messages
+export interface ThemeSyncMessage {
+  type: 'theme:sync'
+  payload: {
+    theme: 'light' | 'dark' | 'system'
+  }
+}
+
 export type ClientMessage =
   | TerminalCreateMessage
   | TerminalDestroyMessage
@@ -173,6 +181,7 @@ export type ClientMessage =
   | TabDeleteMessage
   | TabReorderMessage
   | TabsListMessage
+  | ThemeSyncMessage
 
 // Server -> Client messages
 
@@ -344,6 +353,13 @@ export interface SyncStaleMessage {
   }
 }
 
+export interface ThemeSyncedMessage {
+  type: 'theme:synced'
+  payload: {
+    theme: 'light' | 'dark' | 'system'
+  }
+}
+
 export type ServerMessage =
   | TerminalCreatedMessage
   | TerminalOutputMessage
@@ -363,3 +379,4 @@ export type ServerMessage =
   | TaskUpdatedMessage
   | NotificationMessage
   | SyncStaleMessage
+  | ThemeSyncedMessage

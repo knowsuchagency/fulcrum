@@ -2,7 +2,7 @@ import type { WSContext, WSEvents } from 'hono/ws'
 import type { ClientMessage, ServerMessage } from '../types'
 import { getPTYManager } from '../terminal/pty-instance'
 import { getTabManager } from '../terminal/tab-manager'
-import { getWorktreeBasePath } from '../lib/settings'
+import { getWorktreeBasePath, getSettings, updateSettingByPath } from '../lib/settings'
 import { log } from '../lib/logger'
 
 interface ClientData {
@@ -90,6 +90,14 @@ export const terminalWebSocketHandlers: WSEvents = {
     sendTo(ws, {
       type: 'tabs:list',
       payload: { tabs: tabManager.list() },
+    })
+
+    // Send current theme to newly connected client
+    const settings = getSettings()
+    const theme = settings.appearance?.theme ?? null
+    sendTo(ws, {
+      type: 'theme:synced',
+      payload: { theme: theme || 'system' },
     })
   },
 
@@ -451,6 +459,26 @@ export const terminalWebSocketHandlers: WSEvents = {
           sendTo(ws, {
             type: 'tabs:list',
             payload: { tabs: tabManager.list() },
+          })
+          break
+        }
+
+        // Theme sync
+        case 'theme:sync': {
+          const { theme } = message.payload
+          if (!['light', 'dark', 'system'].includes(theme)) {
+            log.ws.warn('theme:sync invalid theme', { theme, clientId: clientData.id })
+            break
+          }
+
+          // Save to settings file (null for system)
+          updateSettingByPath('appearance.theme', theme === 'system' ? null : theme)
+          log.ws.info('theme:sync', { theme, clientId: clientData.id })
+
+          // Broadcast to all clients
+          broadcast({
+            type: 'theme:synced',
+            payload: { theme },
           })
           break
         }

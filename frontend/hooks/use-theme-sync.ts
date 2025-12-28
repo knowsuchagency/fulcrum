@@ -1,28 +1,46 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { useTheme as useNextTheme } from 'next-themes'
-import { useTheme, useSyncClaudeCodeTheme, useUpdateConfig, CONFIG_KEYS, type Theme } from './use-config'
+import { useSyncClaudeCodeTheme, type Theme } from './use-config'
+import { useStore } from '@/stores'
 import { fetchJSON } from '@/lib/api'
+import { reaction } from 'mobx'
 
 /**
- * Hook to sync theme between next-themes and backend settings.
- * - On mount: applies saved theme preference from backend
- * - Provides changeTheme function to update both next-themes and backend
- * - Optionally syncs theme to Claude Code config when enabled (only on explicit user action)
+ * Hook to sync theme across all clients via WebSocket.
+ * - Listens for theme:synced messages from server
+ * - Broadcasts theme changes to all connected clients
+ * - Optionally syncs theme to Claude Code config when enabled
  */
 export function useThemeSync() {
+  const store = useStore()
   const { setTheme, resolvedTheme, theme: currentTheme } = useNextTheme()
-  const { data: savedTheme, isSuccess } = useTheme()
   const { data: syncClaudeCode } = useSyncClaudeCodeTheme()
-  const updateConfig = useUpdateConfig()
   const prevSyncClaudeCode = useRef<boolean | undefined>(undefined)
   const hasInitialized = useRef(false)
 
-  // Apply saved theme on mount (if different from current)
+  // Track if we're applying a broadcasted theme (to skip re-broadcasting)
+  const isApplyingBroadcast = useRef(false)
+
+  // Use MobX reaction to listen for broadcasted theme changes
+  // This properly observes MST volatile state
   useEffect(() => {
-    if (isSuccess && savedTheme && savedTheme !== currentTheme) {
-      setTheme(savedTheme)
-    }
-  }, [isSuccess, savedTheme, currentTheme, setTheme])
+    const dispose = reaction(
+      () => store.broadcastedTheme,
+      (broadcastedTheme) => {
+        if (broadcastedTheme) {
+          isApplyingBroadcast.current = true
+          setTheme(broadcastedTheme)
+          store.clearBroadcastedTheme()
+          // Reset flag after a tick to allow changeTheme to work normally
+          setTimeout(() => {
+            isApplyingBroadcast.current = false
+          }, 0)
+        }
+      },
+      { fireImmediately: true }
+    )
+    return dispose
+  }, [store, setTheme])
 
   // Update favicon based on resolved theme
   useEffect(() => {
@@ -42,9 +60,6 @@ export function useThemeSync() {
   }, [resolvedTheme])
 
   // Sync to Claude Code when sync setting is toggled on (immediate sync with current theme)
-  // NOTE: We intentionally do NOT sync on resolvedTheme changes here to avoid a feedback loop
-  // when multiple tabs are open. Cross-tab theme sync is handled by next-themes via localStorage.
-  // Claude sync only happens on explicit user action (changeTheme) or when enabling the toggle.
   useEffect(() => {
     const syncJustEnabled = hasInitialized.current && syncClaudeCode && prevSyncClaudeCode.current === false
 
@@ -59,17 +74,18 @@ export function useThemeSync() {
     }
   }, [syncClaudeCode, resolvedTheme])
 
-  // Function to change theme and persist to backend
+  // Function to change theme and broadcast to all clients
   const changeTheme = useCallback(
     (theme: Theme) => {
-      setTheme(theme)
-      // Persist to backend (empty string for system/null)
-      updateConfig.mutate({
-        key: CONFIG_KEYS.THEME,
-        value: theme === 'system' ? '' : theme,
-      })
+      // Skip if this is from a broadcast (prevents feedback loop)
+      if (isApplyingBroadcast.current) return
 
-      // Sync to Claude Code if enabled (only on explicit user action, not cross-tab sync)
+      setTheme(theme)
+
+      // Broadcast via WebSocket to all clients (server also persists to settings)
+      store.syncTheme(theme)
+
+      // Sync to Claude Code if enabled (only on explicit user action)
       if (syncClaudeCode) {
         const effectiveTheme = theme === 'system'
           ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
@@ -80,15 +96,14 @@ export function useThemeSync() {
         }).catch(() => {})
       }
     },
-    [setTheme, updateConfig, syncClaudeCode]
+    [setTheme, store, syncClaudeCode]
   )
 
   return {
     theme: (currentTheme as Theme) ?? 'system',
     resolvedTheme: resolvedTheme as 'light' | 'dark' | undefined,
-    savedTheme,
     syncClaudeCode,
     changeTheme,
-    isUpdating: updateConfig.isPending,
+    isUpdating: false,
   }
 }

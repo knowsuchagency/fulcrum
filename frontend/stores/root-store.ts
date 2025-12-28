@@ -200,6 +200,12 @@ export const RootStore = types
      * Triggers navigation to the new tab in the component.
      */
     lastCreatedTabId: null as string | null,
+    /**
+     * Theme broadcasted from server via WebSocket.
+     * Set when theme:synced message is received.
+     * Consumed by use-theme-sync hook to apply theme.
+     */
+    broadcastedTheme: null as 'light' | 'dark' | 'system' | null,
   }))
   .views((self) => ({
     /** Whether the store is ready for use */
@@ -289,6 +295,21 @@ export const RootStore = types
       /** Clear the last created tab ID after navigation is complete */
       clearLastCreatedTabId() {
         self.lastCreatedTabId = null
+      },
+
+      // ============ Theme Actions ============
+
+      /** Send theme change to server for broadcast to all clients */
+      syncTheme(theme: 'light' | 'dark' | 'system') {
+        getWs().send({
+          type: 'theme:sync',
+          payload: { theme },
+        })
+      },
+
+      /** Clear broadcasted theme after it's been applied */
+      clearBroadcastedTheme() {
+        self.broadcastedTheme = null
       },
 
       // ============ Terminal Actions ============
@@ -1082,6 +1103,13 @@ export const RootStore = types
                 self.viewState.clearFocusedTerminalForTab(entityId)
               }
             }
+            break
+          }
+
+          case 'theme:synced': {
+            const { theme } = payload as { theme: 'light' | 'dark' | 'system' }
+            self.broadcastedTheme = theme
+            getWs().log.ws.debug('theme:synced received', { theme })
             break
           }
 
