@@ -36,6 +36,8 @@ export const TerminalModel = types
     isPending: false,
     /** Temporary client-side ID before server confirms (for optimistic updates) */
     pendingId: null as string | null,
+    /** Whether Claude Code is currently starting up in this terminal */
+    isStartingUp: false,
   }))
   .views((self) => ({
     /** Whether the terminal is alive (running) */
@@ -101,6 +103,11 @@ export const TerminalModel = types
       if (pendingId !== undefined) {
         self.pendingId = pendingId
       }
+    },
+
+    /** Set Claude startup state */
+    setStartingUp(isStartingUp: boolean) {
+      self.isStartingUp = isStartingUp
     },
 
     /** Cleanup volatile state */

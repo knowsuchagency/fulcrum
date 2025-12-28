@@ -276,6 +276,9 @@ export const RootStore = types
         const startup = self.terminalsPendingStartup.get(terminalId)
         if (startup) {
           self.terminalsPendingStartup.delete(terminalId)
+          // Clear the observable isStartingUp flag on the terminal model
+          const terminal = self.terminals.get(terminalId)
+          terminal?.setStartingUp(false)
           getWs().log.ws.debug('consumed pending startup', { terminalId, taskName: startup.taskName })
         }
         return startup
@@ -359,6 +362,7 @@ export const RootStore = types
         // Register startup info if provided (survives component unmount/remount)
         if (options.startup) {
           self.terminalsPendingStartup.set(tempId, options.startup)
+          terminal?.setStartingUp(true)
           getWs().log.ws.debug('createTerminal registered startup', { tempId, taskName: options.startup.taskName })
         }
 
@@ -744,6 +748,9 @@ export const RootStore = types
 
                   if (isNew) {
                     // Server created a new terminal - replace temp with real
+                    // Capture isStartingUp before destroying (volatile state is lost on destroy)
+                    const wasStartingUp = optimisticTerminal.isStartingUp
+
                     // Use destroy directly without cleanup (we cleared volatile above)
                     const idx = self.terminals.items.findIndex((t) => t.id === tempId)
                     if (idx >= 0) {
@@ -753,6 +760,11 @@ export const RootStore = types
 
                     // Re-attach xterm to the real terminal with correct ID
                     const realTerminal = self.terminals.get(terminal.id)
+
+                    // Transfer isStartingUp state to the new terminal model
+                    if (wasStartingUp && realTerminal) {
+                      realTerminal.setStartingUp(true)
+                    }
                     getWs().log.ws.info('terminal:created re-attaching xterm', {
                       realId: terminal.id,
                       hasRealTerminal: !!realTerminal,

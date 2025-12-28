@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { observer } from 'mobx-react-lite'
 import {
@@ -65,35 +65,11 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
   const store = useStore()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const [isStartingClaude, setIsStartingClaude] = useState(false)
 
-  // Poll for pending startup status (only for task terminals)
-  // We use polling because terminalsPendingStartup is a volatile Map that isn't observable by MobX
-  useEffect(() => {
-    if (!taskInfo) return // Only for task terminals
-
-    const checkPendingStartup = () => {
-      const isPending = store.terminalsPendingStartup.has(terminal.id)
-      setIsStartingClaude(isPending)
-    }
-
-    // Initial check
-    checkPendingStartup()
-
-    // Poll every 100ms
-    const interval = setInterval(checkPendingStartup, 100)
-
-    // Stop polling after 10 seconds (max reasonable startup time)
-    const timeout = setTimeout(() => {
-      clearInterval(interval)
-      setIsStartingClaude(false)
-    }, 10000)
-
-    return () => {
-      clearInterval(interval)
-      clearTimeout(timeout)
-    }
-  }, [terminal.id, taskInfo, store])
+  // Get the observable isStartingUp state from the terminal model (only for task terminals)
+  // This is reactive because TerminalPane is wrapped with observer()
+  const terminalModel = taskInfo ? store.terminals.get(terminal.id) : null
+  const isStartingClaude = terminalModel?.isStartingUp ?? false
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
