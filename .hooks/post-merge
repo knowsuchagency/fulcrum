@@ -1,0 +1,16 @@
+#!/bin/bash
+# Post-merge hook: Push to origin main after merging into main
+# This runs globally for all repositories
+
+# Get the current branch name
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "detached")
+
+# Only push if we're on main branch
+if [ "$current_branch" = "main" ]; then
+    echo "Merged into main branch, pushing to origin..."
+    git push origin main 2>&1 || {
+        echo "Warning: Failed to push to origin. You may need to push manually."
+        exit 0  # Exit successfully so the merge isn't considered failed
+    }
+    echo "Successfully pushed to origin/main"
+fi

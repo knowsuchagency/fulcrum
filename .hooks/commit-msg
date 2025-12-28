@@ -1,0 +1,124 @@
+#!/bin/bash
+# Commit-msg hook: Block commits with AI attribution
+# Unless the project is whitelisted in ~/.claude/whitelist.json
+
+commit_msg_file="$1"
+whitelist_file="$HOME/.claude/whitelist.json"
+
+if [ ! -f "$commit_msg_file" ]; then
+    echo "ERROR: Commit message file not found"
+    exit 1
+fi
+
+# Get the main repository path, resolving worktrees to their parent repo
+get_main_repo_path() {
+    local git_dir
+    git_dir=$(git rev-parse --git-dir 2>/dev/null)
+
+    if [ -z "$git_dir" ]; then
+        echo "$PWD"
+        return
+    fi
+
+    # If .git is a file (worktree), it contains "gitdir: /path/to/main/.git/worktrees/name"
+    # We need to extract the main repo path from that
+    if [ -f "$git_dir" ]; then
+        # This is a worktree - read the gitdir pointer
+        local gitdir_content
+        gitdir_content=$(cat "$git_dir" | sed 's/^gitdir: //')
+        # The path looks like: /main/repo/.git/worktrees/branch-name
+        # We want: /main/repo
+        git_dir="$gitdir_content"
+    fi
+
+    # Now git_dir is either:
+    # - /path/to/repo/.git (normal repo)
+    # - /path/to/repo/.git/worktrees/name (worktree's actual git dir)
+    #
+    # For worktrees, strip /worktrees/name to get main .git, then get parent
+    if [[ "$git_dir" == *"/.git/worktrees/"* ]]; then
+        # Extract main repo path: /path/to/repo/.git/worktrees/name -> /path/to/repo
+        echo "${git_dir%/.git/worktrees/*}"
+    else
+        # Normal repo: /path/to/repo/.git -> /path/to/repo
+        # Or bare repo handling
+        local toplevel
+        toplevel=$(git rev-parse --show-toplevel 2>/dev/null)
+        if [ -n "$toplevel" ]; then
+            echo "$toplevel"
+        else
+            echo "$PWD"
+        fi
+    fi
+}
+
+# Check if a path is in the whitelist
+path_is_whitelisted() {
+    local check_path="$1"
+
+    if [ ! -f "$whitelist_file" ]; then
+        return 1
+    fi
+
+    # Parse whitelist and check each path
+    while IFS= read -r path; do
+        # Expand ~ to $HOME
+        expanded_path="${path/#\~/$HOME}"
+
+        # Check if check_path matches the whitelisted path
+        if [[ "$check_path" == "$expanded_path" || "$check_path" == "$expanded_path"/* ]]; then
+            return 0
+        fi
+    done < <(grep -oP '(?<=")[^"]+(?=")' "$whitelist_file" | grep -v "allow_ai_attribution")
+
+    return 1
+}
+
+# Check if current directory or its main repo is in the whitelist
+is_whitelisted() {
+    # First check if current directory is directly whitelisted
+    if path_is_whitelisted "$PWD"; then
+        return 0
+    fi
+
+    # Then check if the main repository (for worktrees) is whitelisted
+    local main_repo
+    main_repo=$(get_main_repo_path)
+
+    if [ "$main_repo" != "$PWD" ] && path_is_whitelisted "$main_repo"; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Skip check if project is whitelisted
+if is_whitelisted; then
+    exit 0
+fi
+
+commit_msg=$(cat "$commit_msg_file")
+
+# Check for AI attribution patterns
+if echo "$commit_msg" | grep -qi "co-authored-by.*claude\|generated with.*claude\|generated with.*ai\|🤖"; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "❌ COMMIT BLOCKED: AI attribution detected"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "Your commit message contains AI attribution which is not allowed"
+    echo "by project policies."
+    echo ""
+    echo "Please remove:"
+    echo "  • 'Co-Authored-By: Claude' lines"
+    echo "  • 'Generated with' AI markers"
+    echo "  • Robot emojis (🤖)"
+    echo ""
+    echo "To allow AI attribution for this project, add its path to:"
+    echo "  $whitelist_file"
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    exit 1
+fi
+
+exit 0
