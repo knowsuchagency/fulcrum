@@ -9,7 +9,7 @@ import { Terminal } from './terminal'
 import { TerminalStatusBar } from './terminal-status'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon, PlusSignIcon, Task01Icon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon } from '@hugeicons/core-free-icons'
 import { GitActionsButtons } from './git-actions-buttons'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
@@ -77,8 +77,9 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
                 <Link
                   to={taskInfo.repoId ? '/repositories/$repoId' : '/repositories'}
                   params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
-                  className="text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
+                  className="flex items-center gap-1 text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
                 >
+                  <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} className="shrink-0" />
                   {taskInfo.repoName}
                 </Link>
                 {terminal.cwd && (
