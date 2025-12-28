@@ -8,19 +8,6 @@ import {
 } from '@/hooks/use-repositories'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -50,7 +37,6 @@ import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/edi
 import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { NewProjectDialog } from '@/components/repositories/new-project-dialog'
-import { Checkbox } from '@/components/ui/checkbox'
 
 export const Route = createFileRoute('/repositories/')({
   component: RepositoriesView,
@@ -206,155 +192,36 @@ function RepositoryCard({
   )
 }
 
-function CreateRepositoryDialog() {
+function AddRepositoryButton() {
   const { t } = useTranslation('repositories')
-  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const [browserOpen, setBrowserOpen] = useState(false)
-  const [path, setPath] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [startupScript, setStartupScript] = useState('')
-  const [copyFiles, setCopyFiles] = useState('')
-  const [isCopierTemplate, setIsCopierTemplate] = useState(false)
 
   const createRepository = useCreateRepository()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
 
   const handlePathSelect = (selectedPath: string) => {
-    setPath(selectedPath)
-    // Auto-fill display name from folder name
-    if (!displayName) {
-      setDisplayName(selectedPath.split('/').pop() || '')
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!path.trim()) return
+    const displayName = selectedPath.split('/').pop() || 'repo'
 
     createRepository.mutate(
       {
-        path: path.trim(),
-        displayName: displayName.trim() || path.split('/').pop() || 'repo',
-        startupScript: startupScript.trim() || null,
-        copyFiles: copyFiles.trim() || null,
-        isCopierTemplate,
+        path: selectedPath,
+        displayName,
       },
       {
-        onSuccess: () => {
-          setOpen(false)
-          setPath('')
-          setDisplayName('')
-          setStartupScript('')
-          setCopyFiles('')
-          setIsCopierTemplate(false)
+        onSuccess: (repo) => {
+          navigate({ to: '/repositories/$repoId', params: { repoId: repo.id } })
         },
       }
     )
   }
 
-  const folderName = path ? path.split('/').pop() : ''
-
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<Button size="sm" />}>
-          <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-          <span className="max-sm:hidden">{t('addRepository')}</span>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>{t('addModal.title')}</DialogTitle>
-              <DialogDescription>
-                {t('addModal.description')}
-              </DialogDescription>
-            </DialogHeader>
-
-            <FieldGroup className="mt-4">
-              <Field>
-                <FieldLabel>{t('addModal.fields.path')}</FieldLabel>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start font-normal"
-                  onClick={() => setBrowserOpen(true)}
-                >
-                  <HugeiconsIcon
-                    icon={Folder01Icon}
-                    size={14}
-                    strokeWidth={2}
-                    className="mr-2"
-                  />
-                  {folderName ? (
-                    <span className="truncate">{path}</span>
-                  ) : (
-                    <span className="text-muted-foreground">{t('addModal.fields.pathPlaceholder')}</span>
-                  )}
-                </Button>
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="displayName">{t('addModal.fields.displayName')}</FieldLabel>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder={folderName || 'My Project'}
-                />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="startupScript">{t('addModal.fields.startupScript')}</FieldLabel>
-                <Textarea
-                  id="startupScript"
-                  value={startupScript}
-                  onChange={(e) => setStartupScript(e.target.value)}
-                  placeholder={t('addModal.fields.startupScriptPlaceholder')}
-                  rows={2}
-                />
-                <FieldDescription>
-                  {t('addModal.fields.startupScriptDescription')}
-                </FieldDescription>
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="copyFiles">{t('addModal.fields.copyFiles')}</FieldLabel>
-                <Input
-                  id="copyFiles"
-                  value={copyFiles}
-                  onChange={(e) => setCopyFiles(e.target.value)}
-                  placeholder={t('addModal.fields.copyFilesPlaceholder')}
-                />
-                <FieldDescription>
-                  {t('addModal.fields.copyFilesDescription')}
-                </FieldDescription>
-              </Field>
-
-              <Field>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={isCopierTemplate}
-                    onCheckedChange={(checked) => setIsCopierTemplate(checked === true)}
-                  />
-                  <FieldLabel className="cursor-pointer">
-                    {t('addModal.fields.isCopierTemplate')}
-                  </FieldLabel>
-                </div>
-                <FieldDescription>
-                  {t('addModal.fields.isCopierTemplateDescription')}
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-
-            <DialogFooter className="mt-4">
-              <DialogClose render={<Button variant="outline" type="button" />}>{t('addModal.cancel')}</DialogClose>
-              <Button type="submit" disabled={createRepository.isPending || !path.trim()}>
-                {createRepository.isPending ? t('addModal.adding') : t('addRepository')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <Button size="sm" onClick={() => setBrowserOpen(true)} disabled={createRepository.isPending}>
+        <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+        <span className="max-sm:hidden">{t('addRepository')}</span>
+      </Button>
 
       <FilesystemBrowser
         open={browserOpen}
@@ -386,7 +253,7 @@ function RepositoriesView() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
         <NewProjectDialog />
-        <CreateRepositoryDialog />
+        <AddRepositoryButton />
       </div>
 
       <div className="flex-1 overflow-auto p-4">

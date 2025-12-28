@@ -186,8 +186,6 @@ function RepositoryDetailView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
-        <span className="text-sm font-medium">{repository.displayName}</span>
-
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -231,46 +229,9 @@ function RepositoryDetailView() {
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">Editor</span>
           </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                />
-              }
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="max-sm:hidden">Delete</span>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Repository</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove "{repository.displayName}" from Vibora. The actual repository
-                  files will not be affected.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <Button variant="destructive" onClick={handleDelete}>
-                  Delete
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!hasChanges || updateRepository.isPending}
-          >
-            <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{updateRepository.isPending ? 'Saving...' : 'Save'}</span>
-          </Button>
         </div>
+
+        <span className="text-sm font-medium">{repository.displayName}</span>
       </div>
 
       <Tabs
@@ -278,7 +239,7 @@ function RepositoryDetailView() {
         onValueChange={(v) => setActiveTab(v as RepoTab)}
         className="flex flex-1 flex-col overflow-hidden"
       >
-        <div className="shrink-0 border-b border-border px-4">
+        <div className="shrink-0 border-b border-border bg-muted/50 px-4">
           <TabsList variant="line">
             <TabsTrigger value="settings" className="px-3 py-1.5">Settings</TabsTrigger>
             <TabsTrigger value="files" className="px-3 py-1.5">Files</TabsTrigger>
@@ -345,6 +306,47 @@ function RepositoryDetailView() {
                     </FieldDescription>
                   </Field>
                 </FieldGroup>
+
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive"
+                        />
+                      }
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+                      Delete
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Repository</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will remove "{repository.displayName}" from Vibora. The actual repository
+                          files will not be affected.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button variant="destructive" onClick={handleDelete}>
+                          Delete
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={!hasChanges || updateRepository.isPending}
+                  >
+                    <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} data-slot="icon" />
+                    {updateRepository.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
               </div>
             </div>
           </ScrollArea>
