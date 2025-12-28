@@ -1,6 +1,7 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { Link } from '@tanstack/react-router'
 import { observer } from 'mobx-react-lite'
+import { log } from '@/lib/logger'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -70,6 +71,19 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
   // This is reactive because TerminalPane is wrapped with observer()
   const terminalModel = taskInfo ? store.terminals.get(terminal.id) : null
   const isStartingClaude = terminalModel?.isStartingUp ?? false
+
+  // Debug logging to trace isStartingUp state
+  useEffect(() => {
+    if (taskInfo) {
+      log.terminal.info('TerminalPane isStartingUp check', {
+        terminalId: terminal.id,
+        hasTaskInfo: !!taskInfo,
+        hasTerminalModel: !!terminalModel,
+        isStartingUp: terminalModel?.isStartingUp,
+        isStartingClaude,
+      })
+    }
+  }, [terminal.id, taskInfo, terminalModel, isStartingClaude, terminalModel?.isStartingUp])
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">

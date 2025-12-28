@@ -279,7 +279,7 @@ export const RootStore = types
           // Clear the observable isStartingUp flag on the terminal model
           const terminal = self.terminals.get(terminalId)
           terminal?.setStartingUp(false)
-          getWs().log.ws.debug('consumed pending startup', { terminalId, taskName: startup.taskName })
+          getWs().log.ws.info('consumed pending startup', { terminalId, taskName: startup.taskName, isStartingUp: terminal?.isStartingUp })
         }
         return startup
       },
@@ -363,7 +363,7 @@ export const RootStore = types
         if (options.startup) {
           self.terminalsPendingStartup.set(tempId, options.startup)
           terminal?.setStartingUp(true)
-          getWs().log.ws.debug('createTerminal registered startup', { tempId, taskName: options.startup.taskName })
+          getWs().log.ws.info('createTerminal registered startup', { tempId, taskName: options.startup.taskName, isStartingUp: terminal?.isStartingUp })
         }
 
         // Send request to server (don't include startup in payload - it's client-side only)
@@ -764,6 +764,7 @@ export const RootStore = types
                     // Transfer isStartingUp state to the new terminal model
                     if (wasStartingUp && realTerminal) {
                       realTerminal.setStartingUp(true)
+                      getWs().log.ws.info('terminal:created transferred isStartingUp', { tempId, realId: terminal.id, isStartingUp: realTerminal.isStartingUp })
                     }
                     getWs().log.ws.info('terminal:created re-attaching xterm', {
                       realId: terminal.id,
