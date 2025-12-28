@@ -45,6 +45,12 @@
     --sidebar-ring: #2a2a27;                      /* Graphite */
     --terminal-background: #faf9f5;               /* Porcelain - matches background */
     --tile: rgba(42, 42, 39, 0.1);                /* Graphite 10% */
+
+    /* Status colors */
+    --status-in-progress: #8d909b;                /* Lavender Grey - active */
+    --status-in-review: #e08d3c;                  /* Tiger's Eye - waiting */
+    --status-done: #0d5c63;                       /* Stormy Teal - complete */
+    --status-canceled: #dd403a;                   /* Cinnabar - stopped */
 }
 
 .dark {
@@ -127,6 +133,10 @@
     --color-background: var(--background);
     --color-terminal-background: var(--terminal-background);
     --color-tile: var(--tile);
+    --color-status-in-progress: var(--status-in-progress);
+    --color-status-in-review: var(--status-in-review);
+    --color-status-done: var(--status-done);
+    --color-status-canceled: var(--status-canceled);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);

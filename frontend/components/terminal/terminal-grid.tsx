@@ -9,12 +9,13 @@ import { Terminal } from './terminal'
 import { TerminalStatusBar } from './terminal-status'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon, PlusSignIcon, Task01Icon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon } from '@hugeicons/core-free-icons'
 import { GitActionsButtons } from './git-actions-buttons'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 import { MobileTerminalControls } from './mobile-terminal-controls'
+import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 
 interface TaskInfo {
   taskId: string
@@ -76,16 +77,21 @@ function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize
                 <Link
                   to={taskInfo.repoId ? '/repositories/$repoId' : '/repositories'}
                   params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
-                  className="text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
+                  className="flex items-center gap-1 text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
                 >
+                  <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} className="shrink-0" />
                   {taskInfo.repoName}
                 </Link>
                 {terminal.cwd && (
-                  <span className="text-xs text-muted-foreground truncate">{terminal.cwd.split('/').pop()}</span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                    <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} className="shrink-0" />
+                    {terminal.cwd.split('/').pop()}
+                  </span>
                 )}
               </>
             )}
-            <div className="ml-auto flex items-center gap-0.5">
+            <div className="ml-auto flex items-center gap-1">
+              <GitStatusBadge worktreePath={taskInfo.worktreePath} />
               <GitActionsButtons
                 repoPath={taskInfo.repoPath}
                 worktreePath={taskInfo.worktreePath}
