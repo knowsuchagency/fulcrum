@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -56,8 +56,15 @@ import {
 import { useDeveloperMode } from '@/hooks/use-config'
 import { desktopZoom } from '@/main'
 
+type MonitoringTab = 'system' | 'processes' | 'claude' | 'vibora' | 'worktrees' | 'usage'
+
+const VALID_TABS: MonitoringTab[] = ['system', 'processes', 'claude', 'vibora', 'worktrees', 'usage']
+
 export const Route = createFileRoute('/monitoring/')({
   component: MonitoringPage,
+  validateSearch: (search: Record<string, unknown>): { tab?: MonitoringTab } => ({
+    tab: VALID_TABS.includes(search.tab as MonitoringTab) ? (search.tab as MonitoringTab) : undefined,
+  }),
 })
 
 const TIME_WINDOWS: TimeWindow[] = ['1m', '10m', '1h', '3h', '6h', '12h', '24h']
@@ -85,10 +92,13 @@ function ClaudeInstancesTab() {
   const { t } = useTranslation('monitoring')
   const [filter, setFilter] = useState<ClaudeFilter>('vibora')
   const [killingPid, setKillingPid] = useState<number | null>(null)
+  const [selectedPids, setSelectedPids] = useState<Set<number>>(new Set())
+  const [isKillingSelected, setIsKillingSelected] = useState(false)
   const { data: instances, isLoading, error } = useClaudeInstances(filter)
   const killInstance = useKillClaudeInstance()
 
   const totalRam = instances?.reduce((sum, i) => sum + i.ramMB, 0) || 0
+  const isAnyKilling = killingPid !== null || isKillingSelected
 
   // Clear killingPid when the instance is no longer in the list
   useEffect(() => {
@@ -96,6 +106,16 @@ function ClaudeInstancesTab() {
       setKillingPid(null)
     }
   }, [killingPid, instances])
+
+  // Clear selected PIDs that no longer exist
+  useEffect(() => {
+    if (selectedPids.size > 0 && instances) {
+      const stillExists = new Set([...selectedPids].filter(pid => instances.some(i => i.pid === pid)))
+      if (stillExists.size !== selectedPids.size) {
+        setSelectedPids(stillExists)
+      }
+    }
+  }, [selectedPids, instances])
 
   const handleKill = (instance: ClaudeInstance) => {
     setKillingPid(instance.pid)
@@ -107,18 +127,78 @@ function ClaudeInstancesTab() {
     })
   }
 
+  const toggleSelection = (pid: number) => {
+    setSelectedPids(prev => {
+      const next = new Set(prev)
+      if (next.has(pid)) {
+        next.delete(pid)
+      } else {
+        next.add(pid)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (!instances) return
+    if (selectedPids.size === instances.length) {
+      setSelectedPids(new Set())
+    } else {
+      setSelectedPids(new Set(instances.map(i => i.pid)))
+    }
+  }
+
+  const handleKillSelected = async () => {
+    if (!instances || selectedPids.size === 0) return
+    setIsKillingSelected(true)
+
+    const toKill = instances.filter(i => selectedPids.has(i.pid))
+    for (const instance of toKill) {
+      const payload = instance.isViboraManaged && instance.terminalId
+        ? { terminalId: instance.terminalId }
+        : { pid: instance.pid }
+      try {
+        await killInstance.mutateAsync(payload)
+      } catch {
+        // Continue killing others even if one fails
+      }
+    }
+
+    setSelectedPids(new Set())
+    setIsKillingSelected(false)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="show-all"
-            checked={filter === 'all'}
-            onCheckedChange={(checked) => setFilter(checked ? 'all' : 'vibora')}
-          />
-          <Label htmlFor="show-all" className="text-sm text-muted-foreground">
-            {t('claude.showAllInstances')}
-          </Label>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-all"
+              checked={filter === 'all'}
+              onCheckedChange={(checked) => setFilter(checked ? 'all' : 'vibora')}
+            />
+            <Label htmlFor="show-all" className="text-sm text-muted-foreground">
+              {t('claude.showAllInstances')}
+            </Label>
+          </div>
+
+          {selectedPids.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleKillSelected}
+              disabled={isAnyKilling}
+              className="gap-1.5"
+            >
+              {isKillingSelected ? (
+                <HugeiconsIcon icon={Loading03Icon} className="size-3.5 animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+              )}
+              {t('claude.killSelected', { count: selectedPids.size })}
+            </Button>
+          )}
         </div>
 
         {instances && (
@@ -151,7 +231,14 @@ function ClaudeInstancesTab() {
       {instances && instances.length > 0 && (
         <div className="space-y-2">
           {/* Header - desktop only */}
-          <div className="hidden lg:grid grid-cols-[60px_150px_1fr_1fr_80px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
+          <div className="hidden lg:grid grid-cols-[32px_60px_150px_1fr_1fr_80px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <div className="flex items-center justify-center">
+              <Checkbox
+                checked={selectedPids.size === instances.length}
+                onCheckedChange={toggleSelectAll}
+                disabled={isAnyKilling}
+              />
+            </div>
             <span>{t('claude.headers.pid')}</span>
             <span>{t('claude.headers.terminal')}</span>
             <span>{t('claude.headers.task')}</span>
@@ -165,41 +252,56 @@ function ClaudeInstancesTab() {
               {/* Mobile: stacked layout */}
               <div className="flex flex-col gap-1 lg:hidden">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium truncate">
-                    {instance.taskId ? (
-                      <Link
-                        to="/tasks/$taskId"
-                        params={{ taskId: instance.taskId }}
-                        className="hover:text-foreground hover:underline"
-                      >
-                        {instance.taskTitle}
-                      </Link>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {instance.isViboraManaged ? instance.terminalName : t('claude.source.external')}
-                      </span>
-                    )}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Checkbox
+                      checked={selectedPids.has(instance.pid)}
+                      onCheckedChange={() => toggleSelection(instance.pid)}
+                      disabled={isAnyKilling}
+                      className="shrink-0"
+                    />
+                    <span className="text-sm font-medium truncate">
+                      {instance.taskId ? (
+                        <Link
+                          to="/tasks/$taskId"
+                          params={{ taskId: instance.taskId }}
+                          className="hover:text-foreground hover:underline"
+                        >
+                          {instance.taskTitle}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {instance.isViboraManaged ? instance.terminalName : t('claude.source.external')}
+                        </span>
+                      )}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="tabular-nums text-sm text-muted-foreground">{instance.ramMB.toFixed(0)} MB</span>
                     <Button
                       variant="ghost"
                       size="xs"
                       onClick={() => handleKill(instance)}
-                      disabled={killingPid !== null}
-                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid !== null ? 'opacity-50' : ''}`}
+                      disabled={isAnyKilling}
+                      className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isAnyKilling ? 'opacity-50' : ''}`}
                     >
                       <HugeiconsIcon icon={killingPid === instance.pid ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${killingPid === instance.pid ? 'animate-spin' : ''}`} />
                     </Button>
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground truncate" title={instance.cwd}>
+                <span className="text-xs text-muted-foreground truncate pl-6" title={instance.cwd}>
                   {instance.cwd}
                 </span>
               </div>
 
               {/* Desktop: grid layout */}
-              <div className="hidden lg:grid grid-cols-[60px_150px_1fr_1fr_80px_80px] items-center gap-4">
+              <div className="hidden lg:grid grid-cols-[32px_60px_150px_1fr_1fr_80px_80px] items-center gap-4">
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={selectedPids.has(instance.pid)}
+                    onCheckedChange={() => toggleSelection(instance.pid)}
+                    disabled={isAnyKilling}
+                  />
+                </div>
                 <span className="font-mono text-xs">{instance.pid}</span>
                 <span className="truncate text-sm">
                   {instance.isViboraManaged ? (
@@ -230,8 +332,8 @@ function ClaudeInstancesTab() {
                     variant="ghost"
                     size="xs"
                     onClick={() => handleKill(instance)}
-                    disabled={killingPid !== null}
-                    className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${killingPid !== null ? 'opacity-50' : ''}`}
+                    disabled={isAnyKilling}
+                    className={`text-destructive hover:text-destructive hover:bg-destructive/10 ${isAnyKilling ? 'opacity-50' : ''}`}
                   >
                     <HugeiconsIcon icon={killingPid === instance.pid ? Loading03Icon : Cancel01Icon} className={`size-3.5 ${killingPid === instance.pid ? 'animate-spin' : ''}`} />
                     {killingPid === instance.pid ? t('claude.killing') : t('claude.kill')}
@@ -1267,12 +1369,21 @@ function WorktreesTab() {
   )
 }
 
-type MonitoringTab = 'system' | 'processes' | 'claude' | 'vibora' | 'worktrees' | 'usage'
-
 function MonitoringPage() {
   const { t } = useTranslation('monitoring')
   const { data: developerMode } = useDeveloperMode()
-  const [activeTab, setActiveTab] = useState<MonitoringTab>('system')
+  const navigate = useNavigate()
+  const { tab: tabFromUrl } = Route.useSearch()
+
+  const activeTab = tabFromUrl || 'system'
+
+  const setActiveTab = useCallback((newTab: MonitoringTab) => {
+    navigate({
+      to: '/monitoring',
+      search: newTab === 'system' ? {} : { tab: newTab },
+      replace: true,
+    })
+  }, [navigate])
 
   const tabs: { value: MonitoringTab; label: string; devOnly?: boolean }[] = [
     { value: 'system', label: t('tabs.system') },

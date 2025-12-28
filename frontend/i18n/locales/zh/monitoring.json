@@ -23,6 +23,7 @@
     "noTask": "(无任务)",
     "kill": "终止",
     "killing": "终止中...",
+    "killSelected": "终止 {{count}} 个已选",
     "source": {
       "vibora": "Vibora: {{name}}",
       "external": "外部"

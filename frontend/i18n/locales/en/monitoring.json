@@ -24,6 +24,7 @@
     "noTask": "(no task)",
     "kill": "Kill",
     "killing": "Killing...",
+    "killSelected": "Kill {{count}} selected",
     "source": {
       "vibora": "Vibora: {{name}}",
       "external": "External"
