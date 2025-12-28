@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# Pre-merge-commit hook: Runs the build before completing a merge into main.
+# Prevents broken builds from being merged.
+#
+# Works from both the main repository and worktrees.
+
+set -e
+
+# Get the current branch name
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+
+# Only run build check when merging into main
+if [ "$current_branch" = "main" ]; then
+    echo "Pre-merge check: Running build before merge into main..."
+
+    # Get the root of the working tree (works in both main repo and worktrees)
+    repo_root=$(git rev-parse --show-toplevel)
+
+    # Run the build from the repo root
+    cd "$repo_root"
+
+    if mise run build; then
+        echo "Build succeeded. Proceeding with merge."
+    else
+        echo ""
+        echo "ERROR: Build failed! Merge aborted."
+        echo "Fix the build errors before merging into main."
+        exit 1
+    fi
+fi
