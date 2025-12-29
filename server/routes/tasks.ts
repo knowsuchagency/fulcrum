@@ -13,6 +13,7 @@ import {
 import { broadcast } from '../websocket/terminal-ws'
 import { updateTaskStatus } from '../services/task-status'
 import { log } from '../lib/logger'
+import { badRequest, notFound, serverError, ErrorCode } from '../lib/api-error'
 
 // Helper to create git worktree
 function createGitWorktree(
@@ -170,7 +171,7 @@ app.post('/', async (c) => {
     if (body.branch && body.worktreePath && body.repoPath && body.baseBranch) {
       const result = createGitWorktree(body.repoPath, body.worktreePath, body.branch, body.baseBranch)
       if (!result.success) {
-        return c.json({ error: `Failed to create worktree: ${result.error}` }, 500)
+        return serverError(c, null, `Failed to create worktree: ${result.error}`, ErrorCode.WORKTREE_ERROR)
       }
 
       // Copy files if patterns provided
@@ -198,7 +199,7 @@ app.post('/', async (c) => {
     broadcast({ type: 'task:updated', payload: { taskId: newTask.id } })
     return c.json(created ? parseViewState(created) : null, 201)
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to create task' }, 400)
+    return serverError(c, err, 'Failed to create task', ErrorCode.DATABASE_ERROR)
   }
 })
 
@@ -208,7 +209,7 @@ app.delete('/bulk', async (c) => {
     const body = await c.req.json<{ ids: string[]; deleteLinkedWorktrees?: boolean }>()
 
     if (!Array.isArray(body.ids) || body.ids.length === 0) {
-      return c.json({ error: 'ids must be a non-empty array' }, 400)
+      return badRequest(c, 'ids must be a non-empty array', ErrorCode.VALIDATION_ERROR)
     }
 
     const now = new Date().toISOString()
@@ -248,7 +249,7 @@ app.delete('/bulk', async (c) => {
 
     return c.json({ success: true, deleted: deletedCount })
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to delete tasks' }, 400)
+    return serverError(c, err, 'Failed to delete tasks', ErrorCode.DATABASE_ERROR)
   }
 })
 
@@ -257,7 +258,7 @@ app.get('/:id', (c) => {
   const id = c.req.param('id')
   const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
   if (!task) {
-    return c.json({ error: 'Task not found' }, 404)
+    return notFound(c, 'Task not found', ErrorCode.TASK_NOT_FOUND)
   }
   return c.json(parseViewState(task))
 })
@@ -269,7 +270,7 @@ app.patch('/:id', async (c) => {
   try {
     const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
+      return notFound(c, 'Task not found', ErrorCode.TASK_NOT_FOUND)
     }
 
     const body = await c.req.json<Partial<Task> & { viewState?: unknown }>()
@@ -300,7 +301,7 @@ app.patch('/:id', async (c) => {
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to update task' }, 400)
+    return serverError(c, err, 'Failed to update task', ErrorCode.DATABASE_ERROR)
   }
 })
 
@@ -311,7 +312,7 @@ app.delete('/:id', (c) => {
 
   const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
   if (!existing) {
-    return c.json({ error: 'Task not found' }, 404)
+    return notFound(c, 'Task not found', ErrorCode.TASK_NOT_FOUND)
   }
 
   // Handle linked worktree based on deleteLinkedWorktree flag
@@ -350,7 +351,7 @@ app.patch('/:id/status', async (c) => {
   try {
     const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
     if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
+      return notFound(c, 'Task not found', ErrorCode.TASK_NOT_FOUND)
     }
 
     const body = await c.req.json<{ status: string; position: number }>()
@@ -416,7 +417,7 @@ app.patch('/:id/status', async (c) => {
 
     return c.json(updated ? parseViewState(updated) : null)
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)
+    return serverError(c, err, 'Failed to update task status', ErrorCode.DATABASE_ERROR)
   }
 })
 
@@ -426,7 +427,7 @@ app.post('/:id/kill-claude', (c) => {
   const task = db.select().from(tasks).where(eq(tasks.id, id)).get()
 
   if (!task) {
-    return c.json({ error: 'Task not found' }, 404)
+    return notFound(c, 'Task not found', ErrorCode.TASK_NOT_FOUND)
   }
 
   if (!task.worktreePath) {
