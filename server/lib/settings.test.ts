@@ -148,7 +148,7 @@ describe('Settings', () => {
 
       // File should be updated with nested structure
       const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(migrated._schemaVersion).toBe(3) // Current schema version
+      expect(migrated._schemaVersion).toBe(4) // Current schema version
       expect(migrated.server?.port).toBe(8888)
       expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
       expect(migrated.integrations?.linearApiKey).toBe('migrated-key')
@@ -178,7 +178,7 @@ describe('Settings', () => {
     test('skips migration if already at current schema version', async () => {
       const settingsPath = join(tempDir, 'settings.json')
       const originalContent = {
-        _schemaVersion: 3, // Current schema version
+        _schemaVersion: 4, // Current schema version
         server: { port: 8888 },
       }
       writeFileSync(settingsPath, JSON.stringify(originalContent))
