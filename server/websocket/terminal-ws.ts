@@ -356,7 +356,7 @@ export const terminalWebSocketHandlers: WSEvents = {
           log.ws.info('tab:create created', { tabId: tab.id, name: tab.name, directory: tab.directory, requestId, tempId })
           broadcast({
             type: 'tab:created',
-            payload: { tab, requestId, tempId },
+            payload: { tab, requestId, tempId, adoptTerminalId },
           })
 
           // Adopt existing terminal into the new tab if specified

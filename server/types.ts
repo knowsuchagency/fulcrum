@@ -281,6 +281,8 @@ export interface TabCreatedMessage {
     requestId?: string
     /** Client's temporary ID that should be replaced with tab.id */
     tempId?: string
+    /** If set, an existing terminal was adopted into this tab (skip creating new terminal) */
+    adoptTerminalId?: string
   }
 }
 

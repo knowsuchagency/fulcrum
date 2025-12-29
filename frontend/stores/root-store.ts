@@ -1001,10 +1001,11 @@ export const RootStore = types
             break
 
           case 'tab:created': {
-            const { tab, requestId, tempId } = payload as {
+            const { tab, requestId, tempId, adoptTerminalId } = payload as {
               tab: ITabSnapshot
               requestId?: string
               tempId?: string
+              adoptTerminalId?: string
             }
 
             // Check if this is a confirmation of an optimistic update
@@ -1024,14 +1025,20 @@ export const RootStore = types
                   self.tabs.remove(tempId)
                   self.tabs.add(tab)
 
-                  // Clear pending and set lastCreatedTabId for navigation
+                  // Clear pending
                   self.pendingTabCreation = null
-                  self.lastCreatedTabId = tab.id
+
+                  // Only set lastCreatedTabId if NOT adopting a terminal
+                  // (adopting means terminal already exists, no need to create new one)
+                  if (!adoptTerminalId) {
+                    self.lastCreatedTabId = tab.id
+                  }
 
                   getWs().log.ws.debug('tab:created confirmed', {
                     requestId,
                     tempId,
                     realId: tab.id,
+                    adoptTerminalId,
                   })
                 }
                 break
