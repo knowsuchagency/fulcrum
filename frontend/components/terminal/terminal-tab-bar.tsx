@@ -191,8 +191,10 @@ export function TerminalTabBar({
   onTabReorder,
 }: TerminalTabBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const createButtonRef = useRef<HTMLButtonElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
+  const [createButtonVisible, setCreateButtonVisible] = useState(true)
 
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current
@@ -201,6 +203,26 @@ export function TerminalTabBar({
     const { scrollLeft, scrollWidth, clientWidth } = el
     setCanScrollLeft(scrollLeft > 0)
     setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1)
+  }, [])
+
+  // Track visibility of the create button inside scroll area
+  useEffect(() => {
+    const button = createButtonRef.current
+    const scrollContainer = scrollRef.current
+    if (!button || !scrollContainer) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setCreateButtonVisible(entry.isIntersecting)
+      },
+      {
+        root: scrollContainer,
+        threshold: 0.9, // Consider visible if 90% is showing
+      }
+    )
+
+    observer.observe(button)
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -266,6 +288,17 @@ export function TerminalTabBar({
             onReorder={onTabReorder}
           />
         ))}
+
+        {/* Create button inside scroll area - sits next to rightmost tab */}
+        <Button
+          ref={createButtonRef}
+          variant="ghost"
+          size="icon-xs"
+          onClick={onTabCreate}
+          className="shrink-0"
+        >
+          <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2} />
+        </Button>
       </div>
 
       {/* Scroll to end button */}
@@ -280,15 +313,17 @@ export function TerminalTabBar({
         </Button>
       )}
 
-      {/* Always-visible create button */}
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={onTabCreate}
-        className="ml-1 shrink-0"
-      >
-        <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2} />
-      </Button>
+      {/* Fallback create button - visible when the primary one is scrolled out of view */}
+      {!createButtonVisible && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={onTabCreate}
+          className="shrink-0"
+        >
+          <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2} />
+        </Button>
+      )}
     </div>
   )
 }
