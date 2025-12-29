@@ -13,8 +13,42 @@ import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { log } from './lib/logger'
 
+/**
+ * Validates that a port number is within the valid range.
+ * @param port - The port number to validate
+ * @returns true if port is valid, false otherwise
+ */
+function isValidPort(port: number): boolean {
+  return Number.isInteger(port) && port >= 1 && port <= 65535
+}
+
+/**
+ * Validates that a hostname is properly formatted.
+ * @param host - The hostname to validate
+ * @returns true if hostname is valid, false otherwise
+ */
+function isValidHostname(host: string): boolean {
+  if (!host || typeof host !== 'string') return false
+  // Allow localhost, IP addresses, and domain names
+  const hostnameRegex = /^(localhost|(\d{1,3}\.){3}\d{1,3}|[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9][a-zA-Z0-9-]*)*)$/
+  return hostnameRegex.test(host)
+}
+
 const PORT = getSettingByKey('port')
 const HOST = process.env.HOST || 'localhost'
+
+// Validate environment configuration before proceeding
+if (!isValidPort(PORT)) {
+  log.server.error('Invalid port configuration', { port: PORT })
+  console.error(`Error: Invalid port number "${PORT}". Port must be between 1 and 65535.`)
+  process.exit(1)
+}
+
+if (!isValidHostname(HOST)) {
+  log.server.error('Invalid hostname configuration', { host: HOST })
+  console.error(`Error: Invalid hostname "${HOST}". Please provide a valid hostname.`)
+  process.exit(1)
+}
 
 // Check if port is already in use before starting
 async function checkPortAvailable(port: number, host: string): Promise<boolean> {
