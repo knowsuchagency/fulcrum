@@ -135,8 +135,9 @@ claude plugin install vibora@vibora --scope user
 
 ### MCP Tools
 
-The plugin includes an MCP server that exposes task management tools:
+The plugin includes an MCP server that exposes task management and remote execution tools:
 
+**Task Management:**
 - `list_tasks` — List all tasks with optional status/repo filter
 - `get_task` — Get task details by ID
 - `create_task` — Create a new task with git worktree
@@ -145,6 +146,13 @@ The plugin includes an MCP server that exposes task management tools:
 - `move_task` — Change task status
 - `list_repositories` — List configured repositories
 - `send_notification` — Send notification to enabled channels
+
+**Remote Command Execution:**
+- `execute_command` — Execute shell commands on the Vibora server with persistent session support
+- `list_exec_sessions` — List active command execution sessions
+- `destroy_exec_session` — Clean up a session
+
+The `execute_command` tool supports persistent sessions where environment variables, working directory, and shell state are preserved between commands. Sessions expire after 24 hours of inactivity.
 
 For Claude Desktop, add to your `claude_desktop_config.json`:
 

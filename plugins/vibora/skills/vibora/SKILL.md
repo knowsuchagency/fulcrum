@@ -23,6 +23,10 @@ Use the Vibora CLI when:
 - **Linking Linear tickets** - Connect a Linear issue to the current task
 - **Sending notifications** - Alert the user when work is complete or needs attention
 
+Use the Vibora MCP tools when:
+- **Executing commands remotely** - Run shell commands on the Vibora server from Claude Desktop
+- **Stateful workflows** - Use persistent sessions to maintain environment variables and working directory across commands
+
 ## Core CLI Commands
 
 ### current-task (Primary Agent Workflow)
@@ -159,9 +163,73 @@ These flags work with most commands:
 - `DONE` - Task is finished
 - `CANCELED` - Task was abandoned
 
+## MCP Tools for Remote Execution
+
+When using Claude Desktop with Vibora's MCP server, you can execute commands on the remote Vibora server. This is useful when connecting to Vibora via SSH port forwarding.
+
+### execute_command
+
+Execute shell commands with optional persistent session support:
+
+```json
+{
+  "command": "echo hello world",
+  "sessionId": "optional-session-id",
+  "cwd": "/path/to/start",
+  "timeout": 30000
+}
+```
+
+**Parameters:**
+- `command` (required) — The shell command to execute
+- `sessionId` (optional) — Reuse a session to preserve env vars, cwd, and shell state
+- `cwd` (optional) — Initial working directory (only used when creating new session)
+- `timeout` (optional) — Timeout in milliseconds (default: 30000)
+
+**Response:**
+```json
+{
+  "sessionId": "uuid",
+  "stdout": "hello world",
+  "stderr": "",
+  "exitCode": 0,
+  "timedOut": false
+}
+```
+
+### Session Workflow Example
+
+```
+1. First command (creates session):
+   execute_command { command: "cd /project && export API_KEY=secret" }
+   → Returns sessionId: "abc-123"
+
+2. Subsequent commands (reuse session):
+   execute_command { command: "echo $API_KEY", sessionId: "abc-123" }
+   → Returns stdout: "secret" (env var preserved)
+
+   execute_command { command: "pwd", sessionId: "abc-123" }
+   → Returns stdout: "/project" (cwd preserved)
+
+3. Cleanup when done:
+   destroy_exec_session { sessionId: "abc-123" }
+```
+
+Sessions expire after 24 hours of inactivity.
+
+### list_exec_sessions
+
+List all active sessions with their current working directory and timestamps.
+
+### destroy_exec_session
+
+Clean up a session when you're done to free resources.
+
 ## Best Practices
 
 1. **Use `current-task` inside worktrees** - It auto-detects which task you're in
 2. **Link PRs immediately** - Run `vibora current-task pr <url>` right after creating a PR
 3. **Mark review when done** - `vibora current-task review` notifies the user
 4. **Send notifications for blocking issues** - Keep the user informed of progress
+5. **Reuse sessions for related commands** - Preserve state across multiple execute_command calls
+6. **Clean up sessions when done** - Use destroy_exec_session to free resources
