@@ -52,3 +52,6 @@ CLAUDE.local.md
 
 # Local git hooks
 .hooks/
+
+# PR Review Bot (local service, not part of main project)
+services/pr-bot/
