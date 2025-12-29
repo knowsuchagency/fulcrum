@@ -1,11 +1,11 @@
 import { Hono } from 'hono'
 import { existsSync, rmSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { execSync } from 'node:child_process'
 import { db, repositories, type NewRepository } from '../db'
 import { eq, desc, sql, inArray } from 'drizzle-orm'
 import { getSettings } from '../lib/settings'
 import { isGitUrl, extractRepoNameFromUrl } from '../lib/git-utils'
+import { gitClone } from '../lib/git-command'
 
 const app = new Hono()
 
@@ -109,20 +109,16 @@ app.post('/clone', async (c) => {
       return c.json({ error: `Directory already exists: ${targetPath}` }, 400)
     }
 
-    // Clone the repository
-    try {
-      execSync(`git clone "${body.url}" "${targetPath}"`, {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-        timeout: 120000, // 2 minute timeout
-      })
-    } catch (cloneErr) {
+    // Clone the repository (using secure spawnSync)
+    const cloneResult = gitClone(body.url, targetPath, { timeout: 120000 })
+
+    if (!cloneResult.success) {
       // Clean up partial clone if it exists
       if (existsSync(targetPath)) {
         rmSync(targetPath, { recursive: true, force: true })
       }
 
-      const errorMessage = cloneErr instanceof Error ? cloneErr.message : 'Clone failed'
+      const errorMessage = cloneResult.error || 'Clone failed'
       // Try to provide a more helpful error message
       if (errorMessage.includes('Permission denied') || errorMessage.includes('publickey')) {
         return c.json({ error: 'Authentication failed. Check your SSH keys or use HTTPS with credentials.' }, 500)

@@ -3,11 +3,12 @@ import { parse as parseYaml } from 'yaml'
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { execSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { db, repositories, type NewRepository } from '../db'
 import { eq } from 'drizzle-orm'
 import { log } from '../lib/logger'
 import { isGitUrl } from '../lib/git-utils'
+import { gitClone } from '../lib/git-command'
 import type {
   CopierQuestion,
   CopierQuestionType,
@@ -23,12 +24,8 @@ const app = new Hono()
  * Check if uv is installed
  */
 function isUvInstalled(): boolean {
-  try {
-    execSync('uv --version', { stdio: 'pipe' })
-    return true
-  } catch {
-    return false
-  }
+  const result = spawnSync('uv', ['--version'], { stdio: 'pipe' })
+  return result.status === 0
 }
 
 /**
@@ -110,11 +107,12 @@ function fetchCopierYamlFromGit(gitUrl: string): { content: string; cleanup: () 
   const tempDir = mkdtempSync(join(tmpdir(), 'copier-template-'))
 
   try {
-    // Shallow clone the repository
-    execSync(`git clone --depth 1 "${gitUrl}" "${tempDir}"`, {
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    })
+    // Shallow clone the repository (using secure spawnSync)
+    const cloneResult = gitClone(gitUrl, tempDir, { depth: 1 })
+    if (!cloneResult.success) {
+      rmSync(tempDir, { recursive: true, force: true })
+      return null
+    }
 
     // Look for copier.yml or copier.yaml
     const yamlPath = join(tempDir, 'copier.yml')
@@ -256,20 +254,20 @@ app.post('/create', async (c) => {
     answersFile = join(tmpdir(), `copier-answers-${crypto.randomUUID()}.json`)
     writeFileSync(answersFile, JSON.stringify(filteredAnswers))
 
-    // Execute copier via uvx
-    try {
-      const trustFlag = trust ? '--trust ' : ''
-      execSync(
-        `uvx copier copy --data-file "${answersFile}" --force --vcs-ref HEAD ${trustFlag}"${templatePath}" "${fullOutputPath}"`,
-        {
-          encoding: 'utf-8',
-          stdio: 'pipe',
-          timeout: 120000, // 2 minute timeout
-        }
-      )
-    } catch (err) {
-      const error = err as { stderr?: string; message?: string }
-      const errorMessage = error.stderr || error.message || 'Copier execution failed'
+    // Execute copier via uvx (using secure spawnSync)
+    const uvxArgs = ['copier', 'copy', '--data-file', answersFile, '--force', '--vcs-ref', 'HEAD']
+    if (trust) {
+      uvxArgs.push('--trust')
+    }
+    uvxArgs.push(templatePath, fullOutputPath)
+
+    const copierResult = spawnSync('uvx', uvxArgs, {
+      stdio: 'pipe',
+      timeout: 120000, // 2 minute timeout
+    })
+
+    if (copierResult.status !== 0) {
+      const errorMessage = copierResult.stderr?.toString().trim() || 'Copier execution failed'
       log.api.error('Copier execution failed', { templatePath, outputPath: fullOutputPath, error: errorMessage })
       return c.json({ error: errorMessage }, 500)
     }

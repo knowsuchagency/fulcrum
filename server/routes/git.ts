@@ -1,25 +1,23 @@
 import { Hono } from 'hono'
-import { execSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import { gitCommand } from '../lib/git-command'
 
-// Execute git command and return output
-function gitExec(cwd: string, args: string): string {
-  try {
-    return execSync(`git ${args}`, {
-      cwd,
-      encoding: 'utf-8',
-      maxBuffer: 10 * 1024 * 1024, // 10MB for large diffs
-      stdio: ['pipe', 'pipe', 'pipe'], // Capture stderr for better error messages
-    }).trim()
-  } catch (err) {
-    // Include stderr in error message for better debugging
-    if (err && typeof err === 'object' && 'stderr' in err && err.stderr) {
-      throw new Error(String(err.stderr).trim() || String(err))
-    }
-    throw err
+// Secure git command runner using spawnSync (no shell injection)
+function gitRun(cwd: string, ...args: string[]): string {
+  const result = spawnSync('git', args, {
+    cwd,
+    maxBuffer: 10 * 1024 * 1024, // 10MB for large diffs
+  })
+
+  if (result.status !== 0) {
+    const errorMessage = result.stderr?.toString().trim() || `Git command failed with code ${result.status}`
+    throw new Error(errorMessage)
   }
+
+  return result.stdout?.toString().trim() || ''
 }
 
 function parseStatusCode(code: string): string {
@@ -111,7 +109,7 @@ function getDefaultBranch(repoPath: string, baseBranchOverride?: string): string
 
   // Try to get origin's default branch
   try {
-    const originHead = gitExec(repoPath, 'symbolic-ref refs/remotes/origin/HEAD')
+    const originHead = gitRun(repoPath, 'symbolic-ref', 'refs/remotes/origin/HEAD')
     // Returns something like "refs/remotes/origin/main"
     const match = originHead.match(/refs\/remotes\/origin\/(.+)/)
     if (match) {
@@ -123,7 +121,7 @@ function getDefaultBranch(repoPath: string, baseBranchOverride?: string): string
 
   // Check if 'main' exists locally
   try {
-    gitExec(repoPath, 'rev-parse --verify main')
+    gitRun(repoPath, 'rev-parse', '--verify', 'main')
     return 'main'
   } catch {
     // main doesn't exist
@@ -131,7 +129,7 @@ function getDefaultBranch(repoPath: string, baseBranchOverride?: string): string
 
   // Check if 'master' exists locally
   try {
-    gitExec(repoPath, 'rev-parse --verify master')
+    gitRun(repoPath, 'rev-parse', '--verify', 'master')
     return 'master'
   } catch {
     // master doesn't exist either
@@ -178,10 +176,7 @@ app.get('/branches', (c) => {
     }
 
     // Get all local branches
-    const branchOutput = execSync('git branch --list', {
-      cwd: repoPath,
-      encoding: 'utf-8',
-    })
+    const branchOutput = gitRun(repoPath, 'branch', '--list')
 
     const branches = branchOutput
       .split('\n')
@@ -192,10 +187,7 @@ app.get('/branches', (c) => {
     // Get current branch
     let current = 'main'
     try {
-      current = execSync('git rev-parse --abbrev-ref HEAD', {
-        cwd: repoPath,
-        encoding: 'utf-8',
-      }).trim()
+      current = gitRun(repoPath, 'rev-parse', '--abbrev-ref', 'HEAD')
     } catch {
       // Use first branch if HEAD is detached
       current = branches[0] || 'main'
@@ -247,11 +239,11 @@ app.post('/worktree', async (c) => {
 
     // Create the worktree with a new branch based on baseBranch
     try {
-      gitExec(repoPath, `worktree add -b "${branch}" "${worktreePath}" "${baseBranch}"`)
+      gitRun(repoPath, 'worktree', 'add', '-b', branch, worktreePath, baseBranch)
     } catch {
       // Branch might already exist, try without -b
       try {
-        gitExec(repoPath, `worktree add "${worktreePath}" "${branch}"`)
+        gitRun(repoPath, 'worktree', 'add', worktreePath, branch)
       } catch (err2) {
         const message = err2 instanceof Error ? err2.message : 'Failed to create worktree'
         return c.json({ error: message }, 500)
@@ -294,12 +286,12 @@ app.delete('/worktree', async (c) => {
     if (fs.existsSync(worktreePath)) {
       try {
         // First try git worktree remove
-        gitExec(repoPath, `worktree remove "${worktreePath}" --force`)
+        gitRun(repoPath, 'worktree', 'remove', worktreePath, '--force')
       } catch {
         // If that fails, manually remove and prune
         fs.rmSync(worktreePath, { recursive: true, force: true })
         try {
-          gitExec(repoPath, 'worktree prune')
+          gitRun(repoPath, 'worktree', 'prune')
         } catch {
           // Ignore prune errors
         }
@@ -329,11 +321,12 @@ app.get('/diff', (c) => {
 
   try {
     // Get the diff
-    const wsFlag = ignoreWhitespace ? ' -w' : ''
-    const diffArgs = staged ? `diff --cached${wsFlag}` : `diff${wsFlag}`
+    const diffArgs = staged
+      ? ignoreWhitespace ? ['diff', '--cached', '-w'] : ['diff', '--cached']
+      : ignoreWhitespace ? ['diff', '-w'] : ['diff']
     let diff = ''
     try {
-      diff = gitExec(worktreePath, diffArgs)
+      diff = gitRun(worktreePath, ...diffArgs)
     } catch {
       // No diff available
       diff = ''
@@ -342,7 +335,7 @@ app.get('/diff', (c) => {
     // Get status summary
     let status = ''
     try {
-      status = gitExec(worktreePath, 'status --short')
+      status = gitRun(worktreePath, 'status', '--short')
     } catch {
       status = ''
     }
@@ -350,7 +343,7 @@ app.get('/diff', (c) => {
     // Get current branch
     let branch = ''
     try {
-      branch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
+      branch = gitRun(worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD')
     } catch {
       branch = 'unknown'
     }
@@ -360,8 +353,11 @@ app.get('/diff', (c) => {
     if (!diff) {
       try {
         const baseBranch = getDefaultBranch(worktreePath)
-        const mergeBase = gitExec(worktreePath, `merge-base ${baseBranch} HEAD`)
-        branchDiff = gitExec(worktreePath, `diff${wsFlag} ${mergeBase}..HEAD`)
+        const mergeBase = gitRun(worktreePath, 'merge-base', baseBranch, 'HEAD')
+        const branchDiffArgs = ignoreWhitespace
+          ? ['diff', '-w', `${mergeBase}..HEAD`]
+          : ['diff', `${mergeBase}..HEAD`]
+        branchDiff = gitRun(worktreePath, ...branchDiffArgs)
       } catch {
         // No branch diff available
         branchDiff = ''
@@ -435,7 +431,7 @@ app.get('/status', (c) => {
     // Get current branch
     let branch = ''
     try {
-      branch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
+      branch = gitRun(worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD')
     } catch {
       branch = 'unknown'
     }
@@ -444,9 +440,9 @@ app.get('/status', (c) => {
     let ahead = 0
     let behind = 0
     try {
-      const tracking = gitExec(worktreePath, 'rev-parse --abbrev-ref @{upstream}')
+      const tracking = gitRun(worktreePath, 'rev-parse', '--abbrev-ref', '@{upstream}')
       if (tracking) {
-        const counts = gitExec(worktreePath, `rev-list --left-right --count ${branch}...${tracking}`)
+        const counts = gitRun(worktreePath, 'rev-list', '--left-right', '--count', `${branch}...${tracking}`)
         const [a, b] = counts.split('\t').map(Number)
         ahead = a || 0
         behind = b || 0
@@ -458,7 +454,7 @@ app.get('/status', (c) => {
     // Get status
     let status = ''
     try {
-      status = gitExec(worktreePath, 'status --short')
+      status = gitRun(worktreePath, 'status', '--short')
     } catch {
       status = ''
     }
@@ -517,15 +513,15 @@ app.post('/sync', async (c) => {
     // Rebase worktree on the parent repo's local default branch
     let worktreeRebased = false
     try {
-      gitExec(worktreePath, `rebase ${defaultBranch}`)
+      gitRun(worktreePath, 'rebase', defaultBranch)
       worktreeRebased = true
     } catch (err) {
       // Check if it's a rebase conflict
       try {
-        const rebaseStatus = gitExec(worktreePath, 'status')
+        const rebaseStatus = gitRun(worktreePath, 'status')
         if (rebaseStatus.includes('rebase in progress')) {
           // Abort the rebase
-          gitExec(worktreePath, 'rebase --abort')
+          gitRun(worktreePath, 'rebase', '--abort')
           return c.json({
             error: 'Rebase conflict detected. Rebase has been aborted.',
             conflictAborted: true,
@@ -576,7 +572,7 @@ app.post('/merge-to-main', async (c) => {
     // Get the worktree branch name
     let worktreeBranch: string
     try {
-      worktreeBranch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
+      worktreeBranch = gitRun(worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD')
     } catch {
       return c.json({
         error: 'Failed to determine worktree branch',
@@ -585,7 +581,7 @@ app.post('/merge-to-main', async (c) => {
 
     // Check for uncommitted or untracked changes in the worktree
     try {
-      const worktreeStatus = gitExec(worktreePath, 'status --porcelain')
+      const worktreeStatus = gitRun(worktreePath, 'status', '--porcelain')
       if (worktreeStatus.trim()) {
         // Parse the status output to categorize changes
         const lines = worktreeStatus.trim().split('\n').filter(l => l)
@@ -627,7 +623,7 @@ app.post('/merge-to-main', async (c) => {
     // Save current branch in parent repo
     let originalBranch: string
     try {
-      originalBranch = gitExec(repoPath, 'rev-parse --abbrev-ref HEAD')
+      originalBranch = gitRun(repoPath, 'rev-parse', '--abbrev-ref', 'HEAD')
     } catch {
       originalBranch = defaultBranch
     }
@@ -635,14 +631,14 @@ app.post('/merge-to-main', async (c) => {
     try {
       // Checkout the base branch
       if (originalBranch !== defaultBranch) {
-        gitExec(repoPath, `checkout ${defaultBranch}`)
+        gitRun(repoPath, 'checkout', defaultBranch)
       }
 
       // Get all commit messages from the worktree branch for the squash commit
       let commitMessages = ''
       try {
         // Get commits that are in worktreeBranch but not in defaultBranch
-        commitMessages = gitExec(repoPath, `log ${defaultBranch}..${worktreeBranch} --pretty=format:%s%n%b --reverse`)
+        commitMessages = gitRun(repoPath, 'log', `${defaultBranch}..${worktreeBranch}`, '--pretty=format:%s%n%b', '--reverse')
       } catch {
         // Fall back to simple message if we can't get commit history
       }
@@ -653,12 +649,12 @@ app.post('/merge-to-main', async (c) => {
       // Attempt the squash merge (git hooks will handle pushing to origin)
       const squashMsgPath = path.join(repoPath, '.git', 'SQUASH_MSG')
       try {
-        gitExec(repoPath, `merge --squash ${worktreeBranch}`)
+        gitRun(repoPath, 'merge', '--squash', worktreeBranch)
         // Use a temp file for the commit message to handle special characters
         const tempFile = path.join(repoPath, '.git', 'SQUASH_MSG_TEMP')
         fs.writeFileSync(tempFile, squashMessage)
         try {
-          gitExec(repoPath, `commit -F "${tempFile}"`)
+          gitRun(repoPath, 'commit', '-F', tempFile)
         } finally {
           fs.unlinkSync(tempFile)
           // Clean up git's SQUASH_MSG file if it exists
@@ -673,24 +669,24 @@ app.post('/merge-to-main', async (c) => {
         }
         // Check if it's a merge conflict
         try {
-          const mergeStatus = gitExec(repoPath, 'status')
+          const mergeStatus = gitRun(repoPath, 'status')
           if (mergeStatus.includes('Unmerged paths') || mergeStatus.includes('fix conflicts')) {
             // Get list of conflicting files
             let conflictFiles: string[] = []
             try {
-              const conflictOutput = gitExec(repoPath, 'diff --name-only --diff-filter=U')
+              const conflictOutput = gitRun(repoPath, 'diff', '--name-only', '--diff-filter=U')
               conflictFiles = conflictOutput.split('\n').filter(f => f.trim())
             } catch {
               // Ignore if we can't get conflict files
             }
 
             // Abort the merge
-            gitExec(repoPath, 'merge --abort')
+            gitRun(repoPath, 'merge', '--abort')
 
             // Restore original branch if needed
             if (originalBranch !== defaultBranch) {
               try {
-                gitExec(repoPath, `checkout ${originalBranch}`)
+                gitRun(repoPath, 'checkout', originalBranch)
               } catch {
                 // Ignore checkout errors
               }
@@ -709,7 +705,7 @@ app.post('/merge-to-main', async (c) => {
         // Restore original branch if needed
         if (originalBranch !== defaultBranch) {
           try {
-            gitExec(repoPath, `checkout ${originalBranch}`)
+            gitRun(repoPath, 'checkout', originalBranch)
           } catch {
             // Ignore checkout errors
           }
@@ -723,7 +719,7 @@ app.post('/merge-to-main', async (c) => {
       // Restore original branch if it was different
       if (originalBranch !== defaultBranch) {
         try {
-          gitExec(repoPath, `checkout ${originalBranch}`)
+          gitRun(repoPath, 'checkout', originalBranch)
         } catch {
           // Ignore checkout errors
         }
@@ -738,7 +734,7 @@ app.post('/merge-to-main', async (c) => {
       // Restore original branch on any error
       if (originalBranch !== defaultBranch) {
         try {
-          gitExec(repoPath, `checkout ${originalBranch}`)
+          gitRun(repoPath, 'checkout', originalBranch)
         } catch {
           // Ignore checkout errors
         }
@@ -774,14 +770,14 @@ app.post('/push', async (c) => {
     // Get current branch
     let branch: string
     try {
-      branch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
+      branch = gitRun(worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD')
     } catch {
       return c.json({ error: 'Failed to determine current branch' }, 500)
     }
 
     // Check for uncommitted changes
     try {
-      const status = gitExec(worktreePath, 'status --porcelain')
+      const status = gitRun(worktreePath, 'status', '--porcelain')
       if (status.trim()) {
         return c.json({
           error: 'Worktree has uncommitted changes. Please commit or stash changes before pushing.',
@@ -794,7 +790,7 @@ app.post('/push', async (c) => {
 
     // Push to origin
     try {
-      gitExec(worktreePath, `push origin ${branch}`)
+      gitRun(worktreePath, 'push', 'origin', branch)
     } catch (pushErr) {
       const errorMsg = pushErr instanceof Error ? pushErr.message : 'Unknown error'
 
@@ -845,7 +841,7 @@ app.post('/sync-parent', async (c) => {
     // Save current branch
     let originalBranch: string
     try {
-      originalBranch = gitExec(repoPath, 'rev-parse --abbrev-ref HEAD')
+      originalBranch = gitRun(repoPath, 'rev-parse', '--abbrev-ref', 'HEAD')
     } catch {
       originalBranch = defaultBranch
     }
@@ -853,7 +849,7 @@ app.post('/sync-parent', async (c) => {
     try {
       // Fetch from origin (this works regardless of local state)
       try {
-        gitExec(repoPath, 'fetch origin')
+        gitRun(repoPath, 'fetch', 'origin')
       } catch (fetchErr) {
         return c.json({
           error: `Failed to fetch from origin: ${fetchErr instanceof Error ? fetchErr.message : 'Unknown error'}`,
@@ -864,7 +860,7 @@ app.post('/sync-parent', async (c) => {
       // Checkout default branch if not already on it
       if (originalBranch !== defaultBranch) {
         try {
-          gitExec(repoPath, `checkout ${defaultBranch}`)
+          gitRun(repoPath, 'checkout', defaultBranch)
         } catch (checkoutErr) {
           return c.json({
             error: `Failed to checkout ${defaultBranch}: ${checkoutErr instanceof Error ? checkoutErr.message : 'Unknown error'}`,
@@ -874,12 +870,12 @@ app.post('/sync-parent', async (c) => {
 
       // Pull from origin (fast-forward only to avoid conflicts)
       try {
-        gitExec(repoPath, `pull --ff-only origin ${defaultBranch}`)
+        gitRun(repoPath, 'pull', '--ff-only', 'origin', defaultBranch)
       } catch (pullErr) {
         // Restore original branch if we switched
         if (originalBranch !== defaultBranch) {
           try {
-            gitExec(repoPath, `checkout ${originalBranch}`)
+            gitRun(repoPath, 'checkout', originalBranch)
           } catch {
             // Ignore checkout errors
           }
@@ -902,7 +898,7 @@ app.post('/sync-parent', async (c) => {
       // Restore original branch if we switched
       if (originalBranch !== defaultBranch) {
         try {
-          gitExec(repoPath, `checkout ${originalBranch}`)
+          gitRun(repoPath, 'checkout', originalBranch)
         } catch {
           // Ignore checkout errors
         }
@@ -917,7 +913,7 @@ app.post('/sync-parent', async (c) => {
       // Restore original branch on any error
       if (originalBranch !== defaultBranch) {
         try {
-          gitExec(repoPath, `checkout ${originalBranch}`)
+          gitRun(repoPath, 'checkout', originalBranch)
         } catch {
           // Ignore checkout errors
         }

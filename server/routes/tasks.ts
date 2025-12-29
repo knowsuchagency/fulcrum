@@ -1,10 +1,10 @@
 import { Hono } from 'hono'
 import { db, tasks, repositories, type Task, type NewTask } from '../db'
 import { eq, asc } from 'drizzle-orm'
-import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { glob } from 'glob'
+import { gitCommand } from '../lib/git-command'
 import {
   getPTYManager,
   destroyTerminalAndBroadcast,
@@ -14,7 +14,7 @@ import { broadcast } from '../websocket/terminal-ws'
 import { updateTaskStatus } from '../services/task-status'
 import { log } from '../lib/logger'
 
-// Helper to create git worktree
+// Helper to create git worktree (using secure command builder)
 function createGitWorktree(
   repoPath: string,
   worktreePath: string,
@@ -29,17 +29,19 @@ function createGitWorktree(
     }
 
     // Create the worktree with a new branch based on baseBranch
-    try {
-      execSync(`git worktree add -b "${branch}" "${worktreePath}" "${baseBranch}"`, {
-        cwd: repoPath,
-        encoding: 'utf-8',
-      })
-    } catch {
+    const result = gitCommand(repoPath)
+      .worktree('add', '-b', branch, worktreePath, baseBranch)
+      .tryRun()
+
+    if (!result.success) {
       // Branch might already exist, try without -b
-      execSync(`git worktree add "${worktreePath}" "${branch}"`, {
-        cwd: repoPath,
-        encoding: 'utf-8',
-      })
+      const retryResult = gitCommand(repoPath)
+        .worktree('add', worktreePath, branch)
+        .tryRun()
+
+      if (!retryResult.success) {
+        return { success: false, error: retryResult.error }
+      }
     }
     return { success: true }
   } catch (err) {
@@ -47,23 +49,19 @@ function createGitWorktree(
   }
 }
 
-// Helper to delete git worktree
+// Helper to delete git worktree (using secure command builder)
 function deleteGitWorktree(repoPath: string, worktreePath: string): void {
   if (!fs.existsSync(worktreePath)) return
 
-  try {
-    execSync(`git worktree remove "${worktreePath}" --force`, {
-      cwd: repoPath,
-      encoding: 'utf-8',
-    })
-  } catch {
+  const result = gitCommand(repoPath)
+    .worktree('remove', worktreePath, '--force')
+    .tryRun()
+
+  if (!result.success) {
     // If git worktree remove fails, manually remove and prune
     fs.rmSync(worktreePath, { recursive: true, force: true })
-    try {
-      execSync('git worktree prune', { cwd: repoPath, encoding: 'utf-8' })
-    } catch {
-      // Ignore prune errors
-    }
+    // Prune orphaned worktree references
+    gitCommand(repoPath).worktree('prune').tryRun()
   }
 }
 
