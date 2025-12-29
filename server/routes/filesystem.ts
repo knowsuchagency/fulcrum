@@ -71,8 +71,8 @@ function buildTree(dirPath: string, root: string, depth: number = 0, maxDepth: n
     const items = fs.readdirSync(dirPath)
 
     for (const name of items) {
-      // Skip hidden files/directories and excluded directories
-      if (name.startsWith('.') || EXCLUDED_DIRECTORIES.has(name)) continue
+      // Skip excluded directories (large dependency/build directories)
+      if (EXCLUDED_DIRECTORIES.has(name)) continue
 
       try {
         const itemPath = path.join(dirPath, name)
