@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 
@@ -33,6 +34,7 @@ const RECONNECT_INTERVAL = 2000
 
 export function useTaskSync() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { resolvedTheme } = useTheme()
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -46,9 +48,39 @@ export function useTaskSync() {
         if (message.type === 'task:updated') {
           queryClient.invalidateQueries({ queryKey: ['tasks'] })
         } else if (message.type === 'notification' && 'payload' in message) {
-          const { id, title, message: description, notificationType, playSound, isCustomSound } = (message as NotificationMessage).payload
+          const { id, title, message: description, notificationType, taskId, playSound, isCustomSound } = (message as NotificationMessage).payload
 
-          // Determine icon: goat if default sound enabled, otherwise theme-appropriate logo
+          // Deduplicate notifications across tabs using localStorage
+          // Use a claim mechanism similar to sound deduplication
+          const NOTIFICATION_CLAIM_KEY = `vibora:notification:${id}`
+          const CLAIM_SETTLE_MS = 50
+          const CLAIM_TTL_MS = 10000 // Clean up old claims after 10s
+
+          // Check if another tab already claimed this notification
+          const existingClaim = localStorage.getItem(NOTIFICATION_CLAIM_KEY)
+          if (existingClaim) {
+            return // Another tab already showing this notification
+          }
+
+          // Make our claim
+          const myClaim = `${Date.now()}:${Math.random().toString(36).slice(2)}`
+          localStorage.setItem(NOTIFICATION_CLAIM_KEY, myClaim)
+
+          // Wait for all tabs to write their claims, then check if we won
+          setTimeout(() => {
+            if (localStorage.getItem(NOTIFICATION_CLAIM_KEY) !== myClaim) {
+              return // Another tab won the race
+            }
+
+            // Clean up claim after TTL
+            setTimeout(() => localStorage.removeItem(NOTIFICATION_CLAIM_KEY), CLAIM_TTL_MS)
+
+            // We won - show the notification
+            showNotification()
+          }, CLAIM_SETTLE_MS)
+
+          function showNotification() {
+            // Determine icon: goat if default sound enabled, otherwise theme-appropriate logo
           const useGoat = playSound && !isCustomSound
           const iconUrl = useGoat
             ? '/goat.jpeg'
@@ -65,20 +97,32 @@ export function useTaskSync() {
             />
           )
 
-          // Show toast with custom icon
+          // Build toast options with optional action for navigation
+          const toastOptions: Parameters<typeof toast.success>[1] = {
+            description,
+            icon,
+            ...(taskId && {
+              action: {
+                label: 'View',
+                onClick: () => navigate({ to: '/tasks/$taskId', params: { taskId } }),
+              },
+            }),
+          }
+
+          // Show toast with custom icon and optional action
           switch (notificationType) {
             case 'success':
-              toast.success(title, { description, icon })
+              toast.success(title, toastOptions)
               break
             case 'error':
-              toast.error(title, { description, icon })
+              toast.error(title, toastOptions)
               break
             case 'warning':
-              toast.warning(title, { description, icon })
+              toast.warning(title, toastOptions)
               break
             case 'info':
             default:
-              toast.info(title, { description, icon })
+              toast.info(title, toastOptions)
               break
           }
 
@@ -140,12 +184,13 @@ export function useTaskSync() {
               '*'
             )
           }
+          } // end showNotification
         }
       } catch {
         // Ignore parse errors
       }
     },
-    [queryClient, resolvedTheme]
+    [queryClient, navigate, resolvedTheme]
   )
 
   const connect = useCallback(() => {
