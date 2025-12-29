@@ -38,6 +38,7 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
+    "async-mutex": "^0.5.0",
     "bun-pty": "^0.4.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

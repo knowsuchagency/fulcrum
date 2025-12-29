@@ -6,6 +6,7 @@ import * as os from 'os'
 import type { TerminalInfo } from '../types'
 import { log } from '../lib/logger'
 import { getViboraDir } from '../lib/settings'
+import { terminalMutex } from './terminal-mutex'
 
 export interface PTYManagerCallbacks {
   onData: (terminalId: string, data: string) => void
@@ -142,38 +143,49 @@ export class PTYManager {
   }
 
   // Called when client attaches - ensures PTY is connected
-  attach(terminalId: string): boolean {
-    const session = this.sessions.get(terminalId)
-    if (!session) return false
-    if (!session.isAttached()) {
-      session.attach()
-    }
-    return true
+  // Uses mutex to prevent race condition where concurrent attach() calls
+  // both pass the isAttached() check before either completes
+  async attach(terminalId: string): Promise<boolean> {
+    return terminalMutex.withLock(terminalId, () => {
+      const session = this.sessions.get(terminalId)
+      if (!session) return false
+      if (!session.isAttached()) {
+        session.attach()
+      }
+      return true
+    })
   }
 
-  destroy(terminalId: string): boolean {
-    const session = this.sessions.get(terminalId)
-    if (!session) {
-      log.pty.warn('destroy called for non-existent terminal', { terminalId })
-      return false
-    }
+  // Uses mutex to prevent race condition where concurrent destroy() calls
+  // could cause double-delete or destroy racing with attach()
+  async destroy(terminalId: string): Promise<boolean> {
+    return terminalMutex.withLock(terminalId, () => {
+      const session = this.sessions.get(terminalId)
+      if (!session) {
+        log.pty.warn('destroy called for non-existent terminal', { terminalId })
+        return false
+      }
 
-    const info = session.getInfo()
-    log.pty.info('Destroying terminal', {
-      terminalId,
-      name: info.name,
-      cwd: info.cwd,
-      tabId: info.tabId,
-      stack: new Error().stack?.split('\n').slice(1, 6).join('\n'),
+      const info = session.getInfo()
+      log.pty.info('Destroying terminal', {
+        terminalId,
+        name: info.name,
+        cwd: info.cwd,
+        tabId: info.tabId,
+        stack: new Error().stack?.split('\n').slice(1, 6).join('\n'),
+      })
+
+      session.kill()
+      this.sessions.delete(terminalId)
+
+      // Remove from database
+      db.delete(terminals).where(eq(terminals.id, terminalId)).run()
+
+      // Clean up the mutex for this terminal
+      terminalMutex.cleanup(terminalId)
+
+      return true
     })
-
-    session.kill()
-    this.sessions.delete(terminalId)
-
-    // Remove from database
-    db.delete(terminals).where(eq(terminals.id, terminalId)).run()
-
-    return true
   }
 
   write(terminalId: string, data: string): boolean {
@@ -272,11 +284,11 @@ export class PTYManager {
   }
 
   // Kill all terminals and their dtach sessions
-  destroyAll(): void {
-    for (const session of this.sessions.values()) {
-      session.kill()
-      db.delete(terminals).where(eq(terminals.id, session.id)).run()
-    }
+  async destroyAll(): Promise<void> {
+    // Destroy each terminal with proper locking
+    const destroyPromises = Array.from(this.sessions.keys()).map((id) => this.destroy(id))
+    await Promise.all(destroyPromises)
     this.sessions.clear()
+    terminalMutex.cleanupAll()
   }
 }

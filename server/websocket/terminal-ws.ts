@@ -222,7 +222,7 @@ export const terminalWebSocketHandlers: WSEvents = {
             force: force ?? false,
           })
 
-          const destroyed = ptyManager.destroy(terminalId)
+          const destroyed = await ptyManager.destroy(terminalId)
           if (destroyed) {
             broadcast({
               type: 'terminal:destroyed',
@@ -246,7 +246,7 @@ export const terminalWebSocketHandlers: WSEvents = {
         case 'terminal:attach': {
           const terminalId = message.payload.terminalId
           // Ensure terminal is attached to dtach (connects PTY if not already)
-          ptyManager.attach(terminalId)
+          await ptyManager.attach(terminalId)
           const buffer = ptyManager.getBuffer(terminalId)
           log.ws.info('terminal:attach adding to attachedTerminals', {
             terminalId,
@@ -405,7 +405,7 @@ export const terminalWebSocketHandlers: WSEvents = {
               clientId: clientData.id,
             })
 
-            const destroyed = ptyManager.destroy(terminal.id)
+            const destroyed = await ptyManager.destroy(terminal.id)
             if (destroyed) {
               broadcast({
                 type: 'terminal:destroyed',

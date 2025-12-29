@@ -221,7 +221,9 @@ export class TerminalSession {
       this.pty = null
 
       // If we're intentionally detaching, don't mark as exited
+      // Reset the flag after checking to allow future detach operations
       if (this.isDetaching) {
+        this.isDetaching = false
         return
       }
 
@@ -244,11 +246,13 @@ export class TerminalSession {
 
     if (this.pty) {
       // Set flag BEFORE killing to prevent onExit from marking as exited
+      // Note: We intentionally do NOT reset this flag here because onExit
+      // fires asynchronously. The flag is reset in onExit handler after
+      // it checks the flag value. This prevents a race condition where
+      // the flag is reset before onExit has a chance to check it.
       this.isDetaching = true
       this.pty.kill()
       this.pty = null
-      // Reset flag after kill completes
-      this.isDetaching = false
     }
   }
 
