@@ -156,8 +156,8 @@ jobs:
             ### Desktop App (Recommended)
 
             Download the appropriate package for your platform:
-            - **macOS (Apple Silicon)**: `Vibora-${{ steps.version.outputs.version }}-macos-arm64.dmg`
-            - **Linux (x64)**: `Vibora-${{ steps.version.outputs.version }}-linux-x64.AppImage`
+            - **macOS (Apple Silicon)**: `Vibora-macos-arm64.dmg`
+            - **Linux (x64)**: `Vibora-linux-x64.AppImage`
 
             ### CLI
 
@@ -177,12 +177,12 @@ jobs:
           - os: macos-latest
             platform: macos
             arch: arm64
-            artifact: Vibora-${{ needs.publish.outputs.version }}-macos-arm64.dmg
+            artifact: Vibora-macos-arm64.dmg
           # Linux x64
           - os: ubuntu-latest
             platform: linux
             arch: x64
-            artifact: Vibora-${{ needs.publish.outputs.version }}-linux-x64.AppImage
+            artifact: Vibora-linux-x64.AppImage
 
     runs-on: ${{ matrix.os }}
     permissions:

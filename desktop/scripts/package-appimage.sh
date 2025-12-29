@@ -24,7 +24,7 @@ if [ ! -d "$BUNDLE_DIR/server" ]; then
 fi
 
 # Create AppDir structure
-APP_DIR="$DESKTOP_DIR/dist/Vibora-${VERSION}-${ARCH}.AppDir"
+APP_DIR="$DESKTOP_DIR/dist/Vibora-${ARCH}.AppDir"
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/usr/bin"
 mkdir -p "$APP_DIR/usr/share/vibora/bundle"
@@ -104,7 +104,7 @@ if [ ! -f "$APPIMAGETOOL" ]; then
 fi
 
 # Create AppImage
-OUTPUT="$DESKTOP_DIR/dist/Vibora-${VERSION}-linux-${ARCH}.AppImage"
+OUTPUT="$DESKTOP_DIR/dist/Vibora-linux-${ARCH}.AppImage"
 echo "Creating AppImage..."
 
 if [ "$ARCH" = "arm64" ]; then

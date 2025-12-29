@@ -37,8 +37,8 @@ Download the latest release:
 
 | Platform | Download |
 |----------|----------|
-| **macOS** (Apple Silicon) | [Download DMG](https://vibora-utils.knowsuchagency.workers.dev/download/dmg) |
-| **Linux** | [Download AppImage](https://vibora-utils.knowsuchagency.workers.dev/download/appimage) |
+| **macOS** (Apple Silicon) | [Download DMG](https://github.com/knowsuchagency/vibora/releases/latest/download/Vibora-macos-arm64.dmg) |
+| **Linux** | [Download AppImage](https://github.com/knowsuchagency/vibora/releases/latest/download/Vibora-linux-x64.AppImage) |
 
 The desktop app bundles everything—just install and run. It will start the server, install the Claude Code plugin, and check for updates automatically.
 

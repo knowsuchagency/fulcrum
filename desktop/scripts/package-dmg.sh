@@ -141,7 +141,7 @@ cp "$SCRIPT_DIR/vibora-launcher.sh" "$APP_BUNDLE/Contents/MacOS/vibora-launcher"
 chmod +x "$APP_BUNDLE/Contents/MacOS/vibora-launcher"
 
 # Create DMG
-DMG_NAME="Vibora-${VERSION}-macos-${ARCH}.dmg"
+DMG_NAME="Vibora-macos-${ARCH}.dmg"
 DMG_PATH="$DESKTOP_DIR/dist/$DMG_NAME"
 
 echo "Creating DMG..."
