@@ -211,21 +211,10 @@ app.post('/create', async (c) => {
   let answersFile: string | null = null
 
   try {
-    // Check if uv is installed
-    if (!isUvInstalled()) {
-      return c.json(
-        {
-          error:
-            'uv is not installed. Please install it first: https://docs.astral.sh/uv/getting-started/installation/',
-        },
-        400
-      )
-    }
-
     const body = await c.req.json<CreateProjectRequest>()
     const { templateSource, outputPath, answers, projectName, trust } = body
 
-    // Validate inputs
+    // Validate inputs first
     if (!templateSource || !outputPath || !projectName) {
       return c.json({ error: 'templateSource, outputPath, and projectName are required' }, 400)
     }
@@ -240,6 +229,17 @@ app.post('/create', async (c) => {
     // Check if output already exists
     if (existsSync(fullOutputPath)) {
       return c.json({ error: `Output directory already exists: ${fullOutputPath}` }, 400)
+    }
+
+    // Check if uv is installed (after request/directory validation)
+    if (!isUvInstalled()) {
+      return c.json(
+        {
+          error:
+            'uv is not installed. Please install it first: https://docs.astral.sh/uv/getting-started/installation/',
+        },
+        400
+      )
     }
 
     // Filter out answers that are Jinja2 templates (copier will evaluate them)
