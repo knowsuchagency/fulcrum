@@ -212,6 +212,25 @@ export const RootStore = types
      * Consumed by use-theme-sync hook to apply theme.
      */
     broadcastedTheme: null as 'light' | 'dark' | 'system' | null,
+    /**
+     * Callbacks for task:updated events.
+     * Multiple subscribers can register to be notified when tasks change.
+     * Callback receives taskId for context, but can ignore it.
+     */
+    taskUpdateCallbacks: new Set<(taskId?: string) => void>(),
+    /**
+     * Callbacks for notification events.
+     * Multiple subscribers can register to receive server notifications.
+     */
+    notificationCallbacks: new Set<(notification: {
+      id: string
+      title: string
+      message: string
+      notificationType: 'success' | 'info' | 'warning' | 'error'
+      taskId?: string
+      playSound?: boolean
+      isCustomSound?: boolean
+    }) => void>(),
   }))
   .views((self) => ({
     /** Whether the store is ready for use */
@@ -344,6 +363,38 @@ export const RootStore = types
       /** Clear broadcasted theme after it's been applied */
       clearBroadcastedTheme() {
         self.broadcastedTheme = null
+      },
+
+      // ============ Event Subscription Actions ============
+
+      /**
+       * Subscribe to task:updated events.
+       * Returns an unsubscribe function.
+       */
+      onTaskUpdate(callback: (taskId?: string) => void): () => void {
+        self.taskUpdateCallbacks.add(callback)
+        return () => {
+          self.taskUpdateCallbacks.delete(callback)
+        }
+      },
+
+      /**
+       * Subscribe to notification events.
+       * Returns an unsubscribe function.
+       */
+      onNotification(callback: (notification: {
+        id: string
+        title: string
+        message: string
+        notificationType: 'success' | 'info' | 'warning' | 'error'
+        taskId?: string
+        playSound?: boolean
+        isCustomSound?: boolean
+      }) => void): () => void {
+        self.notificationCallbacks.add(callback)
+        return () => {
+          self.notificationCallbacks.delete(callback)
+        }
       },
 
       // ============ Terminal Actions ============
@@ -1154,6 +1205,42 @@ export const RootStore = types
             const { theme } = payload as { theme: 'light' | 'dark' | 'system' }
             self.broadcastedTheme = theme
             getWs().log.ws.debug('theme:synced received', { theme })
+            break
+          }
+
+          case 'task:updated': {
+            const { taskId } = payload as { taskId: string }
+            getWs().log.ws.debug('task:updated received', { taskId })
+            // Notify all subscribers
+            for (const callback of self.taskUpdateCallbacks) {
+              try {
+                callback(taskId)
+              } catch (err) {
+                getWs().log.ws.error('task:updated callback error', { error: String(err) })
+              }
+            }
+            break
+          }
+
+          case 'notification': {
+            const notification = payload as {
+              id: string
+              title: string
+              message: string
+              notificationType: 'success' | 'info' | 'warning' | 'error'
+              taskId?: string
+              playSound?: boolean
+              isCustomSound?: boolean
+            }
+            getWs().log.ws.debug('notification received', { id: notification.id, type: notification.notificationType })
+            // Notify all subscribers
+            for (const callback of self.notificationCallbacks) {
+              try {
+                callback(notification)
+              } catch (err) {
+                getWs().log.ws.error('notification callback error', { error: String(err) })
+              }
+            }
             break
           }
 
