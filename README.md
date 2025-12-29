@@ -42,7 +42,23 @@ Download the latest release:
 
 The desktop app bundles everything—just install and run. It will start the server, install the Claude Code plugin, and check for updates automatically.
 
-> **macOS note**: On first launch, right-click the app and select "Open" to bypass Gatekeeper.
+#### macOS Installation
+
+1. Open the DMG and drag Vibora to Applications:
+
+   ![DMG Installer](./screenshots/macos-dmg-installer.png)
+
+2. On first launch, macOS will block the app:
+
+   ![Gatekeeper Blocked](./screenshots/macos-gatekeeper-blocked.png)
+
+3. Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**:
+
+   ![Privacy & Security](./screenshots/macos-privacy-security-open-anyway.png)
+
+4. Confirm by clicking **Open Anyway** in the dialog:
+
+   ![Open Anyway](./screenshots/macos-gatekeeper-open-anyway.png)
 
 ### Web Application
 
