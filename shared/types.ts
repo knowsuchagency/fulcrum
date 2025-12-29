@@ -245,3 +245,26 @@ export interface NotificationTestResult {
   success: boolean
   error?: string
 }
+
+// Command execution types
+export interface ExecuteCommandRequest {
+  command: string
+  sessionId?: string  // Optional - creates new session if omitted
+  cwd?: string        // Initial cwd for new sessions
+  timeout?: number    // Timeout in ms (default 30000)
+}
+
+export interface ExecuteCommandResponse {
+  sessionId: string
+  stdout: string
+  stderr: string
+  exitCode: number | null
+  timedOut: boolean
+}
+
+export interface ExecSession {
+  id: string
+  cwd: string
+  createdAt: string
+  lastUsedAt: string
+}
