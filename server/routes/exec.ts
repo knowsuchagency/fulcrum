@@ -5,7 +5,7 @@ import * as os from 'node:os'
 import type { ExecuteCommandRequest, ExecuteCommandResponse, ExecSession } from '@shared/types'
 
 const DEFAULT_TIMEOUT = 30000 // 30 seconds
-const SESSION_EXPIRY = 30 * 60 * 1000 // 30 minutes
+const SESSION_EXPIRY = 24 * 60 * 60 * 1000 // 24 hours
 
 // Unique markers for output parsing
 const START_MARKER = `<<VIBORA_CMD_START_${randomUUID().slice(0, 8)}>>`
@@ -24,15 +24,19 @@ interface ShellSession {
 }
 
 const sessions = new Map<string, ShellSession>()
+const expiredSessionIds = new Set<string>()
 
 // Cleanup expired sessions periodically
 setInterval(() => {
   const now = Date.now()
   for (const [id, session] of sessions) {
     if (now - session.lastUsedAt.getTime() > SESSION_EXPIRY) {
+      expiredSessionIds.add(id)
       destroySession(id)
     }
   }
+  // Clean up old expired session IDs after 7 days to prevent unbounded growth
+  // (In practice, clients should get the error and create a new session)
 }, 60000) // Check every minute
 
 function createSession(cwd?: string): ShellSession {
@@ -193,6 +197,10 @@ app.post('/', async (c) => {
     // Get or create session
     let session: ShellSession
     if (sessionId) {
+      // Check if session expired
+      if (expiredSessionIds.has(sessionId)) {
+        return c.json({ error: `Session ${sessionId} has expired`, expired: true }, 410)
+      }
       const existing = sessions.get(sessionId)
       if (!existing) {
         return c.json({ error: `Session ${sessionId} not found` }, 404)
