@@ -1,3 +1,4 @@
+// Import the serve function from @hono/node-server to start the HTTP server
 import { serve } from '@hono/node-server'
 import { createNodeWebSocket } from '@hono/node-ws'
 import { createServer } from 'net'
