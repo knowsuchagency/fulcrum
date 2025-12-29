@@ -1,5 +1,4 @@
 import { Fragment, useState, useEffect } from 'react'
-import { Link } from '@tanstack/react-router'
 import { observer } from 'mobx-react-lite'
 import { log } from '@/lib/logger'
 import {
@@ -11,26 +10,13 @@ import { Terminal } from './terminal'
 import { TerminalStatusBar } from './terminal-status'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon, PlusSignIcon, Task01Icon, LibraryIcon, GitBranchIcon, Loading03Icon, Delete02Icon, Maximize02Icon, ArrowShrink02Icon } from '@hugeicons/core-free-icons'
-import { GitActionsButtons } from './git-actions-buttons'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { useDeleteTask } from '@/hooks/use-tasks'
+import { Cancel01Icon, PlusSignIcon, Loading03Icon, Maximize02Icon, ArrowShrink02Icon } from '@hugeicons/core-free-icons'
+import { TaskTerminalHeader } from './task-terminal-header'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { MobileTerminalSelector } from './mobile-terminal-selector'
-import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { useStore } from '@/stores'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
@@ -83,17 +69,11 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
   const store = useStore()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const deleteTask = useDeleteTask()
 
   // Get the observable isStartingUp state from the terminal model (only for task terminals)
   // This is reactive because TerminalPane is wrapped with observer()
   const terminalModel = taskInfo ? store.terminals.get(terminal.id) : null
   const isStartingClaude = terminalModel?.isStartingUp ?? false
-
-  const handleDeleteTask = () => {
-    if (!taskInfo) return
-    deleteTask.mutate({ taskId: taskInfo.taskId, deleteLinkedWorktree: true })
-  }
 
   // Debug logging to trace isStartingUp state
   useEffect(() => {
@@ -110,122 +90,52 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
-        {taskInfo ? (
-          // Task terminal header: [Task Link] [Repo Name] [Path] ... [Git Actions] [Close]
-          <div className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1">
-            <Link
-              to="/tasks/$taskId"
-              params={{ taskId: taskInfo.taskId }}
-              className="flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 truncate"
-            >
-              <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} className="shrink-0" />
-              <span className="truncate">{taskInfo.title}</span>
-            </Link>
-            {!isMobile && (
-              <>
-                <Link
-                  to={taskInfo.repoId ? '/repositories/$repoId' : '/repositories'}
-                  params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
-                  className="flex items-center gap-1 text-xs font-medium text-foreground shrink-0 cursor-pointer hover:underline"
-                >
-                  <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} className="shrink-0" />
-                  {taskInfo.repoName}
-                </Link>
-                {terminal.cwd && (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                    <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} className="shrink-0" />
-                    {terminal.cwd.split('/').pop()}
-                  </span>
-                )}
-              </>
+      {taskInfo ? (
+        <TaskTerminalHeader
+          taskInfo={taskInfo}
+          terminalId={terminal.id}
+          terminalCwd={terminal.cwd}
+          isMobile={isMobile}
+          sendInputToTerminal={sendInputToTerminal}
+        />
+      ) : (
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
+          <TerminalStatusBar
+            name={terminal.name}
+            status={terminal.status}
+            exitCode={terminal.exitCode}
+            className="flex-1 border-b-0"
+            onRename={onRename}
+          />
+          <div className="flex items-center gap-1 mr-1">
+            {canMaximize && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={isMaximized ? onMinimize : onMaximize}
+                className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                title={isMaximized ? "Restore" : "Maximize"}
+              >
+                <HugeiconsIcon
+                  icon={isMaximized ? ArrowShrink02Icon : Maximize02Icon}
+                  size={12}
+                  strokeWidth={2}
+                />
+              </Button>
             )}
-            <div className="ml-auto flex items-center gap-1">
-              <GitStatusBadge worktreePath={taskInfo.worktreePath} />
-              <GitActionsButtons
-                repoPath={taskInfo.repoPath}
-                worktreePath={taskInfo.worktreePath}
-                baseBranch={taskInfo.baseBranch}
-                taskId={taskInfo.taskId}
-                isMobile={isMobile}
-                terminalId={terminal.id}
-                sendInputToTerminal={sendInputToTerminal}
-              />
-              <AlertDialog>
-                <AlertDialogTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="h-5 w-5 text-muted-foreground hover:text-destructive"
-                      title="Delete task"
-                      disabled={deleteTask.isPending}
-                    />
-                  }
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={12} strokeWidth={2} />
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Task</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete this task and its worktree.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteTask}
-                      variant="destructive"
-                      disabled={deleteTask.isPending}
-                    >
-                      {deleteTask.isPending ? 'Deleting...' : 'Delete'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={onClose}
+                className="h-5 w-5 text-muted-foreground hover:text-foreground"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+              </Button>
+            )}
           </div>
-        ) : (
-          // Regular terminal header
-          <>
-            <TerminalStatusBar
-              name={terminal.name}
-              status={terminal.status}
-              exitCode={terminal.exitCode}
-              className="flex-1 border-b-0"
-              onRename={onRename}
-            />
-            <div className="flex items-center gap-1 mr-1">
-              {canMaximize && (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={isMaximized ? onMinimize : onMaximize}
-                  className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                  title={isMaximized ? "Restore" : "Maximize"}
-                >
-                  <HugeiconsIcon
-                    icon={isMaximized ? ArrowShrink02Icon : Maximize02Icon}
-                    size={12}
-                    strokeWidth={2}
-                  />
-                </Button>
-              )}
-              {onClose && (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={onClose}
-                  className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                >
-                  <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
-                </Button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
       <div className="relative min-h-0 min-w-0 flex-1">
         <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} terminalId={terminal.id} setupImagePaste={setupImagePaste} onFocus={onFocus} />
         {/* Loading overlay - shown while Claude is starting */}
