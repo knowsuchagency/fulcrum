@@ -11,6 +11,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
+import { escapeForShell } from '@/lib/shell-escape'
 import { useTheme } from 'next-themes'
 import { lightTheme, darkTheme } from './terminal-theme'
 
@@ -320,7 +321,8 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         // Use source with heredoc so exports persist in the current shell
         if (currentStartupScript) {
           setTimeout(() => {
-            const wrappedScript = `source /dev/stdin <<'VIBORA_STARTUP'\n${currentStartupScript}\nVIBORA_STARTUP`
+            const delimiter = 'VIBORA_STARTUP_' + Date.now()
+            const wrappedScript = `source /dev/stdin <<'${delimiter}'\n${currentStartupScript}\n${delimiter}`
             writeToTerminalRef.current(actualTerminalId, wrappedScript + '\r')
           }, 100)
         }
@@ -334,12 +336,10 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           `When linking a PR: vibora current-task pr <url>${portFlag}. ` +
           `For notifications: vibora notify "Title" "Message"${portFlag}.`
         const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
-        const prompt = taskInfo.replace(/"/g, '\\"')
-        const escapedSystemPrompt = systemPrompt.replace(/"/g, '\\"')
 
         const taskCommand = currentAiMode === 'plan'
-          ? `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${actualTerminalId}" --allow-dangerously-skip-permissions --permission-mode plan`
-          : `claude "${prompt}" --append-system-prompt "${escapedSystemPrompt}" --session-id "${actualTerminalId}" --dangerously-skip-permissions`
+          ? `claude ${escapeForShell(taskInfo)} --append-system-prompt ${escapeForShell(systemPrompt)} --session-id "${actualTerminalId}" --allow-dangerously-skip-permissions --permission-mode plan`
+          : `claude ${escapeForShell(taskInfo)} --append-system-prompt ${escapeForShell(systemPrompt)} --session-id "${actualTerminalId}" --dangerously-skip-permissions`
 
         // Wait longer for startup script to complete before sending Claude command
         // 5 seconds should be enough for most scripts (mise trust, mkdir, export, etc.)
