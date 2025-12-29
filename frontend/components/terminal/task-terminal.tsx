@@ -8,7 +8,7 @@ import { desktopZoom } from '@/main'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDownDoubleIcon, Loading03Icon } from '@hugeicons/core-free-icons'
+import { ArrowDownDoubleIcon, Loading03Icon, Alert02Icon, Cancel01Icon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
 import { escapeForShell } from '@/lib/shell-escape'
@@ -35,6 +35,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const [isCreating, setIsCreating] = useState(false)
   const [isStartingClaude, setIsStartingClaude] = useState(false)
   const [xtermOpened, setXtermOpened] = useState(false)
+  const [showClaudeNotFound, setShowClaudeNotFound] = useState(false)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const terminalTheme = isDark ? darkTheme : lightTheme
@@ -379,6 +380,41 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     termRef.current.options.theme = terminalTheme
   }, [terminalTheme])
 
+  // Detect "command not found" for Claude CLI
+  // This helps users who haven't installed Claude Code yet
+  useEffect(() => {
+    if (!termRef.current || showClaudeNotFound) return
+
+    const term = termRef.current
+    const checkForClaudeNotFound = () => {
+      const buffer = term.buffer.active
+      // Check the last few lines of the terminal buffer
+      for (let i = Math.max(0, buffer.cursorY - 3); i <= buffer.cursorY; i++) {
+        const line = buffer.getLine(i)
+        if (line) {
+          const text = line.translateToString()
+          // Match common "command not found" patterns for claude
+          if (
+            text.includes('claude: command not found') ||
+            text.includes('claude: not found') ||
+            text.includes("'claude' is not recognized") ||
+            text.includes('command not found: claude')
+          ) {
+            setShowClaudeNotFound(true)
+            return
+          }
+        }
+      }
+    }
+
+    // Check on line feed (new line added)
+    const disposable = term.onLineFeed(checkForClaudeNotFound)
+
+    return () => {
+      disposable.dispose()
+    }
+  }, [showClaudeNotFound])
+
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {
     if (terminalId) {
@@ -450,6 +486,48 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
               <span className={cn('font-mono text-sm', isDark ? 'text-white/60' : 'text-black/60')}>
                 Starting Claude Code...
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* Claude not found overlay - shown when "command not found" is detected */}
+        {showClaudeNotFound && (
+          <div className="absolute bottom-4 left-4 right-4 z-10">
+            <div className={cn(
+              'flex items-start gap-3 rounded-lg border p-4',
+              'bg-amber-500/10 border-amber-500/30'
+            )}>
+              <HugeiconsIcon
+                icon={Alert02Icon}
+                size={18}
+                strokeWidth={2}
+                className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400"
+              />
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                  Claude Code CLI not found
+                </p>
+                <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+                  Install it with:{' '}
+                  <code className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono">
+                    npm install -g @anthropic/claude-code
+                  </code>
+                </p>
+                <a
+                  href="https://docs.anthropic.com/en/docs/claude-code/overview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-xs font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 underline"
+                >
+                  View documentation
+                </a>
+              </div>
+              <button
+                onClick={() => setShowClaudeNotFound(false)}
+                className="shrink-0 p-1 rounded text-amber-600 hover:text-amber-700 hover:bg-amber-500/20 dark:text-amber-400 dark:hover:text-amber-300"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+              </button>
             </div>
           </div>
         )}

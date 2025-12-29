@@ -70,19 +70,40 @@ Desktop-specific settings are saved to `~/.vibora/settings.json`:
 }
 ```
 
+## First-Time Setup
+
+Before using Vibora, you'll need to install a few dependencies:
+
+### Required Dependencies
+
+| Dependency | Purpose | Install Command |
+|------------|---------|-----------------|
+| **dtach** | Terminal persistence | macOS: `brew install dtach`<br>Ubuntu/Debian: `sudo apt install dtach`<br>Fedora: `sudo dnf install dtach`<br>Arch: `sudo pacman -S dtach` |
+| **Claude Code CLI** | AI agent orchestration | `npm install -g @anthropic/claude-code` |
+
+### What's Bundled (No Install Needed)
+
+The desktop app bundles the following, so you don't need to install them:
+
+- **Bun runtime** - Compiled into the standalone server executable
+- **PTY libraries** - Native terminal support for your platform
+- **Frontend** - Pre-built React application
+
+### First Launch
+
+When you first open Vibora:
+
+1. If **dtach** is missing, the app will show an error dialog with install instructions
+2. If **Claude Code** is missing, you'll see a banner prompting you to install it
+3. Both can be installed while the app is running - no restart needed
+
 ## Building
 
-### Prerequisites
+### Build Prerequisites
 
 - Node.js (for npm/Neutralino CLI)
-- On Linux: GTK WebKit2 (usually pre-installed), dtach (for terminal persistence)
-- On macOS: Xcode Command Line Tools (for code signing), dtach (for terminal persistence)
-
-### Runtime Dependencies
-
-The desktop app bundles the Vibora server as a standalone executable (no Bun required). The only runtime dependency is:
-
-- **dtach** - for terminal persistence (brew install dtach on macOS, apt install dtach on Linux)
+- On Linux: GTK WebKit2 (usually pre-installed)
+- On macOS: Xcode Command Line Tools (for code signing)
 
 ### Quick Build
 

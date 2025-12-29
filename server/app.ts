@@ -18,6 +18,7 @@ import copierRoutes from './routes/copier'
 import linearRoutes from './routes/linear'
 import githubRoutes from './routes/github'
 import { monitoringRoutes } from './routes/monitoring'
+import systemRoutes from './routes/system'
 import { writeEntry } from './lib/logger'
 import type { LogEntry } from '../shared/logger'
 
@@ -61,6 +62,7 @@ export function createApp() {
   app.route('/api/linear', linearRoutes)
   app.route('/api/github', githubRoutes)
   app.route('/api/monitoring', monitoringRoutes)
+  app.route('/api/system', systemRoutes)
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {

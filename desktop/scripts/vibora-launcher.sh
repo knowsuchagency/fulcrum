@@ -36,13 +36,38 @@ info_dialog() {
 check_dtach() {
   if ! command -v dtach &> /dev/null; then
     log "dtach not found"
+
+    # Platform-specific install instructions
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      INSTALL_CMD="brew install dtach"
+    elif command -v apt &> /dev/null; then
+      INSTALL_CMD="sudo apt install dtach"
+    elif command -v dnf &> /dev/null; then
+      INSTALL_CMD="sudo dnf install dtach"
+    elif command -v pacman &> /dev/null; then
+      INSTALL_CMD="sudo pacman -S dtach"
+    else
+      INSTALL_CMD="Install dtach using your package manager"
+    fi
+
     error_dialog "dtach is required for terminal persistence but not installed.
 
 Install it with:
-  brew install dtach"
+  $INSTALL_CMD"
     exit 1
   fi
   log "dtach found: $(which dtach)"
+}
+
+# Check for Claude Code CLI (non-blocking)
+check_claude() {
+  if ! command -v claude &> /dev/null; then
+    log "Claude Code CLI not found"
+    export VIBORA_CLAUDE_MISSING=1
+  else
+    log "Claude Code CLI found: $(which claude)"
+    export VIBORA_CLAUDE_MISSING=0
+  fi
 }
 
 # Install Claude plugin if not present
@@ -116,6 +141,7 @@ start_server() {
   VIBORA_DIR="$VIBORA_DIR" \
   VIBORA_PACKAGE_ROOT="$BUNDLE_DIR" \
   BUN_PTY_LIB="$PTY_LIB" \
+  VIBORA_CLAUDE_MISSING="${VIBORA_CLAUDE_MISSING:-0}" \
   "$SERVER_BIN" >> "$LOG_FILE" 2>&1 &
 
   SERVER_PID=$!
@@ -170,6 +196,7 @@ log "BUNDLE_DIR: $BUNDLE_DIR"
 log "VIBORA_DIR: $VIBORA_DIR"
 
 check_dtach
+check_claude
 install_plugin
 
 # Conditionally start server
