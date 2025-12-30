@@ -6,7 +6,8 @@ set -e
 
 # macOS GUI apps don't inherit user's shell PATH
 # Add common paths where homebrew and other tools are installed
-export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# Include ~/.local/bin where Claude CLI curl installer places the binary
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Get the directory where the app is installed
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
