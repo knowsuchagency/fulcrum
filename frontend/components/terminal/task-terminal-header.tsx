@@ -108,6 +108,8 @@ export function TaskTerminalHeader({
                 worktreePath={taskInfo.worktreePath}
                 baseBranch={taskInfo.baseBranch}
                 taskId={taskInfo.taskId}
+                title={taskInfo.title}
+                prUrl={taskInfo.prUrl}
                 repoId={taskInfo.repoId}
                 repoName={taskInfo.repoName}
                 terminalId={terminalId}
@@ -139,6 +141,8 @@ export function TaskTerminalHeader({
                 worktreePath={taskInfo.worktreePath}
                 baseBranch={taskInfo.baseBranch}
                 taskId={taskInfo.taskId}
+                title={taskInfo.title}
+                prUrl={taskInfo.prUrl}
                 isMobile={isMobile}
                 terminalId={terminalId}
                 sendInputToTerminal={sendInputToTerminal}

@@ -8,6 +8,7 @@ import {
   ArrowUp03Icon,
   Orbit01Icon,
   GitCommitIcon,
+  GitPullRequestIcon,
   LibraryIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons'
@@ -32,8 +33,10 @@ import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitPush } from '@/hooks/use-git-push'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
+import { useGitCreatePR } from '@/hooks/use-git-create-pr'
 import { useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
+import { openExternalUrl } from '@/lib/editor-url'
 import { toast } from 'sonner'
 
 interface TaskActionsDropdownProps {
@@ -41,6 +44,8 @@ interface TaskActionsDropdownProps {
   worktreePath: string
   baseBranch: string
   taskId: string
+  title: string
+  prUrl?: string | null
   repoId?: string
   repoName: string
   terminalId?: string
@@ -52,6 +57,8 @@ export function TaskActionsDropdown({
   worktreePath,
   baseBranch,
   taskId,
+  title,
+  prUrl,
   repoId,
   repoName,
   terminalId,
@@ -62,6 +69,7 @@ export function TaskActionsDropdown({
   const gitMerge = useGitMergeToMain()
   const gitPush = useGitPush()
   const gitSyncParent = useGitSyncParent()
+  const gitCreatePR = useGitCreatePR()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const killClaude = useKillClaudeInTask()
@@ -184,7 +192,58 @@ export function TaskActionsDropdown({
     setShowDeleteDialog(false)
   }
 
-  const isPending = gitSync.isPending || gitMerge.isPending || gitPush.isPending || gitSyncParent.isPending
+  const handleCreatePR = async () => {
+    try {
+      const result = await gitCreatePR.mutateAsync({
+        worktreePath,
+        title,
+        baseBranch,
+      })
+      // Auto-link PR to task
+      updateTask.mutate({
+        taskId,
+        updates: { prUrl: result.prUrl },
+      })
+      toast.success('PR created', {
+        action: {
+          label: 'View PR',
+          onClick: () => openExternalUrl(result.prUrl),
+        },
+      })
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create PR'
+      // Check if PR already exists and we have the URL
+      const existingPrUrl = err && typeof err === 'object' && 'existingPrUrl' in err
+        ? (err as { existingPrUrl?: string }).existingPrUrl
+        : undefined
+      if (existingPrUrl) {
+        // Auto-link the existing PR
+        updateTask.mutate({
+          taskId,
+          updates: { prUrl: existingPrUrl },
+        })
+        toast.info('PR already exists', {
+          action: {
+            label: 'View PR',
+            onClick: () => openExternalUrl(existingPrUrl),
+          },
+        })
+        return
+      }
+      // Show short error in toast, send full error to Claude
+      const shortError = errorMessage.split('\n').filter(Boolean).pop() || errorMessage
+      toast.error(shortError, {
+        action: {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Create a PR for this task. Error: "${errorMessage}". After creating, link it using: vibora current-task pr <url>. Worktree: ${worktreePath}.`
+          ),
+        },
+      })
+    }
+  }
+
+  const isPending = gitSync.isPending || gitMerge.isPending || gitPush.isPending || gitSyncParent.isPending || gitCreatePR.isPending
 
   return (
     <>
@@ -244,6 +303,17 @@ export function TaskActionsDropdown({
                 strokeWidth={2}
               />
               Commit
+            </DropdownMenuItem>
+          )}
+          {!prUrl && (
+            <DropdownMenuItem onClick={handleCreatePR} disabled={gitCreatePR.isPending}>
+              <HugeiconsIcon
+                icon={GitPullRequestIcon}
+                size={12}
+                strokeWidth={2}
+                className={gitCreatePR.isPending ? 'animate-pulse' : ''}
+              />
+              Create PR
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />

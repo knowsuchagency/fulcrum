@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight03Icon, ArrowLeft03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon, GitCommitIcon } from '@hugeicons/core-free-icons'
+import { ArrowRight03Icon, ArrowLeft03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon, GitCommitIcon, GitPullRequestIcon } from '@hugeicons/core-free-icons'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,8 +11,10 @@ import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitPush } from '@/hooks/use-git-push'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
+import { useGitCreatePR } from '@/hooks/use-git-create-pr'
 import { useUpdateTask } from '@/hooks/use-tasks'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
+import { openExternalUrl } from '@/lib/editor-url'
 import { toast } from 'sonner'
 
 interface GitActionsButtonsProps {
@@ -20,6 +22,8 @@ interface GitActionsButtonsProps {
   worktreePath: string
   baseBranch: string
   taskId: string
+  title: string
+  prUrl?: string | null
   isMobile?: boolean
   terminalId?: string
   sendInputToTerminal?: (terminalId: string, text: string) => void
@@ -30,6 +34,8 @@ export function GitActionsButtons({
   worktreePath,
   baseBranch,
   taskId,
+  title,
+  prUrl,
   isMobile,
   terminalId,
   sendInputToTerminal,
@@ -38,6 +44,7 @@ export function GitActionsButtons({
   const gitMerge = useGitMergeToMain()
   const gitPush = useGitPush()
   const gitSyncParent = useGitSyncParent()
+  const gitCreatePR = useGitCreatePR()
   const updateTask = useUpdateTask()
   const killClaude = useKillClaudeInTask()
 
@@ -147,7 +154,58 @@ export function GitActionsButtons({
     }
   }
 
-  const isPending = gitSync.isPending || gitMerge.isPending || gitPush.isPending || gitSyncParent.isPending
+  const handleCreatePR = async () => {
+    try {
+      const result = await gitCreatePR.mutateAsync({
+        worktreePath,
+        title,
+        baseBranch,
+      })
+      // Auto-link PR to task
+      updateTask.mutate({
+        taskId,
+        updates: { prUrl: result.prUrl },
+      })
+      toast.success('PR created', {
+        action: {
+          label: 'View PR',
+          onClick: () => openExternalUrl(result.prUrl),
+        },
+      })
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create PR'
+      // Check if PR already exists and we have the URL
+      const existingPrUrl = err && typeof err === 'object' && 'existingPrUrl' in err
+        ? (err as { existingPrUrl?: string }).existingPrUrl
+        : undefined
+      if (existingPrUrl) {
+        // Auto-link the existing PR
+        updateTask.mutate({
+          taskId,
+          updates: { prUrl: existingPrUrl },
+        })
+        toast.info('PR already exists', {
+          action: {
+            label: 'View PR',
+            onClick: () => openExternalUrl(existingPrUrl),
+          },
+        })
+        return
+      }
+      // Show short error in toast, send full error to Claude
+      const shortError = errorMessage.split('\n').filter(Boolean).pop() || errorMessage
+      toast.error(shortError, {
+        action: {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Create a PR for this task. Error: "${errorMessage}". After creating, link it using: vibora current-task pr <url>. Worktree: ${worktreePath}.`
+          ),
+        },
+      })
+    }
+  }
+
+  const isPending = gitSync.isPending || gitMerge.isPending || gitPush.isPending || gitSyncParent.isPending || gitCreatePR.isPending
 
   if (isMobile) {
     return (
@@ -207,6 +265,17 @@ export function GitActionsButtons({
                 strokeWidth={2}
               />
               Commit
+            </DropdownMenuItem>
+          )}
+          {!prUrl && (
+            <DropdownMenuItem onClick={handleCreatePR} disabled={gitCreatePR.isPending}>
+              <HugeiconsIcon
+                icon={GitPullRequestIcon}
+                size={12}
+                strokeWidth={2}
+                className={gitCreatePR.isPending ? 'animate-pulse' : ''}
+              />
+              Create PR
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -292,6 +361,24 @@ export function GitActionsButtons({
             icon={GitCommitIcon}
             size={12}
             strokeWidth={2}
+          />
+        </Button>
+      )}
+
+      {!prUrl && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={handleCreatePR}
+          disabled={gitCreatePR.isPending}
+          className="h-5 w-5 text-muted-foreground hover:text-foreground"
+          title="Create Pull Request"
+        >
+          <HugeiconsIcon
+            icon={GitPullRequestIcon}
+            size={12}
+            strokeWidth={2}
+            className={gitCreatePR.isPending ? 'animate-pulse' : ''}
           />
         </Button>
       )}

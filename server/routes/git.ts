@@ -932,6 +932,123 @@ app.post('/sync-parent', async (c) => {
   }
 })
 
+// POST /api/git/create-pr - Create a pull request using gh CLI
+app.post('/create-pr', async (c) => {
+  try {
+    const body = await c.req.json<{
+      worktreePath: string
+      title: string
+      baseBranch?: string
+    }>()
+
+    const { worktreePath, title, baseBranch } = body
+
+    if (!worktreePath || !title) {
+      return c.json({ error: 'Missing required fields: worktreePath, title' }, 400)
+    }
+
+    // Verify path exists
+    if (!fs.existsSync(worktreePath)) {
+      return c.json({ error: 'Worktree path does not exist' }, 404)
+    }
+
+    // Check for uncommitted changes
+    try {
+      const status = gitExec(worktreePath, 'status --porcelain')
+      if (status.trim()) {
+        return c.json({
+          error: 'Worktree has uncommitted changes. Please commit changes before creating a PR.',
+          hasUncommittedChanges: true,
+        }, 409)
+      }
+    } catch {
+      // Continue with PR creation
+    }
+
+    // Get current branch
+    let branch: string
+    try {
+      branch = gitExec(worktreePath, 'rev-parse --abbrev-ref HEAD')
+    } catch {
+      return c.json({ error: 'Failed to determine current branch' }, 500)
+    }
+
+    // Build gh pr create command
+    // Use --fill to auto-fill body from commits, title from task
+    const args = ['gh', 'pr', 'create', '--title', JSON.stringify(title), '--fill']
+    if (baseBranch) {
+      args.push('--base', baseBranch)
+    }
+
+    try {
+      const output = execSync(args.join(' '), {
+        cwd: worktreePath,
+        encoding: 'utf-8',
+        timeout: 30_000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      // gh pr create outputs the PR URL on success
+      const prUrl = output.trim()
+
+      return c.json({
+        success: true,
+        prUrl,
+        branch,
+      })
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+      const stderr = err && typeof err === 'object' && 'stderr' in err
+        ? String(err.stderr).trim()
+        : ''
+
+      // Parse common errors
+      if (stderr.includes('already exists') || errorMsg.includes('already exists')) {
+        // Try to get the existing PR URL
+        try {
+          const prViewOutput = execSync('gh pr view --json url -q .url', {
+            cwd: worktreePath,
+            encoding: 'utf-8',
+            timeout: 10_000,
+            stdio: ['pipe', 'pipe', 'pipe'],
+          })
+          const existingPrUrl = prViewOutput.trim()
+          return c.json({
+            error: 'A pull request already exists for this branch',
+            prAlreadyExists: true,
+            existingPrUrl,
+          }, 409)
+        } catch {
+          return c.json({
+            error: 'A pull request already exists for this branch',
+            prAlreadyExists: true,
+          }, 409)
+        }
+      }
+
+      if (stderr.includes('not pushed') || errorMsg.includes('not pushed') ||
+          stderr.includes('no upstream') || errorMsg.includes('no upstream')) {
+        return c.json({
+          error: 'Branch has not been pushed to remote. Please push first.',
+          branchNotPushed: true,
+        }, 409)
+      }
+
+      if (stderr.includes('gh auth login') || errorMsg.includes('gh auth login')) {
+        return c.json({
+          error: 'GitHub CLI not authenticated. Run `gh auth login` first.',
+          notAuthenticated: true,
+        }, 401)
+      }
+
+      return c.json({
+        error: stderr || errorMsg || 'Failed to create PR',
+      }, 500)
+    }
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to create PR' }, 500)
+  }
+})
+
 // GET /api/git/remote?path=/path/to/repo - Get git remote URL
 app.get('/remote', (c) => {
   let repoPath = c.req.query('path')

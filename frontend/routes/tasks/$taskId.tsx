@@ -14,6 +14,7 @@ import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitPush } from '@/hooks/use-git-push'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
+import { useGitCreatePR } from '@/hooks/use-git-create-pr'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
 import { useEditorApp, useEditorHost, useEditorSshPort, usePort } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
@@ -112,6 +113,7 @@ function TaskView() {
   const gitMerge = useGitMergeToMain()
   const gitPush = useGitPush()
   const gitSyncParent = useGitSyncParent()
+  const gitCreatePR = useGitCreatePR()
   const killClaude = useKillClaudeInTask()
   const { data: editorApp } = useEditorApp()
   const { data: editorHost } = useEditorHost()
@@ -320,13 +322,58 @@ function TaskView() {
     sendInputToTerminal(taskTerminal.id, 'commit')
   }
 
-  // Send create PR prompt to Claude Code
-  const handleCreatePR = () => {
-    if (!taskTerminal) return
-    sendInputToTerminal(
-      taskTerminal.id,
-      'Create a PR for this task and link it using: vibora current-task pr <url>'
-    )
+  // Create PR programmatically, fall back to Claude Code on error
+  const handleCreatePR = async () => {
+    if (!task?.worktreePath) return
+
+    try {
+      const result = await gitCreatePR.mutateAsync({
+        worktreePath: task.worktreePath,
+        title: task.title,
+        baseBranch: task.baseBranch,
+      })
+      // Auto-link PR to task
+      updateTask.mutate({
+        taskId: task.id,
+        updates: { prUrl: result.prUrl },
+      })
+      toast.success('PR created', {
+        action: {
+          label: 'View PR',
+          onClick: () => openExternalUrl(result.prUrl),
+        },
+      })
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create PR'
+      // Check if PR already exists and we have the URL
+      const existingPrUrl = err && typeof err === 'object' && 'existingPrUrl' in err
+        ? (err as { existingPrUrl?: string }).existingPrUrl
+        : undefined
+      if (existingPrUrl) {
+        // Auto-link the existing PR
+        updateTask.mutate({
+          taskId: task.id,
+          updates: { prUrl: existingPrUrl },
+        })
+        toast.info('PR already exists', {
+          action: {
+            label: 'View PR',
+            onClick: () => openExternalUrl(existingPrUrl),
+          },
+        })
+        return
+      }
+      // Show short error in toast, send full error to Claude
+      const shortError = errorMessage.split('\n').filter(Boolean).pop() || errorMessage
+      toast.error(shortError, {
+        action: {
+          label: 'Resolve with Claude',
+          onClick: () => resolveWithClaude(
+            `Create a PR for this task. Error: "${errorMessage}". After creating, link it using: vibora current-task pr <url>. Worktree: ${task.worktreePath}.`
+          ),
+        },
+      })
+    }
   }
 
   const handleOpenEditor = () => {
@@ -448,8 +495,13 @@ function TaskView() {
                   Commit
                 </DropdownMenuItem>
                 {!task.prUrl && (
-                  <DropdownMenuItem onClick={handleCreatePR} disabled={!taskTerminal}>
-                    <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
+                  <DropdownMenuItem onClick={handleCreatePR} disabled={gitCreatePR.isPending}>
+                    <HugeiconsIcon
+                      icon={GitPullRequestIcon}
+                      size={14}
+                      strokeWidth={2}
+                      className={gitCreatePR.isPending ? 'animate-pulse' : ''}
+                    />
                     Create PR
                   </DropdownMenuItem>
                 )}
@@ -715,11 +767,16 @@ function TaskView() {
               variant="ghost"
               size="icon-sm"
               onClick={handleCreatePR}
-              disabled={!taskTerminal}
+              disabled={gitCreatePR.isPending}
               className="text-muted-foreground hover:text-foreground"
               title="Create Pull Request"
             >
-              <HugeiconsIcon icon={GitPullRequestIcon} size={16} strokeWidth={2} />
+              <HugeiconsIcon
+                icon={GitPullRequestIcon}
+                size={16}
+                strokeWidth={2}
+                className={gitCreatePR.isPending ? 'animate-pulse' : ''}
+              />
             </Button>
           )}
 
