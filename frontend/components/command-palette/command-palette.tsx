@@ -248,9 +248,35 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
           e.preventDefault()
           setOpen(false)
           break
+        // Number shortcuts (no modifier needed when palette is open)
+        case '1':
+          e.preventDefault()
+          navigate({ to: '/tasks' })
+          setOpen(false)
+          break
+        case '2':
+          e.preventDefault()
+          navigate({ to: '/terminals' })
+          setOpen(false)
+          break
+        case '3':
+          e.preventDefault()
+          navigate({ to: '/repositories' })
+          setOpen(false)
+          break
+        case '4':
+          e.preventDefault()
+          navigate({ to: '/review' })
+          setOpen(false)
+          break
+        case '5':
+          e.preventDefault()
+          navigate({ to: '/monitoring' })
+          setOpen(false)
+          break
       }
     },
-    [flattenedCommands, selectedIndex, setOpen]
+    [flattenedCommands, selectedIndex, setOpen, navigate]
   )
 
   // Reset state when dialog opens/closes
@@ -262,6 +288,27 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [open])
+
+  // Listen for desktop app messages (for Cmd+K, Cmd+J, Cmd+/ from native menu)
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'vibora:action') {
+        switch (event.data.action) {
+          case 'openCommandPalette':
+            setOpen(true)
+            break
+          case 'openNewTask':
+            onNewTask?.()
+            break
+          case 'showShortcuts':
+            onShowShortcuts?.()
+            break
+        }
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [setOpen, onNewTask, onShowShortcuts])
 
   // Track current index for rendering
   let currentIndex = 0

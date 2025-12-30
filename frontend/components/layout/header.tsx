@@ -117,6 +117,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
           size="icon-sm"
           onClick={onOpenCommandPalette}
           title={t('header.commandPalette', { shortcut: '⌘K' })}
+          className="hidden sm:inline-flex"
         >
           <HugeiconsIcon icon={BrowserIcon} size={16} strokeWidth={2} />
         </Button>

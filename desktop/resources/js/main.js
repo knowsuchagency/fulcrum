@@ -345,6 +345,47 @@ window.zoomOut = () => setZoom(currentZoom - 0.1);
 window.zoomReset = () => setZoom(1.2);
 
 /**
+ * Navigate to a path in the Vibora app
+ * Updates the iframe URL, preserving zoom level
+ */
+function navigateTo(path) {
+  const frame = document.getElementById('vibora-frame');
+  if (frame && serverUrl) {
+    const url = new URL(serverUrl);
+    // Parse path and query
+    const [pathname, search] = path.split('?');
+    url.pathname = pathname;
+    // Preserve zoom
+    if (currentZoom !== 1.0) {
+      url.searchParams.set('zoom', currentZoom.toString());
+    }
+    // Add any query params from the path
+    if (search) {
+      const params = new URLSearchParams(search);
+      for (const [key, value] of params) {
+        url.searchParams.set(key, value);
+      }
+    }
+    frame.src = url.toString();
+    // Update route tracking
+    currentRoute = { pathname, search: search ? `?${search}` : '' };
+    log.debug('Navigated to', { path, url: url.toString() });
+  }
+}
+
+/**
+ * Send a message to the Vibora app via postMessage
+ * Used for triggering UI actions like opening modals
+ */
+function postMessageToApp(type, data = {}) {
+  const frame = document.getElementById('vibora-frame');
+  if (frame?.contentWindow) {
+    frame.contentWindow.postMessage({ type, ...data }, '*');
+    log.debug('Posted message to app', { type, data });
+  }
+}
+
+/**
  * Load the Vibora app in an iframe
  */
 async function loadViboraApp(url) {
@@ -814,15 +855,46 @@ async function init() {
             { id: 'zoomOut', text: 'Zoom Out', shortcut: '-' },
             { id: 'zoomReset', text: 'Actual Size', shortcut: '0' }
           ]
+        },
+        {
+          id: 'go',
+          text: 'Go',
+          menuItems: [
+            { id: 'goTasks', text: 'Tasks', shortcut: '1' },
+            { id: 'goTerminals', text: 'Terminals', shortcut: '2' },
+            { id: 'goTaskTerminals', text: 'Task Terminals', shortcut: 'i' },
+            { id: 'goRepositories', text: 'Repositories', shortcut: '3' },
+            { id: 'goReview', text: 'Review', shortcut: '4' },
+            { id: 'goMonitoring', text: 'Monitoring', shortcut: '5' },
+            { text: '-' },
+            { id: 'goSettings', text: 'Settings…', shortcut: ',' },
+            { text: '-' },
+            { id: 'commandPalette', text: 'Command Palette', shortcut: 'k' },
+            { id: 'newTask', text: 'New Task', shortcut: 'j' },
+            { id: 'showHelp', text: 'Keyboard Shortcuts', shortcut: '/' }
+          ]
         }
       ]);
 
-      // Handle custom menu actions (zoom)
+      // Handle custom menu actions (zoom, navigation, actions)
       Neutralino.events.on('mainMenuItemClicked', (evt) => {
         switch (evt.detail.id) {
+          // Zoom
           case 'zoomIn': zoomIn(); break;
           case 'zoomOut': zoomOut(); break;
           case 'zoomReset': zoomReset(); break;
+          // Navigation
+          case 'goTasks': navigateTo('/tasks'); break;
+          case 'goTerminals': navigateTo('/terminals'); break;
+          case 'goTaskTerminals': navigateTo('/terminals?tab=all-tasks'); break;
+          case 'goRepositories': navigateTo('/repositories'); break;
+          case 'goReview': navigateTo('/review'); break;
+          case 'goMonitoring': navigateTo('/monitoring'); break;
+          case 'goSettings': navigateTo('/settings'); break;
+          // Actions (via postMessage to React app)
+          case 'commandPalette': postMessageToApp('vibora:action', { action: 'openCommandPalette' }); break;
+          case 'newTask': postMessageToApp('vibora:action', { action: 'openNewTask' }); break;
+          case 'showHelp': postMessageToApp('vibora:action', { action: 'showShortcuts' }); break;
         }
       });
 
