@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { defineCommand, runMain } from 'citty'
 import { handleCurrentTaskCommand } from './commands/current-task'
 import { handleMcpCommand } from './commands/mcp'
 import { handleTasksCommand } from './commands/tasks'
@@ -14,242 +15,781 @@ import { handleNotificationsCommand } from './commands/notifications'
 import { handleNotifyCommand } from './commands/notify'
 import { handleDevCommand } from './commands/dev'
 import { handleDoctorCommand } from './commands/doctor'
-import { outputError, setPrettyOutput } from './utils/output'
-import { CliError, ExitCodes } from './utils/errors'
+import { outputError, setJsonOutput } from './utils/output'
+import { CliError } from './utils/errors'
+import pkg from '../../package.json'
 
-const VERSION = '0.1.0'
+const VERSION = pkg.version
 
-/**
- * Short flag aliases (e.g., -y -> --yes)
- */
-const FLAG_ALIASES: Record<string, string> = {
-  y: 'yes',
+// Global args shared across commands
+const globalArgs = {
+  port: {
+    type: 'string' as const,
+    description: 'Server port (default: 7777)',
+  },
+  url: {
+    type: 'string' as const,
+    description: 'Override full server URL',
+  },
+  json: {
+    type: 'boolean' as const,
+    description: 'Output as JSON',
+  },
 }
 
-/**
- * Parse command line arguments into flags and positional args.
- * Supports: --flag=value, --flag value, --flag (boolean), -f (short flags)
- */
-function parseArgs(args: string[]): {
-  positional: string[]
-  flags: Record<string, string>
-} {
-  const positional: string[] = []
+// Helper to extract flags from Citty args
+function toFlags(args: Record<string, unknown>): Record<string, string> {
   const flags: Record<string, string> = {}
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
-
-    if (arg.startsWith('--')) {
-      const eqIndex = arg.indexOf('=')
-      if (eqIndex !== -1) {
-        // --flag=value
-        const key = arg.slice(2, eqIndex)
-        const value = arg.slice(eqIndex + 1)
-        flags[key] = value
-      } else {
-        // --flag or --flag value
-        const key = arg.slice(2)
-        const nextArg = args[i + 1]
-        if (nextArg && !nextArg.startsWith('-')) {
-          flags[key] = nextArg
-          i++
-        } else {
-          flags[key] = 'true'
-        }
-      }
-    } else if (arg.startsWith('-') && arg.length === 2) {
-      // Short flag like -y
-      const shortKey = arg.slice(1)
-      const longKey = FLAG_ALIASES[shortKey] || shortKey
-      flags[longKey] = 'true'
-    } else {
-      positional.push(arg)
+  for (const [key, value] of Object.entries(args)) {
+    if (value !== undefined && value !== false) {
+      flags[key] = String(value)
     }
   }
-
-  return { positional, flags }
+  return flags
 }
 
-async function main() {
-  // Use process.argv for Node compatibility (bunx runs with node shebang)
-  const args = process.argv.slice(2)
-  const { positional, flags } = parseArgs(args)
+// ============================================================================
+// Current Task Commands
+// ============================================================================
 
-  // Handle global flags
-  if (flags.pretty) {
-    setPrettyOutput(true)
-  }
+const currentTaskCommand = defineCommand({
+  meta: {
+    name: 'current-task',
+    description: 'Manage the task for the current worktree',
+  },
+  args: {
+    ...globalArgs,
+    action: {
+      type: 'positional' as const,
+      description: 'Action: pr, linear, in-progress, review, done, cancel',
+      required: false,
+    },
+    value: {
+      type: 'positional' as const,
+      description: 'Value for the action (URL for pr/linear)',
+      required: false,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    const action = args.action as string | undefined
+    const value = args.value as string | undefined
+    const positional = value ? [value] : []
+    await handleCurrentTaskCommand(action, positional, toFlags(args))
+  },
+})
 
-  const [command, ...rest] = positional
+// ============================================================================
+// Tasks Commands
+// ============================================================================
 
-  // Handle --version
-  if (flags.version || command === '--version') {
-    console.log(JSON.stringify({ success: true, data: { version: VERSION } }))
-    process.exit(0)
-  }
+const tasksListCommand = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List all tasks',
+  },
+  args: {
+    ...globalArgs,
+    status: {
+      type: 'string' as const,
+      description: 'Filter by status (IN_PROGRESS, IN_REVIEW, CANCELED)',
+    },
+    repo: {
+      type: 'string' as const,
+      description: 'Filter by repository name or path',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('list', [], toFlags(args))
+  },
+})
 
-  // Handle --help or no command
-  if (flags.help || command === '--help' || !command) {
-    console.log(`vibora CLI v${VERSION}
+const tasksGetCommand = defineCommand({
+  meta: {
+    name: 'get',
+    description: 'Get a task by ID',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('get', [args.id as string], toFlags(args))
+  },
+})
 
-Usage: vibora <command> [options]
+const tasksCreateCommand = defineCommand({
+  meta: {
+    name: 'create',
+    description: 'Create a new task',
+  },
+  args: {
+    ...globalArgs,
+    title: {
+      type: 'string' as const,
+      description: 'Task title',
+      required: true,
+    },
+    repo: {
+      type: 'string' as const,
+      description: 'Repository path',
+      required: true,
+    },
+    'base-branch': {
+      type: 'string' as const,
+      description: 'Base branch (default: main)',
+    },
+    branch: {
+      type: 'string' as const,
+      description: 'Branch name',
+    },
+    description: {
+      type: 'string' as const,
+      description: 'Task description',
+    },
+    'repo-name': {
+      type: 'string' as const,
+      description: 'Repository name (default: basename of repo path)',
+    },
+    'worktree-path': {
+      type: 'string' as const,
+      description: 'Worktree path',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('create', [], toFlags(args))
+  },
+})
 
-Commands:
-  current-task              Get task for current worktree (use inside a Vibora task worktree)
-  current-task pr <url>     Associate a PR with current task
-  current-task linear <url> Link a Linear ticket to current task
-  current-task in-progress  Mark current task as IN_PROGRESS
-  current-task review       Mark current task as IN_REVIEW
-  current-task done         Mark current task as DONE
-  current-task cancel       Mark current task as CANCELED
+const tasksUpdateCommand = defineCommand({
+  meta: {
+    name: 'update',
+    description: 'Update a task',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+    title: {
+      type: 'string' as const,
+      description: 'New title',
+    },
+    description: {
+      type: 'string' as const,
+      description: 'New description',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('update', [args.id as string], toFlags(args))
+  },
+})
 
-  tasks list                List all tasks
-  tasks get <id>            Get a task by ID
-  tasks create              Create a new task
-  tasks update <id>         Update a task
-  tasks move <id>           Move task to different status
-  tasks delete <id>         Delete a task
+const tasksMoveCommand = defineCommand({
+  meta: {
+    name: 'move',
+    description: 'Move a task to a different status',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+    status: {
+      type: 'string' as const,
+      description: 'New status (IN_PROGRESS, IN_REVIEW, CANCELED)',
+      required: true,
+    },
+    position: {
+      type: 'string' as const,
+      description: 'Position in the column',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('move', [args.id as string], toFlags(args))
+  },
+})
 
-  up [-y] [--host] [--debug]
-                            Start Vibora server (daemon)
-                            Checks/installs dependencies: bun, dtach, claude, uv
-  down                      Stop Vibora server
-  status                    Check if server is running
-  doctor [--json]           Check all dependencies and show versions
+const tasksDeleteCommand = defineCommand({
+  meta: {
+    name: 'delete',
+    description: 'Delete a task',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+    'delete-worktree': {
+      type: 'boolean' as const,
+      description: 'Also delete the linked worktree',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('delete', [args.id as string], toFlags(args))
+  },
+})
 
-  git status                Get git status for worktree
-  git diff                  Get git diff for worktree
-  git branches              List branches in a repo
+const tasksCommand = defineCommand({
+  meta: {
+    name: 'tasks',
+    description: 'Manage tasks',
+  },
+  subCommands: {
+    list: tasksListCommand,
+    get: tasksGetCommand,
+    create: tasksCreateCommand,
+    update: tasksUpdateCommand,
+    move: tasksMoveCommand,
+    delete: tasksDeleteCommand,
+  },
+})
 
-  worktrees list            List all worktrees
-  worktrees delete          Delete a worktree
+// ============================================================================
+// Git Commands
+// ============================================================================
 
-  config get <key>          Get a config value
-  config set <key> <value>  Set a config value
+const gitStatusCommand = defineCommand({
+  meta: {
+    name: 'status',
+    description: 'Get git status for a worktree',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'Repository path (default: current directory)',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleGitCommand('status', toFlags(args))
+  },
+})
 
-  notifications             Show notification settings
-  notifications enable      Enable notifications
-  notifications disable     Disable notifications
-  notifications test <ch>   Test a channel (sound, slack, discord, pushover)
-  notifications set <ch> <key> <value>
-                            Set a channel config (e.g., slack webhookUrl <url>)
+const gitDiffCommand = defineCommand({
+  meta: {
+    name: 'diff',
+    description: 'Get git diff for a worktree',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'Repository path (default: current directory)',
+    },
+    staged: {
+      type: 'boolean' as const,
+      description: 'Show staged changes only',
+    },
+    'ignore-whitespace': {
+      type: 'boolean' as const,
+      description: 'Ignore whitespace changes',
+    },
+    'include-untracked': {
+      type: 'boolean' as const,
+      description: 'Include untracked files',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleGitCommand('diff', toFlags(args))
+  },
+})
 
-  notify <title> [message]  Send a notification to all enabled channels
+const gitBranchesCommand = defineCommand({
+  meta: {
+    name: 'branches',
+    description: 'List branches in a repository',
+  },
+  args: {
+    ...globalArgs,
+    repo: {
+      type: 'string' as const,
+      description: 'Repository path',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleGitCommand('branches', toFlags(args))
+  },
+})
 
-  health                    Check server health
+const gitCommand = defineCommand({
+  meta: {
+    name: 'git',
+    description: 'Git operations',
+  },
+  subCommands: {
+    status: gitStatusCommand,
+    diff: gitDiffCommand,
+    branches: gitBranchesCommand,
+  },
+})
 
-  dev restart               Build and restart Vibora (developer mode)
-  dev status                Check if developer mode is enabled
+// ============================================================================
+// Worktrees Commands
+// ============================================================================
 
-  mcp                       Start MCP server (stdio transport)
+const worktreesListCommand = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List all worktrees',
+  },
+  args: {
+    ...globalArgs,
+    repo: {
+      type: 'string' as const,
+      description: 'Repository path',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleWorktreesCommand('list', toFlags(args))
+  },
+})
 
-Global Options:
-  --port=<port>     Server port (default: 7777)
-  --url=<url>       Override full server URL
-  --pretty          Pretty-print JSON output
-  -y, --yes         Auto-confirm prompts (for CI/automation)
-  --version         Show version
-  --help            Show this help
+const worktreesDeleteCommand = defineCommand({
+  meta: {
+    name: 'delete',
+    description: 'Delete a worktree',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'Worktree path',
+      required: true,
+    },
+    force: {
+      type: 'boolean' as const,
+      description: 'Force deletion',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleWorktreesCommand('delete', toFlags(args))
+  },
+})
 
-Examples:
-  vibora current-task                    # Get current task info
-  vibora current-task review             # Mark current task as IN_REVIEW
-  vibora tasks list --status=IN_PROGRESS # List in-progress tasks
-  vibora tasks create --title="My Task" --repo=/path/to/repo
-`)
-    process.exit(0)
-  }
+const worktreesCommand = defineCommand({
+  meta: {
+    name: 'worktrees',
+    description: 'Manage git worktrees',
+  },
+  subCommands: {
+    list: worktreesListCommand,
+    delete: worktreesDeleteCommand,
+  },
+})
 
-  try {
-    switch (command) {
-      case 'current-task': {
-        const [action, ...actionRest] = rest
-        await handleCurrentTaskCommand(action, actionRest, flags)
-        break
-      }
+// ============================================================================
+// Config Commands
+// ============================================================================
 
-      case 'tasks': {
-        const [action, ...taskRest] = rest
-        await handleTasksCommand(action, taskRest, flags)
-        break
-      }
+const configListCommand = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List all config values',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleConfigCommand('list', [], toFlags(args))
+  },
+})
 
-      case 'up': {
-        await handleUpCommand(flags)
-        break
-      }
+const configGetCommand = defineCommand({
+  meta: {
+    name: 'get',
+    description: 'Get a config value',
+  },
+  args: {
+    ...globalArgs,
+    key: {
+      type: 'positional' as const,
+      description: 'Config key',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleConfigCommand('get', [args.key as string], toFlags(args))
+  },
+})
 
-      case 'down': {
-        await handleDownCommand()
-        break
-      }
+const configSetCommand = defineCommand({
+  meta: {
+    name: 'set',
+    description: 'Set a config value',
+  },
+  args: {
+    ...globalArgs,
+    key: {
+      type: 'positional' as const,
+      description: 'Config key',
+      required: true,
+    },
+    value: {
+      type: 'positional' as const,
+      description: 'Config value',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleConfigCommand('set', [args.key as string, args.value as string], toFlags(args))
+  },
+})
 
-      case 'status': {
-        await handleStatusCommand(flags)
-        break
-      }
+const configResetCommand = defineCommand({
+  meta: {
+    name: 'reset',
+    description: 'Reset a config value to default',
+  },
+  args: {
+    ...globalArgs,
+    key: {
+      type: 'positional' as const,
+      description: 'Config key',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleConfigCommand('reset', [args.key as string], toFlags(args))
+  },
+})
 
-      case 'git': {
-        const [action] = rest
-        await handleGitCommand(action, flags)
-        break
-      }
+const configCommand = defineCommand({
+  meta: {
+    name: 'config',
+    description: 'Manage configuration',
+  },
+  subCommands: {
+    list: configListCommand,
+    get: configGetCommand,
+    set: configSetCommand,
+    reset: configResetCommand,
+  },
+})
 
-      case 'worktrees': {
-        const [action] = rest
-        await handleWorktreesCommand(action, flags)
-        break
-      }
+// ============================================================================
+// Notifications Commands
+// ============================================================================
 
-      case 'config': {
-        const [action, ...configRest] = rest
-        await handleConfigCommand(action, configRest, flags)
-        break
-      }
+const notificationsStatusCommand = defineCommand({
+  meta: {
+    name: 'status',
+    description: 'Show notification settings',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleNotificationsCommand('status', [], toFlags(args))
+  },
+})
 
-      case 'health': {
-        await handleHealthCommand(flags)
-        break
-      }
+const notificationsEnableCommand = defineCommand({
+  meta: {
+    name: 'enable',
+    description: 'Enable notifications',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleNotificationsCommand('enable', [], toFlags(args))
+  },
+})
 
-      case 'doctor': {
-        await handleDoctorCommand(flags)
-        break
-      }
+const notificationsDisableCommand = defineCommand({
+  meta: {
+    name: 'disable',
+    description: 'Disable notifications',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleNotificationsCommand('disable', [], toFlags(args))
+  },
+})
 
-      case 'notifications': {
-        const [action, ...notificationsRest] = rest
-        await handleNotificationsCommand(action, notificationsRest, flags)
-        break
-      }
+const notificationsTestCommand = defineCommand({
+  meta: {
+    name: 'test',
+    description: 'Test a notification channel',
+  },
+  args: {
+    ...globalArgs,
+    channel: {
+      type: 'positional' as const,
+      description: 'Channel to test (sound, slack, discord, pushover)',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleNotificationsCommand('test', [args.channel as string], toFlags(args))
+  },
+})
 
-      case 'notify': {
-        await handleNotifyCommand(rest, flags)
-        break
-      }
+const notificationsSetCommand = defineCommand({
+  meta: {
+    name: 'set',
+    description: 'Set a notification channel config',
+  },
+  args: {
+    ...globalArgs,
+    channel: {
+      type: 'positional' as const,
+      description: 'Channel (sound, slack, discord, pushover)',
+      required: true,
+    },
+    key: {
+      type: 'positional' as const,
+      description: 'Config key',
+      required: true,
+    },
+    value: {
+      type: 'positional' as const,
+      description: 'Config value',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleNotificationsCommand(
+      'set',
+      [args.channel as string, args.key as string, args.value as string],
+      toFlags(args)
+    )
+  },
+})
 
-      case 'dev': {
-        const [action] = rest
-        await handleDevCommand(action, flags)
-        break
-      }
+const notificationsCommand = defineCommand({
+  meta: {
+    name: 'notifications',
+    description: 'Manage notification settings',
+  },
+  args: globalArgs,
+  subCommands: {
+    status: notificationsStatusCommand,
+    enable: notificationsEnableCommand,
+    disable: notificationsDisableCommand,
+    test: notificationsTestCommand,
+    set: notificationsSetCommand,
+  },
+  async run({ args }) {
+    // Default to status when no subcommand
+    if (args.json) setJsonOutput(true)
+    await handleNotificationsCommand(undefined, [], toFlags(args))
+  },
+})
 
-      case 'mcp': {
-        await handleMcpCommand(flags)
-        break
-      }
+// ============================================================================
+// Simple Commands (no subcommands)
+// ============================================================================
 
-      default:
-        throw new CliError('UNKNOWN_COMMAND', `Unknown command: ${command}`, ExitCodes.INVALID_ARGS)
-    }
-  } catch (err) {
-    if (err instanceof CliError) {
-      outputError(err)
-    }
-    // Re-throw unexpected errors
+const upCommand = defineCommand({
+  meta: {
+    name: 'up',
+    description: 'Start Vibora server (daemon)',
+  },
+  args: {
+    ...globalArgs,
+    yes: {
+      type: 'boolean' as const,
+      alias: 'y',
+      description: 'Auto-confirm prompts (for CI/automation)',
+    },
+    host: {
+      type: 'boolean' as const,
+      description: 'Bind to all interfaces',
+    },
+    debug: {
+      type: 'boolean' as const,
+      description: 'Enable debug logging',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleUpCommand(toFlags(args))
+  },
+})
+
+const downCommand = defineCommand({
+  meta: {
+    name: 'down',
+    description: 'Stop Vibora server',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleDownCommand()
+  },
+})
+
+const statusCommand = defineCommand({
+  meta: {
+    name: 'status',
+    description: 'Check if server is running',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleStatusCommand(toFlags(args))
+  },
+})
+
+const doctorCommand = defineCommand({
+  meta: {
+    name: 'doctor',
+    description: 'Check all dependencies and show versions',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleDoctorCommand(toFlags(args))
+  },
+})
+
+const healthCommand = defineCommand({
+  meta: {
+    name: 'health',
+    description: 'Check server health',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleHealthCommand(toFlags(args))
+  },
+})
+
+const notifyCommand = defineCommand({
+  meta: {
+    name: 'notify',
+    description: 'Send a notification to all enabled channels',
+  },
+  args: {
+    ...globalArgs,
+    title: {
+      type: 'positional' as const,
+      description: 'Notification title',
+      required: false,
+    },
+    message: {
+      type: 'positional' as const,
+      description: 'Notification message',
+      required: false,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    // Collect positional args, handling title from flag too
+    const positional: string[] = []
+    if (args.title) positional.push(args.title as string)
+    if (args.message) positional.push(args.message as string)
+    await handleNotifyCommand(positional, toFlags(args))
+  },
+})
+
+const devRestartCommand = defineCommand({
+  meta: {
+    name: 'restart',
+    description: 'Build and restart Vibora (developer mode)',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleDevCommand('restart', toFlags(args))
+  },
+})
+
+const devStatusCommand = defineCommand({
+  meta: {
+    name: 'status',
+    description: 'Check if developer mode is enabled',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleDevCommand('status', toFlags(args))
+  },
+})
+
+const devCommand = defineCommand({
+  meta: {
+    name: 'dev',
+    description: 'Developer mode commands',
+  },
+  subCommands: {
+    restart: devRestartCommand,
+    status: devStatusCommand,
+  },
+})
+
+const mcpCommand = defineCommand({
+  meta: {
+    name: 'mcp',
+    description: 'Start MCP server (stdio transport)',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleMcpCommand(toFlags(args))
+  },
+})
+
+// ============================================================================
+// Main Command
+// ============================================================================
+
+const main = defineCommand({
+  meta: {
+    name: 'vibora',
+    version: VERSION,
+    description: 'vibora CLI - Terminal-first AI agent orchestration',
+  },
+  args: globalArgs,
+  subCommands: {
+    'current-task': currentTaskCommand,
+    tasks: tasksCommand,
+    up: upCommand,
+    down: downCommand,
+    status: statusCommand,
+    doctor: doctorCommand,
+    git: gitCommand,
+    worktrees: worktreesCommand,
+    config: configCommand,
+    health: healthCommand,
+    notifications: notificationsCommand,
+    notify: notifyCommand,
+    dev: devCommand,
+    mcp: mcpCommand,
+  },
+})
+
+runMain(main).catch((err) => {
+  if (err instanceof CliError) {
+    outputError(err)
+  } else {
     throw err
   }
-}
-
-main()
+})

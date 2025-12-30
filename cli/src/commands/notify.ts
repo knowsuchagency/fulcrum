@@ -1,5 +1,5 @@
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
 export async function handleNotifyCommand(
@@ -20,5 +20,11 @@ export async function handleNotifyCommand(
   }
 
   const result = await client.sendNotification(title, message || title)
-  output(result)
+  if (isJsonOutput()) {
+    output(result)
+  } else {
+    const successCount = result.results.filter((r) => r.success).length
+    const totalCount = result.results.length
+    console.log(`Notification sent to ${successCount}/${totalCount} channels`)
+  }
 }

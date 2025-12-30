@@ -1,5 +1,5 @@
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
 export async function handleConfigCommand(
@@ -10,13 +10,32 @@ export async function handleConfigCommand(
   const client = new ViboraClient(flags.url, flags.port)
 
   switch (action) {
+    case 'list': {
+      const config = await client.getAllConfig()
+      if (isJsonOutput()) {
+        output(config)
+      } else {
+        console.log('Configuration:')
+        for (const [key, value] of Object.entries(config)) {
+          const displayValue = value === null ? '(not set)' : value
+          console.log(`  ${key}: ${displayValue}`)
+        }
+      }
+      break
+    }
+
     case 'get': {
       const [key] = positional
       if (!key) {
         throw new CliError('MISSING_KEY', 'Config key is required', ExitCodes.INVALID_ARGS)
       }
       const config = await client.getConfig(key)
-      output(config)
+      if (isJsonOutput()) {
+        output(config)
+      } else {
+        const value = config.value === null ? '(not set)' : config.value
+        console.log(`${key}: ${value}`)
+      }
       break
     }
 
@@ -31,7 +50,11 @@ export async function handleConfigCommand(
       // Try to parse as number if it looks like one
       const parsedValue = /^\d+$/.test(value) ? parseInt(value, 10) : value
       const config = await client.setConfig(key, parsedValue)
-      output(config)
+      if (isJsonOutput()) {
+        output(config)
+      } else {
+        console.log(`Set ${key} = ${config.value}`)
+      }
       break
     }
 
@@ -41,14 +64,18 @@ export async function handleConfigCommand(
         throw new CliError('MISSING_KEY', 'Config key is required', ExitCodes.INVALID_ARGS)
       }
       const config = await client.resetConfig(key)
-      output(config)
+      if (isJsonOutput()) {
+        output(config)
+      } else {
+        console.log(`Reset ${key} to default: ${config.value}`)
+      }
       break
     }
 
     default:
       throw new CliError(
         'UNKNOWN_ACTION',
-        `Unknown action: ${action}. Valid: get, set, reset`,
+        `Unknown action: ${action}. Valid: list, get, set, reset`,
         ExitCodes.INVALID_ARGS
       )
   }

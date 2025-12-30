@@ -1,5 +1,5 @@
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
 export async function handleGitCommand(
@@ -12,7 +12,19 @@ export async function handleGitCommand(
     case 'status': {
       const path = flags.path || process.cwd()
       const status = await client.getStatus(path)
-      output(status)
+      if (isJsonOutput()) {
+        output(status)
+      } else {
+        console.log(`Branch: ${status.branch}`)
+        if (status.ahead) console.log(`  Ahead: ${status.ahead}`)
+        if (status.behind) console.log(`  Behind: ${status.behind}`)
+        if (status.staged?.length) console.log(`  Staged: ${status.staged.length} files`)
+        if (status.modified?.length) console.log(`  Modified: ${status.modified.length} files`)
+        if (status.untracked?.length) console.log(`  Untracked: ${status.untracked.length} files`)
+        if (!status.staged?.length && !status.modified?.length && !status.untracked?.length) {
+          console.log('  Working tree clean')
+        }
+      }
       break
     }
 
@@ -23,7 +35,12 @@ export async function handleGitCommand(
         ignoreWhitespace: flags['ignore-whitespace'] === 'true',
         includeUntracked: flags['include-untracked'] === 'true',
       })
-      output(diff)
+      if (isJsonOutput()) {
+        output(diff)
+      } else {
+        // For diff, just output the raw diff text
+        console.log(diff.diff || 'No changes')
+      }
       break
     }
 
@@ -33,7 +50,14 @@ export async function handleGitCommand(
         throw new CliError('MISSING_REPO', '--repo is required', ExitCodes.INVALID_ARGS)
       }
       const branches = await client.getBranches(repo)
-      output(branches)
+      if (isJsonOutput()) {
+        output(branches)
+      } else {
+        for (const branch of branches) {
+          const current = branch.current ? '* ' : '  '
+          console.log(`${current}${branch.name}`)
+        }
+      }
       break
     }
 

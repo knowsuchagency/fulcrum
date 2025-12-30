@@ -1,4 +1,4 @@
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import { readPid, removePid, isProcessRunning } from '../utils/process'
 
@@ -16,7 +16,11 @@ export async function handleDownCommand() {
   if (!isProcessRunning(pid)) {
     // Process not running, just clean up PID file
     removePid()
-    output({ stopped: true, pid, wasRunning: false })
+    if (isJsonOutput()) {
+      output({ stopped: true, pid, wasRunning: false })
+    } else {
+      console.log(`Vibora was not running (stale PID file cleaned up)`)
+    }
     return
   }
 
@@ -50,5 +54,9 @@ export async function handleDownCommand() {
   // Clean up PID file
   removePid()
 
-  output({ stopped: true, pid, wasRunning: true })
+  if (isJsonOutput()) {
+    output({ stopped: true, pid, wasRunning: true })
+  } else {
+    console.log(`Vibora stopped (PID: ${pid})`)
+  }
 }

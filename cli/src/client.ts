@@ -167,6 +167,10 @@ export class ViboraClient {
   }
 
   // Config
+  async getAllConfig(): Promise<Record<string, unknown>> {
+    return this.fetch('/api/config')
+  }
+
   async getConfig(key: string): Promise<ConfigResponse> {
     return this.fetch(`/api/config/${key}`)
   }

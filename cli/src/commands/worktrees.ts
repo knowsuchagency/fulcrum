@@ -1,5 +1,5 @@
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
 export async function handleWorktreesCommand(
@@ -11,7 +11,19 @@ export async function handleWorktreesCommand(
   switch (action) {
     case 'list': {
       const worktrees = await client.listWorktrees()
-      output(worktrees)
+      if (isJsonOutput()) {
+        output(worktrees)
+      } else {
+        if (worktrees.length === 0) {
+          console.log('No worktrees found')
+        } else {
+          for (const wt of worktrees) {
+            console.log(`${wt.path}`)
+            console.log(`  Branch: ${wt.branch}`)
+            if (wt.taskId) console.log(`  Task: ${wt.taskId}`)
+          }
+        }
+      }
       break
     }
 
@@ -22,7 +34,11 @@ export async function handleWorktreesCommand(
       }
       const deleteLinkedTask = flags['delete-task'] === 'true' || flags['delete-task'] === ''
       const result = await client.deleteWorktree(worktreePath, flags.repo, deleteLinkedTask)
-      output(result)
+      if (isJsonOutput()) {
+        output(result)
+      } else {
+        console.log(`Deleted worktree: ${worktreePath}`)
+      }
       break
     }
 

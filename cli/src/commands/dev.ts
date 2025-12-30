@@ -1,5 +1,5 @@
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
 export async function handleDevCommand(
@@ -20,25 +20,36 @@ export async function handleDevCommand(
         )
       }
 
-      output({ status: 'restarting', message: 'Triggering restart (build + migrate + restart)...' })
+      if (!isJsonOutput()) {
+        console.log('Triggering restart (build + migrate + restart)...')
+      }
       const result = await client.restartVibora()
 
       if (result.error) {
         throw new CliError('RESTART_FAILED', result.error, ExitCodes.OPERATION_FAILED)
       }
 
-      output({ status: 'initiated', message: 'Restart initiated. If build or migration fails, old instance keeps running.' })
+      if (isJsonOutput()) {
+        output({ status: 'initiated', message: 'Restart initiated' })
+      } else {
+        console.log('Restart initiated. If build or migration fails, old instance keeps running.')
+      }
       break
     }
 
     case 'status': {
       const devMode = await client.getDeveloperMode()
-      output({
-        developerMode: devMode.enabled,
-        message: devMode.enabled
-          ? 'Developer mode is enabled. Use "vibora dev restart" to rebuild and restart.'
-          : 'Developer mode is disabled. Set VIBORA_DEVELOPER=1 to enable.',
-      })
+      if (isJsonOutput()) {
+        output({ developerMode: devMode.enabled })
+      } else {
+        if (devMode.enabled) {
+          console.log('Developer mode: enabled')
+          console.log('  Use "vibora dev restart" to rebuild and restart.')
+        } else {
+          console.log('Developer mode: disabled')
+          console.log('  Set VIBORA_DEVELOPER=1 to enable.')
+        }
+      }
       break
     }
 

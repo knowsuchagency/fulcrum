@@ -13,14 +13,14 @@ interface ErrorResponse {
   }
 }
 
-let prettyOutput = false
+let jsonOutput = false
 
-export function setPrettyOutput(value: boolean) {
-  prettyOutput = value
+export function setJsonOutput(value: boolean) {
+  jsonOutput = value
 }
 
-export function isPrettyOutput(): boolean {
-  return prettyOutput
+export function isJsonOutput(): boolean {
+  return jsonOutput
 }
 
 export function prettyLog(type: 'success' | 'info' | 'error' | 'warning', message: string): void {
@@ -34,10 +34,10 @@ export function prettyLog(type: 'success' | 'info' | 'error' | 'warning', messag
 }
 
 export function outputSuccess(message: string): void {
-  if (prettyOutput) {
-    prettyLog('success', message)
-  } else {
+  if (jsonOutput) {
     output({ message })
+  } else {
+    prettyLog('success', message)
   }
 }
 
@@ -46,18 +46,22 @@ export function output<T>(data: T): void {
     success: true,
     data,
   }
-  console.log(prettyOutput ? JSON.stringify(response, null, 2) : JSON.stringify(response))
+  console.log(JSON.stringify(response))
 }
 
 export function outputError(error: CliError): never {
-  const response: ErrorResponse = {
-    success: false,
-    error: {
-      code: error.code,
-      message: error.message,
-    },
+  if (jsonOutput) {
+    const response: ErrorResponse = {
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    }
+    console.log(JSON.stringify(response))
+  } else {
+    console.error(`Error: ${error.message}`)
   }
-  console.log(prettyOutput ? JSON.stringify(response, null, 2) : JSON.stringify(response))
   process.exit(error.exitCode)
 }
 
@@ -66,10 +70,14 @@ export function outputErrorAndExit(
   code: string,
   message: string
 ): never {
-  const response: ErrorResponse = {
-    success: false,
-    error: { code, message },
+  if (jsonOutput) {
+    const response: ErrorResponse = {
+      success: false,
+      error: { code, message },
+    }
+    console.log(JSON.stringify(response))
+  } else {
+    console.error(`Error: ${message}`)
   }
-  console.log(prettyOutput ? JSON.stringify(response, null, 2) : JSON.stringify(response))
   process.exit(exitCode)
 }

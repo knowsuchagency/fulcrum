@@ -1,5 +1,5 @@
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
 const VALID_CHANNELS = ['sound', 'slack', 'discord', 'pushover'] as const
@@ -17,19 +17,44 @@ export async function handleNotificationsCommand(
     case undefined: {
       // Get current notification settings
       const settings = await client.getNotifications()
-      output(settings)
+      if (isJsonOutput()) {
+        output(settings)
+      } else {
+        console.log(`Notifications: ${settings.enabled ? 'enabled' : 'disabled'}`)
+        console.log(`\nChannels:`)
+        if (settings.sound) {
+          console.log(`  sound: ${settings.sound.enabled ? 'enabled' : 'disabled'}`)
+        }
+        if (settings.slack) {
+          console.log(`  slack: ${settings.slack.enabled ? 'enabled' : 'disabled'}`)
+        }
+        if (settings.discord) {
+          console.log(`  discord: ${settings.discord.enabled ? 'enabled' : 'disabled'}`)
+        }
+        if (settings.pushover) {
+          console.log(`  pushover: ${settings.pushover.enabled ? 'enabled' : 'disabled'}`)
+        }
+      }
       break
     }
 
     case 'enable': {
       const updated = await client.updateNotifications({ enabled: true })
-      output(updated)
+      if (isJsonOutput()) {
+        output(updated)
+      } else {
+        console.log('Notifications enabled')
+      }
       break
     }
 
     case 'disable': {
       const updated = await client.updateNotifications({ enabled: false })
-      output(updated)
+      if (isJsonOutput()) {
+        output(updated)
+      } else {
+        console.log('Notifications disabled')
+      }
       break
     }
 
@@ -50,7 +75,15 @@ export async function handleNotificationsCommand(
         )
       }
       const result = await client.testNotification(channel as NotificationChannel)
-      output(result)
+      if (isJsonOutput()) {
+        output(result)
+      } else {
+        if (result.success) {
+          console.log(`Test notification sent to ${channel}`)
+        } else {
+          console.log(`Failed to send test to ${channel}: ${result.error}`)
+        }
+      }
       break
     }
 
@@ -80,7 +113,11 @@ export async function handleNotificationsCommand(
       // Build the update object for the specific channel
       const update = buildChannelUpdate(channel as NotificationChannel, key, value)
       const updated = await client.updateNotifications(update)
-      output(updated)
+      if (isJsonOutput()) {
+        output(updated)
+      } else {
+        console.log(`Set ${channel}.${key} = ${value}`)
+      }
       break
     }
 

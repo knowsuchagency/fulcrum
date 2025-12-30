@@ -1,13 +1,23 @@
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
-import type { TaskStatus } from '@shared/types'
+import type { TaskStatus, Task } from '@shared/types'
 
 const STATUS_MAP: Record<string, TaskStatus> = {
   review: 'IN_REVIEW',
   done: 'DONE',
   cancel: 'CANCELED',
   'in-progress': 'IN_PROGRESS',
+}
+
+function formatTask(task: Task): void {
+  console.log(`${task.title}`)
+  console.log(`  ID:       ${task.id}`)
+  console.log(`  Status:   ${task.status}`)
+  console.log(`  Repo:     ${task.repoName}`)
+  if (task.branch) console.log(`  Branch:   ${task.branch}`)
+  if (task.prUrl) console.log(`  PR:       ${task.prUrl}`)
+  if (task.linearTicketId) console.log(`  Linear:   ${task.linearTicketId}`)
 }
 
 /**
@@ -49,7 +59,11 @@ export async function handleCurrentTaskCommand(
   // If no action, just return the current task info
   if (!action) {
     const task = await findCurrentTask(client, pathOverride)
-    output(task)
+    if (isJsonOutput()) {
+      output(task)
+    } else {
+      formatTask(task)
+    }
     return
   }
 
@@ -65,7 +79,11 @@ export async function handleCurrentTaskCommand(
     }
     const task = await findCurrentTask(client, pathOverride)
     const updatedTask = await client.updateTask(task.id, { prUrl })
-    output(updatedTask)
+    if (isJsonOutput()) {
+      output(updatedTask)
+    } else {
+      console.log(`Linked PR: ${prUrl}`)
+    }
     return
   }
 
@@ -95,7 +113,11 @@ export async function handleCurrentTaskCommand(
       linearTicketId: ticketId,
       linearTicketUrl: linearUrl,
     })
-    output(updatedTask)
+    if (isJsonOutput()) {
+      output(updatedTask)
+    } else {
+      console.log(`Linked Linear ticket: ${ticketId}`)
+    }
     return
   }
 
@@ -111,5 +133,9 @@ export async function handleCurrentTaskCommand(
 
   const task = await findCurrentTask(client, pathOverride)
   const updatedTask = await client.moveTask(task.id, newStatus)
-  output(updatedTask)
+  if (isJsonOutput()) {
+    output(updatedTask)
+  } else {
+    console.log(`Moved task to ${newStatus}: ${updatedTask.title}`)
+  }
 }

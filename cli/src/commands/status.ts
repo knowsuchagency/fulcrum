@@ -1,4 +1,4 @@
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { readPid, isProcessRunning, getPort } from '../utils/process'
 import { discoverServerUrl } from '../utils/server'
 
@@ -21,11 +21,25 @@ export async function handleStatusCommand(flags: Record<string, string>) {
     }
   }
 
-  output({
+  const data = {
     running: pidRunning,
     healthy: healthOk,
     pid: pid || null,
     port,
     url: serverUrl,
-  })
+  }
+
+  if (isJsonOutput()) {
+    output(data)
+  } else {
+    if (pidRunning) {
+      const healthStatus = healthOk ? 'healthy' : 'not responding'
+      console.log(`Vibora is running (${healthStatus})`)
+      console.log(`  PID:  ${pid}`)
+      console.log(`  URL:  ${serverUrl}`)
+    } else {
+      console.log('Vibora is not running')
+      console.log(`\nStart with: vibora up`)
+    }
+  }
 }

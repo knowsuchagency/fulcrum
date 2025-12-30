@@ -1,11 +1,46 @@
 import { basename } from 'node:path'
 import { ViboraClient } from '../client'
-import { output } from '../utils/output'
+import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
-import type { TaskStatus } from '@shared/types'
+import type { TaskStatus, Task } from '@shared/types'
 
 // DONE is intentionally excluded - tasks complete automatically when PRs merge
 const VALID_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW', 'CANCELED']
+
+function formatTask(task: Task): void {
+  console.log(`${task.title}`)
+  console.log(`  ID:       ${task.id}`)
+  console.log(`  Status:   ${task.status}`)
+  console.log(`  Repo:     ${task.repoName}`)
+  if (task.branch) console.log(`  Branch:   ${task.branch}`)
+  if (task.prUrl) console.log(`  PR:       ${task.prUrl}`)
+  if (task.linearTicketId) console.log(`  Linear:   ${task.linearTicketId}`)
+}
+
+function formatTaskList(tasks: Task[]): void {
+  if (tasks.length === 0) {
+    console.log('No tasks found')
+    return
+  }
+
+  // Group by status
+  const byStatus = {
+    IN_PROGRESS: tasks.filter((t) => t.status === 'IN_PROGRESS'),
+    IN_REVIEW: tasks.filter((t) => t.status === 'IN_REVIEW'),
+    DONE: tasks.filter((t) => t.status === 'DONE'),
+    CANCELED: tasks.filter((t) => t.status === 'CANCELED'),
+  }
+
+  for (const [status, statusTasks] of Object.entries(byStatus)) {
+    if (statusTasks.length === 0) continue
+    console.log(`\n${status} (${statusTasks.length})`)
+    for (const task of statusTasks) {
+      const branch = task.branch ? ` [${task.branch}]` : ''
+      console.log(`  ${task.title}${branch}`)
+      console.log(`    ${task.id} · ${task.repoName}`)
+    }
+  }
+}
 
 export async function handleTasksCommand(
   action: string | undefined,
@@ -40,7 +75,11 @@ export async function handleTasksCommand(
         )
       }
 
-      output(tasks)
+      if (isJsonOutput()) {
+        output(tasks)
+      } else {
+        formatTaskList(tasks)
+      }
       break
     }
 
@@ -50,7 +89,11 @@ export async function handleTasksCommand(
         throw new CliError('MISSING_ID', 'Task ID required', ExitCodes.INVALID_ARGS)
       }
       const task = await client.getTask(id)
-      output(task)
+      if (isJsonOutput()) {
+        output(task)
+      } else {
+        formatTask(task)
+      }
       break
     }
 
@@ -81,7 +124,13 @@ export async function handleTasksCommand(
         status: 'IN_PROGRESS',
       })
 
-      output(task)
+      if (isJsonOutput()) {
+        output(task)
+      } else {
+        console.log(`Created task: ${task.title}`)
+        console.log(`  ID: ${task.id}`)
+        if (task.worktreePath) console.log(`  Worktree: ${task.worktreePath}`)
+      }
       break
     }
 
@@ -104,7 +153,11 @@ export async function handleTasksCommand(
       }
 
       const task = await client.updateTask(id, updates)
-      output(task)
+      if (isJsonOutput()) {
+        output(task)
+      } else {
+        console.log(`Updated task: ${task.title}`)
+      }
       break
     }
 
@@ -125,7 +178,11 @@ export async function handleTasksCommand(
 
       const position = flags.position ? parseInt(flags.position, 10) : undefined
       const task = await client.moveTask(id, status, position)
-      output(task)
+      if (isJsonOutput()) {
+        output(task)
+      } else {
+        console.log(`Moved task to ${status}: ${task.title}`)
+      }
       break
     }
 
@@ -137,7 +194,11 @@ export async function handleTasksCommand(
 
       const deleteLinkedWorktree = flags['delete-worktree'] === 'true' || flags['delete-worktree'] === ''
       await client.deleteTask(id, deleteLinkedWorktree)
-      output({ deleted: id })
+      if (isJsonOutput()) {
+        output({ deleted: id })
+      } else {
+        console.log(`Deleted task: ${id}`)
+      }
       break
     }
 
