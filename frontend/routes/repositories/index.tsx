@@ -29,7 +29,6 @@ import {
   VisualStudioCodeIcon,
   ComputerTerminal01Icon,
   GridViewIcon,
-  FolderSearchIcon,
   Search01Icon,
 } from '@hugeicons/core-free-icons'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
@@ -39,7 +38,6 @@ import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { NewProjectDialog } from '@/components/repositories/new-project-dialog'
 import { AddRepositoryDialog } from '@/components/repositories/add-repository-dialog'
-import { BulkAddDialog } from '@/components/repositories/bulk-add-dialog'
 import { Input } from '@/components/ui/input'
 
 export const Route = createFileRoute('/repositories/')({
@@ -219,25 +217,6 @@ function AddRepositoryButton() {
   )
 }
 
-function ScanDirectoryButton() {
-  const { t } = useTranslation('repositories')
-  const [dialogOpen, setDialogOpen] = useState(false)
-
-  return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}>
-        <HugeiconsIcon icon={FolderSearchIcon} size={16} strokeWidth={2} data-slot="icon" />
-        {t('scanDirectory')}
-      </Button>
-
-      <BulkAddDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
-    </>
-  )
-}
-
 function RepositoriesView() {
   const { t } = useTranslation('repositories')
   const navigate = useNavigate()
@@ -275,7 +254,6 @@ function RepositoriesView() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
         <AddRepositoryButton />
-        <ScanDirectoryButton />
         <NewProjectDialog />
         <div className="flex-1" />
         <div className="relative min-w-0 w-48 sm:w-64">

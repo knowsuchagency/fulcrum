@@ -44,7 +44,12 @@ export function useCloneRepository() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { url: string; displayName?: string }) =>
+    mutationFn: (data: {
+      url: string
+      displayName?: string
+      targetDir?: string // Parent directory for clone (defaults to defaultGitReposDir)
+      folderName?: string // Custom folder name (defaults to extracted from URL)
+    }) =>
       fetchJSON<Repository>(`${API_BASE}/api/repositories/clone`, {
         method: 'POST',
         body: JSON.stringify(data),

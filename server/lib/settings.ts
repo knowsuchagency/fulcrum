@@ -174,6 +174,12 @@ function migrateSettings(parsed: Record<string, unknown>): MigrationResult {
 
 // Expand tilde in path and ensure absolute path
 function expandPath(p: string): string {
+  if (!p) return p
+  // Handle single tilde (just home directory)
+  if (p === '~') {
+    return os.homedir()
+  }
+  // Handle tilde with path
   if (p.startsWith('~/')) {
     return path.join(os.homedir(), p.slice(2))
   }
@@ -183,6 +189,9 @@ function expandPath(p: string): string {
   }
   return p
 }
+
+// Export expandPath for use in other modules (e.g., repositories route)
+export { expandPath }
 
 // Get the vibora directory path
 // Priority: VIBORA_DIR env var → CWD .vibora → ~/.vibora
