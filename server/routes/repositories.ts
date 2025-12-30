@@ -252,13 +252,48 @@ app.patch('/:id', async (c) => {
 // DELETE /api/repositories/:id - Delete repository
 app.delete('/:id', (c) => {
   const id = c.req.param('id')
+  const deleteDirectory = c.req.query('deleteDirectory') === 'true'
+
   const existing = db.select().from(repositories).where(eq(repositories.id, id)).get()
   if (!existing) {
     return c.json({ error: 'Repository not found' }, 404)
   }
 
+  // Optionally delete the directory from disk
+  if (deleteDirectory && existing.path) {
+    const repoPath = existing.path
+
+    // SAFETY: Reject if path is home directory
+    const home = homedir()
+    if (resolve(repoPath) === home) {
+      return c.json({ error: 'Cannot delete home directory' }, 400)
+    }
+
+    // SAFETY: Reject common dangerous paths
+    const dangerousPaths = ['/', '/home', '/usr', '/etc', '/var', '/tmp', '/root']
+    if (dangerousPaths.includes(resolve(repoPath))) {
+      return c.json({ error: 'Cannot delete system directory' }, 400)
+    }
+
+    // SAFETY: Only delete if directory exists and contains .git
+    if (existsSync(repoPath)) {
+      const gitPath = join(repoPath, '.git')
+      if (!existsSync(gitPath)) {
+        return c.json({ error: 'Directory does not appear to be a git repository' }, 400)
+      }
+
+      try {
+        rmSync(repoPath, { recursive: true, force: true })
+      } catch (err) {
+        return c.json({
+          error: `Failed to delete directory: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        }, 500)
+      }
+    }
+  }
+
   db.delete(repositories).where(eq(repositories.id, id)).run()
-  return c.json({ success: true })
+  return c.json({ success: true, directoryDeleted: deleteDirectory })
 })
 
 // POST /api/repositories/scan - Scan directory for git repositories

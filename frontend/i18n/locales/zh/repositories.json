@@ -12,7 +12,9 @@
     "title": "删除仓库",
     "description": "这将从 Vibora 中移除 \"{{name}}\"。实际的仓库文件不会受到影响。",
     "button": "删除",
-    "deleting": "删除中..."
+    "deleting": "删除中...",
+    "alsoDeleteDirectory": "同时从磁盘删除目录",
+    "deleteDirectoryWarning": "这将永久删除仓库中的所有文件。此操作无法撤销。"
   },
   "addModal": {
     "title": "添加仓库",

@@ -8,16 +8,6 @@ import {
 } from '@/hooks/use-repositories'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
@@ -38,6 +28,7 @@ import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { NewProjectDialog } from '@/components/repositories/new-project-dialog'
 import { AddRepositoryDialog } from '@/components/repositories/add-repository-dialog'
+import { DeleteRepositoryDialog } from '@/components/repositories/delete-repository-dialog'
 import { Input } from '@/components/ui/input'
 
 export const Route = createFileRoute('/repositories/')({
@@ -46,20 +37,18 @@ export const Route = createFileRoute('/repositories/')({
 
 function RepositoryCard({
   repository,
-  onDelete,
   onStartTask,
   onOpenInTerminal,
   onViewTasks,
+  onDeleteClick,
 }: {
   repository: Repository
-  onDelete: () => Promise<void>
   onStartTask: () => void
   onOpenInTerminal: () => void
   onViewTasks: () => void
+  onDeleteClick: () => void
 }) {
   const { t } = useTranslation('repositories')
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
   const { data: editorApp } = useEditorApp()
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
@@ -67,18 +56,6 @@ function RepositoryCard({
   const handleOpenEditor = () => {
     const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
     openExternalUrl(url)
-  }
-
-  const handleDelete = async () => {
-    setIsDeleting(true)
-    try {
-      await onDelete()
-      setDialogOpen(false)
-    } catch {
-      // Keep dialog open on error
-    } finally {
-      setIsDeleting(false)
-    }
   }
 
   return (
@@ -146,48 +123,16 @@ function RepositoryCard({
           </Button>
 
           {/* Delete */}
-          <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <AlertDialogTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                  title={t('delete.button')}
-                />
-              }
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="max-sm:hidden">{t('delete.button')}</span>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t('delete.title')}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('delete.description', { name: repository.displayName })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>{t('addModal.cancel')}</AlertDialogCancel>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="gap-2"
-                >
-                  {isDeleting && (
-                    <HugeiconsIcon
-                      icon={Loading03Icon}
-                      size={14}
-                      strokeWidth={2}
-                      className="animate-spin"
-                    />
-                  )}
-                  {isDeleting ? t('delete.deleting') : t('delete.button')}
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onDeleteClick}
+            className="text-muted-foreground hover:text-destructive"
+            title={t('delete.button')}
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('delete.button')}</span>
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -223,6 +168,7 @@ function RepositoriesView() {
   const { data: repositories, isLoading, error } = useRepositories()
   const deleteRepository = useDeleteRepository()
   const [taskModalRepo, setTaskModalRepo] = useState<Repository | null>(null)
+  const [deleteRepo, setDeleteRepo] = useState<Repository | null>(null)
   const { openInTerminal } = useOpenInTerminal()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -242,8 +188,9 @@ function RepositoriesView() {
       .map(({ repo }) => repo)
   }, [repositories, searchQuery])
 
-  const handleDelete = async (id: string) => {
-    await deleteRepository.mutateAsync(id)
+  const handleDelete = async (deleteDirectory: boolean) => {
+    if (!deleteRepo) return
+    await deleteRepository.mutateAsync({ id: deleteRepo.id, deleteDirectory })
   }
 
   const handleViewTasks = (repoName: string) => {
@@ -307,10 +254,10 @@ function RepositoriesView() {
             <RepositoryCard
               key={repo.id}
               repository={repo}
-              onDelete={() => handleDelete(repo.id)}
               onStartTask={() => setTaskModalRepo(repo)}
               onOpenInTerminal={() => openInTerminal(repo.path, repo.displayName)}
               onViewTasks={() => handleViewTasks(repo.displayName)}
+              onDeleteClick={() => setDeleteRepo(repo)}
             />
           ))}
         </div>
@@ -321,6 +268,13 @@ function RepositoriesView() {
         onOpenChange={(open) => !open && setTaskModalRepo(null)}
         defaultRepository={taskModalRepo ?? undefined}
         showTrigger={false}
+      />
+
+      <DeleteRepositoryDialog
+        repository={deleteRepo}
+        open={deleteRepo !== null}
+        onOpenChange={(open) => !open && setDeleteRepo(null)}
+        onDelete={handleDelete}
       />
     </div>
   )

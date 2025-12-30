@@ -18,7 +18,9 @@
     "title": "Delete Repository",
     "description": "This will remove \"{{name}}\" from Vibora. The actual repository files will not be affected.",
     "button": "Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "alsoDeleteDirectory": "Also delete the directory from disk",
+    "deleteDirectoryWarning": "This will permanently delete all files in the repository. This action cannot be undone."
   },
   "addModal": {
     "title": "Add Repository",
