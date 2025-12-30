@@ -194,10 +194,13 @@ export function registerTools(server: McpServer, client: ViboraClient) {
       timeout: z
         .optional(z.number())
         .describe('Timeout in milliseconds (default: 30000). Use longer timeouts for slow commands.'),
+      name: z
+        .optional(z.string())
+        .describe('Optional session name for identification (only used when creating a new session)'),
     },
-    async ({ command, sessionId, cwd, timeout }) => {
+    async ({ command, sessionId, cwd, timeout, name }) => {
       try {
-        const result = await client.executeCommand(command, { sessionId, cwd, timeout })
+        const result = await client.executeCommand(command, { sessionId, cwd, timeout, name })
         return formatSuccess(result)
       } catch (err) {
         return handleToolError(err)
@@ -214,6 +217,24 @@ export function registerTools(server: McpServer, client: ViboraClient) {
       try {
         const sessions = await client.listExecSessions()
         return formatSuccess(sessions)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // update_exec_session
+  server.tool(
+    'update_exec_session',
+    'Update an existing command execution session (e.g., rename it)',
+    {
+      sessionId: z.string().describe('The session ID to update'),
+      name: z.optional(z.string()).describe('New name for the session'),
+    },
+    async ({ sessionId, name }) => {
+      try {
+        const result = await client.updateExecSession(sessionId, { name })
+        return formatSuccess(result)
       } catch (err) {
         return handleToolError(err)
       }

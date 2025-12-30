@@ -226,7 +226,7 @@ export class ViboraClient {
   // Command execution
   async executeCommand(
     command: string,
-    options?: { sessionId?: string; cwd?: string; timeout?: number }
+    options?: { sessionId?: string; cwd?: string; timeout?: number; name?: string }
   ): Promise<ExecuteCommandResponse> {
     const body: ExecuteCommandRequest = {
       command,
@@ -240,6 +240,13 @@ export class ViboraClient {
 
   async listExecSessions(): Promise<ExecSession[]> {
     return this.fetch('/api/exec/sessions')
+  }
+
+  async updateExecSession(sessionId: string, updates: { name?: string }): Promise<ExecSession> {
+    return this.fetch(`/api/exec/sessions/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
   }
 
   async destroyExecSession(sessionId: string): Promise<{ success: boolean }> {

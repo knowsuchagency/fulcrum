@@ -2,10 +2,9 @@ import { Hono } from 'hono'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import * as os from 'node:os'
-import type { ExecuteCommandRequest, ExecuteCommandResponse, ExecSession } from '@shared/types'
+import type { ExecuteCommandRequest, ExecuteCommandResponse, ExecSession, UpdateExecSessionRequest } from '@shared/types'
 
 const DEFAULT_TIMEOUT = 30000 // 30 seconds
-const SESSION_EXPIRY = 24 * 60 * 60 * 1000 // 24 hours
 
 // Unique markers for output parsing
 const START_MARKER = `<<VIBORA_CMD_START_${randomUUID().slice(0, 8)}>>`
@@ -13,6 +12,7 @@ const END_MARKER_PREFIX = `<<VIBORA_CMD_END_${randomUUID().slice(0, 8)}:`
 
 interface ShellSession {
   id: string
+  name?: string
   process: ChildProcess
   cwd: string
   outputBuffer: string
@@ -24,22 +24,10 @@ interface ShellSession {
 }
 
 const sessions = new Map<string, ShellSession>()
-const expiredSessionIds = new Set<string>()
 
-// Cleanup expired sessions periodically
-setInterval(() => {
-  const now = Date.now()
-  for (const [id, session] of sessions) {
-    if (now - session.lastUsedAt.getTime() > SESSION_EXPIRY) {
-      expiredSessionIds.add(id)
-      destroySession(id)
-    }
-  }
-  // Clean up old expired session IDs after 7 days to prevent unbounded growth
-  // (In practice, clients should get the error and create a new session)
-}, 60000) // Check every minute
+// Sessions persist until manually destroyed via DELETE /api/exec/sessions/:id
 
-function createSession(cwd?: string): ShellSession {
+function createSession(cwd?: string, name?: string): ShellSession {
   const id = randomUUID()
   const initialCwd = cwd || os.homedir()
 
@@ -53,6 +41,7 @@ function createSession(cwd?: string): ShellSession {
 
   const session: ShellSession = {
     id,
+    name,
     process: proc,
     cwd: initialCwd,
     outputBuffer: '',
@@ -188,7 +177,7 @@ const app = new Hono()
 app.post('/', async (c) => {
   try {
     const body = await c.req.json<ExecuteCommandRequest>()
-    const { command, sessionId, cwd, timeout = DEFAULT_TIMEOUT } = body
+    const { command, sessionId, cwd, timeout = DEFAULT_TIMEOUT, name } = body
 
     if (!command) {
       return c.json({ error: 'command is required' }, 400)
@@ -197,17 +186,13 @@ app.post('/', async (c) => {
     // Get or create session
     let session: ShellSession
     if (sessionId) {
-      // Check if session expired
-      if (expiredSessionIds.has(sessionId)) {
-        return c.json({ error: `Session ${sessionId} has expired`, expired: true }, 410)
-      }
       const existing = sessions.get(sessionId)
       if (!existing) {
         return c.json({ error: `Session ${sessionId} not found` }, 404)
       }
       session = existing
     } else {
-      session = createSession(cwd)
+      session = createSession(cwd, name)
     }
 
     try {
@@ -249,12 +234,35 @@ app.get('/sessions', (c) => {
   for (const [id, session] of sessions) {
     sessionList.push({
       id,
+      name: session.name,
       cwd: session.cwd,
       createdAt: session.createdAt.toISOString(),
       lastUsedAt: session.lastUsedAt.toISOString(),
     })
   }
   return c.json(sessionList)
+})
+
+// PATCH /api/exec/sessions/:id - Update session metadata
+app.patch('/sessions/:id', async (c) => {
+  const id = c.req.param('id')
+  const session = sessions.get(id)
+  if (!session) {
+    return c.json({ error: `Session ${id} not found` }, 404)
+  }
+
+  const body = await c.req.json<UpdateExecSessionRequest>()
+  if (body.name !== undefined) {
+    session.name = body.name
+  }
+
+  return c.json({
+    id: session.id,
+    name: session.name,
+    cwd: session.cwd,
+    createdAt: session.createdAt.toISOString(),
+    lastUsedAt: session.lastUsedAt.toISOString(),
+  })
 })
 
 // DELETE /api/exec/sessions/:id - Destroy a session

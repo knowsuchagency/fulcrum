@@ -176,7 +176,8 @@ Execute shell commands with optional persistent session support:
   "command": "echo hello world",
   "sessionId": "optional-session-id",
   "cwd": "/path/to/start",
-  "timeout": 30000
+  "timeout": 30000,
+  "name": "my-session"
 }
 ```
 
@@ -185,6 +186,7 @@ Execute shell commands with optional persistent session support:
 - `sessionId` (optional) — Reuse a session to preserve env vars, cwd, and shell state
 - `cwd` (optional) — Initial working directory (only used when creating new session)
 - `timeout` (optional) — Timeout in milliseconds (default: 30000)
+- `name` (optional) — Session name for identification (only used when creating new session)
 
 **Response:**
 ```json
@@ -200,8 +202,8 @@ Execute shell commands with optional persistent session support:
 ### Session Workflow Example
 
 ```
-1. First command (creates session):
-   execute_command { command: "cd /project && export API_KEY=secret" }
+1. First command (creates named session):
+   execute_command { command: "cd /project && export API_KEY=secret", name: "dev-session" }
    → Returns sessionId: "abc-123"
 
 2. Subsequent commands (reuse session):
@@ -211,15 +213,22 @@ Execute shell commands with optional persistent session support:
    execute_command { command: "pwd", sessionId: "abc-123" }
    → Returns stdout: "/project" (cwd preserved)
 
-3. Cleanup when done:
+3. Rename session if needed:
+   update_exec_session { sessionId: "abc-123", name: "new-name" }
+
+4. Cleanup when done:
    destroy_exec_session { sessionId: "abc-123" }
 ```
 
-Sessions expire after 24 hours of inactivity.
+Sessions persist until manually destroyed.
 
 ### list_exec_sessions
 
-List all active sessions with their current working directory and timestamps.
+List all active sessions with their name, current working directory, and timestamps.
+
+### update_exec_session
+
+Rename an existing session for identification.
 
 ### destroy_exec_session
 
@@ -231,5 +240,6 @@ Clean up a session when you're done to free resources.
 2. **Link PRs immediately** - Run `vibora current-task pr <url>` right after creating a PR
 3. **Mark review when done** - `vibora current-task review` notifies the user
 4. **Send notifications for blocking issues** - Keep the user informed of progress
-5. **Reuse sessions for related commands** - Preserve state across multiple execute_command calls
-6. **Clean up sessions when done** - Use destroy_exec_session to free resources
+5. **Name sessions for identification** - Use descriptive names to find sessions later
+6. **Reuse sessions for related commands** - Preserve state across multiple execute_command calls
+7. **Clean up sessions when done** - Use destroy_exec_session to free resources

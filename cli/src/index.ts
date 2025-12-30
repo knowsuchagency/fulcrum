@@ -83,8 +83,9 @@ async function main() {
 Usage: vibora <command> [options]
 
 Commands:
-  current-task              Get task for current worktree
+  current-task              Get task for current worktree (use inside a Vibora task worktree)
   current-task pr <url>     Associate a PR with current task
+  current-task linear <url> Link a Linear ticket to current task
   current-task in-progress  Mark current task as IN_PROGRESS
   current-task review       Mark current task as IN_REVIEW
   current-task done         Mark current task as DONE

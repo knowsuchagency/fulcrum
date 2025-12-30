@@ -150,9 +150,10 @@ The plugin includes an MCP server that exposes task management and remote execut
 **Remote Command Execution:**
 - `execute_command` — Execute shell commands on the Vibora server with persistent session support
 - `list_exec_sessions` — List active command execution sessions
+- `update_exec_session` — Rename a session
 - `destroy_exec_session` — Clean up a session
 
-The `execute_command` tool supports persistent sessions where environment variables, working directory, and shell state are preserved between commands. Sessions expire after 24 hours of inactivity.
+The `execute_command` tool supports persistent sessions where environment variables, working directory, and shell state are preserved between commands. Sessions can be given optional names for identification and persist until manually destroyed.
 
 For Claude Desktop, add to your `claude_desktop_config.json`:
 

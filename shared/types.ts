@@ -252,6 +252,7 @@ export interface ExecuteCommandRequest {
   sessionId?: string  // Optional - creates new session if omitted
   cwd?: string        // Initial cwd for new sessions
   timeout?: number    // Timeout in ms (default 30000)
+  name?: string       // Optional session name (only used when creating new session)
 }
 
 export interface ExecuteCommandResponse {
@@ -264,7 +265,12 @@ export interface ExecuteCommandResponse {
 
 export interface ExecSession {
   id: string
+  name?: string
   cwd: string
   createdAt: string
   lastUsedAt: string
+}
+
+export interface UpdateExecSessionRequest {
+  name?: string
 }
