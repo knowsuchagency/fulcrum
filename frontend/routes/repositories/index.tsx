@@ -200,9 +200,6 @@ function RepositoriesView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
-        <AddRepositoryButton />
-        <NewProjectDialog />
-        <div className="flex-1" />
         <div className="relative min-w-0 w-48 sm:w-64">
           <HugeiconsIcon icon={Search01Icon} size={12} strokeWidth={2} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -212,6 +209,9 @@ function RepositoriesView() {
             className="w-full pl-6"
           />
         </div>
+        <div className="flex-1" />
+        <AddRepositoryButton />
+        <NewProjectDialog />
       </div>
 
       <div className="flex-1 overflow-auto p-4">
