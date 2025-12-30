@@ -57,9 +57,10 @@ fi
 # Update settings schema version to match major version
 settings_file="server/lib/settings.ts"
 if [ -f "$settings_file" ]; then
-  current_schema=$(grep -oP 'CURRENT_SCHEMA_VERSION = \\K\\d+' "$settings_file")
+  current_schema=$(grep '^const CURRENT_SCHEMA_VERSION' "$settings_file" | sed 's/.*= //')
   if [ -n "$current_schema" ] && [ "$current_schema" != "$major" ]; then
-    sed -i "s/CURRENT_SCHEMA_VERSION = $current_schema/CURRENT_SCHEMA_VERSION = $major/" "$settings_file"
+    # Use perl for cross-platform compatibility (macOS sed -i differs from GNU sed)
+    perl -i -pe "s/CURRENT_SCHEMA_VERSION = $current_schema/CURRENT_SCHEMA_VERSION = $major/" "$settings_file"
     echo "Updated $settings_file: schema $current_schema → $major"
   fi
 fi
@@ -205,7 +206,7 @@ echo "All versions in sync: $VERSION"
 
 # Show schema version (informational)
 if [ -f "server/lib/settings.ts" ]; then
-  SCHEMA_VERSION=$(grep -oP 'CURRENT_SCHEMA_VERSION = \\K\\d+' server/lib/settings.ts)
+  SCHEMA_VERSION=$(grep '^const CURRENT_SCHEMA_VERSION' server/lib/settings.ts | sed 's/.*= //')
   echo "Settings schema version: $SCHEMA_VERSION"
 fi
 """
