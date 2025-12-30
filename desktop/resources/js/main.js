@@ -9,7 +9,6 @@
  */
 
 // Configuration
-const SERVER_EXTENSION_ID = 'io.vibora.server';
 const DEFAULT_PORT = 7777;
 const CURRENT_SCHEMA_VERSION = 3;
 const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
@@ -20,6 +19,7 @@ const UPDATE_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // Check daily (24 hours)
 
 // State
 let serverUrl = null;
+let serverPid = null;
 let isShuttingDown = false;
 let desktopSettings = null;
 let currentZoom = 1.2;
@@ -503,7 +503,8 @@ async function startLocalServer() {
 
     // Start server process in background
     const result = await Neutralino.os.spawnProcess(cmd);
-    log.info('Server process spawned', { pid: result?.pid });
+    serverPid = result?.pid ?? null;
+    log.info('Server process spawned', { pid: serverPid });
 
     // Wait for server to be ready
     if (await waitForServerReady(localUrl)) {
@@ -594,14 +595,24 @@ async function shutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  console.log('[Vibora] Initiating shutdown...');
+  log.info('Initiating shutdown...');
 
-  try {
-    // Signal server extension to shutdown if running locally
-    await Neutralino.extensions.dispatch(SERVER_EXTENSION_ID, 'shutdown', {});
-    await new Promise(resolve => setTimeout(resolve, 500));
-  } catch {
-    // Extension might not be running
+  // Kill the server process if we spawned it
+  if (serverPid) {
+    try {
+      log.info('Killing server process', { pid: serverPid });
+      await Neutralino.os.execCommand(`kill ${serverPid}`);
+      // Give it a moment to terminate gracefully
+      await new Promise(resolve => setTimeout(resolve, 500));
+      // Force kill if still running
+      try {
+        await Neutralino.os.execCommand(`kill -9 ${serverPid}`);
+      } catch {
+        // Process already terminated
+      }
+    } catch (err) {
+      log.error('Failed to kill server process', { pid: serverPid, error: String(err) });
+    }
   }
 
   Neutralino.app.exit();
