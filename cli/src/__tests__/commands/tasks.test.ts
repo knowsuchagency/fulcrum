@@ -1,29 +1,20 @@
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { handleTasksCommand } from '../../commands/tasks'
 import { CliError, ExitCodes } from '../../utils/errors'
-import { createTestApp } from '../../../../server/__tests__/fixtures/app'
 import { setupTestEnv, type TestEnv } from '../../../../server/__tests__/utils/env'
-import { db, tasks } from '../../../../server/db'
 import { createTestGitRepo, type TestGitRepo } from '../../../../server/__tests__/fixtures/git'
 
-// Mock the ViboraClient to use the test app
 let testEnv: TestEnv
 let repo: TestGitRepo
-let capturedOutput: unknown[] = []
-
-// Capture output calls
-const originalOutput = console.log
 
 beforeEach(() => {
   testEnv = setupTestEnv()
   repo = createTestGitRepo()
-  capturedOutput = []
 })
 
 afterEach(() => {
   repo.cleanup()
   testEnv.cleanup()
-  console.log = originalOutput
 })
 
 describe('tasks command', () => {

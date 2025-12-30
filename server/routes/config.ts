@@ -98,9 +98,8 @@ const app = new Hono()
 // GET /api/config - List all config values
 app.get('/', (c) => {
   const config: Record<string, unknown> = {}
-  for (const [name, path] of Object.entries(CONFIG_KEYS)) {
+  for (const [, path] of Object.entries(CONFIG_KEYS)) {
     const value = getSettingValue(path)
-    // Use a user-friendly key name (convert SCREAMING_SNAKE to dot.notation)
     config[path] = value ?? getDefaultValue(path)
   }
   return c.json(config)
