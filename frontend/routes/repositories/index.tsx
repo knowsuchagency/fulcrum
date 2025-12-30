@@ -148,7 +148,7 @@ function AddRepositoryButton() {
     <>
       <Button size="sm" onClick={() => setDialogOpen(true)}>
         <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-        {t('addRepository')}
+        <span className="max-sm:hidden">{t('addRepository')}</span>
       </Button>
 
       <AddRepositoryDialog
@@ -200,7 +200,7 @@ function RepositoriesView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
-        <div className="relative min-w-0 w-48 sm:w-64">
+        <div className="relative min-w-0 flex-1 sm:max-w-64 sm:flex-none">
           <HugeiconsIcon icon={Search01Icon} size={12} strokeWidth={2} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
@@ -209,7 +209,7 @@ function RepositoriesView() {
             className="w-full pl-6"
           />
         </div>
-        <div className="flex-1" />
+        <div className="hidden sm:block flex-1" />
         <AddRepositoryButton />
         <NewProjectDialog />
       </div>
