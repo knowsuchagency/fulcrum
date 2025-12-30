@@ -42,13 +42,8 @@ export function useThemeSync() {
     return dispose
   }, [store, setTheme])
 
-  // Update favicon based on resolved theme
+  // Update favicon
   useEffect(() => {
-    if (!resolvedTheme) return
-
-    const favicon = resolvedTheme === 'dark' ? '/logo-dark.jpg' : '/logo-light.jpg'
-
-    // Update or create the favicon link element
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
     if (!link) {
       link = document.createElement('link')
@@ -56,8 +51,8 @@ export function useThemeSync() {
       document.head.appendChild(link)
     }
     link.type = 'image/jpeg'
-    link.href = favicon
-  }, [resolvedTheme])
+    link.href = '/logo.jpg'
+  }, [])
 
   // Sync to Claude Code when sync setting is toggled on (immediate sync with current theme)
   useEffect(() => {

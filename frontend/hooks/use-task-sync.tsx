@@ -80,13 +80,9 @@ export function useTaskSync() {
           }, CLAIM_SETTLE_MS)
 
           function showNotification() {
-            // Determine icon: goat if default sound enabled, otherwise theme-appropriate logo
+            // Determine icon: goat if default sound enabled, otherwise logo
           const useGoat = playSound && !isCustomSound
-          const iconUrl = useGoat
-            ? '/goat.jpeg'
-            : resolvedTheme === 'dark'
-              ? '/logo-dark.jpg'
-              : '/logo-light.jpg'
+          const iconUrl = useGoat ? '/goat.jpeg' : '/logo.jpg'
 
           // Create icon element for toast
           const icon = (

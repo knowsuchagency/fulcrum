@@ -37,16 +37,11 @@
       animation: pulse 2s ease-in-out infinite;
     }
 
-    .logo-light { display: none; }
-    .logo-dark { display: block; }
-
     @media (prefers-color-scheme: light) {
       body {
         background: #f8f8f8;
         color: #1a1a1a;
       }
-      .logo-light { display: block; }
-      .logo-dark { display: none; }
       .status { color: #525252; }
       .status-detail { color: #737373; }
       .spinner {
@@ -371,8 +366,7 @@
 </head>
 <body>
   <div id="app">
-    <img src="/icons/logo-light.jpg" alt="Vibora" class="logo logo-light">
-    <img src="/icons/logo-dark.jpg" alt="Vibora" class="logo logo-dark">
+    <img src="/icons/logo.jpg" alt="Vibora" class="logo">
     <div class="spinner"></div>
     <div class="status">
       <div id="status-text">Starting Vibora...</div>
