@@ -172,18 +172,40 @@ For Claude Desktop, add to your `claude_desktop_config.json`:
 
 Run the backend on a remote server and connect from anywhere. Launch tasks, close your laptop, and your agents keep working. As AI becomes more capable of autonomous work, this becomes essential.
 
-1. **Set up a secure tunnel** — Use Tailscale (recommended) or Cloudflare Tunnels to securely expose your server
-   - **Tailscale** — Works with both web and desktop app. No CORS configuration needed.
-   - **Cloudflare Tunnels** — Alternative for web-only usage. Note: Desktop app has CORS limitations with Cloudflare Tunnels.
+### Desktop App: SSH Port Forwarding (Recommended)
 
-2. **On the remote server:**
+The desktop app connects to `localhost:7777`. Use SSH port forwarding to tunnel to your remote server:
+
+```bash
+# Forward local port 7777 to remote server's port 7777
+ssh -L 7777:localhost:7777 your-server
+
+# Or run in background with keep-alive
+ssh -fN -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 7777:localhost:7777 your-server
+```
+
+On the remote server, start Vibora:
+```bash
+npx vibora@latest up
+```
+
+The desktop app will connect through the tunnel automatically. This approach is:
+- **Secure** — Backend stays bound to localhost, no exposed ports
+- **Performant** — Direct SSH connection, lower latency than overlay networks
+- **Simple** — No additional configuration needed
+
+For persistent tunnels on macOS, use a launchd agent. See [this guide](https://gist.github.com/knowsuchagency/60656087903cd56d3a9b5d1d5c803186).
+
+### Browser: Tailscale or Cloudflare Tunnels
+
+For browser-only access, you can use Tailscale or Cloudflare Tunnels to expose your server:
+
+1. **On the remote server:**
    ```bash
    npx vibora@latest up
    ```
 
-3. **Connect from desktop app** — Click "Connect to Remote" and enter the server URL (e.g., `http://your-server.tailnet.ts.net:7777`)
-
-4. **Or access via browser** — Open the tunnel URL in your browser
+2. **Access via browser** — Open the tunnel URL (e.g., `http://your-server.tailnet.ts.net:7777`)
 
 <details>
 <summary><strong>Configuration</strong></summary>
@@ -196,13 +218,12 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
-| port | `PORT` | 7777 |
-| defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
-| remoteHost | `VIBORA_REMOTE_HOST` | (empty) |
-| sshPort | `VIBORA_SSH_PORT` | 22 |
-| linearApiKey | `LINEAR_API_KEY` | null |
-| githubPat | `GITHUB_PAT` | null |
-| language | — | null (auto-detect) |
+| server.port | `PORT` | 7777 |
+| paths.defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
+| editor.sshPort | `VIBORA_SSH_PORT` | 22 |
+| integrations.linearApiKey | `LINEAR_API_KEY` | null |
+| integrations.githubPat | `GITHUB_PAT` | null |
+| appearance.language | — | null (auto-detect) |
 
 Notification settings (sound, Slack, Discord, Pushover) are configured via the Settings UI or CLI.
 
