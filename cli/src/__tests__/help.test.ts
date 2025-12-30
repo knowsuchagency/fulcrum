@@ -140,17 +140,6 @@ describe('CLI help and version', () => {
       expect(output).toContain('doctor')
     })
 
-    test('help includes health command', async () => {
-      const proc = spawn(['bun', 'cli/src/index.ts', '--help'], {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-
-      const output = await new Response(proc.stdout).text()
-      await proc.exited
-
-      expect(output).toContain('health')
-    })
   })
 
   describe('unknown command', () => {

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { defineCommand, runMain } from 'citty'
+import { consola } from 'consola'
 import { handleCurrentTaskCommand } from './commands/current-task'
 import { handleMcpCommand } from './commands/mcp'
 import { handleTasksCommand } from './commands/tasks'
@@ -10,16 +11,38 @@ import { handleStatusCommand } from './commands/status'
 import { handleGitCommand } from './commands/git'
 import { handleWorktreesCommand } from './commands/worktrees'
 import { handleConfigCommand } from './commands/config'
-import { handleHealthCommand } from './commands/health'
 import { handleNotificationsCommand } from './commands/notifications'
 import { handleNotifyCommand } from './commands/notify'
 import { handleDevCommand } from './commands/dev'
 import { handleDoctorCommand } from './commands/doctor'
-import { outputError, setJsonOutput } from './utils/output'
-import { CliError } from './utils/errors'
+import { setJsonOutput } from './utils/output'
 import pkg from '../../package.json'
 
 const VERSION = pkg.version
+
+// Configure consola to hide stack traces unless --debug is passed
+// Note: citty's runMain logs errors twice - once with the full error object,
+// once with just the message. We skip logging Error objects to avoid duplicates.
+const debugMode = process.argv.includes('--debug')
+if (!debugMode) {
+  consola.options.reporters = [
+    {
+      log: (logObj) => {
+        // Skip if the first arg is an Error object (citty logs it again as message)
+        if (logObj.args[0] instanceof Error) {
+          return
+        }
+        const message = logObj.args.map((arg) => String(arg)).join(' ')
+        if (logObj.type === 'error') {
+          console.error(`ERROR  ${message}`)
+        } else {
+          // For non-error logs (like help output), just print the message
+          console.log(message)
+        }
+      },
+    },
+  ]
+}
 
 // Global args shared across commands
 const globalArgs = {
@@ -34,6 +57,10 @@ const globalArgs = {
   json: {
     type: 'boolean' as const,
     description: 'Output as JSON',
+  },
+  debug: {
+    type: 'boolean' as const,
+    description: 'Show detailed error stack traces',
   },
 }
 
@@ -670,18 +697,6 @@ const doctorCommand = defineCommand({
   },
 })
 
-const healthCommand = defineCommand({
-  meta: {
-    name: 'health',
-    description: 'Check server health',
-  },
-  args: globalArgs,
-  async run({ args }) {
-    if (args.json) setJsonOutput(true)
-    await handleHealthCommand(toFlags(args))
-  },
-})
-
 const notifyCommand = defineCommand({
   meta: {
     name: 'notify',
@@ -778,7 +793,6 @@ const main = defineCommand({
     git: gitCommand,
     worktrees: worktreesCommand,
     config: configCommand,
-    health: healthCommand,
     notifications: notificationsCommand,
     notify: notifyCommand,
     dev: devCommand,
@@ -786,10 +800,4 @@ const main = defineCommand({
   },
 })
 
-runMain(main).catch((err) => {
-  if (err instanceof CliError) {
-    outputError(err)
-  } else {
-    throw err
-  }
-})
+runMain(main)

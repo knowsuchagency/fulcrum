@@ -10,12 +10,19 @@ export async function handleStatusCommand(flags: Record<string, string>) {
   // Check if PID file exists and process is running
   const pidRunning = pid !== null && isProcessRunning(pid)
 
-  // Optionally ping health endpoint
+  // Ping health endpoint for status and details
   let healthOk = false
+  let version: string | null = null
+  let uptime: number | null = null
   if (pidRunning) {
     try {
       const res = await fetch(`${serverUrl}/health`, { signal: AbortSignal.timeout(2000) })
       healthOk = res.ok
+      if (res.ok) {
+        const health = await res.json()
+        version = health.version || null
+        uptime = health.uptime || null
+      }
     } catch {
       // Server not responding
     }
@@ -27,6 +34,8 @@ export async function handleStatusCommand(flags: Record<string, string>) {
     pid: pid || null,
     port,
     url: serverUrl,
+    version,
+    uptime,
   }
 
   if (isJsonOutput()) {
@@ -37,6 +46,8 @@ export async function handleStatusCommand(flags: Record<string, string>) {
       console.log(`Vibora is running (${healthStatus})`)
       console.log(`  PID:  ${pid}`)
       console.log(`  URL:  ${serverUrl}`)
+      if (version) console.log(`  Version: ${version}`)
+      if (uptime) console.log(`  Uptime:  ${Math.floor(uptime / 1000)}s`)
     } else {
       console.log('Vibora is not running')
       console.log(`\nStart with: vibora up`)
