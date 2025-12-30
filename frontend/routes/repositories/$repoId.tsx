@@ -22,6 +22,7 @@ import {
   Link01Icon,
   GithubIcon,
   ComputerTerminal01Icon,
+  VisualStudioCodeIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -34,6 +35,8 @@ import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { log } from '@/lib/logger'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
+import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { Terminal as XTerm } from '@xterm/xterm'
 
 /**
@@ -120,6 +123,15 @@ function RepositoryDetailView() {
   const activeTab = tab || 'settings'
   const isMobile = useIsMobile()
   const { openInTerminal } = useOpenInTerminal()
+  const { data: editorApp } = useEditorApp()
+  const { data: editorHost } = useEditorHost()
+  const { data: editorSshPort } = useEditorSshPort()
+
+  const handleOpenEditor = () => {
+    if (!repository) return
+    const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
+    openExternalUrl(url)
+  }
 
   // Log on mount
   useEffect(() => {
@@ -392,6 +404,17 @@ function RepositoryDetailView() {
           >
             <HugeiconsIcon icon={ComputerTerminal01Icon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">Terminal</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleOpenEditor}
+            className="text-muted-foreground hover:text-foreground"
+            title={`Open in ${getEditorDisplayName(editorApp)}`}
+          >
+            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Editor</span>
           </Button>
         </div>
 

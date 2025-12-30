@@ -51,7 +51,9 @@ function slugify(text: string): string {
 }
 
 function generateBranchName(text: string): string {
-  const slug = slugify(text)
+  // Take only the first 4 words to keep worktree paths short
+  const words = text.trim().split(/\s+/).slice(0, 4).join(' ')
+  const slug = slugify(words)
   if (!slug) return ''
   const suffix = Math.random().toString(36).substring(2, 6)
   return `${slug}-${suffix}`
