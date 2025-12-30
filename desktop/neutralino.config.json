@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
   "applicationId": "io.vibora.desktop",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "defaultMode": "window",
   "port": 0,
   "documentRoot": "/resources/",
@@ -26,7 +26,7 @@
   ],
   "globalVariables": {
     "APP_NAME": "Vibora",
-    "APP_VERSION": "5.2.0"
+    "APP_VERSION": "5.2.1"
   },
   "modes": {
     "window": {
