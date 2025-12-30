@@ -51,9 +51,8 @@ export async function handleTasksCommand(
 
   switch (action) {
     case 'list': {
-      let tasks = await client.listTasks()
-
-      // Apply filters
+      // Validate status filter before making network call
+      let statusFilter: TaskStatus | undefined
       if (flags.status) {
         const status = flags.status.toUpperCase() as TaskStatus
         if (!VALID_STATUSES.includes(status)) {
@@ -63,7 +62,14 @@ export async function handleTasksCommand(
             ExitCodes.INVALID_ARGS
           )
         }
-        tasks = tasks.filter((t) => t.status === status)
+        statusFilter = status
+      }
+
+      let tasks = await client.listTasks()
+
+      // Apply filters
+      if (statusFilter) {
+        tasks = tasks.filter((t) => t.status === statusFilter)
       }
 
       if (flags.repo) {
