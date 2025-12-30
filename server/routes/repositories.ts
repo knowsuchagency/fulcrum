@@ -1,10 +1,11 @@
 import { Hono } from 'hono'
-import { existsSync, rmSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, rmSync, readdirSync, mkdirSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { execSync } from 'node:child_process'
+import { homedir } from 'node:os'
 import { db, repositories, type NewRepository } from '../db'
 import { eq, desc, sql, inArray } from 'drizzle-orm'
-import { getSettings } from '../lib/settings'
+import { getSettings, expandPath } from '../lib/settings'
 import { isGitUrl, extractRepoNameFromUrl } from '../lib/git-utils'
 
 const app = new Hono()
@@ -86,6 +87,8 @@ app.post('/clone', async (c) => {
     const body = await c.req.json<{
       url: string
       displayName?: string
+      targetDir?: string // Parent directory for clone (defaults to defaultGitReposDir)
+      folderName?: string // Custom folder name (defaults to extracted from URL)
     }>()
 
     if (!body.url) {
@@ -96,17 +99,53 @@ app.post('/clone', async (c) => {
       return c.json({ error: 'Invalid git URL format' }, 400)
     }
 
-    // Get the default git repos directory
+    // Get settings for default directory
     const settings = getSettings()
-    const gitReposDir = settings.paths.defaultGitReposDir
 
-    // Derive the repo name from URL
-    const repoName = extractRepoNameFromUrl(body.url)
-    const targetPath = join(gitReposDir, repoName)
+    // Determine parent directory (expand tilde if present)
+    let parentDir = body.targetDir?.trim() || settings.paths.defaultGitReposDir
+    parentDir = expandPath(parentDir)
+
+    // SAFETY: Reject if parent directory is exactly the home directory
+    const home = homedir()
+    if (resolve(parentDir) === home) {
+      return c.json({ error: 'Cannot clone directly into home directory. Please specify a subdirectory.' }, 400)
+    }
+
+    // Derive folder name (use provided or extract from URL)
+    const repoName = body.folderName?.trim() || extractRepoNameFromUrl(body.url)
+
+    // SAFETY: Validate folder name
+    if (!repoName) {
+      return c.json({ error: 'Could not determine folder name from URL' }, 400)
+    }
+    if (repoName === '.' || repoName === '..') {
+      return c.json({ error: 'Invalid folder name' }, 400)
+    }
+    if (repoName.includes('/') || repoName.includes('\\')) {
+      return c.json({ error: 'Folder name cannot contain path separators' }, 400)
+    }
+
+    const targetPath = join(parentDir, repoName)
+
+    // SAFETY: Path traversal protection - ensure target is within parent
+    const resolvedParent = resolve(parentDir)
+    const resolvedTarget = resolve(targetPath)
+    if (!resolvedTarget.startsWith(resolvedParent + '/') && resolvedTarget !== resolvedParent) {
+      return c.json({ error: 'Invalid target path' }, 400)
+    }
 
     // Check if directory already exists
     if (existsSync(targetPath)) {
       return c.json({ error: `Directory already exists: ${targetPath}` }, 400)
+    }
+
+    // Create parent directory if needed (but NEVER create home directory)
+    if (!existsSync(parentDir)) {
+      if (resolve(parentDir) === home) {
+        return c.json({ error: 'Cannot create home directory' }, 400)
+      }
+      mkdirSync(parentDir, { recursive: true })
     }
 
     // Clone the repository
@@ -118,7 +157,8 @@ app.post('/clone', async (c) => {
       })
     } catch (cloneErr) {
       // Clean up partial clone if it exists
-      if (existsSync(targetPath)) {
+      // SAFETY: Only remove if path is within the intended parent directory
+      if (existsSync(targetPath) && resolvedTarget.startsWith(resolvedParent + '/')) {
         rmSync(targetPath, { recursive: true, force: true })
       }
 
@@ -212,13 +252,48 @@ app.patch('/:id', async (c) => {
 // DELETE /api/repositories/:id - Delete repository
 app.delete('/:id', (c) => {
   const id = c.req.param('id')
+  const deleteDirectory = c.req.query('deleteDirectory') === 'true'
+
   const existing = db.select().from(repositories).where(eq(repositories.id, id)).get()
   if (!existing) {
     return c.json({ error: 'Repository not found' }, 404)
   }
 
+  // Optionally delete the directory from disk
+  if (deleteDirectory && existing.path) {
+    const repoPath = existing.path
+
+    // SAFETY: Reject if path is home directory
+    const home = homedir()
+    if (resolve(repoPath) === home) {
+      return c.json({ error: 'Cannot delete home directory' }, 400)
+    }
+
+    // SAFETY: Reject common dangerous paths
+    const dangerousPaths = ['/', '/home', '/usr', '/etc', '/var', '/tmp', '/root']
+    if (dangerousPaths.includes(resolve(repoPath))) {
+      return c.json({ error: 'Cannot delete system directory' }, 400)
+    }
+
+    // SAFETY: Only delete if directory exists and contains .git
+    if (existsSync(repoPath)) {
+      const gitPath = join(repoPath, '.git')
+      if (!existsSync(gitPath)) {
+        return c.json({ error: 'Directory does not appear to be a git repository' }, 400)
+      }
+
+      try {
+        rmSync(repoPath, { recursive: true, force: true })
+      } catch (err) {
+        return c.json({
+          error: `Failed to delete directory: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        }, 500)
+      }
+    }
+  }
+
   db.delete(repositories).where(eq(repositories.id, id)).run()
-  return c.json({ success: true })
+  return c.json({ success: true, directoryDeleted: deleteDirectory })
 })
 
 // POST /api/repositories/scan - Scan directory for git repositories

@@ -18,14 +18,23 @@
     "title": "Delete Repository",
     "description": "This will remove \"{{name}}\" from Vibora. The actual repository files will not be affected.",
     "button": "Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "alsoDeleteDirectory": "Also delete the directory from disk",
+    "deleteDirectoryWarning": "This will permanently delete all files in the repository. This action cannot be undone."
   },
   "addModal": {
     "title": "Add Repository",
-    "description": "Add a git repository from a URL or local path.",
+    "description": "Add a git repository from a URL or local path, or scan a directory.",
+    "tabs": {
+      "add": "Add",
+      "scan": "Scan"
+    },
     "inputLabel": "Repository URL or path",
     "inputPlaceholder": "https://github.com/user/repo or /local/path",
     "browse": "Browse...",
+    "cloneOptions": "Clone Options",
+    "targetDirectory": "Clone to directory",
+    "folderName": "Folder name",
     "willCloneTo": "Will clone to",
     "cloning": "Cloning repository...",
     "adding": "Adding...",

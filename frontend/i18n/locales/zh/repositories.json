@@ -12,14 +12,23 @@
     "title": "删除仓库",
     "description": "这将从 Vibora 中移除 \"{{name}}\"。实际的仓库文件不会受到影响。",
     "button": "删除",
-    "deleting": "删除中..."
+    "deleting": "删除中...",
+    "alsoDeleteDirectory": "同时从磁盘删除目录",
+    "deleteDirectoryWarning": "这将永久删除仓库中的所有文件。此操作无法撤销。"
   },
   "addModal": {
     "title": "添加仓库",
-    "description": "从 URL 或本地路径添加 Git 仓库。",
+    "description": "从 URL 或本地路径添加 Git 仓库，或扫描目录。",
+    "tabs": {
+      "add": "添加",
+      "scan": "扫描"
+    },
     "inputLabel": "仓库 URL 或路径",
     "inputPlaceholder": "https://github.com/user/repo 或 /local/path",
     "browse": "浏览...",
+    "cloneOptions": "克隆选项",
+    "targetDirectory": "克隆到目录",
+    "folderName": "文件夹名称",
     "willCloneTo": "将克隆到",
     "cloning": "正在克隆仓库...",
     "adding": "添加中...",

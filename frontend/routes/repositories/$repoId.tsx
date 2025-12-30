@@ -6,16 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
@@ -35,6 +25,7 @@ import {
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
+import { DeleteRepositoryDialog } from '@/components/repositories/delete-repository-dialog'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { Terminal } from '@/components/terminal/terminal'
@@ -100,6 +91,7 @@ function RepositoryDetailView() {
   const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<'terminal' | 'files'>('terminal')
 
   // Terminal state
@@ -217,9 +209,9 @@ function RepositoryDetailView() {
     )
   }
 
-  const handleDelete = async () => {
+  const handleDelete = async (deleteDirectory: boolean) => {
     if (!repository) return
-    await deleteRepository.mutateAsync(repository.id)
+    await deleteRepository.mutateAsync({ id: repository.id, deleteDirectory })
     navigate({ to: '/repositories' })
   }
 
@@ -407,34 +399,14 @@ function RepositoryDetailView() {
               />
             </a>
           )}
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-destructive"
-                />
-              }
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Repository</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove "{repository.displayName}" from Vibora. The actual repository
-                  files will not be affected.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <Button variant="destructive" onClick={handleDelete}>
-                  Delete
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+          </Button>
         </div>
       </div>
 
@@ -635,6 +607,13 @@ function RepositoryDetailView() {
         onOpenChange={setTaskModalOpen}
         defaultRepository={repository}
         showTrigger={false}
+      />
+
+      <DeleteRepositoryDialog
+        repository={repository}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={handleDelete}
       />
     </div>
   )

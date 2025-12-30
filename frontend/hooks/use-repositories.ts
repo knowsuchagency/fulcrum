@@ -44,7 +44,12 @@ export function useCloneRepository() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { url: string; displayName?: string }) =>
+    mutationFn: (data: {
+      url: string
+      displayName?: string
+      targetDir?: string // Parent directory for clone (defaults to defaultGitReposDir)
+      folderName?: string // Custom folder name (defaults to extracted from URL)
+    }) =>
       fetchJSON<Repository>(`${API_BASE}/api/repositories/clone`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -81,10 +86,14 @@ export function useDeleteRepository() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) =>
-      fetchJSON<{ success: boolean }>(`${API_BASE}/api/repositories/${id}`, {
+    mutationFn: ({ id, deleteDirectory = false }: { id: string; deleteDirectory?: boolean }) => {
+      const url = deleteDirectory
+        ? `${API_BASE}/api/repositories/${id}?deleteDirectory=true`
+        : `${API_BASE}/api/repositories/${id}`
+      return fetchJSON<{ success: boolean; directoryDeleted?: boolean }>(url, {
         method: 'DELETE',
-      }),
+      })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
     },
