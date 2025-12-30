@@ -15,11 +15,12 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   GridViewIcon,
   CommandLineIcon,
-  FolderSyncIcon,
   Database01Icon,
   Settings01Icon,
   PlusSignIcon,
   HelpCircleIcon,
+  GitPullRequestIcon,
+  ChartLineData01Icon,
 } from '@hugeicons/core-free-icons'
 
 interface CommandPaletteProps {
@@ -80,26 +81,38 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         },
       },
       {
-        id: 'goto-worktrees',
-        label: t('commandPalette.commands.goToWorktrees'),
-        shortcut: 'meta+3',
-        keywords: ['git', 'branches'],
-        category: 'navigation',
-        icon: <HugeiconsIcon icon={FolderSyncIcon} size={16} strokeWidth={2} />,
-        action: () => {
-          navigate({ to: '/worktrees' })
-          setOpen(false)
-        },
-      },
-      {
         id: 'goto-repositories',
         label: t('commandPalette.commands.goToRepositories'),
-        shortcut: 'meta+4',
+        shortcut: 'meta+3',
         keywords: ['repos', 'git', 'projects'],
         category: 'navigation',
         icon: <HugeiconsIcon icon={Database01Icon} size={16} strokeWidth={2} />,
         action: () => {
           navigate({ to: '/repositories' })
+          setOpen(false)
+        },
+      },
+      {
+        id: 'goto-review',
+        label: t('commandPalette.commands.goToReview'),
+        shortcut: 'meta+4',
+        keywords: ['pr', 'pull request', 'issues', 'github'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={GitPullRequestIcon} size={16} strokeWidth={2} />,
+        action: () => {
+          navigate({ to: '/review' })
+          setOpen(false)
+        },
+      },
+      {
+        id: 'goto-monitoring',
+        label: t('commandPalette.commands.goToMonitoring'),
+        shortcut: 'meta+5',
+        keywords: ['system', 'cpu', 'memory', 'processes', 'usage'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={ChartLineData01Icon} size={16} strokeWidth={2} />,
+        action: () => {
+          navigate({ to: '/monitoring' })
           setOpen(false)
         },
       },
@@ -190,8 +203,9 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   useHotkeys('meta+i', () => {
     navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
   }, { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+3', () => navigate({ to: '/worktrees' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+4', () => navigate({ to: '/repositories' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+3', () => navigate({ to: '/repositories' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+4', () => navigate({ to: '/review' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+5', () => navigate({ to: '/monitoring' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+,', () => navigate({ to: '/settings' }), { allowInInput: true, allowInTerminal: true })
 
   // New task shortcut
