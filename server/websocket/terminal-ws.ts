@@ -101,7 +101,7 @@ export const terminalWebSocketHandlers: WSEvents = {
     })
   },
 
-  onMessage(evt, ws) {
+  async onMessage(evt, ws) {
     const clientData = clients.get(ws)
     if (!clientData) return
 
@@ -246,7 +246,8 @@ export const terminalWebSocketHandlers: WSEvents = {
         case 'terminal:attach': {
           const terminalId = message.payload.terminalId
           // Ensure terminal is attached to dtach (connects PTY if not already)
-          ptyManager.attach(terminalId)
+          // This is async because it polls for the socket to exist (race condition fix)
+          await ptyManager.attach(terminalId)
           const buffer = ptyManager.getBuffer(terminalId)
           log.ws.info('terminal:attach adding to attachedTerminals', {
             terminalId,

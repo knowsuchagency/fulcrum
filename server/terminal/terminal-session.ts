@@ -164,14 +164,29 @@ export class TerminalSession {
   }
 
   // Attach to an existing dtach session (used after server restart)
-  attach(): void {
+  async attach(): Promise<void> {
     if (this.pty) return // Already attached
 
     const dtach = getDtachService()
 
-    // Verify socket still exists
-    if (!dtach.hasSession(this.id)) {
-      log.terminal.error('dtach socket not found', { terminalId: this.id })
+    // Wait for socket to appear (handles race condition on first dtach use)
+    // dtach -n spawns and exits, but socket creation may take a few ms
+    const MAX_ATTEMPTS = 10
+    const POLL_INTERVAL_MS = 50
+    let socketFound = false
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      if (dtach.hasSession(this.id)) {
+        socketFound = true
+        break
+      }
+      if (attempt < MAX_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+      }
+    }
+
+    if (!socketFound) {
+      log.terminal.error('dtach socket not found after polling', { terminalId: this.id })
       this.status = 'exited'
       this.exitCode = 1
       this.updateDb({ status: 'exited', exitCode: 1 })

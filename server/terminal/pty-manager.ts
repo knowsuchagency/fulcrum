@@ -151,11 +151,11 @@ export class PTYManager {
   }
 
   // Called when client attaches - ensures PTY is connected
-  attach(terminalId: string): boolean {
+  async attach(terminalId: string): Promise<boolean> {
     const session = this.sessions.get(terminalId)
     if (!session) return false
     if (!session.isAttached()) {
-      session.attach()
+      await session.attach()
     }
     return true
   }
