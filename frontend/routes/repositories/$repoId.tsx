@@ -426,6 +426,19 @@ function RepositoryDetailView() {
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">{t('editor')}</span>
           </Button>
+
+          {linkedApp && (
+            <Link to="/apps/$appId" params={{ appId: linkedApp.id }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <HugeiconsIcon icon={CloudIcon} size={14} strokeWidth={2} data-slot="icon" />
+                <span className="max-sm:hidden">{t('application')}</span>
+              </Button>
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -445,17 +458,6 @@ function RepositoryDetailView() {
                 strokeWidth={2}
               />
             </a>
-          )}
-          {linkedApp && (
-            <Link
-              to="/apps/$appId"
-              params={{ appId: linkedApp.id }}
-              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm"
-              title={`Deployed as ${linkedApp.name}`}
-            >
-              <HugeiconsIcon icon={CloudIcon} size={14} strokeWidth={2} />
-              <span className="max-sm:hidden">{linkedApp.name}</span>
-            </Link>
           )}
           <Button
             variant="ghost"

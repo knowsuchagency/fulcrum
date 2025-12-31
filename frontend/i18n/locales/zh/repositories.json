@@ -6,6 +6,7 @@
   "viewTasks": "任务",
   "terminal": "终端",
   "editor": "编辑器",
+  "application": "应用",
   "settings": "设置",
   "addRepository": "添加仓库",
   "scanDirectory": "扫描目录",

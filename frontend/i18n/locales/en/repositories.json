@@ -6,6 +6,7 @@
   "viewTasks": "Tasks",
   "terminal": "Terminal",
   "editor": "Editor",
+  "application": "Application",
   "settings": "Settings",
   "addRepository": "Add Repository",
   "scanDirectory": "Scan Directory",
