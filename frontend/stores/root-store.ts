@@ -548,6 +548,13 @@ export const RootStore = types
             })
             return false // Prevent xterm from processing (would send regular CR)
           }
+
+          // In desktop mode (iframe), prevent Escape from bubbling to native layer
+          // This stops macOS from exiting fullscreen when pressing Escape in terminal
+          if (event.type === 'keydown' && event.key === 'Escape' && window.parent !== window) {
+            event.stopPropagation()
+          }
+
           return true // Allow all other keys to be processed normally
         })
 
