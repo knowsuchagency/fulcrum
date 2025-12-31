@@ -100,6 +100,7 @@ app.post('/', async (c) => {
       composeFile?: string
       autoDeployEnabled?: boolean
       environmentVariables?: Record<string, string>
+      noCacheBuild?: boolean
       services: Array<{
         serviceName: string
         containerPort?: number
@@ -140,6 +141,7 @@ app.post('/', async (c) => {
       status: 'stopped',
       autoDeployEnabled: body.autoDeployEnabled ?? false,
       environmentVariables: body.environmentVariables ? JSON.stringify(body.environmentVariables) : null,
+      noCacheBuild: body.noCacheBuild ?? false,
       createdAt: now,
       updatedAt: now,
     })
@@ -194,6 +196,7 @@ app.patch('/:id', async (c) => {
       branch?: string
       autoDeployEnabled?: boolean
       environmentVariables?: Record<string, string>
+      noCacheBuild?: boolean
       services?: Array<{
         id?: string
         serviceName: string
@@ -212,6 +215,9 @@ app.patch('/:id', async (c) => {
     if (body.autoDeployEnabled !== undefined) updateData.autoDeployEnabled = body.autoDeployEnabled
     if (body.environmentVariables !== undefined) {
       updateData.environmentVariables = JSON.stringify(body.environmentVariables)
+    }
+    if (body.noCacheBuild !== undefined) {
+      updateData.noCacheBuild = body.noCacheBuild
     }
 
     await db.update(apps).set(updateData).where(eq(apps.id, id))

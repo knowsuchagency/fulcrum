@@ -74,6 +74,7 @@ export function useUpdateApp() {
         branch?: string
         autoDeployEnabled?: boolean
         environmentVariables?: Record<string, string>
+        noCacheBuild?: boolean
         services?: Array<{
           id?: string
           serviceName: string

@@ -305,6 +305,7 @@ export interface App {
   status: AppStatus
   autoDeployEnabled: boolean
   environmentVariables?: Record<string, string>
+  noCacheBuild?: boolean
   lastDeployedAt: string | null
   lastDeployCommit: string | null
   createdAt: string

@@ -86,6 +86,7 @@ export const apps = sqliteTable('apps', {
   status: text('status').notNull().default('stopped'), // stopped|building|running|failed
   autoDeployEnabled: integer('auto_deploy_enabled', { mode: 'boolean' }).default(false),
   environmentVariables: text('environment_variables'), // JSON string: {"KEY": "value", ...}
+  noCacheBuild: integer('no_cache_build', { mode: 'boolean' }).default(false),
   lastDeployedAt: text('last_deployed_at'),
   lastDeployCommit: text('last_deploy_commit'),
   createdAt: text('created_at').notNull(),

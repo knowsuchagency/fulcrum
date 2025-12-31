@@ -160,6 +160,7 @@ export async function deployApp(
         cwd: repo.path,
         composeFile: app.composeFile,
         env,
+        noCache: app.noCacheBuild ?? false,
       },
       (line) => {
         buildLogs.push(line)

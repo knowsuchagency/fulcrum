@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -655,6 +656,9 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
   })
   const [envSaved, setEnvSaved] = useState(false)
 
+  // Build settings state
+  const [noCacheBuild, setNoCacheBuild] = useState(app.noCacheBuild ?? false)
+
   // Services/domains state
   const [services, setServices] = useState(
     app.services?.map((s) => ({
@@ -664,6 +668,14 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
       domain: s.domain ?? '',
     })) ?? []
   )
+
+  const handleToggleNoCache = async (checked: boolean) => {
+    setNoCacheBuild(checked)
+    await updateApp.mutateAsync({
+      id: app.id,
+      updates: { noCacheBuild: checked },
+    })
+  }
 
   const handleSaveEnv = async () => {
     // Parse "KEY=value" lines back to object
@@ -742,6 +754,29 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
               'Save Environment'
             )}
           </Button>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Build Settings Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Build Settings</h3>
+          <p className="text-sm text-muted-foreground">Configure Docker build behavior</p>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="no-cache-build" className="text-base font-medium">
+              No Cache Build
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Always rebuild images from scratch without using Docker cache. Useful when builds fail due to corrupted
+              cache.
+            </p>
+          </div>
+          <Switch id="no-cache-build" checked={noCacheBuild} onCheckedChange={handleToggleNoCache} />
         </div>
       </div>
 

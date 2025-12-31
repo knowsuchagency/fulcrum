@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import { log } from '../lib/logger'
+import { getShellEnv } from '../lib/env'
 
 export interface ContainerStatus {
   name: string
@@ -35,11 +36,13 @@ async function runCompose(
   log.deploy.debug('Running docker compose command', { args: fullArgs, cwd: options.cwd })
 
   return new Promise((resolve) => {
+    // Use getShellEnv() to filter out server-specific vars (PORT, DEBUG, etc.)
+    // then merge with per-app env vars
     const proc = spawn('docker', fullArgs, {
       cwd: options.cwd,
       env: {
-        ...process.env,
-        ...options.env, // Merge per-app env vars (overrides process.env)
+        ...getShellEnv(),
+        ...options.env, // Merge per-app env vars (overrides filtered env)
       },
     })
 
@@ -77,16 +80,25 @@ async function runCompose(
   })
 }
 
+export interface ComposeBuildOptions extends ComposeCommandOptions {
+  noCache?: boolean
+}
+
 /**
  * Build the compose stack
  */
 export async function composeBuild(
-  options: ComposeCommandOptions,
+  options: ComposeBuildOptions,
   onOutput?: (line: string) => void
 ): Promise<{ success: boolean; error?: string }> {
-  log.deploy.info('Building compose stack', { project: options.projectName })
+  log.deploy.info('Building compose stack', { project: options.projectName, noCache: options.noCache })
 
-  const result = await runCompose(['build', '--progress', 'plain'], options, onOutput)
+  const args = ['build', '--progress', 'plain']
+  if (options.noCache) {
+    args.push('--no-cache')
+  }
+
+  const result = await runCompose(args, options, onOutput)
 
   if (result.exitCode !== 0) {
     log.deploy.error('Compose build failed', {
