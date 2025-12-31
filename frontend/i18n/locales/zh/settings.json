@@ -100,6 +100,10 @@
   },
   "notifications": {
     "enable": "启用通知",
+    "toast": "应用内提示",
+    "toastDescription": "在 Vibora 界面中显示提示通知",
+    "desktop": "桌面通知",
+    "desktopDescription": "显示原生桌面或浏览器通知",
     "sound": "声音",
     "slack": "Slack",
     "discord": "Discord",

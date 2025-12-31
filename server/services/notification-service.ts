@@ -147,7 +147,15 @@ async function sendPushoverNotification(
 }
 
 // Broadcast notification to UI via WebSocket
-function broadcastUINotification(payload: NotificationPayload, playSound: boolean, isCustomSound: boolean): void {
+function broadcastUINotification(
+  payload: NotificationPayload,
+  options: {
+    showToast: boolean
+    showDesktop: boolean
+    playSound: boolean
+    isCustomSound: boolean
+  }
+): void {
   const notificationType =
     payload.type === 'pr_merged' || payload.type === 'plan_complete' ? 'success' : 'info'
 
@@ -159,8 +167,10 @@ function broadcastUINotification(payload: NotificationPayload, playSound: boolea
       message: payload.message,
       notificationType,
       taskId: payload.taskId,
-      playSound, // Tell desktop app to play local sound
-      isCustomSound, // Whether user has custom sound file (affects notification icon)
+      showToast: options.showToast, // Whether to show in-app toast
+      showDesktop: options.showDesktop, // Whether to show browser/desktop notification
+      playSound: options.playSound, // Tell desktop app to play local sound
+      isCustomSound: options.isCustomSound, // Whether user has custom sound file (affects notification icon)
     },
   })
 }
@@ -176,13 +186,14 @@ export async function sendNotification(payload: NotificationPayload): Promise<No
   const results: NotificationResult[] = []
   const promises: Promise<void>[] = []
 
-  // Determine if sound should be played
-  // Pass this to UI so desktop app can play sound locally
+  // Determine notification options from settings
+  const showToast = settings.toast?.enabled ?? true
+  const showDesktop = settings.desktop?.enabled ?? true
   const playSound = settings.sound?.enabled ?? false
   const isCustomSound = !!settings.sound?.customSoundFile
 
-  // Always broadcast to UI (with sound flag for desktop app)
-  broadcastUINotification(payload, playSound, isCustomSound)
+  // Always broadcast to UI (frontend will respect showToast/showDesktop flags)
+  broadcastUINotification(payload, { showToast, showDesktop, playSound, isCustomSound })
 
   // Sound (macOS only)
   if (settings.sound?.enabled) {
@@ -246,7 +257,14 @@ export async function testNotificationChannel(
 
   switch (channel) {
     case 'sound':
-      return sendSoundNotification()
+      // Broadcast to UI to play sound (frontend handles actual playback)
+      broadcastUINotification(testPayload, {
+        showToast: false, // Don't show toast for sound test
+        showDesktop: false, // Don't show desktop notification for sound test
+        playSound: true,
+        isCustomSound: !!config.sound?.customSoundFile,
+      })
+      return { channel: 'sound', success: true }
     case 'slack':
       return sendSlackNotification(config.slack, testPayload)
     case 'discord':

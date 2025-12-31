@@ -94,6 +94,8 @@ function SettingsPage() {
 
   // Notification settings local state
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [toastEnabled, setToastEnabled] = useState(true)
+  const [desktopEnabled, setDesktopEnabled] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(false)
   const [slackEnabled, setSlackEnabled] = useState(false)
   const [slackWebhook, setSlackWebhook] = useState('')
@@ -138,6 +140,8 @@ function SettingsPage() {
   useEffect(() => {
     if (notificationSettings) {
       setNotificationsEnabled(notificationSettings.enabled)
+      setToastEnabled(notificationSettings.toast?.enabled ?? true)
+      setDesktopEnabled(notificationSettings.desktop?.enabled ?? true)
       setSoundEnabled(notificationSettings.sound?.enabled ?? false)
       setHasCustomSound(!!notificationSettings.sound?.customSoundFile)
       setSlackEnabled(notificationSettings.slack?.enabled ?? false)
@@ -186,6 +190,8 @@ function SettingsPage() {
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
+    toastEnabled !== (notificationSettings.toast?.enabled ?? true) ||
+    desktopEnabled !== (notificationSettings.desktop?.enabled ?? true) ||
     soundEnabled !== (notificationSettings.sound?.enabled ?? false) ||
     slackEnabled !== (notificationSettings.slack?.enabled ?? false) ||
     slackWebhook !== (notificationSettings.slack?.webhookUrl ?? '') ||
@@ -302,6 +308,8 @@ function SettingsPage() {
           updateNotifications.mutate(
             {
               enabled: notificationsEnabled,
+              toast: { enabled: toastEnabled },
+              desktop: { enabled: desktopEnabled },
               sound: { enabled: soundEnabled },
               slack: { enabled: slackEnabled, webhookUrl: slackWebhook },
               discord: { enabled: discordEnabled, webhookUrl: discordWebhook },
@@ -854,6 +862,36 @@ function SettingsPage() {
                       onCheckedChange={setNotificationsEnabled}
                       disabled={isLoading}
                     />
+                  </div>
+
+                  {/* Toast (in-app) */}
+                  <div className="space-y-2 pl-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={toastEnabled}
+                        onCheckedChange={setToastEnabled}
+                        disabled={isLoading || !notificationsEnabled}
+                      />
+                      <label className="text-sm text-muted-foreground">{t('notifications.toast')}</label>
+                    </div>
+                    <p className="ml-10 text-xs text-muted-foreground">
+                      {t('notifications.toastDescription')}
+                    </p>
+                  </div>
+
+                  {/* Desktop (browser/native) */}
+                  <div className="space-y-2 pl-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={desktopEnabled}
+                        onCheckedChange={setDesktopEnabled}
+                        disabled={isLoading || !notificationsEnabled}
+                      />
+                      <label className="text-sm text-muted-foreground">{t('notifications.desktop')}</label>
+                    </div>
+                    <p className="ml-10 text-xs text-muted-foreground">
+                      {t('notifications.desktopDescription')}
+                    </p>
                   </div>
 
                   {/* Sound */}

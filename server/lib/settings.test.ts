@@ -364,6 +364,178 @@ describe('Settings', () => {
     })
   })
 
+  describe('ensureLatestSettings', () => {
+    test('adds missing keys with defaults', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 5,
+          server: { port: 8888 },
+          // Missing: paths, editor, integrations, appearance, notifications, zai
+        })
+      )
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // User value preserved
+      expect(file.server.port).toBe(8888)
+
+      // All sections should exist with defaults
+      expect(file.paths).toBeDefined()
+      expect(file.paths.defaultGitReposDir).toBeDefined()
+      expect(file.editor).toBeDefined()
+      expect(file.editor.app).toBe('vscode')
+      expect(file.integrations).toBeDefined()
+      expect(file.appearance).toBeDefined()
+      expect(file.notifications).toBeDefined()
+      expect(file.notifications.enabled).toBe(true)
+      expect(file.zai).toBeDefined()
+      expect(file.zai.enabled).toBe(false)
+    })
+
+    test('preserves user values while adding missing keys', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 5,
+          server: { port: 9999 },
+          appearance: { theme: 'dark' }, // User set theme but missing other appearance keys
+        })
+      )
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // User values preserved
+      expect(file.server.port).toBe(9999)
+      expect(file.appearance.theme).toBe('dark')
+
+      // Missing appearance keys added with defaults
+      expect(file.appearance.syncClaudeCodeTheme).toBe(false)
+      expect(file.appearance.claudeCodeLightTheme).toBe('light-ansi')
+      expect(file.appearance.claudeCodeDarkTheme).toBe('dark-ansi')
+    })
+
+    test('preserves extra keys not in schema', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 5,
+          server: { port: 7777 },
+          desktop: { zoomLevel: 1.5 }, // Extra key not in main schema
+          lastUpdateCheck: 1234567890, // Another extra key
+        })
+      )
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // Extra keys preserved
+      expect(file.desktop?.zoomLevel).toBe(1.5)
+      expect(file.lastUpdateCheck).toBe(1234567890)
+    })
+
+    test('always writes file and sets schema version', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          server: { port: 7777 },
+          // No schema version
+        })
+      )
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // Schema version should be set to current
+      expect(file._schemaVersion).toBe(5)
+    })
+
+    test('creates settings file with all defaults if none exists', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      expect(existsSync(settingsPath)).toBe(false)
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      expect(existsSync(settingsPath)).toBe(true)
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // All default sections should exist
+      expect(file._schemaVersion).toBe(5)
+      expect(file.server.port).toBe(7777)
+      expect(file.editor.app).toBe('vscode')
+      expect(file.notifications.enabled).toBe(true)
+      expect(file.zai.enabled).toBe(false)
+    })
+
+    test('handles missing notifications section', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 5,
+          server: { port: 7777 },
+          // No notifications section
+        })
+      )
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // Notifications should be added with defaults
+      expect(file.notifications).toBeDefined()
+      expect(file.notifications.enabled).toBe(true)
+      expect(file.notifications.sound.enabled).toBe(true)
+      expect(file.notifications.slack.enabled).toBe(false)
+    })
+
+    test('handles missing zai section', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 5,
+          server: { port: 7777 },
+          // No zai section
+        })
+      )
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // zai should be added with defaults
+      expect(file.zai).toBeDefined()
+      expect(file.zai.enabled).toBe(false)
+      expect(file.zai.apiKey).toBeNull()
+      expect(file.zai.haikuModel).toBe('glm-4.5-air')
+    })
+  })
+
   describe('helper functions', () => {
     test('getNestedValue retrieves nested values', async () => {
       const { getNestedValue } = await import('./settings')

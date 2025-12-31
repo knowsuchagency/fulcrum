@@ -100,6 +100,10 @@
   },
   "notifications": {
     "enable": "Enable Notifications",
+    "toast": "In-app Toast",
+    "toastDescription": "Show toast notifications in the Vibora interface",
+    "desktop": "Desktop Notifications",
+    "desktopDescription": "Show native desktop or browser notifications",
     "sound": "Sound",
     "slack": "Slack",
     "discord": "Discord",

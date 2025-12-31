@@ -10,7 +10,7 @@
 
 // Configuration
 const DEFAULT_PORT = 7777;
-const CURRENT_SCHEMA_VERSION = 3;
+const FALLBACK_SCHEMA_VERSION = 5; // Used if package.json cannot be read
 const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
 const MAX_HEALTH_RETRIES = 10;
 const DEV_PORT = 5173;
@@ -27,6 +27,7 @@ let currentRoute = { pathname: '/', search: '' }; // Track current SPA route fro
 let isDevMode = false;
 let logFilePath = null;
 let loadingStartTime = null;
+let cachedSchemaVersion = null; // Cached schema version from package.json
 const MIN_LOADING_DURATION = 3000; // Show loading screen for at least 3 seconds
 
 // =============================================================================
@@ -89,6 +90,33 @@ async function getSettingsPath() {
 }
 
 /**
+ * Get current schema version from bundled package.json major version
+ * Schema version is derived from the major version number (e.g., 5.4.6 → 5)
+ */
+async function getSchemaVersion() {
+  // Return cached value if available
+  if (cachedSchemaVersion !== null) {
+    return cachedSchemaVersion;
+  }
+
+  try {
+    const bundleDir = await getBundlePath();
+    const content = await Neutralino.filesystem.readFile(`${bundleDir}/package.json`);
+    const pkg = JSON.parse(content);
+    const majorVersion = parseInt(pkg.version.split('.')[0], 10);
+    if (!isNaN(majorVersion) && majorVersion > 0) {
+      cachedSchemaVersion = majorVersion;
+      return majorVersion;
+    }
+  } catch (err) {
+    log.debug('Could not read schema version from package.json, using fallback', { error: String(err) });
+  }
+
+  cachedSchemaVersion = FALLBACK_SCHEMA_VERSION;
+  return FALLBACK_SCHEMA_VERSION;
+}
+
+/**
  * Get a nested value from settings (supports both new and legacy formats)
  */
 function getSettingValue(key) {
@@ -109,17 +137,19 @@ function getSettingValue(key) {
 
 /**
  * Migrate settings from flat to nested format
+ * @param {object} settings - The settings object to migrate
+ * @param {number} targetVersion - The target schema version to migrate to
  */
-function migrateSettings(settings) {
+function migrateSettings(settings, targetVersion) {
   const version = settings._schemaVersion || 1;
-  if (version >= CURRENT_SCHEMA_VERSION) {
+  if (version >= targetVersion) {
     return settings; // Already migrated
   }
 
-  console.log('[Vibora] Migrating settings from version', version, 'to', CURRENT_SCHEMA_VERSION);
+  console.log('[Vibora] Migrating settings from version', version, 'to', targetVersion);
 
   const migrated = {
-    _schemaVersion: CURRENT_SCHEMA_VERSION,
+    _schemaVersion: targetVersion,
     server: { port: DEFAULT_PORT },
     editor: { app: 'vscode', host: '', sshPort: 22 },
   };
@@ -174,13 +204,14 @@ function migrateSettings(settings) {
 async function loadSettings() {
   try {
     const settingsPath = await getSettingsPath();
+    const schemaVersion = await getSchemaVersion();
     const content = await Neutralino.filesystem.readFile(settingsPath);
     let settings = JSON.parse(content);
     log.debug('Loaded settings', settings);
 
     // Migrate if needed
-    if (!settings._schemaVersion || settings._schemaVersion < CURRENT_SCHEMA_VERSION) {
-      settings = migrateSettings(settings);
+    if (!settings._schemaVersion || settings._schemaVersion < schemaVersion) {
+      settings = migrateSettings(settings, schemaVersion);
       // Save migrated settings
       await Neutralino.filesystem.writeFile(settingsPath, JSON.stringify(settings, null, 2));
       log.info('Saved migrated settings');
@@ -214,6 +245,7 @@ async function loadSettings() {
 async function saveSettings(settings) {
   try {
     const settingsPath = await getSettingsPath();
+    const schemaVersion = await getSchemaVersion();
 
     // Ensure .vibora directory exists
     const viboraDir = settingsPath.substring(0, settingsPath.lastIndexOf('/'));
@@ -224,7 +256,7 @@ async function saveSettings(settings) {
     }
 
     // Ensure schema version is set
-    settings._schemaVersion = CURRENT_SCHEMA_VERSION;
+    settings._schemaVersion = schemaVersion;
 
     await Neutralino.filesystem.writeFile(settingsPath, JSON.stringify(settings, null, 2));
     desktopSettings = settings;

@@ -520,6 +520,10 @@ cp -r dist/* "$BUNDLE_DIR/dist/"
 echo "Copying Claude plugin..." >&2
 cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
 
+# Copy package.json for version info (desktop app derives schema version from major version)
+echo "Copying package.json..." >&2
+cp package.json "$BUNDLE_DIR/"
+
 echo "Desktop bundle created at $BUNDLE_DIR (standalone executable, no Bun required)"
 """
 
@@ -575,6 +579,10 @@ cp -r dist/* "$BUNDLE_DIR/dist/"
 # Copy Claude plugin (including hidden .claude-plugin directory)
 echo "Copying Claude plugin..." >&2
 cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
+
+# Copy package.json for version info (desktop app derives schema version from major version)
+echo "Copying package.json..." >&2
+cp package.json "$BUNDLE_DIR/"
 
 echo "Desktop DEBUG bundle created at $BUNDLE_DIR"
 """

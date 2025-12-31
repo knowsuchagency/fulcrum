@@ -22,6 +22,7 @@ import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { WebSocket } from 'ws'
 import { log } from './lib/logger'
+import { ensureLatestSettings, getSettingByKey } from './lib/settings'
 
 // Neutralinojs extension connectivity info
 interface NeutralinoConfig {
@@ -201,11 +202,14 @@ function gracefulShutdown() {
 async function main() {
   log.desktop.info('Starting Vibora server in desktop mode')
 
+  // Ensure settings file is up-to-date with latest schema on startup
+  ensureLatestSettings()
+
   // Read Neutralino config from stdin
   const nlConfig = await readNeutralinoConfig()
 
-  // Find an available port (prefer 7777, but find another if taken)
-  const preferredPort = parseInt(process.env.PORT || '7777', 10)
+  // Find an available port (use configured port from settings, fallback to env or 7777)
+  const preferredPort = parseInt(process.env.PORT || '', 10) || getSettingByKey('port')
   const PORT = await findAvailablePort(preferredPort)
   log.desktop.info('Using port', { port: PORT })
 

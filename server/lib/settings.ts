@@ -463,6 +463,14 @@ export interface SoundNotificationConfig {
   customSoundFile?: string // Path to user-uploaded sound file
 }
 
+export interface ToastNotificationConfig {
+  enabled: boolean
+}
+
+export interface DesktopNotificationConfig {
+  enabled: boolean
+}
+
 export interface SlackNotificationConfig {
   enabled: boolean
   webhookUrl?: string
@@ -481,6 +489,8 @@ export interface PushoverNotificationConfig {
 
 export interface NotificationSettings {
   enabled: boolean
+  toast: ToastNotificationConfig
+  desktop: DesktopNotificationConfig
   sound: SoundNotificationConfig
   slack: SlackNotificationConfig
   discord: DiscordNotificationConfig
@@ -489,6 +499,8 @@ export interface NotificationSettings {
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enabled: true,
+  toast: { enabled: true },
+  desktop: { enabled: true },
   sound: { enabled: true },
   slack: { enabled: false },
   discord: { enabled: false },
@@ -515,6 +527,8 @@ export function getNotificationSettings(): NotificationSettings {
 
     return {
       enabled: notifications.enabled ?? false,
+      toast: { enabled: true, ...notifications.toast },
+      desktop: { enabled: true, ...notifications.desktop },
       sound: { enabled: false, ...notifications.sound },
       slack: { enabled: false, ...notifications.slack },
       discord: { enabled: false, ...notifications.discord },
@@ -542,6 +556,8 @@ export function updateNotificationSettings(updates: Partial<NotificationSettings
   const current = getNotificationSettings()
   const updated: NotificationSettings = {
     enabled: updates.enabled ?? current.enabled,
+    toast: { ...current.toast, ...updates.toast },
+    desktop: { ...current.desktop, ...updates.desktop },
     sound: { ...current.sound, ...updates.sound },
     slack: { ...current.slack, ...updates.slack },
     discord: { ...current.discord, ...updates.discord },
@@ -709,6 +725,98 @@ export function updateZAiSettings(updates: Partial<ZAiSettings>): ZAiSettings {
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
 
   return updated
+}
+
+// Helper: Deep merge user settings with defaults, preserving user values
+// User values take precedence; missing keys are filled from defaults
+// Extra keys in user settings (not in defaults) are preserved
+function deepMergeWithDefaults(
+  userSettings: Record<string, unknown>,
+  defaults: Record<string, unknown>
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+
+  // Start with all keys from defaults
+  for (const key of Object.keys(defaults)) {
+    const defaultValue = defaults[key]
+    const userValue = userSettings[key]
+
+    if (defaultValue !== null && typeof defaultValue === 'object' && !Array.isArray(defaultValue)) {
+      // Recurse for nested objects
+      result[key] = deepMergeWithDefaults(
+        (userValue as Record<string, unknown>) ?? {},
+        defaultValue as Record<string, unknown>
+      )
+    } else if (userValue !== undefined) {
+      // User value exists, use it (even if null)
+      result[key] = userValue
+    } else {
+      // Use default
+      result[key] = defaultValue
+    }
+  }
+
+  // Preserve any extra keys from user settings (e.g., desktop.zoomLevel, lastUpdateCheck)
+  for (const key of Object.keys(userSettings)) {
+    if (!(key in result)) {
+      result[key] = userSettings[key]
+    }
+  }
+
+  return result
+}
+
+// Ensure settings file is up-to-date with latest schema
+// Called on server startup to:
+// 1. Run migrations for old flat settings
+// 2. Add any missing keys with default values
+// 3. Set schema version to current
+// 4. Write back to file
+export function ensureLatestSettings(): void {
+  ensureViboraDir()
+  const settingsPath = getSettingsPath()
+
+  let parsed: Record<string, unknown> = {}
+  if (fs.existsSync(settingsPath)) {
+    try {
+      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+    } catch {
+      // Use empty if invalid
+    }
+  }
+
+  // Run flat→nested migration if needed
+  migrateSettings(parsed)
+
+  // Deep merge with default settings, preserving user values
+  const merged = deepMergeWithDefaults(parsed, DEFAULT_SETTINGS as unknown as Record<string, unknown>)
+
+  // Ensure notifications section exists with defaults
+  if (!merged.notifications || typeof merged.notifications !== 'object') {
+    merged.notifications = { ...DEFAULT_NOTIFICATION_SETTINGS }
+  } else {
+    merged.notifications = deepMergeWithDefaults(
+      merged.notifications as Record<string, unknown>,
+      DEFAULT_NOTIFICATION_SETTINGS as unknown as Record<string, unknown>
+    )
+  }
+
+  // Ensure zai section exists with defaults
+  if (!merged.zai || typeof merged.zai !== 'object') {
+    merged.zai = { ...DEFAULT_ZAI_SETTINGS }
+  } else {
+    merged.zai = deepMergeWithDefaults(
+      merged.zai as Record<string, unknown>,
+      DEFAULT_ZAI_SETTINGS as unknown as Record<string, unknown>
+    )
+  }
+
+  // Always set to current schema version
+  merged._schemaVersion = CURRENT_SCHEMA_VERSION
+
+  // Write back to file
+  fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
+  log.settings.info('Settings normalized to latest schema', { schemaVersion: CURRENT_SCHEMA_VERSION })
 }
 
 // Export helper functions for use in other modules

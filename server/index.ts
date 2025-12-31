@@ -8,10 +8,13 @@ import {
   broadcast,
   broadcastToTerminal,
 } from './websocket/terminal-ws'
-import { getSettingByKey } from './lib/settings'
+import { ensureLatestSettings, getSettingByKey } from './lib/settings'
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { log } from './lib/logger'
+
+// Ensure settings file is up-to-date with latest schema on startup
+ensureLatestSettings()
 
 const PORT = getSettingByKey('port')
 const HOST = process.env.HOST || 'localhost'

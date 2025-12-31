@@ -17,6 +17,8 @@ interface NotificationMessage {
     message: string
     notificationType: 'success' | 'info' | 'warning' | 'error'
     taskId?: string
+    showToast?: boolean
+    showDesktop?: boolean
     playSound?: boolean
     isCustomSound?: boolean
   }
@@ -48,7 +50,7 @@ export function useTaskSync() {
         if (message.type === 'task:updated') {
           queryClient.invalidateQueries({ queryKey: ['tasks'] })
         } else if (message.type === 'notification' && 'payload' in message) {
-          const { id, title, message: description, notificationType, taskId, playSound, isCustomSound } = (message as NotificationMessage).payload
+          const { id, title, message: description, notificationType, taskId, showToast, showDesktop, playSound, isCustomSound } = (message as NotificationMessage).payload
 
           // Deduplicate notifications across tabs using localStorage
           // Use a claim mechanism similar to sound deduplication
@@ -84,46 +86,50 @@ export function useTaskSync() {
           const useGoat = playSound && !isCustomSound
           const iconUrl = useGoat ? '/goat.jpeg' : '/logo.png'
 
-          // Create icon element for toast
-          const icon = (
-            <img
-              src={iconUrl}
-              alt=""
-              className="size-8 shrink-0 aspect-square rounded-sm object-cover"
-            />
-          )
+          // Show in-app toast if enabled (default: true for backward compatibility)
+          if (showToast !== false) {
+            // Create icon element for toast
+            const icon = (
+              <img
+                src={iconUrl}
+                alt=""
+                className="size-8 shrink-0 aspect-square rounded-sm object-cover"
+              />
+            )
 
-          // Build toast options with optional action for navigation
-          const toastOptions: Parameters<typeof toast.success>[1] = {
-            description,
-            icon,
-            ...(taskId && {
-              action: {
-                label: 'View',
-                onClick: () => navigate({ to: '/tasks/$taskId', params: { taskId } }),
-              },
-            }),
+            // Build toast options with optional action for navigation
+            const toastOptions: Parameters<typeof toast.success>[1] = {
+              description,
+              icon,
+              ...(taskId && {
+                action: {
+                  label: 'View',
+                  onClick: () => navigate({ to: '/tasks/$taskId', params: { taskId } }),
+                },
+              }),
+            }
+
+            // Show toast with custom icon and optional action
+            switch (notificationType) {
+              case 'success':
+                toast.success(title, toastOptions)
+                break
+              case 'error':
+                toast.error(title, toastOptions)
+                break
+              case 'warning':
+                toast.warning(title, toastOptions)
+                break
+              case 'info':
+              default:
+                toast.info(title, toastOptions)
+                break
+            }
           }
 
-          // Show toast with custom icon and optional action
-          switch (notificationType) {
-            case 'success':
-              toast.success(title, toastOptions)
-              break
-            case 'error':
-              toast.error(title, toastOptions)
-              break
-            case 'warning':
-              toast.warning(title, toastOptions)
-              break
-            case 'info':
-            default:
-              toast.info(title, toastOptions)
-              break
-          }
-
-          // Show browser notification (skip in iframe - desktop app handles natively)
-          if ('Notification' in window && window.parent === window && Notification.permission === 'granted') {
+          // Show browser notification if enabled (skip in iframe - desktop app handles natively)
+          // Default: true for backward compatibility
+          if (showDesktop !== false && 'Notification' in window && window.parent === window && Notification.permission === 'granted') {
             new Notification(title, {
               body: description,
               icon: iconUrl,
