@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   useApp,
@@ -48,6 +48,8 @@ import {
   Copy01Icon,
 } from '@hugeicons/core-free-icons'
 import type { Deployment } from '@/types'
+import { parseLogs } from '@/lib/log-utils'
+import { LogLine } from '@/components/ui/log-line'
 
 export const Route = createFileRoute('/apps/$appId')({
   component: AppDetailView,
@@ -585,7 +587,7 @@ function DeploymentRow({
   )
 }
 
-// Deployment logs modal - Dokploy style
+// Deployment logs modal - Dokploy style with log highlighting
 function DeploymentLogsModal({
   deployment,
   open,
@@ -595,8 +597,9 @@ function DeploymentLogsModal({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const lineCount = deployment?.buildLogs?.split('\n').length ?? 0
   const [copied, setCopied] = useState(false)
+
+  const logs = useMemo(() => parseLogs(deployment?.buildLogs ?? ''), [deployment?.buildLogs])
 
   const copyLogs = async () => {
     if (deployment?.buildLogs) {
@@ -614,7 +617,7 @@ function DeploymentLogsModal({
           <DialogDescription className="flex items-center gap-2">
             See all the details of this deployment
             <span className="text-muted-foreground">|</span>
-            <span>{lineCount} lines</span>
+            <span>{logs.length} lines</span>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyLogs}>
               <HugeiconsIcon
                 icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
@@ -625,11 +628,11 @@ function DeploymentLogsModal({
             </Button>
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-auto rounded-lg border bg-muted/30 p-4 font-mono text-xs text-foreground">
-          {deployment?.buildLogs ? (
-            <pre className="whitespace-pre-wrap">{deployment.buildLogs}</pre>
+        <div className="flex-1 overflow-auto rounded-lg border bg-muted/30 p-2 custom-logs-scrollbar">
+          {logs.length > 0 ? (
+            logs.map((log, i) => <LogLine key={i} message={log.message} type={log.type} />)
           ) : (
-            <span className="text-muted-foreground">No build logs available</span>
+            <span className="text-muted-foreground p-2">No build logs available</span>
           )}
         </div>
       </DialogContent>
