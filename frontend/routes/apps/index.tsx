@@ -12,8 +12,8 @@ import {
   Loading03Icon,
   Alert02Icon,
   Search01Icon,
-  Play01Icon,
-  Stop01Icon,
+  PlayIcon,
+  StopIcon,
   Delete02Icon,
   Rocket01Icon,
   Link01Icon,
@@ -128,7 +128,7 @@ function AppCard({
               onClick={onStop}
               className="text-muted-foreground hover:text-foreground"
             >
-              <HugeiconsIcon icon={Stop01Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} data-slot="icon" />
               <span className="max-sm:hidden">Stop</span>
             </Button>
           ) : (
@@ -148,7 +148,7 @@ function AppCard({
                   data-slot="icon"
                 />
               ) : (
-                <HugeiconsIcon icon={Play01Icon} size={14} strokeWidth={2} data-slot="icon" />
+                <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} data-slot="icon" />
               )}
               <span className="max-sm:hidden">{app.status === 'building' ? 'Building...' : 'Deploy'}</span>
             </Button>

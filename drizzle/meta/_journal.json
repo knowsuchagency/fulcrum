@@ -99,6 +99,13 @@
       "when": 1767243600000,
       "tag": "0013_replace_system_prompt_with_claude_options",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1767181351150,
+      "tag": "0014_aromatic_mockingbird",
+      "breakpoints": true
     }
   ]
 }

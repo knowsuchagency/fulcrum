@@ -21,8 +21,8 @@ import {
   ArrowLeft01Icon,
   Loading03Icon,
   Alert02Icon,
-  Play01Icon,
-  Stop01Icon,
+  PlayIcon,
+  StopIcon,
   RefreshIcon,
   Link01Icon,
   CheckmarkCircle02Icon,
@@ -129,7 +129,7 @@ function AppDetailView() {
               {stopApp.isPending ? (
                 <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
               ) : (
-                <HugeiconsIcon icon={Stop01Icon} size={14} strokeWidth={2} />
+                <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
               )}
               Stop
             </Button>
@@ -142,7 +142,7 @@ function AppDetailView() {
               {deployApp.isPending || app.status === 'building' ? (
                 <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
               ) : (
-                <HugeiconsIcon icon={Play01Icon} size={14} strokeWidth={2} />
+                <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
               )}
               {app.status === 'building' ? 'Building...' : 'Deploy'}
             </Button>
