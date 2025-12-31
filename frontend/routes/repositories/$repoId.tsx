@@ -498,19 +498,6 @@ function RepositoryDetailView() {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="copyFiles">Copy Files</FieldLabel>
-                    <Input
-                      id="copyFiles"
-                      value={copyFiles}
-                      onChange={(e) => setCopyFiles(e.target.value)}
-                      placeholder=".env, config.local.json"
-                    />
-                    <FieldDescription>
-                      Comma-separated glob patterns for files to copy into new worktrees.
-                    </FieldDescription>
-                  </Field>
-
-                  <Field>
                     <FieldLabel htmlFor="systemPromptAddition">System Prompt Addition</FieldLabel>
                     <Textarea
                       id="systemPromptAddition"
@@ -521,6 +508,19 @@ function RepositoryDetailView() {
                     />
                     <FieldDescription>
                       Custom instructions to append to the Claude system prompt when creating tasks.
+                    </FieldDescription>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="copyFiles">Copy Files</FieldLabel>
+                    <Input
+                      id="copyFiles"
+                      value={copyFiles}
+                      onChange={(e) => setCopyFiles(e.target.value)}
+                      placeholder=".env, config.local.json"
+                    />
+                    <FieldDescription>
+                      Comma-separated glob patterns for files to copy into new worktrees.
                     </FieldDescription>
                   </Field>
 
