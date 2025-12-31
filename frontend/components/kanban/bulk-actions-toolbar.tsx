@@ -43,7 +43,7 @@ export function BulkActionsToolbar() {
         'animate-in slide-in-from-bottom-2 duration-200'
       )}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2">
         <span className="text-sm text-muted-foreground">
           {count} task{count !== 1 ? 's' : ''} selected
         </span>

@@ -217,7 +217,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
       </div>
 
       {/* Desktop layout - hidden on mobile */}
-      <div className="hidden h-full justify-center gap-4 overflow-x-auto p-4 lg:flex">
+      <div className="hidden h-full justify-center gap-3 overflow-x-auto p-3 lg:flex">
         {COLUMNS.map((status) => (
           <KanbanColumn
             key={status}
@@ -228,7 +228,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
       </div>
 
       {/* Mobile single column */}
-      <div className="flex-1 overflow-y-auto p-4 lg:hidden">
+      <div className="flex-1 overflow-y-auto p-3 lg:hidden">
         <KanbanColumn
           status={activeTab}
           tasks={tasks.filter((t) => t.status === activeTab)}
@@ -238,7 +238,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
 
       {/* Mobile drop zones - shown during drag */}
       {activeTask && (
-        <div className="fixed inset-x-0 bottom-0 flex gap-2 border-t bg-background/95 p-4 backdrop-blur-sm lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 flex gap-2 border-t bg-background/95 p-3 backdrop-blur-sm lg:hidden">
           {COLUMNS.filter((s) => s !== activeTab).map((status) => (
             <MobileDropZone key={status} status={status} />
           ))}

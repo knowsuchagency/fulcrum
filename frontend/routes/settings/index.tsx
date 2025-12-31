@@ -48,7 +48,7 @@ export const Route = createFileRoute('/settings/')({
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="relative rounded-lg border border-border bg-card p-4 pt-6">
+    <div className="relative rounded-lg border border-border bg-card p-3 pt-5">
       <span className="absolute -top-2.5 left-3 rounded bg-card px-2 text-xs font-medium text-muted-foreground">
         {title}
       </span>
@@ -500,8 +500,8 @@ function SettingsPage() {
         <h1 className="text-sm font-medium">{t('title')}</h1>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        <div className="mx-auto max-w-5xl space-y-4">
+      <div className="flex-1 overflow-auto p-4">
+        <div className="mx-auto max-w-5xl space-y-3">
               {/* Server */}
               <SettingsSection title={t('sections.server')}>
                 <div className="space-y-1">
@@ -580,10 +580,10 @@ function SettingsPage() {
               </SettingsSection>
 
               {/* Editor + Integrations side by side */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {/* Editor */}
                 <SettingsSection title={t('sections.editor')}>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {/* Editor App */}
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -692,7 +692,7 @@ function SettingsPage() {
 
                 {/* Integrations */}
                 <SettingsSection title={t('sections.integrations')}>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {/* Linear API Key */}
                     <div className="space-y-1">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -762,7 +762,7 @@ function SettingsPage() {
 
               {/* z.ai */}
               <SettingsSection title={t('sections.zai')}>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Enable toggle */}
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
@@ -851,7 +851,7 @@ function SettingsPage() {
 
               {/* Notifications */}
               <SettingsSection title={t('sections.notifications')}>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Master toggle */}
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <label className="text-sm text-muted-foreground sm:w-40 sm:shrink-0">
@@ -1085,7 +1085,7 @@ function SettingsPage() {
 
               {/* Appearance */}
               <SettingsSection title={t('sections.appearance')}>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Language */}
                   <div className="space-y-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
