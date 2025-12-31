@@ -81,7 +81,7 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
   }
 
   // Check if this is a database created with drizzle-kit push (has tables but no migrations recorded).
-  // If so, mark existing migrations as applied to avoid "table already exists" errors.
+  // If so, mark migrations as applied based on actual schema state to avoid duplicate errors.
   const hasTasksTable = sqlite
     .query("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
     .get()
@@ -100,15 +100,39 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
     const migrationCount = sqlite.query('SELECT COUNT(*) as count FROM __drizzle_migrations').get() as { count: number }
 
     if (migrationCount.count === 0) {
-      // Database was created with drizzle-kit push - mark all migrations as applied
-      // and skip running migrate() since all tables/columns already exist
+      // Database has tables but no migrations recorded. This can happen when:
+      // 1. Database was created with drizzle-kit push (test databases)
+      // 2. Migrations table was lost/reset
+      //
+      // We need to mark migrations as applied ONLY if their changes are already in the schema.
+      // Check if the schema matches the LATEST migration state (has claude_options, no system_prompt_addition)
+      const hasClaudeOptions = sqlite
+        .query("SELECT name FROM pragma_table_info('tasks') WHERE name='claude_options'")
+        .get()
+
       const files = readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
-      for (const file of files) {
-        const hash = file.replace('.sql', '')
-        sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${hash}', ${Date.now()})`)
+
+      if (hasClaudeOptions) {
+        // Schema is fully up-to-date (created with push from latest schema)
+        // Mark all migrations as applied and skip migrate()
+        for (const file of files) {
+          const hash = file.replace('.sql', '')
+          sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${hash}', ${Date.now()})`)
+        }
+        log.db.info('Database created via push, marked all migrations as applied', { count: files.length })
+        return
+      } else {
+        // Schema is outdated - only mark old migrations as applied, let new ones run
+        // Find migrations that predate the schema change (0013 adds claude_options)
+        for (const file of files) {
+          const hash = file.replace('.sql', '')
+          // Only mark migrations before 0013 as applied
+          if (hash < '0013_replace_system_prompt_with_claude_options') {
+            sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${hash}', ${Date.now()})`)
+          }
+        }
+        log.db.info('Legacy database detected, marked pre-0013 migrations as applied')
       }
-      log.db.info('Database created via push, marked all migrations as applied', { count: files.length })
-      return
     }
   }
 

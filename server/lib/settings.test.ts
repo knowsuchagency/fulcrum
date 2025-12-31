@@ -148,7 +148,7 @@ describe('Settings', () => {
 
       // File should be updated with nested structure
       const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(migrated._schemaVersion).toBe(5) // Current schema version
+      expect(migrated._schemaVersion).toBe(6) // Current schema version
       expect(migrated.server?.port).toBe(8888)
       expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
       expect(migrated.integrations?.linearApiKey).toBe('migrated-key')
@@ -178,7 +178,7 @@ describe('Settings', () => {
     test('skips migration if already at current schema version', async () => {
       const settingsPath = join(tempDir, 'settings.json')
       const originalContent = {
-        _schemaVersion: 5, // Current schema version
+        _schemaVersion: 6, // Current schema version
         server: { port: 8888 },
       }
       writeFileSync(settingsPath, JSON.stringify(originalContent))
@@ -370,7 +370,7 @@ describe('Settings', () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({
-          _schemaVersion: 5,
+          _schemaVersion: 6,
           server: { port: 8888 },
           // Missing: paths, editor, integrations, appearance, notifications, zai
         })
@@ -403,7 +403,7 @@ describe('Settings', () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({
-          _schemaVersion: 5,
+          _schemaVersion: 6,
           server: { port: 9999 },
           appearance: { theme: 'dark' }, // User set theme but missing other appearance keys
         })
@@ -430,7 +430,7 @@ describe('Settings', () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({
-          _schemaVersion: 5,
+          _schemaVersion: 6,
           server: { port: 7777 },
           desktop: { zoomLevel: 1.5 }, // Extra key not in main schema
           lastUpdateCheck: 1234567890, // Another extra key
@@ -465,7 +465,7 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // Schema version should be set to current
-      expect(file._schemaVersion).toBe(5)
+      expect(file._schemaVersion).toBe(6)
     })
 
     test('creates settings file with all defaults if none exists', async () => {
@@ -480,7 +480,7 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // All default sections should exist
-      expect(file._schemaVersion).toBe(5)
+      expect(file._schemaVersion).toBe(6)
       expect(file.server.port).toBe(7777)
       expect(file.editor.app).toBe('vscode')
       expect(file.notifications.enabled).toBe(true)
@@ -492,7 +492,7 @@ describe('Settings', () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({
-          _schemaVersion: 5,
+          _schemaVersion: 6,
           server: { port: 7777 },
           // No notifications section
         })
@@ -516,7 +516,7 @@ describe('Settings', () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({
-          _schemaVersion: 5,
+          _schemaVersion: 6,
           server: { port: 7777 },
           // No zai section
         })
