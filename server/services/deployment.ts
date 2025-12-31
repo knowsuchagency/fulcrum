@@ -20,9 +20,10 @@ export type DeploymentProgressCallback = (progress: DeploymentProgress) => void
 
 /**
  * Get the project name for docker compose (used for container naming)
+ * Docker compose project names must be lowercase alphanumeric, hyphens, underscores
  */
-function getProjectName(app: App): string {
-  return `vibora-${app.id.slice(0, 8)}`
+export function getProjectName(appId: string): string {
+  return `vibora-${appId.slice(0, 8).toLowerCase()}`
 }
 
 /**
@@ -125,7 +126,7 @@ export async function deployApp(
   // Update app status
   await db.update(apps).set({ status: 'building', updatedAt: now }).where(eq(apps.id, appId))
 
-  const projectName = getProjectName(app)
+  const projectName = getProjectName(app.id)
   const buildLogs: string[] = []
 
   try {
@@ -318,7 +319,7 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
     return { success: false, error: 'Repository not found' }
   }
 
-  const projectName = getProjectName(app)
+  const projectName = getProjectName(app.id)
 
   // Stop containers
   const downResult = await composeDown({

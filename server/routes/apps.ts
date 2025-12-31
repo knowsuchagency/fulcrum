@@ -4,7 +4,7 @@ import { eq, desc } from 'drizzle-orm'
 import { db } from '../db'
 import { apps, appServices, deployments, repositories } from '../db/schema'
 import { findComposeFile, parseComposeFile } from '../services/compose-parser'
-import { deployApp, stopApp, getDeploymentHistory } from '../services/deployment'
+import { deployApp, stopApp, getDeploymentHistory, getProjectName } from '../services/deployment'
 import { composeLogs, composePs } from '../services/docker-compose'
 import type { App, AppService, Deployment } from '../db/schema'
 
@@ -352,10 +352,9 @@ app.get('/:id/logs', async (c) => {
     return c.json({ error: 'Repository not found' }, 404)
   }
 
-  const projectName = `vibora-${id.slice(0, 8)}`
   const logs = await composeLogs(
     {
-      projectName,
+      projectName: getProjectName(id),
       cwd: repo.path,
       composeFile: appRecord.composeFile,
     },
@@ -386,9 +385,8 @@ app.get('/:id/status', async (c) => {
     return c.json({ error: 'Repository not found' }, 404)
   }
 
-  const projectName = `vibora-${id.slice(0, 8)}`
   const containers = await composePs({
-    projectName,
+    projectName: getProjectName(id),
     cwd: repo.path,
     composeFile: appRecord.composeFile,
   })
