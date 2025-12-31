@@ -8,7 +8,7 @@
       "name": "vibora",
       "source": "./plugins/vibora",
       "description": "Task orchestration for Claude Code",
-      "version": "5.5.0"
+      "version": "5.5.1"
     }
   ]
 }
