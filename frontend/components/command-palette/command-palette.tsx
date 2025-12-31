@@ -246,7 +246,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
     () => {
       onOpenInEditor?.()
     },
-    { allowInInput: false, allowInTerminal: true, deps: [onOpenInEditor] }
+    { allowInInput: true, allowInTerminal: true, deps: [onOpenInEditor] }
   )
 
   // Handle keyboard navigation in the palette
