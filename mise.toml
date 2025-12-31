@@ -75,16 +75,16 @@ usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
 run = """
 # Determine host binding
 if [ "$usage_host" = "true" ]; then
-  export HOST="0.0.0.0"
+  export VITE_HOST="--host"
 else
-  export HOST="localhost"
+  export VITE_HOST=""
 fi
 export VITE_BACKEND_PORT="$PORT"
 export DEBUG="1"
 # Pass through env vars explicitly since they may not inherit through concurrently/bunx
 bunx concurrently -n server,client -c blue,green \
   'VIBORA_DIR="$VIBORA_DIR" PORT="$PORT" mise run server' \
-  'DEBUG="$DEBUG" VITE_BACKEND_PORT="$VITE_BACKEND_PORT" mise run client'
+  'DEBUG="$DEBUG" VITE_BACKEND_PORT="$VITE_BACKEND_PORT" VITE_HOST="$VITE_HOST" mise run client'
 """
 
 [tasks.server]
@@ -96,7 +96,7 @@ bun --watch server/index.ts
 
 [tasks.client]
 description = "Start frontend dev server"
-run = "DEBUG=\"${DEBUG:-}\" bunx vite --port \"${FRONTEND_PORT:-5173}\""
+run = "DEBUG=\"${DEBUG:-}\" bunx vite --port \"${FRONTEND_PORT:-5173}\" ${VITE_HOST:-}"
 
 [tasks.build]
 description = "Build for production"

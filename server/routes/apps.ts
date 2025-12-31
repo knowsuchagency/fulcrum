@@ -3,15 +3,16 @@ import { nanoid } from 'nanoid'
 import { eq, desc } from 'drizzle-orm'
 import { db } from '../db'
 import { apps, appServices, deployments, repositories } from '../db/schema'
-import { findComposeFile, parseComposeFile } from '../services/compose-parser'
+import { findComposeFile } from '../services/compose-parser'
 import { deployApp, stopApp, getDeploymentHistory, getProjectName } from '../services/deployment'
 import { composeLogs, composePs } from '../services/docker-compose'
-import type { App, AppService, Deployment } from '../db/schema'
+import type { App, AppService } from '../db/schema'
 
 const app = new Hono()
 
 // Types for API responses
-interface AppWithServices extends App {
+interface AppWithServices extends Omit<App, 'environmentVariables'> {
+  environmentVariables?: Record<string, string>
   services: AppService[]
   repository?: {
     id: string
@@ -22,8 +23,19 @@ interface AppWithServices extends App {
 
 // Transform to API response
 function toAppResponse(row: App, services: AppService[] = [], repo?: typeof repositories.$inferSelect): AppWithServices {
+  // Parse environmentVariables from JSON string to object
+  let envVars: Record<string, string> | undefined
+  if (row.environmentVariables) {
+    try {
+      envVars = JSON.parse(row.environmentVariables)
+    } catch {
+      envVars = undefined
+    }
+  }
+
   return {
     ...row,
+    environmentVariables: envVars,
     services,
     repository: repo
       ? {
@@ -87,6 +99,7 @@ app.post('/', async (c) => {
       branch?: string
       composeFile?: string
       autoDeployEnabled?: boolean
+      environmentVariables?: Record<string, string>
       services: Array<{
         serviceName: string
         containerPort?: number
@@ -126,6 +139,7 @@ app.post('/', async (c) => {
       composeFile,
       status: 'stopped',
       autoDeployEnabled: body.autoDeployEnabled ?? false,
+      environmentVariables: body.environmentVariables ? JSON.stringify(body.environmentVariables) : null,
       createdAt: now,
       updatedAt: now,
     })
@@ -179,6 +193,7 @@ app.patch('/:id', async (c) => {
       name?: string
       branch?: string
       autoDeployEnabled?: boolean
+      environmentVariables?: Record<string, string>
       services?: Array<{
         id?: string
         serviceName: string
@@ -195,6 +210,9 @@ app.patch('/:id', async (c) => {
     if (body.name !== undefined) updateData.name = body.name
     if (body.branch !== undefined) updateData.branch = body.branch
     if (body.autoDeployEnabled !== undefined) updateData.autoDeployEnabled = body.autoDeployEnabled
+    if (body.environmentVariables !== undefined) {
+      updateData.environmentVariables = JSON.stringify(body.environmentVariables)
+    }
 
     await db.update(apps).set(updateData).where(eq(apps.id, id))
 

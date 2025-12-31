@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -387,6 +388,7 @@ function LogsTab({
   const [tail, setTail] = useState(100)
   const { data, isLoading, refetch } = useAppLogs(appId, selectedService, tail)
   const [copied, setCopied] = useState(false)
+  const logs = useMemo(() => parseLogs(data?.logs ?? ''), [data?.logs])
 
   const copyLogs = async () => {
     if (data?.logs) {
@@ -475,16 +477,16 @@ function LogsTab({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-black p-4 font-mono text-xs text-green-400 overflow-auto max-h-[600px] min-h-[300px]">
+      <div className="rounded-lg border bg-muted/30 p-2 overflow-auto max-h-[600px] min-h-[300px] custom-logs-scrollbar">
         {isLoading ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
+          <div className="flex items-center gap-2 text-muted-foreground p-2">
             <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
             Loading logs...
           </div>
-        ) : data?.logs ? (
-          <pre className="whitespace-pre-wrap">{data.logs}</pre>
+        ) : logs.length > 0 ? (
+          logs.map((log, i) => <LogLine key={i} message={log.message} type={log.type} />)
         ) : (
-          <span className="text-muted-foreground">No logs available</span>
+          <span className="text-muted-foreground p-2">No logs available</span>
         )}
       </div>
     </div>
@@ -640,9 +642,20 @@ function DeploymentLogsModal({
   )
 }
 
-// Settings tab - Domain configuration
+// Settings tab - Environment variables and domain configuration
 function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
   const updateApp = useUpdateApp()
+
+  // Environment variables state - convert object to "KEY=value" lines
+  const [envText, setEnvText] = useState(() => {
+    const envVars = app.environmentVariables ?? {}
+    return Object.entries(envVars)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('\n')
+  })
+  const [envSaved, setEnvSaved] = useState(false)
+
+  // Services/domains state
   const [services, setServices] = useState(
     app.services?.map((s) => ({
       serviceName: s.serviceName,
@@ -652,7 +665,31 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
     })) ?? []
   )
 
-  const handleSave = async () => {
+  const handleSaveEnv = async () => {
+    // Parse "KEY=value" lines back to object
+    const env: Record<string, string> = {}
+    envText.split('\n').forEach((line) => {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) return // Skip empty lines and comments
+      const eqIndex = trimmed.indexOf('=')
+      if (eqIndex > 0) {
+        const key = trimmed.slice(0, eqIndex).trim()
+        const value = trimmed.slice(eqIndex + 1).trim()
+        if (key) {
+          env[key] = value
+        }
+      }
+    })
+
+    await updateApp.mutateAsync({
+      id: app.id,
+      updates: { environmentVariables: env },
+    })
+    setEnvSaved(true)
+    setTimeout(() => setEnvSaved(false), 2000)
+  }
+
+  const handleSaveDomains = async () => {
     await updateApp.mutateAsync({
       id: app.id,
       updates: {
@@ -671,74 +708,114 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      {/* Domain Configuration Header */}
-      <div>
-        <h3 className="text-lg font-semibold">Domain Configuration</h3>
-        <p className="text-sm text-muted-foreground">
-          Configure which services are exposed and their domain mappings
-        </p>
-      </div>
-
-      {/* Services */}
-      {services.length > 0 ? (
-        <div className="space-y-4">
-          {services.map((service, index) => (
-            <div key={service.serviceName} className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{service.serviceName}</span>
-                  {service.containerPort && <Badge variant="secondary">:{service.containerPort}</Badge>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id={`expose-${index}`}
-                    checked={service.exposed}
-                    onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
-                  />
-                  <Label htmlFor={`expose-${index}`} className="text-sm">
-                    Expose
-                  </Label>
-                </div>
-              </div>
-
-              {service.exposed && (
-                <div className="space-y-2">
-                  <Label htmlFor={`domain-${index}`} className="text-sm">
-                    Domain
-                  </Label>
-                  <Input
-                    id={`domain-${index}`}
-                    value={service.domain}
-                    onChange={(e) => updateService(index, { domain: e.target.value })}
-                    placeholder="app.example.com"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+    <div className="space-y-8 max-w-3xl">
+      {/* Environment Variables Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Environment Variables</h3>
+          <p className="text-sm text-muted-foreground">
+            Set environment variables for Docker Compose builds. These will be available during the build and in your
+            containers.
+          </p>
         </div>
-      ) : (
-        <div className="py-8 text-center text-muted-foreground border rounded-lg">
-          <p>No services configured. Deploy the app first to see available services.</p>
-        </div>
-      )}
 
-      {/* Save button */}
-      {services.length > 0 && (
+        <Textarea
+          value={envText}
+          onChange={(e) => setEnvText(e.target.value)}
+          placeholder={'DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# Comments are supported'}
+          className="font-mono text-sm min-h-[200px]"
+        />
+
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={updateApp.isPending}>
+          <Button onClick={handleSaveEnv} disabled={updateApp.isPending}>
             {updateApp.isPending ? (
               <>
                 <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
                 Saving...
               </>
+            ) : envSaved ? (
+              <>
+                <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} className="text-green-500" />
+                Saved
+              </>
             ) : (
-              'Save Changes'
+              'Save Environment'
             )}
           </Button>
         </div>
-      )}
+      </div>
+
+      <Separator />
+
+      {/* Domain Configuration Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold">Domain Configuration</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure which services are exposed and their domain mappings
+          </p>
+        </div>
+
+        {/* Services */}
+        {services.length > 0 ? (
+          <div className="space-y-4">
+            {services.map((service, index) => (
+              <div key={service.serviceName} className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{service.serviceName}</span>
+                    {service.containerPort && <Badge variant="secondary">:{service.containerPort}</Badge>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`expose-${index}`}
+                      checked={service.exposed}
+                      onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
+                    />
+                    <Label htmlFor={`expose-${index}`} className="text-sm">
+                      Expose
+                    </Label>
+                  </div>
+                </div>
+
+                {service.exposed && (
+                  <div className="space-y-2">
+                    <Label htmlFor={`domain-${index}`} className="text-sm">
+                      Domain
+                    </Label>
+                    <Input
+                      id={`domain-${index}`}
+                      value={service.domain}
+                      onChange={(e) => updateService(index, { domain: e.target.value })}
+                      placeholder="app.example.com"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-muted-foreground border rounded-lg">
+            <p>No services configured. Deploy the app first to see available services.</p>
+          </div>
+        )}
+
+        {/* Save button */}
+        {services.length > 0 && (
+          <div className="flex justify-end">
+            <Button onClick={handleSaveDomains} disabled={updateApp.isPending}>
+              {updateApp.isPending ? (
+                <>
+                  <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Domains'
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
 
       {updateApp.error && (
         <div className="flex items-center gap-2 text-destructive">

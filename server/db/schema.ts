@@ -85,6 +85,7 @@ export const apps = sqliteTable('apps', {
   composeFile: text('compose_file').notNull(), // e.g., "compose.yml"
   status: text('status').notNull().default('stopped'), // stopped|building|running|failed
   autoDeployEnabled: integer('auto_deploy_enabled', { mode: 'boolean' }).default(false),
+  environmentVariables: text('environment_variables'), // JSON string: {"KEY": "value", ...}
   lastDeployedAt: text('last_deployed_at'),
   lastDeployCommit: text('last_deploy_commit'),
   createdAt: text('created_at').notNull(),

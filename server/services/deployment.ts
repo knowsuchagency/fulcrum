@@ -8,7 +8,7 @@ import { getDeploymentSettings } from '../lib/settings'
 import { composeUp, composeDown, composeBuild, composePs } from './docker-compose'
 import { createDnsRecord, deleteDnsRecord } from './cloudflare'
 import { addRoute, removeRoute } from './caddy'
-import type { App, AppService, Deployment } from '../db/schema'
+import type { Deployment } from '../db/schema'
 
 export interface DeploymentProgress {
   stage: 'pulling' | 'building' | 'starting' | 'configuring' | 'done' | 'failed'
@@ -129,6 +129,16 @@ export async function deployApp(
   const projectName = getProjectName(app.id)
   const buildLogs: string[] = []
 
+  // Parse environment variables from app
+  let env: Record<string, string> | undefined
+  if (app.environmentVariables) {
+    try {
+      env = JSON.parse(app.environmentVariables)
+    } catch {
+      log.deploy.warn('Failed to parse environment variables', { appId })
+    }
+  }
+
   try {
     // Stage 1: Pull latest code
     onProgress?.({ stage: 'pulling', message: 'Pulling latest code...' })
@@ -149,6 +159,7 @@ export async function deployApp(
         projectName,
         cwd: repo.path,
         composeFile: app.composeFile,
+        env,
       },
       (line) => {
         buildLogs.push(line)
@@ -168,6 +179,7 @@ export async function deployApp(
         projectName,
         cwd: repo.path,
         composeFile: app.composeFile,
+        env,
       },
       false,
       (line) => {

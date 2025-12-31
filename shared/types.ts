@@ -304,6 +304,7 @@ export interface App {
   composeFile: string
   status: AppStatus
   autoDeployEnabled: boolean
+  environmentVariables?: Record<string, string>
   lastDeployedAt: string | null
   lastDeployCommit: string | null
   createdAt: string

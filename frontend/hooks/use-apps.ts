@@ -73,6 +73,7 @@ export function useUpdateApp() {
         name?: string
         branch?: string
         autoDeployEnabled?: boolean
+        environmentVariables?: Record<string, string>
         services?: Array<{
           id?: string
           serviceName: string

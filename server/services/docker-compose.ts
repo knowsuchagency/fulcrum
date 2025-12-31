@@ -13,6 +13,7 @@ export interface ComposeCommandOptions {
   projectName: string
   cwd: string
   composeFile?: string
+  env?: Record<string, string> // Per-app environment variables to pass to Docker Compose
 }
 
 /**
@@ -36,7 +37,10 @@ async function runCompose(
   return new Promise((resolve) => {
     const proc = spawn('docker', fullArgs, {
       cwd: options.cwd,
-      env: { ...process.env },
+      env: {
+        ...process.env,
+        ...options.env, // Merge per-app env vars (overrides process.env)
+      },
     })
 
     let stdout = ''
