@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useParseCompose, useFindCompose, useCreateApp } from '@/hooks/use-apps'
@@ -21,8 +21,15 @@ import {
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import type { Repository, ComposeService } from '@/types'
 
+interface NewAppSearch {
+  repoId?: string
+}
+
 export const Route = createFileRoute('/apps/new')({
   component: CreateAppWizard,
+  validateSearch: (search: Record<string, unknown>): NewAppSearch => ({
+    repoId: typeof search.repoId === 'string' ? search.repoId : undefined,
+  }),
 })
 
 type Step = 'select-repo' | 'configure-services'
@@ -36,12 +43,24 @@ interface ServiceConfig {
 
 function CreateAppWizard() {
   const navigate = useNavigate()
+  const { repoId } = Route.useSearch()
   const { data: repositories, isLoading: reposLoading } = useRepositories()
   const createApp = useCreateApp()
 
   const [step, setStep] = useState<Step>('select-repo')
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Auto-select repository if repoId is provided in URL
+  useEffect(() => {
+    if (repoId && repositories && !selectedRepo) {
+      const repo = repositories.find((r) => r.id === repoId)
+      if (repo) {
+        setSelectedRepo(repo)
+        setAppName(repo.displayName)
+      }
+    }
+  }, [repoId, repositories, selectedRepo])
 
   // Step 2 state
   const [appName, setAppName] = useState('')

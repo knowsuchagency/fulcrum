@@ -419,7 +419,7 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
   const [isEditing, setIsEditing] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [saved, setSaved] = useState(false)
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Sync content when data loads
   useEffect(() => {

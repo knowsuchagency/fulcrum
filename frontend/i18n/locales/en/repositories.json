@@ -7,6 +7,14 @@
   "terminal": "Terminal",
   "editor": "Editor",
   "application": "Application",
+  "createApp": "Create App",
+  "createAppDialog": {
+    "title": "Docker Compose Required",
+    "description": "To create an app for deployment, this repository needs a Docker Compose file.",
+    "instructions": "Create one of the following files in your repository:",
+    "files": "docker-compose.yml, docker-compose.yaml, docker.yml, or docker.yaml",
+    "close": "Got it"
+  },
   "settings": "Settings",
   "addRepository": "Add Repository",
   "scanDirectory": "Scan Directory",

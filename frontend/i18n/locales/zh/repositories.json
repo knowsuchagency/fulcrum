@@ -7,6 +7,14 @@
   "terminal": "终端",
   "editor": "编辑器",
   "application": "应用",
+  "createApp": "创建应用",
+  "createAppDialog": {
+    "title": "需要 Docker Compose",
+    "description": "要为部署创建应用，此仓库需要 Docker Compose 文件。",
+    "instructions": "请在仓库中创建以下文件之一：",
+    "files": "docker-compose.yml、docker-compose.yaml、docker.yml 或 docker.yaml",
+    "close": "知道了"
+  },
   "settings": "设置",
   "addRepository": "添加仓库",
   "scanDirectory": "扫描目录",

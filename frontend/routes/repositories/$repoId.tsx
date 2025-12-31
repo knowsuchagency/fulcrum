@@ -25,12 +25,21 @@ import {
   ComputerTerminal01Icon,
   VisualStudioCodeIcon,
   CloudIcon,
+  Add01Icon,
 } from '@hugeicons/core-free-icons'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { DeleteRepositoryDialog } from '@/components/repositories/delete-repository-dialog'
-import { useAppByRepository } from '@/hooks/use-apps'
+import { useAppByRepository, useFindCompose } from '@/hooks/use-apps'
 import { ClaudeOptionsEditor } from '@/components/repositories/claude-options-editor'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
@@ -94,6 +103,7 @@ function RepositoryDetailView() {
   const deleteRepository = useDeleteRepository()
   const { data: remoteUrl } = useGitRemoteUrl(repository?.path)
   const linkedApp = useAppByRepository(repository?.id ?? null)
+  const { data: composeInfo, isLoading: composeLoading } = useFindCompose(repository?.id ?? null)
 
   // Form state
   const [displayName, setDisplayName] = useState('')
@@ -104,6 +114,7 @@ function RepositoryDetailView() {
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [composeWarningOpen, setComposeWarningOpen] = useState(false)
   const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<'terminal' | 'files'>('terminal')
 
   // Terminal state
@@ -138,6 +149,15 @@ function RepositoryDetailView() {
     if (!repository) return
     const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
     openExternalUrl(url)
+  }
+
+  const handleCreateApp = () => {
+    if (composeLoading) return
+    if (!composeInfo?.found) {
+      setComposeWarningOpen(true)
+    } else {
+      navigate({ to: '/apps/new', search: { repoId } })
+    }
   }
 
   // Log on mount
@@ -427,7 +447,7 @@ function RepositoryDetailView() {
             <span className="max-sm:hidden">{t('editor')}</span>
           </Button>
 
-          {linkedApp && (
+          {linkedApp ? (
             <Link to="/apps/$appId" params={{ appId: linkedApp.id }}>
               <Button
                 variant="ghost"
@@ -438,6 +458,17 @@ function RepositoryDetailView() {
                 <span className="max-sm:hidden">{t('application')}</span>
               </Button>
             </Link>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={handleCreateApp}
+              disabled={composeLoading}
+            >
+              <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{t('createApp')}</span>
+            </Button>
           )}
         </div>
 
@@ -686,6 +717,28 @@ function RepositoryDetailView() {
         onOpenChange={setDeleteDialogOpen}
         onDelete={handleDelete}
       />
+
+      <Dialog open={composeWarningOpen} onOpenChange={setComposeWarningOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('createAppDialog.title')}</DialogTitle>
+            <DialogDescription>
+              {t('createAppDialog.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p>{t('createAppDialog.instructions')}</p>
+            <code className="block rounded bg-muted px-3 py-2 font-mono text-xs">
+              {t('createAppDialog.files')}
+            </code>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setComposeWarningOpen(false)}>
+              {t('createAppDialog.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
