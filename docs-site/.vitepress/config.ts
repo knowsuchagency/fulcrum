@@ -19,7 +19,7 @@ export default defineConfig({
   ],
 
   head: [
-    ['link', { rel: 'icon', href: '/vibora/favicon.ico' }],
+    ['link', { rel: 'icon', href: '/vibora/logo.jpg' }],
     ['meta', { name: 'theme-color', content: '#0b7a75' }],
   ],
 
