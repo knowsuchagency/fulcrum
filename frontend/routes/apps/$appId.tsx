@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   useApp,
@@ -9,6 +9,8 @@ import {
   useAppStatus,
   useUpdateApp,
   useDeleteApp,
+  useComposeFile,
+  useWriteComposeFile,
 } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +40,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  ArrowLeft01Icon,
   Loading03Icon,
   Alert02Icon,
   PlayIcon,
@@ -48,7 +49,11 @@ import {
   CheckmarkCircle02Icon,
   Delete02Icon,
   Copy01Icon,
+  Edit02Icon,
+  Folder01Icon,
+  ArrowLeft01Icon,
 } from '@hugeicons/core-free-icons'
+import { MonacoEditor } from '@/components/viewer/monaco-editor'
 import type { Deployment } from '@/types'
 import { parseLogs } from '@/lib/log-utils'
 import { LogLine } from '@/components/ui/log-line'
@@ -135,11 +140,6 @@ function AppDetailView() {
     <div className="flex h-full flex-col">
       {/* Header - Dokploy style */}
       <div className="flex shrink-0 items-center gap-4 border-b border-border bg-background px-4 py-3">
-        <Link to="/apps" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
-          <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
-          <span className="text-sm">Apps</span>
-        </Link>
-
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">{app.name}</span>
@@ -147,7 +147,22 @@ function AppDetailView() {
               {app.status}
             </Badge>
           </div>
-          <div className="text-sm text-muted-foreground">{app.id.slice(0, 12)}</div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{app.id.slice(0, 12)}</span>
+            {app.repository && (
+              <>
+                <span>·</span>
+                <Link
+                  to="/repositories/$repoId"
+                  params={{ repoId: app.repository.id }}
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
+                  {app.repository.displayName}
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         <Button
@@ -167,7 +182,8 @@ function AppDetailView() {
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="deployments">Deployments</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="environment">Environment</TabsTrigger>
+            <TabsTrigger value="domains">Domains</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general">
@@ -182,8 +198,12 @@ function AppDetailView() {
             <LogsTab appId={appId} services={app.services} />
           </TabsContent>
 
-          <TabsContent value="settings">
-            <SettingsTab app={app} />
+          <TabsContent value="environment">
+            <EnvironmentTab app={app} />
+          </TabsContent>
+
+          <TabsContent value="domains">
+            <DomainsTab app={app} />
           </TabsContent>
         </Tabs>
       </div>
@@ -289,35 +309,6 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
 
       <Separator />
 
-      {/* Repository Info */}
-      <div>
-        <h4 className="font-medium mb-2">Repository</h4>
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-green-500" />
-          <span className="text-sm">
-            {app.repository?.displayName ?? 'Unknown repository'} · {app.branch}
-          </span>
-        </div>
-        {app.lastDeployedAt && (
-          <p className="text-sm text-muted-foreground mt-1">
-            Last deployed {formatRelativeTime(app.lastDeployedAt)}
-            {app.lastDeployCommit && ` · ${app.lastDeployCommit.slice(0, 7)}`}
-          </p>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* Compose File */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-medium">Compose File</h4>
-          <span className="text-sm text-muted-foreground">{app.composeFile}</span>
-        </div>
-      </div>
-
-      <Separator />
-
       {/* Services Status */}
       <div>
         <h4 className="font-medium mb-3">Services</h4>
@@ -371,6 +362,206 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
             <p className="text-sm text-muted-foreground">No services configured</p>
           )}
         </div>
+      </div>
+
+      <Separator />
+
+      {/* Compose File */}
+      <ComposeFileEditor app={app} />
+
+      <Separator />
+
+      {/* Build Settings */}
+      <BuildSettings app={app} />
+    </div>
+  )
+}
+
+// Build settings component
+function BuildSettings({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+  const updateApp = useUpdateApp()
+  const [noCacheBuild, setNoCacheBuild] = useState(app.noCacheBuild ?? false)
+
+  const handleToggleNoCache = async (checked: boolean) => {
+    setNoCacheBuild(checked)
+    await updateApp.mutateAsync({
+      id: app.id,
+      updates: { noCacheBuild: checked },
+    })
+  }
+
+  return (
+    <div>
+      <h4 className="font-medium mb-3">Build Settings</h4>
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="no-cache-build" className="text-sm font-medium">
+            No Cache Build
+          </Label>
+          <p className="text-sm text-muted-foreground">
+            Rebuild images from scratch without Docker cache
+          </p>
+        </div>
+        <Switch id="no-cache-build" checked={noCacheBuild} onCheckedChange={handleToggleNoCache} />
+      </div>
+    </div>
+  )
+}
+
+// Compose file editor - embedded in General tab
+function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+  const repoPath = app.repository?.path ?? null
+  const { data, isLoading, error } = useComposeFile(repoPath, app.composeFile)
+  const writeCompose = useWriteComposeFile()
+
+  // Local content state for editing
+  const [content, setContent] = useState<string>('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [hasChanges, setHasChanges] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+
+  // Sync content when data loads
+  useEffect(() => {
+    if (data?.content !== undefined) {
+      setContent(data.content)
+      setHasChanges(false)
+    }
+  }, [data?.content])
+
+  // Debounced autosave
+  const handleChange = useCallback(
+    (newContent: string) => {
+      setContent(newContent)
+      setHasChanges(true)
+      setSaved(false)
+
+      // Clear any pending save
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+
+      // Autosave after 1 second of inactivity
+      if (isEditing && repoPath && app.composeFile) {
+        saveTimeoutRef.current = setTimeout(() => {
+          writeCompose.mutate(
+            { repoPath, composeFile: app.composeFile, content: newContent },
+            {
+              onSuccess: () => {
+                setHasChanges(false)
+                setSaved(true)
+                setTimeout(() => setSaved(false), 2000)
+              },
+            }
+          )
+        }, 1000)
+      }
+    },
+    [isEditing, repoPath, app.composeFile, writeCompose]
+  )
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const toggleEdit = () => {
+    if (isEditing && hasChanges && repoPath && app.composeFile) {
+      // Save before exiting edit mode
+      writeCompose.mutate(
+        { repoPath, composeFile: app.composeFile, content },
+        {
+          onSuccess: () => {
+            setHasChanges(false)
+            setSaved(true)
+            setTimeout(() => setSaved(false), 2000)
+          },
+        }
+      )
+    }
+    setIsEditing(!isEditing)
+  }
+
+  if (!repoPath) {
+    return (
+      <div className="py-4">
+        <h4 className="font-medium mb-2">Compose File</h4>
+        <p className="text-sm text-muted-foreground">Repository path not found</p>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="py-4">
+        <h4 className="font-medium mb-2">Compose File</h4>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
+          <span className="text-sm">Loading...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="py-4">
+        <h4 className="font-medium mb-2">Compose File</h4>
+        <div className="flex items-center gap-2 text-destructive">
+          <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />
+          <span className="text-sm">{error.message}</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="font-medium">Compose File</h4>
+        <div className="flex items-center gap-2">
+          {/* Status indicators */}
+          {hasChanges && isEditing && (
+            <span className="text-xs text-muted-foreground">Unsaved</span>
+          )}
+          {saved && (
+            <span className="flex items-center gap-1 text-xs text-green-500">
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={12} strokeWidth={2} />
+              Saved
+            </span>
+          )}
+          {writeCompose.isPending && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
+              Saving...
+            </span>
+          )}
+          <span className="text-sm text-muted-foreground">{app.composeFile}</span>
+          {/* Edit toggle */}
+          <Button
+            variant={isEditing ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleEdit}
+          >
+            <HugeiconsIcon icon={Edit02Icon} size={14} strokeWidth={2} />
+            {isEditing ? 'Done' : 'Edit'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Editor */}
+      <div className="h-[300px] rounded-lg border overflow-hidden">
+        <MonacoEditor
+          filePath={app.composeFile}
+          content={content}
+          onChange={handleChange}
+          readOnly={!isEditing}
+        />
       </div>
     </div>
   )
@@ -643,8 +834,8 @@ function DeploymentLogsModal({
   )
 }
 
-// Settings tab - Environment variables and domain configuration
-function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+// Environment tab - environment variables
+function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
   const updateApp = useUpdateApp()
 
   // Environment variables state - convert object to "KEY=value" lines
@@ -655,27 +846,6 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
       .join('\n')
   })
   const [envSaved, setEnvSaved] = useState(false)
-
-  // Build settings state
-  const [noCacheBuild, setNoCacheBuild] = useState(app.noCacheBuild ?? false)
-
-  // Services/domains state
-  const [services, setServices] = useState(
-    app.services?.map((s) => ({
-      serviceName: s.serviceName,
-      containerPort: s.containerPort,
-      exposed: s.exposed,
-      domain: s.domain ?? '',
-    })) ?? []
-  )
-
-  const handleToggleNoCache = async (checked: boolean) => {
-    setNoCacheBuild(checked)
-    await updateApp.mutateAsync({
-      id: app.id,
-      updates: { noCacheBuild: checked },
-    })
-  }
 
   const handleSaveEnv = async () => {
     // Parse "KEY=value" lines back to object
@@ -701,6 +871,65 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
     setTimeout(() => setEnvSaved(false), 2000)
   }
 
+  return (
+    <div className="space-y-4 max-w-3xl">
+      <div>
+        <h3 className="text-lg font-semibold">Environment Variables</h3>
+        <p className="text-sm text-muted-foreground">
+          Set environment variables for Docker Compose builds. These will be available during the build and in your
+          containers.
+        </p>
+      </div>
+
+      <Textarea
+        value={envText}
+        onChange={(e) => setEnvText(e.target.value)}
+        placeholder={'DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# Comments are supported'}
+        className="font-mono text-sm min-h-[200px]"
+      />
+
+      <div className="flex justify-end">
+        <Button onClick={handleSaveEnv} disabled={updateApp.isPending}>
+          {updateApp.isPending ? (
+            <>
+              <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
+              Saving...
+            </>
+          ) : envSaved ? (
+            <>
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} className="text-green-500" />
+              Saved
+            </>
+          ) : (
+            'Save Environment'
+          )}
+        </Button>
+      </div>
+
+      {updateApp.error && (
+        <div className="flex items-center gap-2 text-destructive mt-4">
+          <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />
+          <span className="text-sm">{updateApp.error.message}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Domains tab - service exposure and domain configuration
+function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+  const updateApp = useUpdateApp()
+
+  // Services/domains state
+  const [services, setServices] = useState(
+    app.services?.map((s) => ({
+      serviceName: s.serviceName,
+      containerPort: s.containerPort,
+      exposed: s.exposed,
+      domain: s.domain ?? '',
+    })) ?? []
+  )
+
   const handleSaveDomains = async () => {
     await updateApp.mutateAsync({
       id: app.id,
@@ -720,137 +949,73 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
   }
 
   return (
-    <div className="space-y-8 max-w-3xl">
-      {/* Environment Variables Section */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold">Environment Variables</h3>
-          <p className="text-sm text-muted-foreground">
-            Set environment variables for Docker Compose builds. These will be available during the build and in your
-            containers.
-          </p>
+    <div className="space-y-4 max-w-3xl">
+      <div>
+        <h3 className="text-lg font-semibold">Domain Configuration</h3>
+        <p className="text-sm text-muted-foreground">
+          Configure which services are exposed and their domain mappings
+        </p>
+      </div>
+
+      {/* Services */}
+      {services.length > 0 ? (
+        <div className="space-y-4">
+          {services.map((service, index) => (
+            <div key={service.serviceName} className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{service.serviceName}</span>
+                  {service.containerPort && <Badge variant="secondary">:{service.containerPort}</Badge>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`expose-${index}`}
+                    checked={service.exposed}
+                    onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
+                  />
+                  <Label htmlFor={`expose-${index}`} className="text-sm">
+                    Expose
+                  </Label>
+                </div>
+              </div>
+
+              {service.exposed && (
+                <div className="space-y-2">
+                  <Label htmlFor={`domain-${index}`} className="text-sm">
+                    Domain
+                  </Label>
+                  <Input
+                    id={`domain-${index}`}
+                    value={service.domain}
+                    onChange={(e) => updateService(index, { domain: e.target.value })}
+                    placeholder="app.example.com"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
+      ) : (
+        <div className="py-8 text-center text-muted-foreground border rounded-lg">
+          <p>No services configured. Deploy the app first to see available services.</p>
+        </div>
+      )}
 
-        <Textarea
-          value={envText}
-          onChange={(e) => setEnvText(e.target.value)}
-          placeholder={'DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# Comments are supported'}
-          className="font-mono text-sm min-h-[200px]"
-        />
-
+      {/* Save button */}
+      {services.length > 0 && (
         <div className="flex justify-end">
-          <Button onClick={handleSaveEnv} disabled={updateApp.isPending}>
+          <Button onClick={handleSaveDomains} disabled={updateApp.isPending}>
             {updateApp.isPending ? (
               <>
                 <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
                 Saving...
               </>
-            ) : envSaved ? (
-              <>
-                <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} className="text-green-500" />
-                Saved
-              </>
             ) : (
-              'Save Environment'
+              'Save Domains'
             )}
           </Button>
         </div>
-      </div>
-
-      <Separator />
-
-      {/* Build Settings Section */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold">Build Settings</h3>
-          <p className="text-sm text-muted-foreground">Configure Docker build behavior</p>
-        </div>
-
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="no-cache-build" className="text-base font-medium">
-              No Cache Build
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              Always rebuild images from scratch without using Docker cache. Useful when builds fail due to corrupted
-              cache.
-            </p>
-          </div>
-          <Switch id="no-cache-build" checked={noCacheBuild} onCheckedChange={handleToggleNoCache} />
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Domain Configuration Section */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold">Domain Configuration</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure which services are exposed and their domain mappings
-          </p>
-        </div>
-
-        {/* Services */}
-        {services.length > 0 ? (
-          <div className="space-y-4">
-            {services.map((service, index) => (
-              <div key={service.serviceName} className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{service.serviceName}</span>
-                    {service.containerPort && <Badge variant="secondary">:{service.containerPort}</Badge>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={`expose-${index}`}
-                      checked={service.exposed}
-                      onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
-                    />
-                    <Label htmlFor={`expose-${index}`} className="text-sm">
-                      Expose
-                    </Label>
-                  </div>
-                </div>
-
-                {service.exposed && (
-                  <div className="space-y-2">
-                    <Label htmlFor={`domain-${index}`} className="text-sm">
-                      Domain
-                    </Label>
-                    <Input
-                      id={`domain-${index}`}
-                      value={service.domain}
-                      onChange={(e) => updateService(index, { domain: e.target.value })}
-                      placeholder="app.example.com"
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-8 text-center text-muted-foreground border rounded-lg">
-            <p>No services configured. Deploy the app first to see available services.</p>
-          </div>
-        )}
-
-        {/* Save button */}
-        {services.length > 0 && (
-          <div className="flex justify-end">
-            <Button onClick={handleSaveDomains} disabled={updateApp.isPending}>
-              {updateApp.isPending ? (
-                <>
-                  <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Domains'
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
+      )}
 
       {updateApp.error && (
         <div className="flex items-center gap-2 text-destructive">

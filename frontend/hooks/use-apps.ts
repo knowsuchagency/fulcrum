@@ -218,3 +218,37 @@ export function useFindCompose(repoId: string | null) {
     enabled: !!repoId,
   })
 }
+
+// Read compose file content
+export function useComposeFile(repoPath: string | null, composeFile: string | null) {
+  return useQuery({
+    queryKey: ['compose', 'file', repoPath, composeFile],
+    queryFn: () =>
+      fetchJSON<{ content: string; mimeType: string; size: number }>(
+        `${API_BASE}/api/fs/read?path=${encodeURIComponent(composeFile!)}&root=${encodeURIComponent(repoPath!)}`
+      ),
+    enabled: !!repoPath && !!composeFile,
+  })
+}
+
+// Write compose file content
+export function useWriteComposeFile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ repoPath, composeFile, content }: { repoPath: string; composeFile: string; content: string }) =>
+      fetchJSON<{ success: boolean; size: number }>(`${API_BASE}/api/fs/write`, {
+        method: 'POST',
+        body: JSON.stringify({ path: composeFile, root: repoPath, content }),
+      }),
+    onSuccess: (_, { repoPath, composeFile }) => {
+      queryClient.invalidateQueries({ queryKey: ['compose', 'file', repoPath, composeFile] })
+    },
+  })
+}
+
+// Find app by repository ID
+export function useAppByRepository(repositoryId: string | null) {
+  const { data: apps } = useApps()
+  return apps?.find((app) => app.repository?.id === repositoryId) ?? null
+}

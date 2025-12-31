@@ -24,11 +24,13 @@ import {
   GithubIcon,
   ComputerTerminal01Icon,
   VisualStudioCodeIcon,
+  CloudIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { DeleteRepositoryDialog } from '@/components/repositories/delete-repository-dialog'
+import { useAppByRepository } from '@/hooks/use-apps'
 import { ClaudeOptionsEditor } from '@/components/repositories/claude-options-editor'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
@@ -91,6 +93,7 @@ function RepositoryDetailView() {
   const updateRepository = useUpdateRepository()
   const deleteRepository = useDeleteRepository()
   const { data: remoteUrl } = useGitRemoteUrl(repository?.path)
+  const linkedApp = useAppByRepository(repository?.id ?? null)
 
   // Form state
   const [displayName, setDisplayName] = useState('')
@@ -442,6 +445,17 @@ function RepositoryDetailView() {
                 strokeWidth={2}
               />
             </a>
+          )}
+          {linkedApp && (
+            <Link
+              to="/apps/$appId"
+              params={{ appId: linkedApp.id }}
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm"
+              title={`Deployed as ${linkedApp.name}`}
+            >
+              <HugeiconsIcon icon={CloudIcon} size={14} strokeWidth={2} />
+              <span className="max-sm:hidden">{linkedApp.name}</span>
+            </Link>
           )}
           <Button
             variant="ghost"
