@@ -20,6 +20,7 @@ import {
   BrowserIcon,
   ChartLineData01Icon,
   More03Icon,
+  Rocket01Icon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { cn } from '@/lib/utils'
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { to: '/tasks', icon: GridViewIcon, labelKey: 'header.tasks', matchPrefix: true },
   { to: '/terminals', icon: ComputerTerminal01Icon, labelKey: 'header.terminals', matchPrefix: false },
   { to: '/repositories', icon: LibraryIcon, labelKey: 'header.repositories', matchPrefix: true },
+  { to: '/apps', icon: Rocket01Icon, labelKey: 'header.apps', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
   { to: '/monitoring', icon: ChartLineData01Icon, labelKey: 'header.monitoring', matchPrefix: true },
 ] as const

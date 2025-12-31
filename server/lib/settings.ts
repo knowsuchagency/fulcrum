@@ -811,12 +811,96 @@ export function ensureLatestSettings(): void {
     )
   }
 
+  // Ensure deployment section exists with defaults
+  if (!merged.deployment || typeof merged.deployment !== 'object') {
+    merged.deployment = { ...DEFAULT_DEPLOYMENT_SETTINGS }
+  } else {
+    merged.deployment = deepMergeWithDefaults(
+      merged.deployment as Record<string, unknown>,
+      DEFAULT_DEPLOYMENT_SETTINGS as unknown as Record<string, unknown>
+    )
+  }
+
   // Always set to current schema version
   merged._schemaVersion = CURRENT_SCHEMA_VERSION
 
   // Write back to file
   fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
   log.settings.info('Settings normalized to latest schema', { schemaVersion: CURRENT_SCHEMA_VERSION })
+}
+
+// ==================== Deployment Settings ====================
+// These settings control the self-hosted deployment feature
+
+export interface DeploymentSettings {
+  cloudflareApiToken: string | null
+  defaultDomain: string | null // e.g., "example.com"
+  serverPublicIp: string | null
+  caddyApiUrl: string // Default: 'http://localhost:2019'
+}
+
+const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
+  cloudflareApiToken: null,
+  defaultDomain: null,
+  serverPublicIp: null,
+  caddyApiUrl: 'http://localhost:2019',
+}
+
+// Get deployment settings from settings.json
+export function getDeploymentSettings(): DeploymentSettings {
+  ensureViboraDir()
+  const settingsPath = getSettingsPath()
+
+  if (!fs.existsSync(settingsPath)) {
+    return DEFAULT_DEPLOYMENT_SETTINGS
+  }
+
+  try {
+    const content = fs.readFileSync(settingsPath, 'utf-8')
+    const parsed = JSON.parse(content)
+    const deployment = parsed.deployment as Partial<DeploymentSettings> | undefined
+
+    if (!deployment) {
+      return DEFAULT_DEPLOYMENT_SETTINGS
+    }
+
+    return {
+      cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? deployment.cloudflareApiToken ?? null,
+      defaultDomain: deployment.defaultDomain ?? null,
+      serverPublicIp: deployment.serverPublicIp ?? null,
+      caddyApiUrl: deployment.caddyApiUrl ?? DEFAULT_DEPLOYMENT_SETTINGS.caddyApiUrl,
+    }
+  } catch {
+    return DEFAULT_DEPLOYMENT_SETTINGS
+  }
+}
+
+// Update deployment settings
+export function updateDeploymentSettings(updates: Partial<DeploymentSettings>): DeploymentSettings {
+  ensureViboraDir()
+  const settingsPath = getSettingsPath()
+
+  let parsed: Record<string, unknown> = {}
+  if (fs.existsSync(settingsPath)) {
+    try {
+      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+    } catch {
+      // Use empty if invalid
+    }
+  }
+
+  const current = getDeploymentSettings()
+  const updated: DeploymentSettings = {
+    cloudflareApiToken: updates.cloudflareApiToken !== undefined ? updates.cloudflareApiToken : current.cloudflareApiToken,
+    defaultDomain: updates.defaultDomain !== undefined ? updates.defaultDomain : current.defaultDomain,
+    serverPublicIp: updates.serverPublicIp !== undefined ? updates.serverPublicIp : current.serverPublicIp,
+    caddyApiUrl: updates.caddyApiUrl ?? current.caddyApiUrl,
+  }
+
+  parsed.deployment = updated
+  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
+
+  return updated
 }
 
 // Export helper functions for use in other modules
