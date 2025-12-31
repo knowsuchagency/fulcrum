@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { reaction } from 'mobx'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -19,6 +20,7 @@ import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
 import { useEditorApp, useEditorHost, useEditorSshPort, usePort } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
+import { useStore } from '@/stores'
 import { buildEditorUrl, openExternalUrl } from '@/lib/editor-url'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
 import { DiffViewer } from '@/components/viewer/diff-viewer'
@@ -40,6 +42,7 @@ import {
   VisualStudioCodeIcon,
   Task01Icon,
   Settings05Icon,
+  ReloadIcon,
   GitCommitIcon,
   LibraryIcon,
   More03Icon,
@@ -134,6 +137,8 @@ function TaskView() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteLinkedWorktree, setDeleteLinkedWorktree] = useState(true)
   const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
+  const [terminalKey, setTerminalKey] = useState(0)
+  const [pendingRetryTerminalId, setPendingRetryTerminalId] = useState<string | null>(null)
   const isMobile = useIsMobile()
 
   // Determine the active tab - URL takes precedence, then database state
@@ -199,13 +204,52 @@ function TaskView() {
     [taskId, navigate, setFilesViewState]
   )
 
-  // Get terminal functions for sending commands
-  const { terminals, sendInputToTerminal } = useTerminalWS()
+  // Get terminal functions for sending commands and managing terminals
+  const { terminals, sendInputToTerminal, destroyTerminal } = useTerminalWS()
+  const store = useStore()
 
   // Find the terminal for this task (matches if cwd is the worktree or a subdirectory)
   const taskTerminal = terminals.find((t) =>
     task?.worktreePath && t.cwd.startsWith(task.worktreePath)
   )
+
+  // Watch for pending retry terminal to be removed using MobX reaction
+  // (useEffect with terminals dependency doesn't work because component isn't observer)
+  useEffect(() => {
+    if (!pendingRetryTerminalId) return
+
+    const dispose = reaction(
+      // Data function: check if terminal still exists in store
+      () => store.terminals.items.some(t => t.id === pendingRetryTerminalId),
+      // Effect function: when terminal is removed, complete the retry
+      (stillExists) => {
+        if (!stillExists) {
+          setPendingRetryTerminalId(null)
+          setTerminalKey(k => k + 1)
+        }
+      },
+      { fireImmediately: true }
+    )
+
+    return dispose
+  }, [pendingRetryTerminalId, store])
+
+  // Restart task terminal - destroys existing and forces TaskTerminal remount
+  const handleRetry = () => {
+    if (!task?.worktreePath) return
+    // Read fresh terminal from store (not from potentially stale hook snapshot)
+    const freshTerminal = store.terminals.items.find(t =>
+      t.cwd.startsWith(task.worktreePath!)
+    )
+    if (freshTerminal) {
+      // Store ID and destroy - reaction will increment key when removal is confirmed
+      setPendingRetryTerminalId(freshTerminal.id)
+      destroyTerminal(freshTerminal.id, { force: true, reason: 'retry' })
+    } else {
+      // No terminal to destroy, just increment key immediately
+      setTerminalKey(k => k + 1)
+    }
+  }
 
   // Send prompt to Claude Code to resolve git issues
   const resolveWithClaude = (prompt: string) => {
@@ -547,7 +591,7 @@ function TaskView() {
               </AlertDialogContent>
             </AlertDialog>
           </div>
-          {/* Row 2: Settings + repo + git status badge */}
+          {/* Row 2: Settings + retry + repo + git status badge */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <button
               type="button"
@@ -556,6 +600,14 @@ function TaskView() {
               title="Task settings"
             >
               <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              onClick={handleRetry}
+              title="New task terminal"
+            >
+              <HugeiconsIcon icon={ReloadIcon} size={14} strokeWidth={2} />
             </button>
             {repository ? (
               <Link
@@ -592,6 +644,14 @@ function TaskView() {
                 title="Task settings"
               >
                 <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                onClick={handleRetry}
+                title="New task terminal"
+              >
+                <HugeiconsIcon icon={ReloadIcon} size={14} strokeWidth={2} />
               </button>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -851,6 +911,7 @@ function TaskView() {
 
           <TabsContent value="terminal" className="flex-1 min-h-0">
             <TaskTerminal
+              key={terminalKey}
               taskName={task.title}
               cwd={task.worktreePath}
               aiMode={aiMode}
@@ -904,6 +965,7 @@ function TaskView() {
           {/* Left: Terminal */}
           <ResizablePanel defaultSize={50} minSize={30}>
             <TaskTerminal
+              key={terminalKey}
               taskName={task.title}
               cwd={task.worktreePath}
               aiMode={aiMode}
