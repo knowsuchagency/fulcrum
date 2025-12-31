@@ -42,6 +42,7 @@ app.post('/', async (c) => {
       displayName: string
       startupScript?: string | null
       copyFiles?: string | null
+      systemPromptAddition?: string | null
       isCopierTemplate?: boolean
     }>()
 
@@ -71,6 +72,7 @@ app.post('/', async (c) => {
       displayName,
       startupScript: body.startupScript || null,
       copyFiles: body.copyFiles || null,
+      systemPromptAddition: body.systemPromptAddition || null,
       isCopierTemplate: body.isCopierTemplate ?? false,
       createdAt: now,
       updatedAt: now,
@@ -224,6 +226,7 @@ app.patch('/:id', async (c) => {
       displayName?: string
       startupScript?: string | null
       copyFiles?: string | null
+      systemPromptAddition?: string | null
       isCopierTemplate?: boolean
     }>()
 

@@ -22,10 +22,11 @@ interface TaskTerminalProps {
   aiMode?: 'default' | 'plan'
   description?: string
   startupScript?: string | null
+  systemPromptAddition?: string | null
   serverPort?: number
 }
 
-export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript, serverPort = 7777 }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript, systemPromptAddition, serverPort = 7777 }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -233,6 +234,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         // component unmount/remount (fixes race condition with React strict mode)
         startup: {
           startupScript,
+          systemPromptAddition,
           aiMode,
           description,
           taskName,
@@ -316,7 +318,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       if (pendingStartup) {
         log.taskTerminal.info('onAttached: running startup commands', { terminalId: actualTerminalId })
         setIsStartingClaude(true)
-        const { startupScript: currentStartupScript, aiMode: currentAiMode, description: currentDescription, taskName: currentTaskName, serverPort: currentServerPort } = pendingStartup
+        const { startupScript: currentStartupScript, systemPromptAddition: currentSystemPromptAddition, aiMode: currentAiMode, description: currentDescription, taskName: currentTaskName, serverPort: currentServerPort } = pendingStartup
 
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
         // Use source with heredoc so exports persist in the current shell
@@ -331,11 +333,16 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         // 2. Then run Claude with the task prompt
         const effectivePort = currentServerPort ?? 7777
         const portFlag = effectivePort !== 7777 ? ` --port=${effectivePort}` : ''
-        const systemPrompt = 'You are working in a Vibora task worktree. ' +
+        let systemPrompt = 'You are working in a Vibora task worktree. ' +
           'Commit after completing each logical unit of work (feature, fix, refactor) to preserve progress. ' +
           `When you finish working and need user input, run: vibora current-task review${portFlag}. ` +
           `When linking a PR: vibora current-task pr <url>${portFlag}. ` +
+          `When linking a Linear ticket: vibora current-task linear <url-or-ticket>${portFlag}. ` +
           `For notifications: vibora notify "Title" "Message"${portFlag}.`
+        // Append custom system prompt addition if provided
+        if (currentSystemPromptAddition) {
+          systemPrompt += '\n\n' + currentSystemPromptAddition
+        }
         const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
 
         const taskCommand = currentAiMode === 'plan'

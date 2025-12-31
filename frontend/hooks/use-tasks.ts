@@ -36,6 +36,7 @@ export function useCreateTask() {
       prUrl?: string | null
       copyFiles?: string
       startupScript?: string
+      systemPromptAddition?: string
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks`, {
         method: 'POST',

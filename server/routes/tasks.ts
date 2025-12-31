@@ -137,6 +137,7 @@ app.post('/', async (c) => {
       Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & {
         copyFiles?: string
         startupScript?: string
+        systemPromptAddition?: string
       }
     >()
 
@@ -162,6 +163,7 @@ app.post('/', async (c) => {
       worktreePath: body.worktreePath || null,
       startupScript: body.startupScript || null,
       aiMode: body.aiMode || null,
+      systemPromptAddition: body.systemPromptAddition || null,
       createdAt: now,
       updatedAt: now,
     }

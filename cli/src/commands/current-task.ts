@@ -89,29 +89,40 @@ export async function handleCurrentTaskCommand(
 
   // Handle Linear ticket association
   if (action === 'linear') {
-    const linearUrl = rest[0]
-    if (!linearUrl) {
+    const input = rest[0]
+    if (!input) {
       throw new CliError(
-        'MISSING_LINEAR_URL',
-        'Usage: vibora current-task linear <url>',
+        'MISSING_LINEAR_INPUT',
+        'Usage: vibora current-task linear <url-or-ticket>',
         ExitCodes.INVALID_ARGS
       )
     }
 
-    // Extract ticket ID from URL
-    const ticketId = linearUrl.match(/\/issue\/([A-Z]+-\d+)/i)?.[1]
-    if (!ticketId) {
-      throw new CliError(
-        'INVALID_LINEAR_URL',
-        'Invalid Linear URL. Expected format: https://linear.app/team/issue/TEAM-123',
-        ExitCodes.INVALID_ARGS
-      )
+    let ticketId: string
+    let ticketUrl: string | null = null
+
+    // Check if input is a ticket number (e.g., DAT-547)
+    const ticketMatch = input.match(/^([A-Z]+-\d+)$/i)
+    if (ticketMatch) {
+      ticketId = ticketMatch[1].toUpperCase()
+    } else {
+      // Try to extract from URL
+      const urlMatch = input.match(/\/issue\/([A-Z]+-\d+)/i)
+      if (!urlMatch) {
+        throw new CliError(
+          'INVALID_LINEAR_INPUT',
+          'Invalid input. Expected ticket number (DAT-547) or URL (https://linear.app/team/issue/DAT-547)',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+      ticketId = urlMatch[1].toUpperCase()
+      ticketUrl = input
     }
 
     const task = await findCurrentTask(client, pathOverride)
     const updatedTask = await client.updateTask(task.id, {
       linearTicketId: ticketId,
-      linearTicketUrl: linearUrl,
+      linearTicketUrl: ticketUrl,
     })
     if (isJsonOutput()) {
       output(updatedTask)

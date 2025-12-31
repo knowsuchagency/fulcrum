@@ -93,6 +93,7 @@ function RepositoryDetailView() {
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
   const [copyFiles, setCopyFiles] = useState('')
+  const [systemPromptAddition, setSystemPromptAddition] = useState('')
   const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
@@ -180,6 +181,7 @@ function RepositoryDetailView() {
       setDisplayName(repository.displayName)
       setStartupScript(repository.startupScript || '')
       setCopyFiles(repository.copyFiles || '')
+      setSystemPromptAddition(repository.systemPromptAddition || '')
       setIsCopierTemplate(repository.isCopierTemplate ?? false)
       setHasChanges(false)
     }
@@ -192,10 +194,11 @@ function RepositoryDetailView() {
         displayName !== repository.displayName ||
         startupScript !== (repository.startupScript || '') ||
         copyFiles !== (repository.copyFiles || '') ||
+        systemPromptAddition !== (repository.systemPromptAddition || '') ||
         isCopierTemplate !== (repository.isCopierTemplate ?? false)
       setHasChanges(changed)
     }
-  }, [displayName, startupScript, copyFiles, isCopierTemplate, repository])
+  }, [displayName, startupScript, copyFiles, systemPromptAddition, isCopierTemplate, repository])
 
   const handleSave = () => {
     if (!repository) return
@@ -207,6 +210,7 @@ function RepositoryDetailView() {
           displayName: displayName.trim() || repository.path.split('/').pop() || 'repo',
           startupScript: startupScript.trim() || null,
           copyFiles: copyFiles.trim() || null,
+          systemPromptAddition: systemPromptAddition.trim() || null,
           isCopierTemplate,
         },
       },
@@ -503,6 +507,20 @@ function RepositoryDetailView() {
                     />
                     <FieldDescription>
                       Comma-separated glob patterns for files to copy into new worktrees.
+                    </FieldDescription>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="systemPromptAddition">System Prompt Addition</FieldLabel>
+                    <Textarea
+                      id="systemPromptAddition"
+                      value={systemPromptAddition}
+                      onChange={(e) => setSystemPromptAddition(e.target.value)}
+                      placeholder="Additional context or instructions for Claude..."
+                      rows={3}
+                    />
+                    <FieldDescription>
+                      Custom instructions to append to the Claude system prompt when creating tasks.
                     </FieldDescription>
                   </Field>
 

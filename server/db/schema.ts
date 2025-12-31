@@ -17,6 +17,7 @@ export const tasks = sqliteTable('tasks', {
   linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
   startupScript: text('startup_script'), // Command to run after worktree creation
   aiMode: text('ai_mode'), // 'default' | 'plan' | null - AI mode for Claude startup
+  systemPromptAddition: text('system_prompt_addition'), // Custom text to append to Claude system prompt
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
@@ -67,6 +68,7 @@ export const repositories = sqliteTable('repositories', {
   displayName: text('display_name').notNull(),
   startupScript: text('startup_script'), // Command to run after worktree creation
   copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
+  systemPromptAddition: text('system_prompt_addition'), // Custom text to append to Claude system prompt
   remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
   isCopierTemplate: integer('is_copier_template', { mode: 'boolean' }).default(false), // Mark as Copier template
   lastUsedAt: text('last_used_at'), // Timestamp of last task creation with this repo
