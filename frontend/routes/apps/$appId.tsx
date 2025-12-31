@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   useApp,
   useDeployApp,
@@ -8,14 +8,32 @@ import {
   useDeployments,
   useAppStatus,
   useUpdateApp,
+  useDeleteApp,
 } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
@@ -26,8 +44,8 @@ import {
   RefreshIcon,
   Link01Icon,
   CheckmarkCircle02Icon,
-  Cancel01Icon,
-  Clock01Icon,
+  Delete02Icon,
+  Copy01Icon,
 } from '@hugeicons/core-free-icons'
 import type { Deployment } from '@/types'
 
@@ -35,17 +53,29 @@ export const Route = createFileRoute('/apps/$appId')({
   component: AppDetailView,
 })
 
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'running':
-      return 'bg-green-500'
-    case 'building':
-      return 'bg-yellow-500'
-    case 'failed':
-      return 'bg-red-500'
-    default:
-      return 'bg-gray-400'
-  }
+// Helper functions
+function formatDuration(startedAt: string, completedAt?: string | null): string {
+  const start = new Date(startedAt).getTime()
+  const end = completedAt ? new Date(completedAt).getTime() : Date.now()
+  const seconds = Math.floor((end - start) / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  if (remainingSeconds === 0) return `${minutes}m`
+  return `${minutes}m ${remainingSeconds}s`
+}
+
+function formatRelativeTime(date: string): string {
+  const now = Date.now()
+  const then = new Date(date).getTime()
+  const diff = now - then
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `about ${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `about ${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `about ${days}d ago`
 }
 
 function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -63,10 +93,16 @@ function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destr
 
 function AppDetailView() {
   const { appId } = Route.useParams()
+  const navigate = useNavigate()
   const { data: app, isLoading, error } = useApp(appId)
-  const deployApp = useDeployApp()
-  const stopApp = useStopApp()
-  const [activeTab, setActiveTab] = useState('overview')
+  const deleteApp = useDeleteApp()
+  const [activeTab, setActiveTab] = useState('general')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const handleDelete = async () => {
+    await deleteApp.mutateAsync({ id: appId })
+    navigate({ to: '/apps' })
+  }
 
   if (isLoading) {
     return (
@@ -91,85 +127,55 @@ function AppDetailView() {
     )
   }
 
-  const handleDeploy = async () => {
-    await deployApp.mutateAsync(appId)
-  }
-
-  const handleStop = async () => {
-    await stopApp.mutateAsync(appId)
-  }
-
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex shrink-0 items-center gap-4 border-b border-border bg-background px-4 py-2">
+      {/* Header - Dokploy style */}
+      <div className="flex shrink-0 items-center gap-4 border-b border-border bg-background px-4 py-3">
         <Link to="/apps" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
           <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
           <span className="text-sm">Apps</span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(app.status)}`} />
-          <span className="font-medium">{app.name}</span>
-          <Badge variant={getStatusBadgeVariant(app.status)} className="capitalize">
-            {app.status}
-          </Badge>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold">{app.name}</span>
+            <Badge variant={getStatusBadgeVariant(app.status)} className="capitalize">
+              {app.status}
+            </Badge>
+          </div>
+          <div className="text-sm text-muted-foreground">{app.id.slice(0, 12)}</div>
         </div>
 
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-2">
-          {app.status === 'running' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleStop}
-              disabled={stopApp.isPending}
-            >
-              {stopApp.isPending ? (
-                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-              ) : (
-                <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
-              )}
-              Stop
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              onClick={handleDeploy}
-              disabled={deployApp.isPending || app.status === 'building'}
-            >
-              {deployApp.isPending || app.status === 'building' ? (
-                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-              ) : (
-                <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
-              )}
-              {app.status === 'building' ? 'Building...' : 'Deploy'}
-            </Button>
-          )}
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-destructive"
+          onClick={() => setShowDeleteConfirm(true)}
+        >
+          <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
+        </Button>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
+            <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="deployments">Deployments</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview">
-            <OverviewTab app={app} />
-          </TabsContent>
-
-          <TabsContent value="logs">
-            <LogsTab appId={appId} services={app.services} />
+          <TabsContent value="general">
+            <GeneralTab app={app} />
           </TabsContent>
 
           <TabsContent value="deployments">
             <DeploymentsTab appId={appId} />
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <LogsTab appId={appId} services={app.services} />
           </TabsContent>
 
           <TabsContent value="settings">
@@ -177,120 +183,196 @@ function AppDetailView() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete App</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{app.name}"? This will stop all containers and remove the app
+              configuration. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteApp.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
 
-// Overview tab
-function OverviewTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+// General tab - Dokploy style with deploy actions
+function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
   const { data: status } = useAppStatus(app.id)
-  const exposedServices = app.services?.filter((s) => s.exposed) ?? []
-  const internalServices = app.services?.filter((s) => !s.exposed) ?? []
+  const deployApp = useDeployApp()
+  const stopApp = useStopApp()
+  const updateApp = useUpdateApp()
+
+  const handleDeploy = async () => {
+    await deployApp.mutateAsync(app.id)
+  }
+
+  const handleStop = async () => {
+    await stopApp.mutateAsync(app.id)
+  }
+
+  const handleAutoDeployToggle = async (enabled: boolean) => {
+    await updateApp.mutateAsync({
+      id: app.id,
+      updates: { autoDeployEnabled: enabled },
+    })
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Status card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3">
-            <div className={`h-3 w-3 rounded-full ${getStatusColor(app.status)}`} />
-            <span className="font-medium capitalize">{app.status}</span>
-            {app.lastDeployedAt && (
-              <span className="text-sm text-muted-foreground">
-                · Deployed {new Date(app.lastDeployedAt).toLocaleString()}
-                {app.lastDeployCommit && ` (${app.lastDeployCommit})`}
-              </span>
-            )}
-          </div>
-          <div className="mt-2 text-sm text-muted-foreground">
-            {app.repository?.displayName ?? 'Unknown'} · {app.branch}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Deploy Settings Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Deploy Settings</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure and deploy your compose application
+          </p>
+        </div>
+        <Badge variant="secondary">Compose</Badge>
+      </div>
 
-      {/* Exposed Services */}
-      {exposedServices.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Exposed Services</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {exposedServices.map((service) => {
-                const container = status?.containers.find((c) => c.service === service.serviceName)
-                return (
-                  <div key={service.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`h-2 w-2 rounded-full ${
-                          container?.status === 'running' ? 'bg-green-500' : 'bg-gray-400'
-                        }`}
-                      />
-                      <span className="font-medium">{service.serviceName}</span>
-                      {service.domain && (
-                        <a
-                          href={`https://${service.domain}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-sm text-primary hover:underline"
-                        >
-                          <HugeiconsIcon icon={Link01Icon} size={12} strokeWidth={2} />
-                          {service.domain}
-                        </a>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="capitalize">
-                      {container?.status ?? service.status ?? 'stopped'}
-                    </Badge>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        <Button onClick={handleDeploy} disabled={deployApp.isPending || app.status === 'building'}>
+          {deployApp.isPending || app.status === 'building' ? (
+            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+          ) : (
+            <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
+          )}
+          {app.status === 'building' ? 'Building...' : 'Deploy'}
+        </Button>
+        <Button variant="outline" onClick={handleDeploy} disabled={deployApp.isPending}>
+          <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
+          Reload
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleStop}
+          disabled={stopApp.isPending || app.status !== 'running'}
+        >
+          {stopApp.isPending ? (
+            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+          ) : (
+            <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+          )}
+          Stop
+        </Button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="autodeploy"
+            checked={app.autoDeployEnabled ?? false}
+            onCheckedChange={(checked) => handleAutoDeployToggle(checked === true)}
+          />
+          <Label htmlFor="autodeploy" className="text-sm">
+            Autodeploy
+          </Label>
+        </div>
+      </div>
 
-      {/* Internal Services */}
-      {internalServices.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Internal Services</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {internalServices.map((service) => {
-                const container = status?.containers.find((c) => c.service === service.serviceName)
-                return (
-                  <div key={service.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`h-2 w-2 rounded-full ${
-                          container?.status === 'running' ? 'bg-green-500' : 'bg-gray-400'
-                        }`}
-                      />
-                      <span className="font-medium">{service.serviceName}</span>
-                      {service.containerPort && (
-                        <span className="text-sm text-muted-foreground">:{service.containerPort}</span>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="capitalize">
-                      {container?.status ?? service.status ?? 'stopped'}
-                    </Badge>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Separator />
+
+      {/* Repository Info */}
+      <div>
+        <h4 className="font-medium mb-2">Repository</h4>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-green-500" />
+          <span className="text-sm">
+            {app.repository?.displayName ?? 'Unknown repository'} · {app.branch}
+          </span>
+        </div>
+        {app.lastDeployedAt && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Last deployed {formatRelativeTime(app.lastDeployedAt)}
+            {app.lastDeployCommit && ` · ${app.lastDeployCommit.slice(0, 7)}`}
+          </p>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Compose File */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-medium">Compose File</h4>
+          <span className="text-sm text-muted-foreground">{app.composeFile}</span>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Services Status */}
+      <div>
+        <h4 className="font-medium mb-3">Services</h4>
+        <div className="space-y-2 rounded-lg border p-3">
+          {status?.containers && status.containers.length > 0 ? (
+            status.containers.map((container) => {
+              const service = app.services?.find((s) => s.serviceName === container.service)
+              return (
+                <div key={container.name} className="flex items-center gap-3">
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      container.status === 'running' ? 'bg-green-500' : 'bg-gray-400'
+                    }`}
+                  />
+                  <span className="font-medium text-sm">{container.service}</span>
+                  <span className="text-sm text-muted-foreground">{container.status}</span>
+                  {service?.exposed && service.domain && (
+                    <a
+                      href={`https://${service.domain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto flex items-center gap-1 text-sm text-primary hover:underline"
+                    >
+                      <HugeiconsIcon icon={Link01Icon} size={12} strokeWidth={2} />
+                      {service.domain}
+                    </a>
+                  )}
+                </div>
+              )
+            })
+          ) : app.services && app.services.length > 0 ? (
+            app.services.map((service) => (
+              <div key={service.id} className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-gray-400" />
+                <span className="font-medium text-sm">{service.serviceName}</span>
+                <span className="text-sm text-muted-foreground">stopped</span>
+                {service.exposed && service.domain && (
+                  <a
+                    href={`https://${service.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    <HugeiconsIcon icon={Link01Icon} size={12} strokeWidth={2} />
+                    {service.domain}
+                  </a>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">No services configured</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
 
-// Logs tab
+// Logs tab - Dokploy style with container selector
 function LogsTab({
   appId,
   services,
@@ -298,44 +380,100 @@ function LogsTab({
   appId: string
   services?: NonNullable<ReturnType<typeof useApp>['data']>['services']
 }) {
+  const { data: status } = useAppStatus(appId)
   const [selectedService, setSelectedService] = useState<string | undefined>()
   const [tail, setTail] = useState(100)
   const { data, isLoading, refetch } = useAppLogs(appId, selectedService, tail)
+  const [copied, setCopied] = useState(false)
+
+  const copyLogs = async () => {
+    if (data?.logs) {
+      await navigator.clipboard.writeText(data.logs)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const downloadLogs = () => {
+    if (data?.logs) {
+      const blob = new Blob([data.logs], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${appId}-${selectedService ?? 'all'}-logs.txt`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }
+  }
+
+  // Get container info for dropdown
+  const containers = status?.containers ?? []
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
+    <div className="space-y-4 max-w-4xl">
+      <div>
+        <h3 className="text-lg font-semibold">Logs</h3>
+        <p className="text-sm text-muted-foreground">
+          Watch the logs of the application in real time
+        </p>
+      </div>
+
+      {/* Container selector */}
+      <div className="flex items-center gap-4 flex-wrap">
         <select
           value={selectedService ?? ''}
           onChange={(e) => setSelectedService(e.target.value || undefined)}
-          className="rounded-md border bg-background px-3 py-1.5 text-sm"
+          className="rounded-md border bg-background px-3 py-2 text-sm min-w-[240px]"
         >
-          <option value="">All services</option>
-          {services?.map((s) => (
-            <option key={s.id} value={s.serviceName}>
-              {s.serviceName}
-            </option>
-          ))}
+          <option value="">All containers</option>
+          {containers.length > 0
+            ? containers.map((c) => (
+                <option key={c.name} value={c.service}>
+                  {c.service} ({c.name.slice(-12)}) [{c.status}]
+                </option>
+              ))
+            : services?.map((s) => (
+                <option key={s.id} value={s.serviceName}>
+                  {s.serviceName}
+                </option>
+              ))}
         </select>
 
         <select
           value={tail}
           onChange={(e) => setTail(parseInt(e.target.value, 10))}
-          className="rounded-md border bg-background px-3 py-1.5 text-sm"
+          className="rounded-md border bg-background px-3 py-2 text-sm"
         >
-          <option value={50}>Last 50 lines</option>
-          <option value={100}>Last 100 lines</option>
-          <option value={500}>Last 500 lines</option>
-          <option value={1000}>Last 1000 lines</option>
+          <option value={50}>50 lines</option>
+          <option value={100}>100 lines</option>
+          <option value={500}>500 lines</option>
+          <option value={1000}>1000 lines</option>
         </select>
 
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-1 ml-auto">
+          <Button variant="outline" size="sm" onClick={copyLogs} disabled={!data?.logs}>
+            <HugeiconsIcon
+              icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
+              size={14}
+              strokeWidth={2}
+              className={copied ? 'text-green-500' : ''}
+            />
+            {copied ? 'Copied' : 'Copy'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadLogs} disabled={!data?.logs}>
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={2} className="rotate-[-90deg]" />
+            Download
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <div className="rounded-lg border bg-black p-4 font-mono text-xs text-green-400 overflow-auto max-h-[600px]">
+      <div className="rounded-lg border bg-black p-4 font-mono text-xs text-green-400 overflow-auto max-h-[600px] min-h-[300px]">
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
@@ -351,9 +489,10 @@ function LogsTab({
   )
 }
 
-// Deployments tab
+// Deployments tab - Dokploy style clean list
 function DeploymentsTab({ appId }: { appId: string }) {
   const { data: deployments, isLoading } = useDeployments(appId)
+  const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null)
 
   if (isLoading) {
     return (
@@ -363,78 +502,144 @@ function DeploymentsTab({ appId }: { appId: string }) {
     )
   }
 
-  if (!deployments?.length) {
-    return (
-      <div className="py-8 text-center text-muted-foreground">
-        <p>No deployments yet</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-3 max-w-3xl">
-      {deployments.map((deployment) => (
-        <DeploymentCard key={deployment.id} deployment={deployment} />
-      ))}
+    <div className="max-w-3xl">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">Deployments</h3>
+        <p className="text-sm text-muted-foreground">
+          See the last 10 deployments for this compose
+        </p>
+      </div>
+
+      {!deployments?.length ? (
+        <div className="py-8 text-center text-muted-foreground border rounded-lg">
+          <p>No deployments yet</p>
+        </div>
+      ) : (
+        <div className="border rounded-lg divide-y">
+          {deployments.map((deployment, index) => (
+            <DeploymentRow
+              key={deployment.id}
+              deployment={deployment}
+              number={index + 1}
+              onViewLogs={() => setSelectedDeployment(deployment)}
+            />
+          ))}
+        </div>
+      )}
+
+      <DeploymentLogsModal
+        deployment={selectedDeployment}
+        open={!!selectedDeployment}
+        onOpenChange={(open) => !open && setSelectedDeployment(null)}
+      />
     </div>
   )
 }
 
-function DeploymentCard({ deployment }: { deployment: Deployment }) {
-  const getIcon = () => {
+// Deployment row - clean single line with View button
+function DeploymentRow({
+  deployment,
+  number,
+  onViewLogs,
+}: {
+  deployment: Deployment
+  number: number
+  onViewLogs: () => void
+}) {
+  const getStatusInfo = () => {
     switch (deployment.status) {
       case 'running':
-        return <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} className="text-green-500" />
+        return { text: 'Done', color: 'bg-green-500' }
       case 'failed':
-        return <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} className="text-red-500" />
+        return { text: 'Error', color: 'bg-red-500' }
       case 'building':
       case 'pending':
-        return <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin text-yellow-500" />
+        return { text: 'Building', color: 'bg-yellow-500' }
       default:
-        return <HugeiconsIcon icon={Clock01Icon} size={16} strokeWidth={2} className="text-muted-foreground" />
+        return { text: deployment.status, color: 'bg-gray-400' }
+    }
+  }
+
+  const { text: statusText, color: statusColor } = getStatusInfo()
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-muted-foreground w-6">{number}.</span>
+        <span className="font-medium">{statusText}</span>
+        <div className={`h-2 w-2 rounded-full ${statusColor}`} />
+      </div>
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-muted-foreground">
+          {formatRelativeTime(deployment.startedAt)}
+        </span>
+        <span className="text-sm text-muted-foreground">
+          ⏱ {formatDuration(deployment.startedAt, deployment.completedAt)}
+        </span>
+        <Button size="sm" onClick={onViewLogs}>
+          View
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// Deployment logs modal - Dokploy style
+function DeploymentLogsModal({
+  deployment,
+  open,
+  onOpenChange,
+}: {
+  deployment: Deployment | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const lineCount = deployment?.buildLogs?.split('\n').length ?? 0
+  const [copied, setCopied] = useState(false)
+
+  const copyLogs = async () => {
+    if (deployment?.buildLogs) {
+      await navigator.clipboard.writeText(deployment.buildLogs)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
   }
 
   return (
-    <Card>
-      <CardContent className="py-4">
-        <div className="flex items-start gap-3">
-          {getIcon()}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm">{deployment.gitCommit ?? 'unknown'}</span>
-              <Badge variant="outline" className="capitalize">
-                {deployment.status}
-              </Badge>
-              {deployment.deployedBy && (
-                <Badge variant="secondary" className="capitalize">
-                  {deployment.deployedBy}
-                </Badge>
-              )}
-            </div>
-            {deployment.gitMessage && (
-              <p className="mt-1 text-sm text-muted-foreground truncate">{deployment.gitMessage}</p>
-            )}
-            <div className="mt-1 text-xs text-muted-foreground">
-              Started: {new Date(deployment.startedAt).toLocaleString()}
-              {deployment.completedAt && ` · Completed: ${new Date(deployment.completedAt).toLocaleString()}`}
-            </div>
-            {deployment.errorMessage && (
-              <p className="mt-2 text-sm text-destructive">{deployment.errorMessage}</p>
-            )}
-          </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="!max-w-[90vw] w-[90vw] h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Deployment</DialogTitle>
+          <DialogDescription className="flex items-center gap-2">
+            See all the details of this deployment
+            <span className="text-muted-foreground">|</span>
+            <span>{lineCount} lines</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyLogs}>
+              <HugeiconsIcon
+                icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
+                size={14}
+                strokeWidth={2}
+                className={copied ? 'text-green-500' : ''}
+              />
+            </Button>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-auto rounded-lg border bg-muted/30 p-4 font-mono text-xs text-foreground">
+          {deployment?.buildLogs ? (
+            <pre className="whitespace-pre-wrap">{deployment.buildLogs}</pre>
+          ) : (
+            <span className="text-muted-foreground">No build logs available</span>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-// Settings tab
+// Settings tab - Domain configuration
 function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
   const updateApp = useUpdateApp()
-  const [name, setName] = useState(app.name)
-  const [branch, setBranch] = useState(app.branch)
-  const [autoDeployEnabled, setAutoDeployEnabled] = useState(app.autoDeployEnabled ?? false)
   const [services, setServices] = useState(
     app.services?.map((s) => ({
       serviceName: s.serviceName,
@@ -448,9 +653,6 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
     await updateApp.mutateAsync({
       id: app.id,
       updates: {
-        name,
-        branch,
-        autoDeployEnabled,
         services: services.map((s) => ({
           serviceName: s.serviceName,
           containerPort: s.containerPort ?? undefined,
@@ -466,40 +668,18 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* General settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">General</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">App Name</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
+    <div className="space-y-6 max-w-3xl">
+      {/* Domain Configuration Header */}
+      <div>
+        <h3 className="text-lg font-semibold">Domain Configuration</h3>
+        <p className="text-sm text-muted-foreground">
+          Configure which services are exposed and their domain mappings
+        </p>
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="branch">Branch</Label>
-            <Input id="branch" value={branch} onChange={(e) => setBranch(e.target.value)} />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="autoDeployEnabled"
-              checked={autoDeployEnabled}
-              onCheckedChange={(checked) => setAutoDeployEnabled(checked === true)}
-            />
-            <Label htmlFor="autoDeployEnabled">Auto-deploy on push to {branch}</Label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Exposed Services */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Exposed Services</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* Services */}
+      {services.length > 0 ? (
+        <div className="space-y-4">
           {services.map((service, index) => (
             <div key={service.serviceName} className="rounded-lg border p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -534,22 +714,28 @@ function SettingsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data
               )}
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <div className="py-8 text-center text-muted-foreground border rounded-lg">
+          <p>No services configured. Deploy the app first to see available services.</p>
+        </div>
+      )}
 
       {/* Save button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={updateApp.isPending}>
-          {updateApp.isPending ? (
-            <>
-              <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Changes'
-          )}
-        </Button>
-      </div>
+      {services.length > 0 && (
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={updateApp.isPending}>
+            {updateApp.isPending ? (
+              <>
+                <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
+        </div>
+      )}
 
       {updateApp.error && (
         <div className="flex items-center gap-2 text-destructive">

@@ -119,7 +119,9 @@ export function useDeployApp() {
       fetchJSON<{ success: boolean; deployment: Deployment }>(`${API_BASE}/api/apps/${id}/deploy`, {
         method: 'POST',
       }),
-    onSuccess: (_, id) => {
+    // Use onSettled to invalidate queries regardless of success/failure
+    // This ensures failed deployments are shown in the deployments list
+    onSettled: (_, __, id) => {
       queryClient.invalidateQueries({ queryKey: ['apps'] })
       queryClient.invalidateQueries({ queryKey: ['apps', id] })
       queryClient.invalidateQueries({ queryKey: ['apps', id, 'deployments'] })
