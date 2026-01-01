@@ -8,6 +8,7 @@ import { findComposeFile } from '../services/compose-parser'
 import { deployApp, stopApp, getDeploymentHistory, getProjectName } from '../services/deployment'
 import { stackServices, serviceLogs } from '../services/docker-swarm'
 import { checkDockerInstalled, checkDockerRunning } from '../services/docker-compose'
+import { refreshGitWatchers } from '../services/git-watcher'
 import type { App, AppService } from '../db/schema'
 
 const app = new Hono()
@@ -202,6 +203,9 @@ app.post('/', async (c) => {
       where: eq(appServices.appId, appId),
     })
 
+    // Refresh git watchers for auto-deploy
+    refreshGitWatchers().catch(() => {})
+
     return c.json(toAppResponse(created!, services, repo), 201)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to create app' }, 400)
@@ -305,6 +309,9 @@ app.patch('/:id', async (c) => {
       where: eq(repositories.id, updated!.repositoryId),
     })
 
+    // Refresh git watchers for auto-deploy
+    refreshGitWatchers().catch(() => {})
+
     return c.json(toAppResponse(updated!, services, repo ?? undefined))
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update app' }, 400)
@@ -337,6 +344,9 @@ app.delete('/:id', async (c) => {
 
   // Delete app
   await db.delete(apps).where(eq(apps.id, id))
+
+  // Refresh git watchers for auto-deploy
+  refreshGitWatchers().catch(() => {})
 
   return c.json({ success: true })
 })

@@ -83,33 +83,6 @@ export function getProjectName(appId: string): string {
 }
 
 /**
- * Pull latest changes from git
- */
-async function gitPull(repoPath: string): Promise<{ success: boolean; error?: string }> {
-  return new Promise((resolve) => {
-    const proc = spawn('git', ['pull', '--ff-only'], { cwd: repoPath })
-
-    let stderr = ''
-    proc.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-
-    proc.on('close', (code) => {
-      if (code !== 0) {
-        log.deploy.error('Git pull failed', { repoPath, stderr: stderr.slice(0, 200) })
-        resolve({ success: false, error: stderr || 'Git pull failed' })
-      } else {
-        resolve({ success: true })
-      }
-    })
-
-    proc.on('error', (err) => {
-      resolve({ success: false, error: String(err) })
-    })
-  })
-}
-
-/**
  * Get the current git commit hash
  */
 async function getGitCommit(repoPath: string): Promise<{ hash: string; message: string } | null> {
@@ -158,6 +131,12 @@ export async function deployApp(
     return { success: false, error: 'App not found' }
   }
 
+  // Skip if already deploying
+  if (app.status === 'building') {
+    log.deploy.info('Skipping deployment - already building', { appId })
+    return { success: false, error: 'Deployment already in progress' }
+  }
+
   const repo = await db.query.repositories.findFirst({
     where: eq(repositories.id, app.repositoryId),
   })
@@ -204,14 +183,6 @@ export async function deployApp(
 
     // Detect or start Traefik for routing
     const traefikConfig = await ensureTraefik()
-
-    // Stage 1: Pull latest code
-    onProgress?.({ stage: 'pulling', message: 'Pulling latest code...' })
-
-    const pullResult = await gitPull(repo.path)
-    if (!pullResult.success) {
-      throw new Error(`Git pull failed: ${pullResult.error}`)
-    }
 
     // Get commit info
     const commitInfo = await getGitCommit(repo.path)
