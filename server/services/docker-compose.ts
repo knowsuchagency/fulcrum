@@ -2,19 +2,12 @@ import { spawn } from 'child_process'
 import { log } from '../lib/logger'
 import { getShellEnv } from '../lib/env'
 
-export interface ContainerStatus {
-  name: string
-  service: string
-  status: string
-  health?: string
-  ports: string[]
-}
-
-export interface ComposeCommandOptions {
+export interface ComposeBuildOptions {
   projectName: string
   cwd: string
   composeFile?: string
-  env?: Record<string, string> // Per-app environment variables to pass to Docker Compose
+  env?: Record<string, string>
+  noCache?: boolean
 }
 
 /**
@@ -22,7 +15,7 @@ export interface ComposeCommandOptions {
  */
 async function runCompose(
   args: string[],
-  options: ComposeCommandOptions,
+  options: { projectName: string; cwd: string; composeFile?: string; env?: Record<string, string> },
   onOutput?: (line: string) => void
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const fullArgs = ['compose', '-p', options.projectName]
@@ -36,13 +29,11 @@ async function runCompose(
   log.deploy.debug('Running docker compose command', { args: fullArgs, cwd: options.cwd })
 
   return new Promise((resolve) => {
-    // Use getShellEnv() to filter out server-specific vars (PORT, DEBUG, etc.)
-    // then merge with per-app env vars
     const proc = spawn('docker', fullArgs, {
       cwd: options.cwd,
       env: {
         ...getShellEnv(),
-        ...options.env, // Merge per-app env vars (overrides filtered env)
+        ...options.env,
       },
     })
 
@@ -80,12 +71,11 @@ async function runCompose(
   })
 }
 
-export interface ComposeBuildOptions extends ComposeCommandOptions {
-  noCache?: boolean
-}
-
 /**
  * Build the compose stack
+ *
+ * Note: Docker Swarm cannot build images inline, so we still use
+ * `docker compose build` before deploying with `docker stack deploy`.
  */
 export async function composeBuild(
   options: ComposeBuildOptions,
@@ -110,171 +100,6 @@ export async function composeBuild(
   }
 
   log.deploy.info('Compose build succeeded', { project: options.projectName })
-  return { success: true }
-}
-
-/**
- * Start the compose stack (with optional build)
- */
-export async function composeUp(
-  options: ComposeCommandOptions,
-  buildFirst = false,
-  onOutput?: (line: string) => void
-): Promise<{ success: boolean; error?: string }> {
-  log.deploy.info('Starting compose stack', { project: options.projectName, buildFirst })
-
-  const args = ['up', '-d', '--remove-orphans']
-  if (buildFirst) {
-    args.push('--build')
-  }
-
-  const result = await runCompose(args, options, onOutput)
-
-  if (result.exitCode !== 0) {
-    log.deploy.error('Compose up failed', {
-      project: options.projectName,
-      exitCode: result.exitCode,
-      stderr: result.stderr.slice(0, 500),
-    })
-    return { success: false, error: result.stderr || 'Failed to start containers' }
-  }
-
-  log.deploy.info('Compose stack started', { project: options.projectName })
-  return { success: true }
-}
-
-/**
- * Stop the compose stack
- */
-export async function composeDown(
-  options: ComposeCommandOptions,
-  removeVolumes = false
-): Promise<{ success: boolean; error?: string }> {
-  log.deploy.info('Stopping compose stack', { project: options.projectName, removeVolumes })
-
-  const args = ['down']
-  if (removeVolumes) {
-    args.push('-v')
-  }
-
-  const result = await runCompose(args, options)
-
-  if (result.exitCode !== 0) {
-    log.deploy.error('Compose down failed', {
-      project: options.projectName,
-      exitCode: result.exitCode,
-      stderr: result.stderr.slice(0, 500),
-    })
-    return { success: false, error: result.stderr || 'Failed to stop containers' }
-  }
-
-  log.deploy.info('Compose stack stopped', { project: options.projectName })
-  return { success: true }
-}
-
-/**
- * Get the status of containers in the compose stack
- */
-export async function composePs(options: ComposeCommandOptions): Promise<ContainerStatus[]> {
-  const result = await runCompose(['ps', '--format', 'json'], options)
-
-  if (result.exitCode !== 0) {
-    log.deploy.error('Compose ps failed', { project: options.projectName })
-    return []
-  }
-
-  try {
-    // docker compose ps --format json outputs one JSON object per line
-    const containers: ContainerStatus[] = []
-    for (const line of result.stdout.split('\n').filter(Boolean)) {
-      const container = JSON.parse(line)
-      containers.push({
-        name: container.Name || container.name,
-        service: container.Service || container.service,
-        status: container.State || container.state || 'unknown',
-        health: container.Health || container.health,
-        ports: parsePortsOutput(container.Ports || container.ports || ''),
-      })
-    }
-    return containers
-  } catch (err) {
-    log.deploy.error('Failed to parse compose ps output', {
-      error: String(err),
-      stdout: result.stdout.slice(0, 200),
-    })
-    return []
-  }
-}
-
-/**
- * Parse the ports string from docker compose ps
- * Example: "0.0.0.0:8080->80/tcp, :::8080->80/tcp"
- */
-function parsePortsOutput(portsStr: string): string[] {
-  if (!portsStr) return []
-  return portsStr
-    .split(',')
-    .map((p) => p.trim())
-    .filter(Boolean)
-}
-
-/**
- * Get logs from compose services
- */
-export async function composeLogs(
-  options: ComposeCommandOptions,
-  serviceName?: string,
-  tail = 100
-): Promise<string> {
-  const args = ['logs', '--no-color', '-t', `--tail=${tail}`]
-  if (serviceName) {
-    args.push(serviceName)
-  }
-
-  const result = await runCompose(args, options)
-  return result.stdout + result.stderr
-}
-
-/**
- * Pull latest images for the compose stack
- */
-export async function composePull(
-  options: ComposeCommandOptions,
-  onOutput?: (line: string) => void
-): Promise<{ success: boolean; error?: string }> {
-  log.deploy.info('Pulling compose images', { project: options.projectName })
-
-  const result = await runCompose(['pull'], options, onOutput)
-
-  if (result.exitCode !== 0) {
-    log.deploy.warn('Compose pull had issues', {
-      project: options.projectName,
-      stderr: result.stderr.slice(0, 200),
-    })
-    // Pull failures are often non-fatal (local builds don't have images to pull)
-  }
-
-  return { success: true }
-}
-
-/**
- * Restart a specific service or all services
- */
-export async function composeRestart(
-  options: ComposeCommandOptions,
-  serviceName?: string
-): Promise<{ success: boolean; error?: string }> {
-  const args = ['restart']
-  if (serviceName) {
-    args.push(serviceName)
-  }
-
-  const result = await runCompose(args, options)
-
-  if (result.exitCode !== 0) {
-    return { success: false, error: result.stderr || 'Restart failed' }
-  }
-
   return { success: true }
 }
 

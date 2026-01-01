@@ -2,7 +2,7 @@ import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import { Database } from 'bun:sqlite'
 import { join, dirname } from 'node:path'
-import { readdirSync, existsSync } from 'node:fs'
+import { readdirSync, existsSync, readFileSync } from 'node:fs'
 import * as schema from './schema'
 import { initializeViboraDirectories, getDatabasePath } from '../lib/settings'
 import { log } from '../lib/logger'
@@ -96,42 +96,75 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       )
     `)
 
-    // Check if any migrations are recorded
-    const migrationCount = sqlite.query('SELECT COUNT(*) as count FROM __drizzle_migrations').get() as { count: number }
+    // Check which migrations need to be marked as applied based on schema state.
+    // This handles both fresh push-created databases and databases with partial/stale migration records.
+    const journalPath = join(migrationsPath, 'meta', '_journal.json')
+    if (!existsSync(journalPath)) {
+      log.db.warn('Migration journal not found', { journalPath })
+      // Let drizzle handle it
+    } else {
+      const journal = JSON.parse(readFileSync(journalPath, 'utf-8')) as {
+        entries: Array<{ tag: string; when: number }>
+      }
 
-    if (migrationCount.count === 0) {
-      // Database has tables but no migrations recorded. This can happen when:
-      // 1. Database was created with drizzle-kit push (test databases)
-      // 2. Migrations table was lost/reset
-      //
-      // We need to mark migrations as applied ONLY if their changes are already in the schema.
-      // Check if the schema matches the LATEST migration state (has claude_options, no system_prompt_addition)
+      // Get existing migration records
+      const existingMigrations = sqlite
+        .query('SELECT hash, created_at FROM __drizzle_migrations')
+        .all() as Array<{ hash: string; created_at: number }>
+      const existingHashes = new Set(existingMigrations.map((m) => m.hash))
+
+      // Check for various schema landmarks to determine which migrations should be marked
       const hasClaudeOptions = sqlite
         .query("SELECT name FROM pragma_table_info('tasks') WHERE name='claude_options'")
         .get()
+      const hasAppsTable = sqlite
+        .query("SELECT name FROM sqlite_master WHERE type='table' AND name='apps'")
+        .get()
+      const hasEnvironmentVariables = sqlite
+        .query("SELECT name FROM pragma_table_info('apps') WHERE name='environment_variables'")
+        .get()
 
-      const files = readdirSync(migrationsPath).filter((f: string) => f.endsWith('.sql')).sort()
+      // Determine which migrations should be marked as applied based on schema state
+      const migrationsToMark: Array<{ tag: string; when: number }> = []
 
-      if (hasClaudeOptions) {
-        // Schema is fully up-to-date (created with push from latest schema)
-        // Mark all migrations as applied and skip migrate()
-        for (const file of files) {
-          const hash = file.replace('.sql', '')
-          sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${hash}', ${Date.now()})`)
+      for (const entry of journal.entries) {
+        // Skip if already recorded
+        if (existingHashes.has(entry.tag)) continue
+
+        let shouldMark = false
+
+        // 0013 adds claude_options
+        if (entry.tag < '0013_replace_system_prompt_with_claude_options') {
+          shouldMark = true
+        } else if (entry.tag.startsWith('0013') && hasClaudeOptions) {
+          shouldMark = true
         }
-        log.db.info('Database created via push, marked all migrations as applied', { count: files.length })
-        return
-      } else {
-        // Schema is outdated - only mark old migrations as applied, let new ones run
-        // Find migrations that predate the schema change (0013 adds claude_options)
-        for (const file of files) {
-          const hash = file.replace('.sql', '')
-          // Only mark migrations before 0013 as applied
-          if (hash < '0013_replace_system_prompt_with_claude_options') {
-            sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${hash}', ${Date.now()})`)
-          }
+        // 0014 creates apps/deployments/app_services tables
+        else if (entry.tag.startsWith('0014') && hasAppsTable) {
+          shouldMark = true
         }
-        log.db.info('Legacy database detected, marked pre-0013 migrations as applied')
+        // 0015 adds environment_variables to apps
+        else if (entry.tag.startsWith('0015') && hasEnvironmentVariables) {
+          shouldMark = true
+        }
+
+        if (shouldMark) {
+          migrationsToMark.push(entry)
+        }
+      }
+
+      // Insert missing migrations with their own timestamps.
+      // Drizzle uses hash matching (not timestamp comparison) for already-recorded migrations,
+      // so we just need to insert the correct hash values.
+      for (const { tag, when } of migrationsToMark) {
+        sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${tag}', ${when})`)
+      }
+
+      if (migrationsToMark.length > 0) {
+        log.db.info('Marked migrations as applied based on schema state', {
+          count: migrationsToMark.length,
+          migrations: migrationsToMark.map((m) => m.tag),
+        })
       }
     }
   }

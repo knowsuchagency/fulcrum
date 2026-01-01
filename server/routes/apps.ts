@@ -5,7 +5,7 @@ import { db } from '../db'
 import { apps, appServices, deployments, repositories } from '../db/schema'
 import { findComposeFile } from '../services/compose-parser'
 import { deployApp, stopApp, getDeploymentHistory, getProjectName } from '../services/deployment'
-import { composeLogs, composePs } from '../services/docker-compose'
+import { stackServices, serviceLogs } from '../services/docker-swarm'
 import type { App, AppService } from '../db/schema'
 
 const app = new Hono()
@@ -354,7 +354,7 @@ app.post('/:id/stop', async (c) => {
   return c.json({ success: true })
 })
 
-// GET /api/apps/:id/logs - Get container logs
+// GET /api/apps/:id/logs - Get service logs
 app.get('/:id/logs', async (c) => {
   const id = c.req.param('id')
   const service = c.req.query('service')
@@ -368,28 +368,31 @@ app.get('/:id/logs', async (c) => {
     return c.json({ error: 'App not found' }, 404)
   }
 
-  const repo = await db.query.repositories.findFirst({
-    where: eq(repositories.id, appRecord.repositoryId),
-  })
+  const projectName = getProjectName(id)
 
-  if (!repo) {
-    return c.json({ error: 'Repository not found' }, 404)
+  // Get logs for specific service or all services
+  if (service) {
+    // Swarm service names are: stackName_serviceName
+    const fullServiceName = `${projectName}_${service}`
+    const logs = await serviceLogs(fullServiceName, tail)
+    return c.json({ logs })
   }
 
-  const logs = await composeLogs(
-    {
-      projectName: getProjectName(id),
-      cwd: repo.path,
-      composeFile: appRecord.composeFile,
-    },
-    service || undefined,
-    tail
-  )
+  // Get logs from all services in the stack
+  const services = await stackServices(projectName)
+  const allLogs: string[] = []
 
-  return c.json({ logs })
+  for (const svc of services) {
+    const svcLogs = await serviceLogs(svc.name, tail)
+    if (svcLogs) {
+      allLogs.push(`=== ${svc.serviceName} ===\n${svcLogs}`)
+    }
+  }
+
+  return c.json({ logs: allLogs.join('\n\n') })
 })
 
-// GET /api/apps/:id/status - Get container status
+// GET /api/apps/:id/status - Get service status
 app.get('/:id/status', async (c) => {
   const id = c.req.param('id')
 
@@ -401,18 +404,22 @@ app.get('/:id/status', async (c) => {
     return c.json({ error: 'App not found' }, 404)
   }
 
-  const repo = await db.query.repositories.findFirst({
-    where: eq(repositories.id, appRecord.repositoryId),
-  })
+  const projectName = getProjectName(id)
+  const services = await stackServices(projectName)
 
-  if (!repo) {
-    return c.json({ error: 'Repository not found' }, 404)
-  }
+  // Map swarm services to container-like format for frontend compatibility
+  const containers = services.map((svc) => {
+    // Parse replicas "1/1" to determine status
+    const [current, desired] = svc.replicas.split('/').map(Number)
+    const isRunning = !isNaN(current) && !isNaN(desired) && current > 0 && current === desired
 
-  const containers = await composePs({
-    projectName: getProjectName(id),
-    cwd: repo.path,
-    composeFile: appRecord.composeFile,
+    return {
+      name: svc.name,
+      service: svc.serviceName,
+      status: isRunning ? 'running' : current > 0 ? 'starting' : 'stopped',
+      replicas: svc.replicas,
+      ports: svc.ports,
+    }
   })
 
   return c.json({ containers })

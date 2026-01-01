@@ -5,7 +5,14 @@ import { db } from '../db'
 import { apps, appServices, deployments, repositories } from '../db/schema'
 import { log } from '../lib/logger'
 import { getDeploymentSettings } from '../lib/settings'
-import { composeUp, composeDown, composeBuild, composePs } from './docker-compose'
+import { composeBuild } from './docker-compose'
+import {
+  ensureSwarmMode,
+  stackDeploy,
+  stackRemove,
+  stackServices,
+  waitForServicesHealthy,
+} from './docker-swarm'
 import { createDnsRecord, deleteDnsRecord } from './cloudflare'
 import { addRoute, removeRoute } from './caddy'
 import type { Deployment } from '../db/schema'
@@ -140,6 +147,12 @@ export async function deployApp(
   }
 
   try {
+    // Stage 0: Ensure Swarm mode is active
+    const swarmResult = await ensureSwarmMode()
+    if (!swarmResult.initialized) {
+      throw new Error(`Docker Swarm initialization failed: ${swarmResult.error}`)
+    }
+
     // Stage 1: Pull latest code
     onProgress?.({ stage: 'pulling', message: 'Pulling latest code...' })
 
@@ -172,25 +185,36 @@ export async function deployApp(
       throw new Error(`Build failed: ${buildResult.error}`)
     }
 
-    // Stage 3: Start containers
-    onProgress?.({ stage: 'starting', message: 'Starting containers...' })
+    // Stage 3: Deploy stack
+    onProgress?.({ stage: 'starting', message: 'Deploying stack...' })
 
-    const upResult = await composeUp(
+    const deployResult = await stackDeploy(
       {
-        projectName,
+        stackName: projectName,
         cwd: repo.path,
         composeFile: app.composeFile,
         env,
       },
-      false,
       (line) => {
         buildLogs.push(line)
         onProgress?.({ stage: 'starting', message: line })
       }
     )
 
-    if (!upResult.success) {
-      throw new Error(`Failed to start containers: ${upResult.error}`)
+    if (!deployResult.success) {
+      throw new Error(`Failed to deploy stack: ${deployResult.error}`)
+    }
+
+    // Wait for services to be healthy
+    onProgress?.({ stage: 'starting', message: 'Waiting for services to be healthy...' })
+
+    const healthResult = await waitForServicesHealthy(projectName, 120000) // 2 minute timeout
+    if (!healthResult.healthy) {
+      log.deploy.warn('Some services did not become healthy', {
+        stackName: projectName,
+        failedServices: healthResult.failedServices,
+      })
+      // Don't fail the deployment - services may still start
     }
 
     // Stage 4: Configure routing (DNS + Caddy)
@@ -201,17 +225,13 @@ export async function deployApp(
       where: eq(appServices.appId, appId),
     })
 
-    // Get container status to find actual ports
-    const containerStatuses = await composePs({
-      projectName,
-      cwd: repo.path,
-      composeFile: app.composeFile,
-    })
+    // Get service status
+    const serviceStatuses = await stackServices(projectName)
 
     for (const service of services) {
       if (service.exposed && service.domain && service.containerPort) {
-        // Find the container for this service
-        const container = containerStatuses.find((c) => c.service === service.serviceName)
+        // Find the swarm service for this app service
+        const swarmService = serviceStatuses.find((s) => s.serviceName === service.serviceName)
 
         // Configure Caddy reverse proxy
         const caddyResult = await addRoute(service.domain, service.containerPort)
@@ -243,11 +263,15 @@ export async function deployApp(
         }
 
         // Update service status
+        // Parse replicas "1/1" to determine if running
+        const [current, desired] = (swarmService?.replicas || '0/0').split('/').map(Number)
+        const isRunning = !isNaN(current) && !isNaN(desired) && current > 0 && current === desired
+
         await db
           .update(appServices)
           .set({
-            status: container?.status === 'running' ? 'running' : 'stopped',
-            containerId: container?.name,
+            status: isRunning ? 'running' : 'stopped',
+            containerId: swarmService?.name, // Use swarm service name
             updatedAt: now,
           })
           .where(eq(appServices.id, service.id))
@@ -334,15 +358,11 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
 
   const projectName = getProjectName(app.id)
 
-  // Stop containers
-  const downResult = await composeDown({
-    projectName,
-    cwd: repo.path,
-    composeFile: app.composeFile,
-  })
+  // Remove stack
+  const removeResult = await stackRemove(projectName)
 
-  if (!downResult.success) {
-    return { success: false, error: downResult.error }
+  if (!removeResult.success) {
+    return { success: false, error: removeResult.error }
   }
 
   // Remove routes and DNS records
