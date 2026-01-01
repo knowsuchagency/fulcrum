@@ -54,11 +54,11 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   }, [onNewTaskRef])
 
   return (
-    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-4 max-sm:px-2">
+    <header className="sticky top-0 z-10 flex h-10 shrink-0 items-center justify-between border-b border-border bg-card px-4 max-sm:px-2">
       <div className="flex min-w-0 items-center gap-4 max-sm:gap-2">
 
-        {/* Mobile navigation menu */}
-        <NavigationMenu className="md:hidden">
+        {/* Mobile navigation menu (hamburger) */}
+        <NavigationMenu className="sm:hidden">
           <NavigationMenuList>
             <NavigationMenuItem>
               <NavigationMenuTrigger className="bg-transparent hover:bg-muted/50 data-open:bg-muted/50 gap-1 px-2">
@@ -82,8 +82,8 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* Desktop navigation */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Tablet/Desktop navigation */}
+        <nav className="hidden items-center gap-1 sm:flex">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to, item.matchPrefix)
             return (
@@ -105,7 +105,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                   strokeWidth={2}
                   data-slot="icon"
                 />
-                {t(item.labelKey)}
+                <span>{t(item.labelKey)}</span>
               </Link>
             )
           })}
