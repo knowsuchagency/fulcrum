@@ -1547,45 +1547,6 @@ function MonitoringTab({
 
       {/* Service summary with distribution charts */}
       <ServiceSummaryCard containers={appContainers} />
-
-      {/* Per-container cards showing raw values */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {appContainers.map((container) => (
-          <ContainerCard key={container.id} container={container} />
-        ))}
-      </div>
     </div>
-  )
-}
-
-// Card displaying a single container's resource usage
-function ContainerCard({ container }: { container: ContainerStats }) {
-  const { t } = useTranslation('common')
-
-  // Use the extractServiceName helper
-  const serviceName = useMemo(() => extractServiceName(container.name), [container.name])
-
-  return (
-    <Card className="p-4">
-      <div className="mb-3">
-        <h4 className="font-medium truncate" title={container.name}>
-          {serviceName}
-        </h4>
-        <p className="text-xs text-muted-foreground truncate" title={container.name}>
-          {container.name}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-xs text-muted-foreground">{t('apps.monitoring.cpu')}</p>
-          <p className="text-lg font-semibold tabular-nums">{container.cpuPercent.toFixed(1)}%</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">{t('apps.monitoring.memory')}</p>
-          <p className="text-lg font-semibold tabular-nums">{container.memoryMB.toFixed(0)} MB</p>
-        </div>
-      </div>
-    </Card>
   )
 }
