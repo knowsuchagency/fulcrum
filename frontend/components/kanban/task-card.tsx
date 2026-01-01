@@ -13,7 +13,7 @@ import { useSelection } from './selection-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, GitPullRequestIcon, Task01Icon, Settings05Icon } from '@hugeicons/core-free-icons'
+import { PackageIcon, GitPullRequestIcon, Task01Icon, Settings05Icon } from '@hugeicons/core-free-icons'
 import { TaskConfigModal } from '@/components/task-config-modal'
 
 interface TaskCardProps {
@@ -188,7 +188,7 @@ export function TaskCard({ task, isDragPreview }: TaskCardProps) {
           </p>
         )}
         <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground/70">
-          <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
+          <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
           <span>{task.repoName}</span>
           {task.prUrl && (
             <>

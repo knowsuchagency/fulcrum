@@ -44,7 +44,7 @@ import {
   Settings05Icon,
   ReloadIcon,
   GitCommitIcon,
-  LibraryIcon,
+  PackageIcon,
   More03Icon,
 } from '@hugeicons/core-free-icons'
 import { TaskConfigModal } from '@/components/task-config-modal'
@@ -615,12 +615,12 @@ function TaskView() {
                 params={{ repoId: repository.id }}
                 className="flex items-center gap-1 hover:text-foreground transition-colors"
               >
-                <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
                 <span>{task.repoName}</span>
               </Link>
             ) : (
               <span className="flex items-center gap-1">
-                <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
                 <span>{task.repoName}</span>
               </span>
             )}
@@ -661,12 +661,12 @@ function TaskView() {
                   params={{ repoId: repository.id }}
                   className="flex items-center gap-1 hover:text-foreground transition-colors"
                 >
-                  <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
                   <span>{task.repoName}</span>
                 </Link>
               ) : (
                 <span className="flex items-center gap-1">
-                  <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} />
+                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
                   <span>{task.repoName}</span>
                 </span>
               )}

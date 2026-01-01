@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Task01Icon,
-  LibraryIcon,
+  PackageIcon,
   GitBranchIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons'
@@ -125,7 +125,7 @@ export function TaskTerminalHeader({
               params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
               className="flex min-w-0 items-center gap-1 text-xs font-medium text-foreground cursor-pointer hover:underline"
             >
-              <HugeiconsIcon icon={LibraryIcon} size={12} strokeWidth={2} className="shrink-0" />
+              <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} className="shrink-0" />
               <span className="truncate">{taskInfo.repoName}</span>
             </Link>
             {terminalCwd && (

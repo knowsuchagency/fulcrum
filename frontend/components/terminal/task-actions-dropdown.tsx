@@ -9,7 +9,7 @@ import {
   Orbit01Icon,
   GitCommitIcon,
   GitPullRequestIcon,
-  LibraryIcon,
+  PackageIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons'
 import {
@@ -319,7 +319,7 @@ export function TaskActionsDropdown({
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleNavigateToRepo}>
             <HugeiconsIcon
-              icon={LibraryIcon}
+              icon={PackageIcon}
               size={12}
               strokeWidth={2}
             />
