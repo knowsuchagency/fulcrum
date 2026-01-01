@@ -25,6 +25,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -56,6 +62,7 @@ import {
   PencilEdit02Icon,
   ArrowLeft01Icon,
   Cancel01Icon,
+  Menu01Icon,
 } from '@hugeicons/core-free-icons'
 import { MonacoEditor } from '@/components/viewer/monaco-editor'
 import type { Deployment, ExposureMethod } from '@/types'
@@ -183,8 +190,30 @@ function AppDetailView() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTab)} className="flex h-full flex-col">
         {/* Header bar - tabs on left, app info on right */}
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-4 py-2">
-          {/* Tabs on left */}
-          <TabsList variant="line">
+          {/* Mobile: hamburger menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-2 sm:hidden">
+              <HugeiconsIcon icon={Menu01Icon} size={18} strokeWidth={2} />
+              <span className="text-sm font-medium">{t(`apps.tabs.${activeTab}`)}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setActiveTab('general')}>
+                {t('apps.tabs.general')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveTab('deployments')}>
+                {t('apps.tabs.deployments')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveTab('logs')}>
+                {t('apps.tabs.logs')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveTab('monitoring')}>
+                {t('apps.tabs.monitoring')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Desktop: tabs */}
+          <TabsList variant="line" className="hidden sm:inline-flex">
             <TabsTrigger value="general" className="px-3 py-1.5">{t('apps.tabs.general')}</TabsTrigger>
             <TabsTrigger value="deployments" className="px-3 py-1.5">{t('apps.tabs.deployments')}</TabsTrigger>
             <TabsTrigger value="logs" className="px-3 py-1.5">{t('apps.tabs.logs')}</TabsTrigger>
