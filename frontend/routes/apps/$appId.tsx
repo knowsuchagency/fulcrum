@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useMemo, useEffect, useCallback, useRef, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   useApp,
@@ -57,8 +57,19 @@ import type { Deployment } from '@/types'
 import { parseLogs } from '@/lib/log-utils'
 import { LogLine } from '@/components/ui/log-line'
 
+type AppTab = 'general' | 'deployments' | 'logs' | 'environment' | 'domains'
+
+interface AppDetailSearch {
+  tab?: AppTab
+}
+
 export const Route = createFileRoute('/apps/$appId')({
   component: AppDetailView,
+  validateSearch: (search: Record<string, unknown>): AppDetailSearch => ({
+    tab: ['general', 'deployments', 'logs', 'environment', 'domains'].includes(search.tab as string)
+      ? (search.tab as AppTab)
+      : undefined,
+  }),
 })
 
 // Helper functions
@@ -101,11 +112,24 @@ function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destr
 
 function AppDetailView() {
   const { appId } = Route.useParams()
+  const { tab } = Route.useSearch()
   const navigate = useNavigate()
   const { data: app, isLoading, error } = useApp(appId)
   const deleteApp = useDeleteApp()
-  const [activeTab, setActiveTab] = useState('general')
+  const activeTab = tab || 'general'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const setActiveTab = useCallback(
+    (newTab: AppTab) => {
+      navigate({
+        to: '/apps/$appId',
+        params: { appId },
+        search: newTab === 'general' ? {} : { tab: newTab },
+        replace: true,
+      })
+    },
+    [navigate, appId]
+  )
 
   const handleDelete = async () => {
     await deleteApp.mutateAsync({ id: appId })
@@ -176,7 +200,7 @@ function AppDetailView() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTab)}>
           <TabsList className="mb-4">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="deployments">Deployments</TabsTrigger>

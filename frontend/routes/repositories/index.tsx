@@ -141,14 +141,14 @@ function RepositoryCard({
 
           {/* App - hidden on mobile */}
           {linkedApp ? (
-            <Link to="/apps/$appId" params={{ appId: linkedApp.id }}>
+            <Link to="/apps" search={{ repo: repository.displayName }}>
               <Button
                 variant="outline"
                 size="sm"
                 className="text-muted-foreground hover:text-foreground max-sm:hidden"
               >
                 <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
-                <span>{t('application')}</span>
+                <span>{t('applications')}</span>
               </Button>
             </Link>
           ) : (

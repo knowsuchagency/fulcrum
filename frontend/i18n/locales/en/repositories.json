@@ -7,6 +7,7 @@
   "terminal": "Terminal",
   "editor": "Editor",
   "application": "Application",
+  "applications": "Applications",
   "createApp": "Create App",
   "createAppDialog": {
     "title": "Docker Compose Required",

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import { useApps, useDeployApp, useStopApp, useDeleteApp, useDeploymentPrerequisites } from '@/hooks/use-apps'
@@ -18,8 +18,16 @@ import {
   Delete02Icon,
   Rocket01Icon,
   Link01Icon,
+  FilterIcon,
 } from '@hugeicons/core-free-icons'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,8 +39,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
+interface AppsSearch {
+  repo?: string
+}
+
 export const Route = createFileRoute('/apps/')({
   component: AppsView,
+  validateSearch: (search: Record<string, unknown>): AppsSearch => ({
+    repo: typeof search.repo === 'string' ? search.repo : undefined,
+  }),
 })
 
 function getStatusColor(status: string) {
@@ -177,9 +192,30 @@ function AppsView() {
   const stopApp = useStopApp()
   const deleteApp = useDeleteApp()
   const navigate = useNavigate()
+  const { repo: repoFilter } = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<AppWithServices | null>(null)
   const [setupDismissed, setSetupDismissed] = useState(false)
+
+  const setRepoFilter = useCallback(
+    (repo: string | null) => {
+      navigate({
+        to: '/apps',
+        search: repo ? { repo } : {},
+        replace: true,
+      })
+    },
+    [navigate]
+  )
+
+  // Unique repo names for filtering
+  const repoNames = useMemo(() => {
+    if (!apps) return []
+    const names = new Set(
+      apps.map((app) => app.repository?.displayName).filter((name): name is string => !!name)
+    )
+    return Array.from(names).sort()
+  }, [apps])
 
   // Show setup wizard if:
   // - Prerequisites are not ready
@@ -194,19 +230,29 @@ function AppsView() {
 
   const filteredApps = useMemo(() => {
     if (!apps) return []
-    if (!searchQuery?.trim()) return apps
-    return apps
-      .map((app) => ({
-        app,
-        score: Math.max(
-          fuzzyScore(app.name, searchQuery),
-          fuzzyScore(app.repository?.displayName ?? '', searchQuery)
-        ),
-      }))
-      .filter(({ score }) => score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(({ app }) => app)
-  }, [apps, searchQuery])
+
+    // First apply repo filter
+    let result = repoFilter
+      ? apps.filter((app) => app.repository?.displayName === repoFilter)
+      : apps
+
+    // Then apply search query
+    if (searchQuery?.trim()) {
+      result = result
+        .map((app) => ({
+          app,
+          score: Math.max(
+            fuzzyScore(app.name, searchQuery),
+            fuzzyScore(app.repository?.displayName ?? '', searchQuery)
+          ),
+        }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(({ app }) => app)
+    }
+
+    return result
+  }, [apps, repoFilter, searchQuery])
 
   const handleDeploy = async (appId: string) => {
     await deployApp.mutateAsync(appId)
@@ -251,6 +297,25 @@ function AppsView() {
             className="w-full pl-6"
           />
         </div>
+        <Select
+          value={repoFilter ?? ''}
+          onValueChange={(v) => setRepoFilter(v || null)}
+        >
+          <SelectTrigger size="sm" className="shrink-0 gap-1.5">
+            <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
+            <SelectValue>
+              {repoFilter ?? 'All repos'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="min-w-[160px]">
+            <SelectItem value="">All repos</SelectItem>
+            {repoNames.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="hidden sm:block flex-1" />
         <Link to="/apps/new">
           <Button size="sm">

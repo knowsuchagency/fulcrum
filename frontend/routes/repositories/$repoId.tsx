@@ -447,14 +447,14 @@ function RepositoryDetailView() {
           </Button>
 
           {linkedApp ? (
-            <Link to="/apps/$appId" params={{ appId: linkedApp.id }}>
+            <Link to="/apps" search={{ repo: repository.displayName }}>
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
-                <span className="max-sm:hidden">{t('application')}</span>
+                <span className="max-sm:hidden">{t('applications')}</span>
               </Button>
             </Link>
           ) : (
