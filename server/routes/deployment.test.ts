@@ -101,7 +101,8 @@ describe('Deployment Routes', () => {
       const body = await res.json()
 
       expect(res.status).toBe(200)
-      expect(body.cloudflareApiToken).toBe('***')
+      // Token is masked with bullets matching its length
+      expect(body.cloudflareApiToken).toBe('•'.repeat('test-token-12345'.length))
       expect(body.cloudflareConfigured).toBe(true)
     })
   })
