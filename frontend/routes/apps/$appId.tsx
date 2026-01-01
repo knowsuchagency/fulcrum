@@ -40,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Loading03Icon,
@@ -130,9 +131,8 @@ function AppDetailView() {
     }
   }, [deployStream])
 
-  // Show DNS warning if app has exposed services but Cloudflare is not configured
-  const hasExposedServices = app?.services?.some((s) => s.exposed && s.domain)
-  const showDnsWarning = hasExposedServices && prereqs && !prereqs.settings.cloudflareConfigured
+  // Show DNS warning if Cloudflare is not configured
+  const showDnsWarning = prereqs && !prereqs.settings.cloudflareConfigured
 
   const setActiveTab = useCallback(
     (newTab: AppTab) => {
@@ -198,21 +198,15 @@ function AppDetailView() {
               title={t(`apps.status.${app.status}`)}
             />
             {showDnsWarning && (
-              <button
-                onClick={() => {
-                  toast.warning(t('apps.manualDnsRequired'), {
-                    description: t('apps.manualDnsRequiredDesc'),
-                    action: {
-                      label: t('apps.settings'),
-                      onClick: () => navigate({ to: '/settings' }),
-                    },
-                  })
-                }}
-                className="p-1 text-amber-500 hover:text-amber-400 transition-colors"
-                title={t('apps.dnsConfigRequired')}
-              >
-                <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} />
-              </button>
+              <Tooltip>
+                <TooltipTrigger className="p-1 text-amber-500 hover:text-amber-400 transition-colors">
+                  <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="font-medium">{t('apps.manualDnsRequired')}</p>
+                  <p className="text-muted-foreground mt-1">{t('apps.manualDnsRequiredDesc')}</p>
+                </TooltipContent>
+              </Tooltip>
             )}
             <Button
               variant="ghost"
