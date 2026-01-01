@@ -376,9 +376,6 @@ export interface DeploymentPrerequisites {
   }
   settings: {
     cloudflareConfigured: boolean
-    serverIpConfigured: boolean
-    defaultDomainConfigured: boolean
-    acmeEmailConfigured: boolean
   }
   ready: boolean
 }
@@ -431,9 +428,6 @@ export function useDetectPublicIp() {
 export interface DeploymentSettings {
   cloudflareApiToken: string | null
   cloudflareConfigured: boolean
-  defaultDomain: string | null
-  serverPublicIp: string | null
-  acmeEmail: string | null
 }
 
 export function useDeploymentSettings() {
@@ -450,9 +444,6 @@ export function useUpdateDeploymentSettings() {
   return useMutation({
     mutationFn: (data: {
       cloudflareApiToken?: string | null
-      defaultDomain?: string | null
-      serverPublicIp?: string | null
-      acmeEmail?: string | null
     }) =>
       fetchJSON<{ success: boolean }>(`${API_BASE}/api/deployment/settings`, {
         method: 'POST',

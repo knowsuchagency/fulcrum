@@ -9,24 +9,18 @@ import {
   RefreshIcon,
 } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   useDeploymentPrerequisites,
   useStartTraefik,
-  useDetectPublicIp,
-  useUpdateDeploymentSettings,
-  useDeploymentSettings,
 } from '@/hooks/use-apps'
 import { cn } from '@/lib/utils'
 
 interface DeploymentSetupWizardProps {
   onComplete?: () => void
-  onSkip?: () => void
 }
 
-type Step = 'docker' | 'traefik' | 'settings' | 'complete'
+type Step = 'docker' | 'traefik' | 'complete'
 
 function StepIndicator({
   step,
@@ -39,7 +33,7 @@ function StepIndicator({
   label: string
   status: 'pending' | 'current' | 'complete' | 'error'
 }) {
-  const stepOrder: Step[] = ['docker', 'traefik', 'settings', 'complete']
+  const stepOrder: Step[] = ['docker', 'traefik', 'complete']
   const stepIndex = stepOrder.indexOf(step)
   const currentIndex = stepOrder.indexOf(currentStep)
   const isCurrent = step === currentStep
@@ -77,32 +71,11 @@ function StepIndicator({
   )
 }
 
-export function DeploymentSetupWizard({ onComplete, onSkip }: DeploymentSetupWizardProps) {
+export function DeploymentSetupWizard({ onComplete }: DeploymentSetupWizardProps) {
   const { data: prereqs, isLoading: prereqsLoading, refetch: refetchPrereqs } = useDeploymentPrerequisites()
-  const { data: settings } = useDeploymentSettings()
   const startTraefik = useStartTraefik()
-  const detectIp = useDetectPublicIp()
-  const updateSettings = useUpdateDeploymentSettings()
 
   const [currentStep, setCurrentStep] = useState<Step>('docker')
-  const [settingsForm, setSettingsForm] = useState({
-    cloudflareApiToken: '',
-    serverPublicIp: '',
-    defaultDomain: '',
-    acmeEmail: '',
-  })
-
-  // Initialize form with existing settings
-  useState(() => {
-    if (settings) {
-      setSettingsForm({
-        cloudflareApiToken: '',
-        serverPublicIp: settings.serverPublicIp || '',
-        defaultDomain: settings.defaultDomain || '',
-        acmeEmail: settings.acmeEmail || '',
-      })
-    }
-  })
 
   // Determine current step based on prerequisites
   // With Traefik, we auto-start if needed, so we just need Docker running
@@ -111,12 +84,11 @@ export function DeploymentSetupWizard({ onComplete, onSkip }: DeploymentSetupWiz
     if (!prereqs.docker.installed || !prereqs.docker.running) return 'docker'
     // Traefik step shows detected info or offers to start Vibora's Traefik
     if (!prereqs.traefik.detected && prereqs.traefik.type === 'none') return 'traefik'
-    if (!prereqs.settings.serverIpConfigured) return 'settings'
     return 'complete'
   }
 
   // Auto-advance step when prerequisites change
-  const stepOrder: Step[] = ['docker', 'traefik', 'settings', 'complete']
+  const stepOrder: Step[] = ['docker', 'traefik', 'complete']
   const effectiveStepIndex = prereqsLoading ? stepOrder.indexOf(currentStep) : Math.max(
     stepOrder.indexOf(currentStep),
     stepOrder.indexOf(determineStep())
@@ -126,24 +98,6 @@ export function DeploymentSetupWizard({ onComplete, onSkip }: DeploymentSetupWiz
   const handleStartTraefik = async () => {
     await startTraefik.mutateAsync()
     await refetchPrereqs()
-  }
-
-  const handleDetectIp = async () => {
-    const result = await detectIp.mutateAsync()
-    if (result.success) {
-      setSettingsForm((prev) => ({ ...prev, serverPublicIp: result.ip }))
-    }
-  }
-
-  const handleSaveSettings = async () => {
-    await updateSettings.mutateAsync({
-      cloudflareApiToken: settingsForm.cloudflareApiToken || null,
-      serverPublicIp: settingsForm.serverPublicIp || null,
-      defaultDomain: settingsForm.defaultDomain || null,
-      acmeEmail: settingsForm.acmeEmail || null,
-    })
-    await refetchPrereqs()
-    setCurrentStep('complete')
   }
 
   const handleComplete = () => {
@@ -183,13 +137,6 @@ export function DeploymentSetupWizard({ onComplete, onSkip }: DeploymentSetupWiz
             currentStep={displayStep}
             label="Traefik"
             status={prereqs?.traefik.detected ? 'complete' : displayStep === 'traefik' ? 'current' : 'pending'}
-          />
-          <div className="h-px flex-1 mx-2 bg-border" />
-          <StepIndicator
-            step="settings"
-            currentStep={displayStep}
-            label="Settings"
-            status={displayStep === 'complete' ? 'complete' : displayStep === 'settings' ? 'current' : 'pending'}
           />
         </div>
 
@@ -303,7 +250,7 @@ export function DeploymentSetupWizard({ onComplete, onSkip }: DeploymentSetupWiz
                 </Button>
               )}
               {prereqs?.traefik.detected && (
-                <Button onClick={() => setCurrentStep('settings')}>
+                <Button onClick={() => setCurrentStep('complete')}>
                   Continue
                   <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} data-slot="icon" />
                 </Button>
@@ -315,95 +262,6 @@ export function DeploymentSetupWizard({ onComplete, onSkip }: DeploymentSetupWiz
                 Failed to start Traefik: {(startTraefik.error as Error)?.message || 'Unknown error'}
               </p>
             )}
-          </div>
-        )}
-
-        {/* Settings step */}
-        {displayStep === 'settings' && (
-          <div className="space-y-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="serverIp">Server Public IP</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="serverIp"
-                    value={settingsForm.serverPublicIp}
-                    onChange={(e) => setSettingsForm((prev) => ({ ...prev, serverPublicIp: e.target.value }))}
-                    placeholder="e.g., 5.78.100.199"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={handleDetectIp}
-                    disabled={detectIp.isPending}
-                  >
-                    {detectIp.isPending ? (
-                      <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
-                    ) : (
-                      'Detect'
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  The public IP address of this server for DNS records.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="defaultDomain">Default Domain (optional)</Label>
-                <Input
-                  id="defaultDomain"
-                  value={settingsForm.defaultDomain}
-                  onChange={(e) => setSettingsForm((prev) => ({ ...prev, defaultDomain: e.target.value }))}
-                  placeholder="e.g., example.com"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Apps will be deployed to subdomains of this domain.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="acmeEmail">ACME Email (optional)</Label>
-                <Input
-                  id="acmeEmail"
-                  type="email"
-                  value={settingsForm.acmeEmail}
-                  onChange={(e) => setSettingsForm((prev) => ({ ...prev, acmeEmail: e.target.value }))}
-                  placeholder="e.g., admin@example.com"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Email for Let's Encrypt certificate notifications.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cfToken">Cloudflare API Token (optional)</Label>
-                <Input
-                  id="cfToken"
-                  type="password"
-                  value={settingsForm.cloudflareApiToken}
-                  onChange={(e) => setSettingsForm((prev) => ({ ...prev, cloudflareApiToken: e.target.value }))}
-                  placeholder="Enter token to enable automatic DNS"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enables automatic DNS record creation. Requires Zone:DNS:Edit permission.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={onSkip}>
-                Skip for now
-              </Button>
-              <Button
-                onClick={handleSaveSettings}
-                disabled={updateSettings.isPending || !settingsForm.serverPublicIp}
-              >
-                {updateSettings.isPending ? (
-                  <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" data-slot="icon" />
-                ) : null}
-                Save & Continue
-              </Button>
-            </div>
           </div>
         )}
 

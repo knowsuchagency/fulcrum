@@ -17,7 +17,7 @@ import {
   TRAEFIK_NETWORK,
   TRAEFIK_DYNAMIC_DIR,
 } from '../services/traefik-docker'
-import { getDeploymentSettings, updateDeploymentSettings } from '../lib/settings'
+import { getSettings, updateSettingByPath } from '../lib/settings'
 
 const app = new Hono()
 
@@ -37,9 +37,6 @@ export interface DeploymentPrerequisites {
   }
   settings: {
     cloudflareConfigured: boolean
-    serverIpConfigured: boolean
-    defaultDomainConfigured: boolean
-    acmeEmailConfigured: boolean
   }
   ready: boolean
 }
@@ -62,7 +59,7 @@ app.get('/prerequisites', async (c) => {
   }
 
   // Check settings
-  const settings = getDeploymentSettings()
+  const settings = getSettings()
 
   const prerequisites: DeploymentPrerequisites = {
     docker: {
@@ -79,10 +76,7 @@ app.get('/prerequisites', async (c) => {
       configWritable,
     },
     settings: {
-      cloudflareConfigured: !!settings.cloudflareApiToken,
-      serverIpConfigured: !!settings.serverPublicIp,
-      defaultDomainConfigured: !!settings.defaultDomain,
-      acmeEmailConfigured: !!settings.acmeEmail,
+      cloudflareConfigured: !!settings.integrations.cloudflareApiToken,
     },
     // Ready if Docker is running (Traefik will be auto-started if needed)
     ready: dockerRunning,
@@ -120,10 +114,7 @@ app.post('/traefik/start', async (c) => {
     )
   }
 
-  const settings = getDeploymentSettings()
-  const acmeEmail = settings.acmeEmail || 'admin@localhost'
-
-  const result = await startTraefikContainer(acmeEmail)
+  const result = await startTraefikContainer('admin@localhost')
 
   if (!result.success) {
     return c.json(
@@ -210,20 +201,18 @@ app.post('/settings', async (c) => {
   try {
     const body = await c.req.json<{
       cloudflareApiToken?: string | null
-      defaultDomain?: string | null
-      serverPublicIp?: string | null
-      acmeEmail?: string | null
     }>()
 
-    const updated = updateDeploymentSettings(body)
+    if (body.cloudflareApiToken !== undefined) {
+      updateSettingByPath('integrations.cloudflareApiToken', body.cloudflareApiToken)
+    }
+
+    const settings = getSettings()
 
     return c.json({
       success: true,
       settings: {
-        cloudflareConfigured: !!updated.cloudflareApiToken,
-        serverIpConfigured: !!updated.serverPublicIp,
-        defaultDomainConfigured: !!updated.defaultDomain,
-        acmeEmailConfigured: !!updated.acmeEmail,
+        cloudflareConfigured: !!settings.integrations.cloudflareApiToken,
       },
     })
   } catch (err) {
@@ -239,15 +228,12 @@ app.post('/settings', async (c) => {
 
 // GET /api/deployment/settings - Get current deployment settings
 app.get('/settings', async (c) => {
-  const settings = getDeploymentSettings()
+  const settings = getSettings()
 
   return c.json({
     // Don't expose the full API token, just whether it's set
-    cloudflareApiToken: settings.cloudflareApiToken ? '***' : null,
-    cloudflareConfigured: !!settings.cloudflareApiToken,
-    defaultDomain: settings.defaultDomain,
-    serverPublicIp: settings.serverPublicIp,
-    acmeEmail: settings.acmeEmail,
+    cloudflareApiToken: settings.integrations.cloudflareApiToken ? '***' : null,
+    cloudflareConfigured: !!settings.integrations.cloudflareApiToken,
   })
 })
 

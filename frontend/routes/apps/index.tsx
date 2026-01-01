@@ -195,7 +195,6 @@ function AppsView() {
   const { repo: repoFilter } = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<AppWithServices | null>(null)
-  const [setupDismissed, setSetupDismissed] = useState(false)
 
   const setRepoFilter = useCallback(
     (repo: string | null) => {
@@ -220,13 +219,11 @@ function AppsView() {
   // Show setup wizard if:
   // - Prerequisites are not ready
   // - No apps exist yet
-  // - Setup hasn't been dismissed
   const showSetupWizard =
     !prereqsLoading &&
     prereqs &&
     !prereqs.ready &&
-    (!apps || apps.length === 0) &&
-    !setupDismissed
+    (!apps || apps.length === 0)
 
   const filteredApps = useMemo(() => {
     if (!apps) return []
@@ -274,7 +271,6 @@ function AppsView() {
       <div className="flex h-full flex-col overflow-auto p-8">
         <DeploymentSetupWizard
           onComplete={() => navigate({ to: '/apps/new' })}
-          onSkip={() => setSetupDismissed(true)}
         />
       </div>
     )

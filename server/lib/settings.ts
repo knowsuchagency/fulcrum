@@ -30,6 +30,7 @@ export interface Settings {
   integrations: {
     linearApiKey: string | null
     githubPat: string | null
+    cloudflareApiToken: string | null
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS: Settings = {
   integrations: {
     linearApiKey: null,
     githubPat: null,
+    cloudflareApiToken: null,
   },
   appearance: {
     language: null,
@@ -308,6 +310,7 @@ export function getSettings(): Settings {
     integrations: {
       linearApiKey: ((parsed.integrations as Record<string, unknown>)?.linearApiKey as string | null) ?? null,
       githubPat: ((parsed.integrations as Record<string, unknown>)?.githubPat as string | null) ?? null,
+      cloudflareApiToken: ((parsed.integrations as Record<string, unknown>)?.cloudflareApiToken as string | null) ?? null,
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
@@ -340,6 +343,7 @@ export function getSettings(): Settings {
     integrations: {
       linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.integrations.linearApiKey,
       githubPat: process.env.GITHUB_PAT ?? fileSettings.integrations.githubPat,
+      cloudflareApiToken: fileSettings.integrations.cloudflareApiToken,
     },
     appearance: fileSettings.appearance,
   }
@@ -811,14 +815,17 @@ export function ensureLatestSettings(): void {
     )
   }
 
-  // Ensure deployment section exists with defaults
-  if (!merged.deployment || typeof merged.deployment !== 'object') {
-    merged.deployment = { ...DEFAULT_DEPLOYMENT_SETTINGS }
-  } else {
-    merged.deployment = deepMergeWithDefaults(
-      merged.deployment as Record<string, unknown>,
-      DEFAULT_DEPLOYMENT_SETTINGS as unknown as Record<string, unknown>
-    )
+  // Migrate deployment.cloudflareApiToken to integrations.cloudflareApiToken
+  if (merged.deployment && typeof merged.deployment === 'object') {
+    const deployment = merged.deployment as Record<string, unknown>
+    if (deployment.cloudflareApiToken && !((merged.integrations as Record<string, unknown>)?.cloudflareApiToken)) {
+      const integrations = (merged.integrations as Record<string, unknown>) ?? {}
+      integrations.cloudflareApiToken = deployment.cloudflareApiToken
+      merged.integrations = integrations
+      log.settings.info('Migrated cloudflareApiToken from deployment to integrations')
+    }
+    // Remove the deployment section entirely
+    delete merged.deployment
   }
 
   // Always set to current schema version
@@ -827,80 +834,6 @@ export function ensureLatestSettings(): void {
   // Write back to file
   fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
   log.settings.info('Settings normalized to latest schema', { schemaVersion: CURRENT_SCHEMA_VERSION })
-}
-
-// ==================== Deployment Settings ====================
-// These settings control the self-hosted deployment feature
-
-export interface DeploymentSettings {
-  cloudflareApiToken: string | null
-  defaultDomain: string | null // e.g., "example.com"
-  serverPublicIp: string | null
-  acmeEmail: string | null // Email for Let's Encrypt certificates
-}
-
-const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
-  cloudflareApiToken: null,
-  defaultDomain: null,
-  serverPublicIp: null,
-  acmeEmail: null,
-}
-
-// Get deployment settings from settings.json
-export function getDeploymentSettings(): DeploymentSettings {
-  ensureViboraDir()
-  const settingsPath = getSettingsPath()
-
-  if (!fs.existsSync(settingsPath)) {
-    return DEFAULT_DEPLOYMENT_SETTINGS
-  }
-
-  try {
-    const content = fs.readFileSync(settingsPath, 'utf-8')
-    const parsed = JSON.parse(content)
-    const deployment = parsed.deployment as Partial<DeploymentSettings> | undefined
-
-    if (!deployment) {
-      return DEFAULT_DEPLOYMENT_SETTINGS
-    }
-
-    return {
-      cloudflareApiToken: deployment.cloudflareApiToken ?? null,
-      defaultDomain: deployment.defaultDomain ?? null,
-      serverPublicIp: deployment.serverPublicIp ?? null,
-      acmeEmail: deployment.acmeEmail ?? null,
-    }
-  } catch {
-    return DEFAULT_DEPLOYMENT_SETTINGS
-  }
-}
-
-// Update deployment settings
-export function updateDeploymentSettings(updates: Partial<DeploymentSettings>): DeploymentSettings {
-  ensureViboraDir()
-  const settingsPath = getSettingsPath()
-
-  let parsed: Record<string, unknown> = {}
-  if (fs.existsSync(settingsPath)) {
-    try {
-      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-    } catch {
-      // Use empty if invalid
-    }
-  }
-
-  const current = getDeploymentSettings()
-  const updated: DeploymentSettings = {
-    cloudflareApiToken: updates.cloudflareApiToken !== undefined ? updates.cloudflareApiToken : current.cloudflareApiToken,
-    defaultDomain: updates.defaultDomain !== undefined ? updates.defaultDomain : current.defaultDomain,
-    serverPublicIp: updates.serverPublicIp !== undefined ? updates.serverPublicIp : current.serverPublicIp,
-    acmeEmail: updates.acmeEmail !== undefined ? updates.acmeEmail : current.acmeEmail,
-  }
-
-  parsed.deployment = updated
-  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
-
-  return updated
 }
 
 // Export helper functions for use in other modules

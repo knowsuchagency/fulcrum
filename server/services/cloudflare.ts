@@ -1,14 +1,14 @@
 import Cloudflare from 'cloudflare'
-import { getDeploymentSettings } from '../lib/settings'
+import { getSettings } from '../lib/settings'
 import { log } from '../lib/logger'
 
 /**
  * Get a Cloudflare client instance
  */
 function getClient(): Cloudflare | null {
-  const settings = getDeploymentSettings()
-  if (!settings.cloudflareApiToken) return null
-  return new Cloudflare({ apiToken: settings.cloudflareApiToken })
+  const settings = getSettings()
+  if (!settings.integrations.cloudflareApiToken) return null
+  return new Cloudflare({ apiToken: settings.integrations.cloudflareApiToken })
 }
 
 /**

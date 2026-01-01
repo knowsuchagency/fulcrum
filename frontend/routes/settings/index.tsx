@@ -120,9 +120,6 @@ function SettingsPage() {
 
   // Deployment settings local state
   const [localCloudflareToken, setLocalCloudflareToken] = useState('')
-  const [localServerIp, setLocalServerIp] = useState('')
-  const [localDefaultDomain, setLocalDefaultDomain] = useState('')
-  const [localAcmeEmail, setLocalAcmeEmail] = useState('')
 
   // Claude Code theme sync local state
   const [localSyncClaudeCode, setLocalSyncClaudeCode] = useState(false)
@@ -177,15 +174,7 @@ function SettingsPage() {
     }
   }, [zAiSettings])
 
-  // Sync deployment settings
-  useEffect(() => {
-    if (deploymentSettings) {
-      // Token is masked as '***' if set, so only update if empty (new token being entered)
-      setLocalServerIp(deploymentSettings.serverPublicIp ?? '')
-      setLocalDefaultDomain(deploymentSettings.defaultDomain ?? '')
-      setLocalAcmeEmail(deploymentSettings.acmeEmail ?? '')
-    }
-  }, [deploymentSettings])
+  // Sync deployment settings - no local state needed, token is masked from API
 
   // Sync Claude Code theme settings
   useEffect(() => {
@@ -210,12 +199,7 @@ function SettingsPage() {
     localClaudeCodeLightTheme !== claudeCodeLightTheme ||
     localClaudeCodeDarkTheme !== claudeCodeDarkTheme
 
-  const hasDeploymentChanges = deploymentSettings && (
-    localCloudflareToken !== '' || // New token entered (existing is masked)
-    localServerIp !== (deploymentSettings.serverPublicIp ?? '') ||
-    localDefaultDomain !== (deploymentSettings.defaultDomain ?? '') ||
-    localAcmeEmail !== (deploymentSettings.acmeEmail ?? '')
-  )
+  const hasDeploymentChanges = localCloudflareToken !== '' // New token entered (existing is masked)
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -403,16 +387,13 @@ function SettingsPage() {
       }
     }
 
-    // Save deployment settings
+    // Save deployment settings (cloudflare token)
     if (hasDeploymentChanges) {
       promises.push(
         new Promise((resolve) => {
           updateDeploymentSettings.mutate(
             {
-              cloudflareApiToken: localCloudflareToken || undefined, // Only send if entered
-              serverPublicIp: localServerIp || null,
-              defaultDomain: localDefaultDomain || null,
-              acmeEmail: localAcmeEmail || null,
+              cloudflareApiToken: localCloudflareToken || undefined,
             },
             {
               onSettled: () => {

@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db'
 import { apps, appServices, deployments, repositories } from '../db/schema'
 import { log } from '../lib/logger'
-import { getDeploymentSettings } from '../lib/settings'
+import { getSettings } from '../lib/settings'
 import { composeBuild } from './docker-compose'
 import {
   ensureSwarmMode,
@@ -21,6 +21,41 @@ import type { Deployment } from '../db/schema'
 
 // Cache detected Traefik config to avoid repeated detection
 let cachedTraefikConfig: TraefikConfig | null = null
+
+// Cache detected public IP to avoid repeated detection
+let cachedPublicIp: string | null = null
+
+/**
+ * Detect the server's public IP address
+ */
+async function detectPublicIp(): Promise<string | null> {
+  if (cachedPublicIp) return cachedPublicIp
+
+  const services = [
+    'https://api.ipify.org',
+    'https://icanhazip.com',
+    'https://ifconfig.me/ip',
+    'https://checkip.amazonaws.com',
+  ]
+
+  for (const service of services) {
+    try {
+      const response = await fetch(service, { signal: AbortSignal.timeout(5000) })
+      if (response.ok) {
+        const ip = (await response.text()).trim()
+        // Basic IPv4 validation
+        if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+          cachedPublicIp = ip
+          return ip
+        }
+      }
+    } catch {
+      // Try next service
+    }
+  }
+
+  return null
+}
 
 /**
  * Get or detect Traefik configuration
@@ -51,12 +86,9 @@ async function ensureTraefik(): Promise<TraefikConfig> {
   }
 
   // No Traefik found, start Vibora's
-  const settings = getDeploymentSettings()
-  const acmeEmail = settings.acmeEmail || 'admin@localhost'
-
   log.deploy.info('No Traefik detected, starting Vibora Traefik')
 
-  const result = await startTraefikContainer(acmeEmail)
+  const result = await startTraefikContainer('admin@localhost')
   if (!result.success) {
     throw new Error(`Failed to start Traefik: ${result.error}`)
   }
@@ -256,7 +288,8 @@ export async function deployApp(
     // Stage 4: Configure routing (DNS + Traefik)
     onProgress?.({ stage: 'configuring', message: 'Configuring DNS and proxy...' })
 
-    const deploymentSettings = getDeploymentSettings()
+    const settings = getSettings()
+    const serverPublicIp = await detectPublicIp()
     const services = await db.query.appServices.findMany({
       where: eq(appServices.appId, appId),
     })
@@ -281,7 +314,7 @@ export async function deployApp(
         }
 
         // Configure Cloudflare DNS
-        if (deploymentSettings.cloudflareApiToken && deploymentSettings.serverPublicIp) {
+        if (settings.integrations.cloudflareApiToken && serverPublicIp) {
           const [subdomain, ...domainParts] = service.domain.split('.')
           const domain = domainParts.join('.')
 
@@ -289,7 +322,7 @@ export async function deployApp(
             const dnsResult = await createDnsRecord(
               subdomain,
               domain,
-              deploymentSettings.serverPublicIp
+              serverPublicIp
             )
             if (!dnsResult.success) {
               log.deploy.warn('Failed to create DNS record', {

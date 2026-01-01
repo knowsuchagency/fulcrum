@@ -365,7 +365,5 @@ export interface ContainerStatus {
 
 export interface DeploymentSettings {
   cloudflareApiToken: string | null
-  defaultDomain: string | null
-  serverPublicIp: string | null
-  caddyApiUrl: string
+  cloudflareConfigured: boolean
 }
