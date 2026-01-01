@@ -1,138 +1,147 @@
+import Cloudflare from 'cloudflare'
 import { getDeploymentSettings } from '../lib/settings'
 import { log } from '../lib/logger'
 
-interface CloudflareDnsRecord {
-  id: string
-  name: string
-  type: string
-  content: string
-  proxied: boolean
-  ttl: number
-}
-
-interface CloudflareZone {
-  id: string
-  name: string
-}
-
-const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4'
-
 /**
- * Get the Cloudflare API token from settings
+ * Get a Cloudflare client instance
  */
-function getApiToken(): string | null {
+function getClient(): Cloudflare | null {
   const settings = getDeploymentSettings()
-  return settings.cloudflareApiToken
-}
-
-/**
- * Make an authenticated request to the Cloudflare API
- */
-async function cloudflareRequest<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<{ success: boolean; result?: T; errors?: { message: string }[] }> {
-  const token = getApiToken()
-  if (!token) {
-    return { success: false, errors: [{ message: 'Cloudflare API token not configured' }] }
-  }
-
-  const response = await fetch(`${CLOUDFLARE_API_BASE}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  })
-
-  const data = await response.json()
-  return data as { success: boolean; result?: T; errors?: { message: string }[] }
+  if (!settings.cloudflareApiToken) return null
+  return new Cloudflare({ apiToken: settings.cloudflareApiToken })
 }
 
 /**
  * Get the zone ID for a domain
  */
 export async function getZoneId(domain: string): Promise<string | null> {
-  const response = await cloudflareRequest<CloudflareZone[]>(`/zones?name=${domain}`)
+  const client = getClient()
+  if (!client) return null
 
-  if (!response.success || !response.result?.length) {
-    log.deploy.error('Failed to get Cloudflare zone', { domain, errors: response.errors })
+  try {
+    const zones = await client.zones.list({ name: domain })
+    const zone = zones.result?.[0]
+    if (!zone) {
+      log.deploy.error('Zone not found', { domain })
+      return null
+    }
+    return zone.id
+  } catch (err) {
+    log.deploy.error('Failed to get Cloudflare zone', { domain, error: String(err) })
     return null
   }
+}
 
-  return response.result[0].id
+/**
+ * Check if a wildcard A record exists pointing to the target IP
+ */
+export async function checkWildcardRecord(
+  domain: string,
+  targetIp: string
+): Promise<{ exists: boolean; matchesIp: boolean; currentIp?: string }> {
+  const client = getClient()
+  if (!client) return { exists: false, matchesIp: false }
+
+  try {
+    const zoneId = await getZoneId(domain)
+    if (!zoneId) return { exists: false, matchesIp: false }
+
+    const wildcardName = `*.${domain}`
+    const records = await client.dns.records.list({
+      zone_id: zoneId,
+      type: 'A',
+      name: wildcardName,
+    })
+
+    const wildcard = records.result?.[0]
+    if (!wildcard || wildcard.type !== 'A') {
+      return { exists: false, matchesIp: false }
+    }
+
+    return {
+      exists: true,
+      matchesIp: wildcard.content === targetIp,
+      currentIp: wildcard.content,
+    }
+  } catch (err) {
+    log.deploy.error('Failed to check wildcard record', { domain, error: String(err) })
+    return { exists: false, matchesIp: false }
+  }
 }
 
 /**
  * Create a DNS A record for a subdomain
+ * Returns skipped: true if a wildcard record already handles this subdomain
  */
 export async function createDnsRecord(
   subdomain: string,
   domain: string,
   ip: string,
   proxied = false
-): Promise<{ success: boolean; error?: string }> {
-  const zoneId = await getZoneId(domain)
-  if (!zoneId) {
-    return { success: false, error: `Zone not found for domain: ${domain}` }
+): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+  const client = getClient()
+  if (!client) {
+    return { success: false, error: 'Cloudflare API token not configured' }
   }
 
-  const fullName = subdomain ? `${subdomain}.${domain}` : domain
-
-  // Check if record already exists
-  const existingResponse = await cloudflareRequest<CloudflareDnsRecord[]>(
-    `/zones/${zoneId}/dns_records?type=A&name=${fullName}`
-  )
-
-  if (existingResponse.success && existingResponse.result?.length) {
-    // Update existing record
-    const recordId = existingResponse.result[0].id
-    const updateResponse = await cloudflareRequest<CloudflareDnsRecord>(
-      `/zones/${zoneId}/dns_records/${recordId}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify({
-          type: 'A',
-          name: fullName,
-          content: ip,
-          proxied,
-          ttl: proxied ? 1 : 300, // Auto for proxied, 5 min otherwise
-        }),
-      }
-    )
-
-    if (!updateResponse.success) {
-      log.deploy.error('Failed to update DNS record', { fullName, errors: updateResponse.errors })
-      return { success: false, error: updateResponse.errors?.[0]?.message || 'Failed to update DNS record' }
+  try {
+    // Check for wildcard first
+    const wildcard = await checkWildcardRecord(domain, ip)
+    if (wildcard.exists && wildcard.matchesIp) {
+      log.deploy.info('Wildcard record exists, skipping subdomain creation', {
+        domain,
+        subdomain,
+        wildcardIp: wildcard.currentIp,
+      })
+      return { success: true, skipped: true }
     }
 
-    log.deploy.info('Updated DNS record', { fullName, ip })
-    return { success: true }
-  }
+    const zoneId = await getZoneId(domain)
+    if (!zoneId) {
+      return { success: false, error: `Zone not found for domain: ${domain}` }
+    }
 
-  // Create new record
-  const createResponse = await cloudflareRequest<CloudflareDnsRecord>(
-    `/zones/${zoneId}/dns_records`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
+    const fullName = subdomain ? `${subdomain}.${domain}` : domain
+    const ttl = proxied ? 1 : 300 // Auto for proxied, 5 min otherwise
+
+    // Check if record already exists
+    const existing = await client.dns.records.list({
+      zone_id: zoneId,
+      type: 'A',
+      name: fullName,
+    })
+
+    if (existing.result?.length) {
+      // Update existing record
+      const recordId = existing.result[0].id
+      await client.dns.records.update(recordId, {
+        zone_id: zoneId,
         type: 'A',
         name: fullName,
         content: ip,
         proxied,
-        ttl: proxied ? 1 : 300,
-      }),
+        ttl,
+      })
+      log.deploy.info('Updated DNS record', { fullName, ip })
+    } else {
+      // Create new record
+      await client.dns.records.create({
+        zone_id: zoneId,
+        type: 'A',
+        name: fullName,
+        content: ip,
+        proxied,
+        ttl,
+      })
+      log.deploy.info('Created DNS record', { fullName, ip })
     }
-  )
 
-  if (!createResponse.success) {
-    log.deploy.error('Failed to create DNS record', { fullName, errors: createResponse.errors })
-    return { success: false, error: createResponse.errors?.[0]?.message || 'Failed to create DNS record' }
+    return { success: true }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    log.deploy.error('Failed to create DNS record', { subdomain, domain, error: errorMessage })
+    return { success: false, error: errorMessage }
   }
-
-  log.deploy.info('Created DNS record', { fullName, ip })
-  return { success: true }
 }
 
 /**
@@ -142,61 +151,73 @@ export async function deleteDnsRecord(
   subdomain: string,
   domain: string
 ): Promise<{ success: boolean; error?: string }> {
-  const zoneId = await getZoneId(domain)
-  if (!zoneId) {
-    return { success: false, error: `Zone not found for domain: ${domain}` }
+  const client = getClient()
+  if (!client) {
+    return { success: false, error: 'Cloudflare API token not configured' }
   }
 
-  const fullName = subdomain ? `${subdomain}.${domain}` : domain
+  try {
+    const zoneId = await getZoneId(domain)
+    if (!zoneId) {
+      return { success: false, error: `Zone not found for domain: ${domain}` }
+    }
 
-  // Find the record
-  const response = await cloudflareRequest<CloudflareDnsRecord[]>(
-    `/zones/${zoneId}/dns_records?type=A&name=${fullName}`
-  )
+    const fullName = subdomain ? `${subdomain}.${domain}` : domain
 
-  if (!response.success || !response.result?.length) {
-    log.deploy.warn('DNS record not found for deletion', { fullName })
-    return { success: true } // Already doesn't exist
+    // Find the record
+    const records = await client.dns.records.list({
+      zone_id: zoneId,
+      type: 'A',
+      name: fullName,
+    })
+
+    if (!records.result?.length) {
+      log.deploy.warn('DNS record not found for deletion', { fullName })
+      return { success: true } // Already doesn't exist
+    }
+
+    // Delete the record
+    const recordId = records.result[0].id
+    await client.dns.records.delete(recordId, { zone_id: zoneId })
+    log.deploy.info('Deleted DNS record', { fullName })
+    return { success: true }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    log.deploy.error('Failed to delete DNS record', { subdomain, domain, error: errorMessage })
+    return { success: false, error: errorMessage }
   }
-
-  // Delete the record
-  const recordId = response.result[0].id
-  const deleteResponse = await cloudflareRequest(
-    `/zones/${zoneId}/dns_records/${recordId}`,
-    { method: 'DELETE' }
-  )
-
-  if (!deleteResponse.success) {
-    log.deploy.error('Failed to delete DNS record', { fullName, errors: deleteResponse.errors })
-    return { success: false, error: deleteResponse.errors?.[0]?.message || 'Failed to delete DNS record' }
-  }
-
-  log.deploy.info('Deleted DNS record', { fullName })
-  return { success: true }
 }
 
 /**
  * Verify the Cloudflare API token is valid
  */
 export async function verifyToken(): Promise<{ valid: boolean; error?: string }> {
-  const response = await cloudflareRequest<{ id: string }>('/user/tokens/verify')
-
-  if (!response.success) {
-    return { valid: false, error: response.errors?.[0]?.message || 'Invalid token' }
+  const client = getClient()
+  if (!client) {
+    return { valid: false, error: 'Cloudflare API token not configured' }
   }
 
-  return { valid: true }
+  try {
+    await client.user.tokens.verify()
+    return { valid: true }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    return { valid: false, error: errorMessage }
+  }
 }
 
 /**
  * List available zones for the configured token
  */
 export async function listZones(): Promise<{ name: string; id: string }[]> {
-  const response = await cloudflareRequest<CloudflareZone[]>('/zones?per_page=50')
+  const client = getClient()
+  if (!client) return []
 
-  if (!response.success || !response.result) {
+  try {
+    const zones = await client.zones.list({ per_page: 50 })
+    return zones.result?.map((z) => ({ name: z.name, id: z.id })) ?? []
+  } catch (err) {
+    log.deploy.error('Failed to list zones', { error: String(err) })
     return []
   }
-
-  return response.result.map((z) => ({ name: z.name, id: z.id }))
 }

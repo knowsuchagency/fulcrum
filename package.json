@@ -41,6 +41,7 @@
     "bun-pty": "^0.4.2",
     "citty": "^0.1.6",
     "class-variance-authority": "^0.7.1",
+    "cloudflare": "^5.2.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
     "fancy-ansi": "^0.1.3",
