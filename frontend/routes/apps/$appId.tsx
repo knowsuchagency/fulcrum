@@ -11,6 +11,7 @@ import {
   useDeleteApp,
   useComposeFile,
   useWriteComposeFile,
+  useDeploymentPrerequisites,
   type DeploymentStage,
 } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
@@ -56,6 +57,7 @@ import { MonacoEditor } from '@/components/viewer/monaco-editor'
 import type { Deployment } from '@/types'
 import { parseLogs } from '@/lib/log-utils'
 import { LogLine } from '@/components/ui/log-line'
+import { toast } from 'sonner'
 
 type AppTab = 'general' | 'deployments' | 'logs' | 'environment' | 'domains'
 
@@ -115,9 +117,14 @@ function AppDetailView() {
   const { tab } = Route.useSearch()
   const navigate = useNavigate()
   const { data: app, isLoading, error } = useApp(appId)
+  const { data: prereqs } = useDeploymentPrerequisites()
   const deleteApp = useDeleteApp()
   const activeTab = tab || 'general'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // Show DNS warning if app has exposed services but Cloudflare is not configured
+  const hasExposedServices = app?.services?.some((s) => s.exposed && s.domain)
+  const showDnsWarning = hasExposedServices && prereqs && !prereqs.settings.cloudflareConfigured
 
   const setActiveTab = useCallback(
     (newTab: AppTab) => {
@@ -201,13 +208,32 @@ function AppDetailView() {
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTab)}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="deployments">Deployments</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="environment">Environment</TabsTrigger>
-            <TabsTrigger value="domains">Domains</TabsTrigger>
-          </TabsList>
+          <div className="mb-4 flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="deployments">Deployments</TabsTrigger>
+              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="environment">Environment</TabsTrigger>
+              <TabsTrigger value="domains">Domains</TabsTrigger>
+            </TabsList>
+            {showDnsWarning && (
+              <button
+                onClick={() => {
+                  toast.warning('Manual DNS required', {
+                    description: 'Cloudflare API token not configured. You must create DNS records manually for your domains.',
+                    action: {
+                      label: 'Settings',
+                      onClick: () => navigate({ to: '/settings' }),
+                    },
+                  })
+                }}
+                className="p-1.5 text-amber-500 hover:text-amber-400 transition-colors"
+                title="DNS configuration required"
+              >
+                <HugeiconsIcon icon={Alert02Icon} size={18} strokeWidth={2} />
+              </button>
+            )}
+          </div>
 
           <TabsContent value="general">
             <GeneralTab app={app} />

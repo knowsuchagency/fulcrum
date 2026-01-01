@@ -865,7 +865,7 @@ export function getDeploymentSettings(): DeploymentSettings {
     }
 
     return {
-      cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? deployment.cloudflareApiToken ?? null,
+      cloudflareApiToken: deployment.cloudflareApiToken ?? null,
       defaultDomain: deployment.defaultDomain ?? null,
       serverPublicIp: deployment.serverPublicIp ?? null,
       acmeEmail: deployment.acmeEmail ?? null,
