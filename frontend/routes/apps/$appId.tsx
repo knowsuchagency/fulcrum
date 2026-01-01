@@ -290,7 +290,6 @@ function GeneralTab({
   deployStream: ReturnType<typeof useDeployAppStream>
 }) {
   const { t } = useTranslation('common')
-  const { data: status } = useAppStatus(app.id)
   const stopApp = useStopApp()
   const cancelDeployment = useCancelDeployment()
   const updateApp = useUpdateApp()
@@ -325,22 +324,6 @@ function GeneralTab({
       updates: { notificationsEnabled: enabled },
     })
   }
-
-  // Get services to display
-  const serviceItems = status?.containers && status.containers.length > 0
-    ? status.containers.map((container) => {
-        const service = app.services?.find((s) => s.serviceName === container.service)
-        return {
-          name: container.service,
-          status: container.status,
-          domain: service?.exposed && service.domain ? service.domain : null,
-        }
-      })
-    : app.services?.map((service) => ({
-        name: service.serviceName,
-        status: 'stopped',
-        domain: service.exposed && service.domain ? service.domain : null,
-      })) ?? []
 
   return (
     <div className="space-y-4">
@@ -420,44 +403,11 @@ function GeneralTab({
         </div>
 
         {/* Services section */}
-        <div className="rounded-lg border p-4 space-y-3">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.general.services')}</h4>
-          {serviceItems.length > 0 ? (
-            <div className="space-y-2">
-              {serviceItems.map((service) => (
-                <div key={service.name} className="flex items-center gap-2 text-sm">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      service.status === 'running' ? 'bg-green-500' : 'bg-gray-400'
-                    }`}
-                  />
-                  <span className="font-medium">{service.name}</span>
-                  <span className="text-muted-foreground">{service.status}</span>
-                  {service.domain && (
-                    <a
-                      href={`https://${service.domain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto flex items-center gap-1 text-primary hover:underline"
-                    >
-                      <HugeiconsIcon icon={Link01Icon} size={12} strokeWidth={2} />
-                      {service.domain}
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t('apps.general.noServicesConfigured')}</p>
-          )}
-        </div>
+        <ServicesSection app={app} onDeploy={onDeploy} />
       </div>
 
-      {/* Environment and Domains row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <EnvironmentSection app={app} />
-        <DomainsSection app={app} onDeploy={onDeploy} />
-      </div>
+      {/* Environment section - full width */}
+      <EnvironmentSection app={app} />
 
       {/* Bottom row: Compose file full width */}
       <ComposeFileEditor app={app} />
@@ -1106,8 +1056,8 @@ function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp
   )
 }
 
-// Domains section - service exposure and domain configuration (inline in General tab)
-function DomainsSection({
+// Services section - unified status + domain configuration
+function ServicesSection({
   app,
   onDeploy,
 }: {
@@ -1115,9 +1065,10 @@ function DomainsSection({
   onDeploy: () => void
 }) {
   const { t } = useTranslation('common')
+  const { data: status } = useAppStatus(app.id)
   const updateApp = useUpdateApp()
 
-  // Services/domains state
+  // Services state for editing
   const [services, setServices] = useState(
     app.services?.map((s) => ({
       serviceName: s.serviceName,
@@ -1127,7 +1078,16 @@ function DomainsSection({
     })) ?? []
   )
 
-  const handleSaveDomains = async () => {
+  // Get runtime status for each service
+  const getServiceStatus = (serviceName: string): string => {
+    if (status?.containers) {
+      const container = status.containers.find((c) => c.service === serviceName)
+      if (container) return container.status
+    }
+    return 'stopped'
+  }
+
+  const handleSave = async () => {
     await updateApp.mutateAsync({
       id: app.id,
       updates: {
@@ -1155,9 +1115,9 @@ function DomainsSection({
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.domains.title')}</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.general.services')}</h4>
         {services.length > 0 && (
-          <Button size="sm" onClick={handleSaveDomains} disabled={updateApp.isPending}>
+          <Button size="sm" onClick={handleSave} disabled={updateApp.isPending}>
             {updateApp.isPending ? (
               <>
                 <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
@@ -1171,37 +1131,70 @@ function DomainsSection({
       </div>
 
       {services.length > 0 ? (
-        <div className="space-y-3">
-          {services.map((service, index) => (
-            <div key={service.serviceName} className="flex items-center gap-3 text-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="font-medium">{service.serviceName}</span>
-                {service.containerPort && <Badge variant="secondary">:{service.containerPort}</Badge>}
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={`expose-${index}`}
-                  checked={service.exposed}
-                  onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
+        <div className="space-y-2">
+          {services.map((service, index) => {
+            const runtimeStatus = getServiceStatus(service.serviceName)
+            const isRunning = runtimeStatus === 'running'
+            const hasActiveDomain = isRunning && service.exposed && service.domain
+
+            return (
+              <div key={service.serviceName} className="flex items-center gap-3 text-sm">
+                {/* Status dot */}
+                <div
+                  className={`h-2 w-2 shrink-0 rounded-full ${isRunning ? 'bg-green-500' : 'bg-gray-400'}`}
+                  title={runtimeStatus}
                 />
-                <Label htmlFor={`expose-${index}`} className="text-sm">
-                  {t('apps.domains.expose')}
-                </Label>
+
+                {/* Service name + port */}
+                <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+                  <span className="font-medium">{service.serviceName}</span>
+                  {service.containerPort && (
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                      :{service.containerPort}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Expose toggle */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Checkbox
+                    id={`expose-${index}`}
+                    checked={service.exposed}
+                    onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
+                  />
+                  <Label htmlFor={`expose-${index}`} className="text-xs text-muted-foreground">
+                    {t('apps.domains.expose')}
+                  </Label>
+                </div>
+
+                {/* Domain input (when exposed) */}
+                {service.exposed && (
+                  <Input
+                    value={service.domain}
+                    onChange={(e) => updateService(index, { domain: e.target.value })}
+                    placeholder="app.example.com"
+                    className="flex-1 h-7 text-xs"
+                  />
+                )}
+
+                {/* Link to domain (when running + exposed + has domain) */}
+                {hasActiveDomain && (
+                  <a
+                    href={`https://${service.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 p-1 text-primary hover:text-primary/80 transition-colors"
+                    title={service.domain}
+                  >
+                    <HugeiconsIcon icon={Link01Icon} size={14} strokeWidth={2} />
+                  </a>
+                )}
               </div>
-              {service.exposed && (
-                <Input
-                  id={`domain-${index}`}
-                  value={service.domain}
-                  onChange={(e) => updateService(index, { domain: e.target.value })}
-                  placeholder="app.example.com"
-                  className="flex-1 h-8"
-                />
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">{t('apps.domains.noServices')}</p>
+        <p className="text-sm text-muted-foreground">{t('apps.general.noServicesConfigured')}</p>
       )}
 
       {updateApp.error && (
