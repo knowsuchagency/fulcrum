@@ -15,6 +15,7 @@ const KEYS = [
   { label: 'Esc', icon: Cancel01Icon, data: '\x1b' },
   { label: 'Up', icon: ArrowUp01Icon, data: '\x1b[A' },
   { label: 'Down', icon: ArrowDown01Icon, data: '\x1b[B' },
+  { label: 'Tab', icon: null, data: '\t' },
   { label: 'Enter', icon: null, data: '\r' },
 ] as const
 
