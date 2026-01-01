@@ -10,6 +10,7 @@ export interface TraefikConfig {
   certResolver: string // e.g., letsencrypt
   containerName: string // e.g., dokploy-traefik
   type: 'dokploy' | 'vibora' | 'other'
+  certsDir?: string // e.g., /certs (mount point inside container)
 }
 
 interface DockerContainer {
@@ -191,6 +192,16 @@ function getConfigFilename(appId: string): string {
   return `vibora-${appId}.yml`
 }
 
+export interface AddRouteOptions {
+  /** Use file-based TLS certificate instead of ACME resolver */
+  tlsCert?: {
+    /** Path to cert file inside container (e.g., /certs/example.com/cert.pem) */
+    certFile: string
+    /** Path to key file inside container (e.g., /certs/example.com/key.pem) */
+    keyFile: string
+  }
+}
+
 /**
  * Add a Traefik route for an app service
  */
@@ -198,14 +209,42 @@ export async function addRoute(
   config: TraefikConfig,
   appId: string,
   domain: string,
-  upstreamUrl: string
+  upstreamUrl: string,
+  options?: AddRouteOptions
 ): Promise<{ success: boolean; error?: string }> {
   const routerId = `vibora-${appId}`
   const filename = getConfigFilename(appId)
   const filepath = join(config.configDir, filename)
 
+  // Build TLS config - use file cert if provided, otherwise use ACME resolver
+  let tlsConfig: Record<string, unknown>
+  let tlsStores: Record<string, unknown> | undefined
+
+  if (options?.tlsCert) {
+    // Use file-based certificate
+    tlsConfig = {} // Empty - will use default store
+    tlsStores = {
+      default: {
+        defaultCertificate: {
+          certFile: options.tlsCert.certFile,
+          keyFile: options.tlsCert.keyFile,
+        },
+      },
+    }
+    log.deploy.debug('Using file-based TLS certificate', {
+      appId,
+      domain,
+      certFile: options.tlsCert.certFile,
+    })
+  } else {
+    // Use ACME cert resolver
+    tlsConfig = {
+      certResolver: config.certResolver,
+    }
+  }
+
   // Build Traefik dynamic config
-  const traefikConfig = {
+  const traefikConfig: Record<string, unknown> = {
     http: {
       routers: {
         [`${routerId}-http`]: {
@@ -218,9 +257,7 @@ export async function addRoute(
           rule: `Host(\`${domain}\`)`,
           service: routerId,
           entryPoints: ['websecure'],
-          tls: {
-            certResolver: config.certResolver,
-          },
+          tls: tlsConfig,
         },
       },
       services: {
@@ -234,6 +271,11 @@ export async function addRoute(
     },
   }
 
+  // Add TLS stores config if using file certs
+  if (tlsStores) {
+    traefikConfig.tls = { stores: tlsStores }
+  }
+
   try {
     const yamlContent = stringifyYaml(traefikConfig)
     await writeFile(filepath, yamlContent, 'utf-8')
@@ -243,6 +285,7 @@ export async function addRoute(
       domain,
       upstreamUrl,
       filepath,
+      usingFileCert: !!options?.tlsCert,
     })
 
     return { success: true }

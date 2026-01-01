@@ -14,9 +14,9 @@ import {
   stackServices,
   waitForServicesHealthy,
 } from './docker-swarm'
-import { createDnsRecord, deleteDnsRecord } from './cloudflare'
-import { detectTraefik, addRoute, removeRoute, type TraefikConfig } from './traefik'
-import { startTraefikContainer, getViboraTraefikConfig } from './traefik-docker'
+import { createDnsRecord, deleteDnsRecord, createOriginCACertificate } from './cloudflare'
+import { detectTraefik, addRoute, removeRoute, type TraefikConfig, type AddRouteOptions } from './traefik'
+import { startTraefikContainer, getViboraTraefikConfig, TRAEFIK_CERTS_MOUNT } from './traefik-docker'
 import type { Deployment } from '../db/schema'
 
 // Cache detected Traefik config to avoid repeated detection
@@ -302,10 +302,49 @@ export async function deployApp(
         // Find the swarm service for this app service
         const swarmService = serviceStatuses.find((s) => s.serviceName === service.serviceName)
 
+        // Extract root domain for certificate (e.g., vibora.dev from api.vibora.dev)
+        const [subdomain, ...domainParts] = service.domain.split('.')
+        const rootDomain = domainParts.join('.')
+
         // Configure Traefik reverse proxy
         // Upstream URL uses Docker service DNS: http://stackName_serviceName:port
         const upstreamUrl = `http://${projectName}_${service.serviceName}:${service.containerPort}`
-        const traefikResult = await addRoute(traefikConfig, appId, service.domain, upstreamUrl)
+
+        // Try to generate Origin CA certificate if Cloudflare is configured
+        let routeOptions: AddRouteOptions | undefined
+        if (settings.integrations.cloudflareApiToken && rootDomain) {
+          onProgress?.({ stage: 'configuring', message: `Generating SSL certificate for ${rootDomain}...` })
+
+          const certResult = await createOriginCACertificate(rootDomain)
+          if (certResult.success && certResult.certPath && certResult.keyPath) {
+            // Use file-based TLS with paths inside the container
+            routeOptions = {
+              tlsCert: {
+                certFile: `${TRAEFIK_CERTS_MOUNT}/${rootDomain}/cert.pem`,
+                keyFile: `${TRAEFIK_CERTS_MOUNT}/${rootDomain}/key.pem`,
+              },
+            }
+            log.deploy.info('Using Origin CA certificate for TLS', {
+              domain: service.domain,
+              rootDomain,
+            })
+          } else if (certResult.permissionError) {
+            // Log the permission error prominently but continue with ACME fallback
+            log.deploy.warn('Origin CA certificate failed - missing permissions', {
+              domain: rootDomain,
+              error: certResult.error,
+            })
+            buildLogs.push(`⚠️ SSL Certificate: ${certResult.error}`)
+            onProgress?.({ stage: 'configuring', message: `SSL cert generation failed (using fallback): ${certResult.error?.split('\n')[0]}` })
+          } else if (certResult.error) {
+            log.deploy.warn('Origin CA certificate failed', {
+              domain: rootDomain,
+              error: certResult.error,
+            })
+          }
+        }
+
+        const traefikResult = await addRoute(traefikConfig, appId, service.domain, upstreamUrl, routeOptions)
         if (!traefikResult.success) {
           log.deploy.warn('Failed to configure Traefik route', {
             service: service.serviceName,
@@ -314,22 +353,17 @@ export async function deployApp(
         }
 
         // Configure Cloudflare DNS
-        if (settings.integrations.cloudflareApiToken && serverPublicIp) {
-          const [subdomain, ...domainParts] = service.domain.split('.')
-          const domain = domainParts.join('.')
-
-          if (domain) {
-            const dnsResult = await createDnsRecord(
-              subdomain,
-              domain,
-              serverPublicIp
-            )
-            if (!dnsResult.success) {
-              log.deploy.warn('Failed to create DNS record', {
-                domain: service.domain,
-                error: dnsResult.error,
-              })
-            }
+        if (settings.integrations.cloudflareApiToken && serverPublicIp && rootDomain) {
+          const dnsResult = await createDnsRecord(
+            subdomain,
+            rootDomain,
+            serverPublicIp
+          )
+          if (!dnsResult.success) {
+            log.deploy.warn('Failed to create DNS record', {
+              domain: service.domain,
+              error: dnsResult.error,
+            })
           }
         }
 

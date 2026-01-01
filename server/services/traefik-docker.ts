@@ -2,6 +2,7 @@ import { mkdir, writeFile, chmod } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { log } from '../lib/logger'
+import { getViboraDir } from '../lib/settings'
 import { runDocker } from './docker-compose'
 import type { TraefikConfig } from './traefik'
 
@@ -10,6 +11,7 @@ export const TRAEFIK_IMAGE = 'traefik:v3'
 export const TRAEFIK_NETWORK = 'vibora-network'
 export const TRAEFIK_CONFIG_DIR = '/etc/vibora/traefik'
 export const TRAEFIK_DYNAMIC_DIR = '/etc/vibora/traefik/dynamic'
+export const TRAEFIK_CERTS_MOUNT = '/certs' // Mount point inside container
 
 export type TraefikContainerStatus = 'running' | 'stopped' | 'not_found'
 
@@ -67,6 +69,13 @@ async function ensureNetwork(): Promise<{ success: boolean; error?: string }> {
 }
 
 /**
+ * Get the certs directory path (on host)
+ */
+function getCertsDir(): string {
+  return join(getViboraDir(), 'certs')
+}
+
+/**
  * Ensure config directories exist
  */
 async function ensureConfigDirs(): Promise<void> {
@@ -75,6 +84,11 @@ async function ensureConfigDirs(): Promise<void> {
   }
   if (!existsSync(TRAEFIK_DYNAMIC_DIR)) {
     await mkdir(TRAEFIK_DYNAMIC_DIR, { recursive: true })
+  }
+  // Ensure certs directory exists
+  const certsDir = getCertsDir()
+  if (!existsSync(certsDir)) {
+    await mkdir(certsDir, { recursive: true })
   }
 }
 
@@ -197,6 +211,7 @@ export async function startTraefikContainer(
   // Detect platform for network mode
   const isLinux = process.platform === 'linux'
 
+  const certsDir = getCertsDir()
   const args = [
     'run',
     '-d',
@@ -212,6 +227,8 @@ export async function startTraefikContainer(
     `${TRAEFIK_CONFIG_DIR}/acme.json:/etc/traefik/acme.json`,
     '-v',
     `${TRAEFIK_DYNAMIC_DIR}:/etc/traefik/dynamic:ro`,
+    '-v',
+    `${certsDir}:${TRAEFIK_CERTS_MOUNT}:ro`, // Mount Origin CA certificates
     '--network',
     TRAEFIK_NETWORK,
   ]
@@ -354,5 +371,6 @@ export function getViboraTraefikConfig(): TraefikConfig {
     certResolver: 'letsencrypt',
     containerName: TRAEFIK_CONTAINER_NAME,
     type: 'vibora',
+    certsDir: TRAEFIK_CERTS_MOUNT, // /certs inside container
   }
 }
