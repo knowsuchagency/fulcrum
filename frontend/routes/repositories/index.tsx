@@ -20,8 +20,11 @@ import {
   ComputerTerminal01Icon,
   GridViewIcon,
   Search01Icon,
+  Rocket01Icon,
 } from '@hugeicons/core-free-icons'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { useAppByRepository, useFindCompose } from '@/hooks/use-apps'
+import { toast } from 'sonner'
 import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { Repository } from '@/types'
@@ -49,13 +52,27 @@ function RepositoryCard({
   onDeleteClick: () => void
 }) {
   const { t } = useTranslation('repositories')
+  const navigate = useNavigate()
   const { data: editorApp } = useEditorApp()
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
+  const linkedApp = useAppByRepository(repository.id)
+  const { data: composeInfo, isLoading: composeLoading } = useFindCompose(repository.id)
 
   const handleOpenEditor = () => {
     const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
     openExternalUrl(url)
+  }
+
+  const handleCreateApp = () => {
+    if (composeLoading) return
+    if (!composeInfo?.found) {
+      toast.error(t('createAppDialog.title'), {
+        description: t('createAppDialog.description'),
+      })
+    } else {
+      navigate({ to: '/apps/new', search: { repoId: repository.id } })
+    }
   }
 
   return (
@@ -121,6 +138,31 @@ function RepositoryCard({
             <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
             <span>{t('editor')}</span>
           </Button>
+
+          {/* App - hidden on mobile */}
+          {linkedApp ? (
+            <Link to="/apps/$appId" params={{ appId: linkedApp.id }}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground max-sm:hidden"
+              >
+                <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
+                <span>{t('application')}</span>
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground max-sm:hidden"
+              onClick={handleCreateApp}
+              disabled={composeLoading}
+            >
+              <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span>{t('createApp')}</span>
+            </Button>
+          )}
 
           {/* Delete */}
           <Button
