@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import { useApps, useDeployApp, useStopApp, useDeleteApp, useDeploymentPrerequisites } from '@/hooks/use-apps'
 import type { AppWithServices } from '@/hooks/use-apps'
@@ -87,8 +88,10 @@ function AppCard({
   onStop: () => void
   onDelete: () => void
 }) {
+  const { t } = useTranslation('common')
   const exposedServices = app.services?.filter((s) => s.exposed) ?? []
   const primaryDomain = exposedServices.find((s) => s.domain)?.domain
+  const serviceCount = app.services?.length ?? 0
 
   return (
     <Card className="h-full group transition-colors hover:border-foreground/20">
@@ -102,12 +105,12 @@ function AppCard({
                 <span className="block truncate font-medium group-hover:text-primary transition-colors">
                   {app.name}
                 </span>
-                <Badge variant={getStatusBadgeVariant(app.status)} className="shrink-0 capitalize">
-                  {app.status}
+                <Badge variant={getStatusBadgeVariant(app.status)} className="shrink-0">
+                  {t(`apps.status.${app.status}`)}
                 </Badge>
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
-                {app.repository?.displayName ?? 'Unknown repo'} · {app.branch}
+                {app.repository?.displayName ?? t('apps.unknownRepo')} · {app.branch}
               </div>
             </div>
           </div>
@@ -122,14 +125,14 @@ function AppCard({
 
           {/* Services count */}
           <div className="text-xs text-muted-foreground">
-            {app.services?.length ?? 0} service{(app.services?.length ?? 0) !== 1 ? 's' : ''} ·{' '}
-            {exposedServices.length} exposed
+            {serviceCount} {serviceCount !== 1 ? t('apps.services') : t('apps.service')} ·{' '}
+            {exposedServices.length} {t('apps.exposed')}
           </div>
 
           {/* Last deployed */}
           {app.lastDeployedAt && (
             <div className="text-xs text-muted-foreground">
-              Last deployed: {new Date(app.lastDeployedAt).toLocaleString()}
+              {t('apps.lastDeployed')}: {new Date(app.lastDeployedAt).toLocaleString()}
             </div>
           )}
         </CardContent>
@@ -145,7 +148,7 @@ function AppCard({
               className="text-muted-foreground hover:text-foreground"
             >
               <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="max-sm:hidden">Stop</span>
+              <span className="max-sm:hidden">{t('apps.stop')}</span>
             </Button>
           ) : (
             <Button
@@ -166,7 +169,7 @@ function AppCard({
               ) : (
                 <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} data-slot="icon" />
               )}
-              <span className="max-sm:hidden">{app.status === 'building' ? 'Building...' : 'Deploy'}</span>
+              <span className="max-sm:hidden">{app.status === 'building' ? t('apps.building') : t('apps.deploy')}</span>
             </Button>
           )}
 
@@ -177,7 +180,7 @@ function AppCard({
             className="text-muted-foreground hover:text-destructive"
           >
             <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">Delete</span>
+            <span className="max-sm:hidden">{t('apps.delete')}</span>
           </Button>
         </div>
       </CardContent>
@@ -186,6 +189,7 @@ function AppCard({
 }
 
 function AppsView() {
+  const { t } = useTranslation('common')
   const { data: apps, isLoading, error } = useApps()
   const { data: prereqs, isLoading: prereqsLoading } = useDeploymentPrerequisites()
   const deployApp = useDeployApp()
@@ -289,7 +293,7 @@ function AppsView() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search apps..."
+            placeholder={t('apps.searchApps')}
             className="w-full pl-6"
           />
         </div>
@@ -300,11 +304,11 @@ function AppsView() {
           <SelectTrigger size="sm" className="shrink-0 gap-1.5">
             <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
             <SelectValue>
-              {repoFilter ?? 'All repos'}
+              {repoFilter ?? t('apps.allRepos')}
             </SelectValue>
           </SelectTrigger>
           <SelectContent className="min-w-[160px]">
-            <SelectItem value="">All repos</SelectItem>
+            <SelectItem value="">{t('apps.allRepos')}</SelectItem>
             {repoNames.map((name) => (
               <SelectItem key={name} value={name}>
                 {name}
@@ -316,7 +320,7 @@ function AppsView() {
         <Link to="/apps/new">
           <Button size="sm">
             <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">New App</span>
+            <span className="max-sm:hidden">{t('apps.newApp')}</span>
           </Button>
         </Link>
       </div>
@@ -336,18 +340,18 @@ function AppsView() {
         {error && (
           <div className="flex items-center gap-3 py-6 text-destructive">
             <HugeiconsIcon icon={Alert02Icon} size={20} strokeWidth={2} />
-            <span className="text-sm">Failed to load apps: {error.message}</span>
+            <span className="text-sm">{t('apps.failedToLoadApps')}: {error.message}</span>
           </div>
         )}
 
         {!isLoading && !error && apps?.length === 0 && (
           <div className="py-12 text-center text-muted-foreground">
             <HugeiconsIcon icon={Rocket01Icon} size={48} strokeWidth={1.5} className="mx-auto mb-4 opacity-50" />
-            <p className="text-sm">No apps yet. Create your first app to get started!</p>
+            <p className="text-sm">{t('apps.noAppsYet')}</p>
             <Link to="/apps/new" className="mt-4 inline-block">
               <Button>
                 <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-                Create App
+                {t('apps.createApp')}
               </Button>
             </Link>
           </div>
@@ -355,7 +359,7 @@ function AppsView() {
 
         {!isLoading && !error && apps && apps.length > 0 && filteredApps.length === 0 && (
           <div className="py-12 text-muted-foreground">
-            <p className="text-sm">No apps match your search.</p>
+            <p className="text-sm">{t('apps.noAppsMatch')}</p>
           </div>
         )}
 
@@ -376,16 +380,15 @@ function AppsView() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete App</AlertDialogTitle>
+            <AlertDialogTitle>{t('apps.deleteApp')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteTarget?.name}"? This will stop all containers and remove the app
-              configuration. This action cannot be undone.
+              {t('apps.deleteAppConfirm', { name: deleteTarget?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('apps.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Delete
+              {t('apps.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

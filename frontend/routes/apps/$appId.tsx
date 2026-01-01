@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useCallback, useRef, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   useApp,
   useDeployAppStream,
@@ -113,6 +114,7 @@ function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destr
 }
 
 function AppDetailView() {
+  const { t } = useTranslation('common')
   const { appId } = Route.useParams()
   const { tab } = Route.useSearch()
   const navigate = useNavigate()
@@ -159,7 +161,7 @@ function AppDetailView() {
         <Link to="/apps">
           <Button variant="outline">
             <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
-            Back to Apps
+            {t('apps.backToApps')}
           </Button>
         </Link>
       </div>
@@ -173,8 +175,8 @@ function AppDetailView() {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">{app.name}</span>
-            <Badge variant={getStatusBadgeVariant(app.status)} className="capitalize">
-              {app.status}
+            <Badge variant={getStatusBadgeVariant(app.status)}>
+              {t(`apps.status.${app.status}`)}
             </Badge>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -210,25 +212,25 @@ function AppDetailView() {
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTab)}>
           <div className="mb-4 flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="deployments">Deployments</TabsTrigger>
-              <TabsTrigger value="logs">Logs</TabsTrigger>
-              <TabsTrigger value="environment">Environment</TabsTrigger>
-              <TabsTrigger value="domains">Domains</TabsTrigger>
+              <TabsTrigger value="general">{t('apps.tabs.general')}</TabsTrigger>
+              <TabsTrigger value="deployments">{t('apps.tabs.deployments')}</TabsTrigger>
+              <TabsTrigger value="logs">{t('apps.tabs.logs')}</TabsTrigger>
+              <TabsTrigger value="environment">{t('apps.tabs.environment')}</TabsTrigger>
+              <TabsTrigger value="domains">{t('apps.tabs.domains')}</TabsTrigger>
             </TabsList>
             {showDnsWarning && (
               <button
                 onClick={() => {
-                  toast.warning('Manual DNS required', {
-                    description: 'Cloudflare API token not configured. You must create DNS records manually for your domains.',
+                  toast.warning(t('apps.manualDnsRequired'), {
+                    description: t('apps.manualDnsRequiredDesc'),
                     action: {
-                      label: 'Settings',
+                      label: t('apps.settings'),
                       onClick: () => navigate({ to: '/settings' }),
                     },
                   })
                 }}
                 className="p-1.5 text-amber-500 hover:text-amber-400 transition-colors"
-                title="DNS configuration required"
+                title={t('apps.dnsConfigRequired')}
               >
                 <HugeiconsIcon icon={Alert02Icon} size={18} strokeWidth={2} />
               </button>
@@ -261,19 +263,18 @@ function AppDetailView() {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete App</AlertDialogTitle>
+            <AlertDialogTitle>{t('apps.deleteApp')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{app.name}"? This will stop all containers and remove the app
-              configuration. This action cannot be undone.
+              {t('apps.deleteAppConfirm', { name: app.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('apps.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteApp.isPending ? 'Deleting...' : 'Delete'}
+              {deleteApp.isPending ? t('apps.deleting') : t('apps.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -284,6 +285,7 @@ function AppDetailView() {
 
 // General tab - dense 2-column layout
 function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+  const { t } = useTranslation('common')
   const { data: status } = useAppStatus(app.id)
   const deployStream = useDeployAppStream()
   const stopApp = useStopApp()
@@ -344,7 +346,7 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Deploy section */}
         <div className="rounded-lg border p-4 space-y-3">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Deploy</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.general.deploy')}</h4>
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" onClick={handleDeploy} disabled={deployStream.isDeploying || app.status === 'building'}>
               {deployStream.isDeploying || app.status === 'building' ? (
@@ -352,11 +354,11 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
               ) : (
                 <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
               )}
-              {deployStream.isDeploying ? 'Deploying...' : app.status === 'building' ? 'Building...' : 'Deploy'}
+              {deployStream.isDeploying ? t('apps.deploying') : app.status === 'building' ? t('apps.building') : t('apps.deploy')}
             </Button>
             <Button variant="outline" size="sm" onClick={handleDeploy} disabled={deployStream.isDeploying}>
               <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
-              Reload
+              {t('apps.general.reload')}
             </Button>
             <Button
               variant="outline"
@@ -369,7 +371,7 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
               ) : (
                 <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
               )}
-              Stop
+              {t('apps.stop')}
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -378,21 +380,21 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
                 checked={app.autoDeployEnabled ?? false}
                 onCheckedChange={(checked) => handleAutoDeployToggle(checked === true)}
               />
-              <span>Autodeploy</span>
+              <span>{t('apps.general.autodeploy')}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={app.noCacheBuild ?? false}
                 onCheckedChange={(checked) => handleNoCacheToggle(checked === true)}
               />
-              <span>No-cache</span>
+              <span>{t('apps.general.noCache')}</span>
             </label>
           </div>
         </div>
 
         {/* Services section */}
         <div className="rounded-lg border p-4 space-y-3">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Services</h4>
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.general.services')}</h4>
           {serviceItems.length > 0 ? (
             <div className="space-y-2">
               {serviceItems.map((service) => (
@@ -419,7 +421,7 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No services configured</p>
+            <p className="text-sm text-muted-foreground">{t('apps.general.noServicesConfigured')}</p>
           )}
         </div>
       </div>
@@ -456,6 +458,7 @@ function StreamingDeploymentModal({
   error: string | null
   isDeploying: boolean
 }) {
+  const { t } = useTranslation('common')
   const [copied, setCopied] = useState(false)
   const logsContainerRef = useRef<HTMLDivElement>(null)
 
@@ -478,19 +481,19 @@ function StreamingDeploymentModal({
   const getStageLabel = (stage: DeploymentStage | null): string => {
     switch (stage) {
       case 'pulling':
-        return 'Pulling code...'
+        return t('apps.streaming.pulling')
       case 'building':
-        return 'Building containers...'
+        return t('apps.streaming.building')
       case 'starting':
-        return 'Starting services...'
+        return t('apps.streaming.starting')
       case 'configuring':
-        return 'Configuring routing...'
+        return t('apps.streaming.configuring')
       case 'done':
-        return 'Deployment complete!'
+        return t('apps.streaming.done')
       case 'failed':
-        return 'Deployment failed'
+        return t('apps.streaming.failed')
       default:
-        return 'Preparing...'
+        return t('apps.streaming.preparing')
     }
   }
 
@@ -499,7 +502,7 @@ function StreamingDeploymentModal({
       <DialogContent className="!max-w-[90vw] w-[90vw] h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Deployment
+            {t('apps.deployments.deployment')}
             {isDeploying && (
               <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
             )}
@@ -513,7 +516,7 @@ function StreamingDeploymentModal({
           <DialogDescription className="flex items-center gap-2">
             {getStageLabel(stage)}
             <span className="text-muted-foreground">|</span>
-            <span>{parsedLogs.length} lines</span>
+            <span>{parsedLogs.length} {t('apps.logs.lines')}</span>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyLogs} disabled={logs.length === 0}>
               <HugeiconsIcon
                 icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
@@ -531,13 +534,13 @@ function StreamingDeploymentModal({
           {parsedLogs.length > 0 ? (
             parsedLogs.map((log, i) => <LogLine key={i} message={log.message} type={log.type} />)
           ) : isDeploying ? (
-            <span className="text-muted-foreground p-2">Waiting for logs...</span>
+            <span className="text-muted-foreground p-2">{t('apps.streaming.waitingForLogs')}</span>
           ) : (
-            <span className="text-muted-foreground p-2">No build logs available</span>
+            <span className="text-muted-foreground p-2">{t('apps.deployments.noBuildLogs')}</span>
           )}
           {error && (
             <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-sm">
-              Error: {error}
+              {t('status.error')}: {error}
             </div>
           )}
         </div>
@@ -548,6 +551,7 @@ function StreamingDeploymentModal({
 
 // Compose file editor - embedded in General tab
 function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+  const { t } = useTranslation('common')
   const repoPath = app.repository?.path ?? null
   const { data, isLoading, error } = useComposeFile(repoPath, app.composeFile)
   const writeCompose = useWriteComposeFile()
@@ -627,8 +631,8 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
   if (!repoPath) {
     return (
       <div className="rounded-lg border p-4">
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Compose File</h4>
-        <p className="text-sm text-muted-foreground">Repository path not found</p>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{t('apps.compose.title')}</h4>
+        <p className="text-sm text-muted-foreground">{t('apps.compose.repoNotFound')}</p>
       </div>
     )
   }
@@ -636,10 +640,10 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
   if (isLoading) {
     return (
       <div className="rounded-lg border p-4">
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Compose File</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{t('apps.compose.title')}</h4>
         <div className="flex items-center gap-2 text-muted-foreground">
           <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">{t('status.loading')}</span>
         </div>
       </div>
     )
@@ -648,7 +652,7 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
   if (error) {
     return (
       <div className="rounded-lg border p-4">
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Compose File</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{t('apps.compose.title')}</h4>
         <div className="flex items-center gap-2 text-destructive">
           <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />
           <span className="text-sm">{error.message}</span>
@@ -661,22 +665,22 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
     <div className="rounded-lg border p-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Compose File</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.compose.title')}</h4>
         <div className="flex items-center gap-2">
           {/* Status indicators */}
           {hasChanges && isEditing && (
-            <span className="text-xs text-muted-foreground">Unsaved</span>
+            <span className="text-xs text-muted-foreground">{t('apps.compose.unsaved')}</span>
           )}
           {saved && (
             <span className="flex items-center gap-1 text-xs text-green-500">
               <HugeiconsIcon icon={CheckmarkCircle02Icon} size={12} strokeWidth={2} />
-              Saved
+              {t('status.saved')}
             </span>
           )}
           {writeCompose.isPending && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
-              Saving...
+              {t('status.saving')}
             </span>
           )}
           <span className="text-sm text-muted-foreground">{app.composeFile}</span>
@@ -687,7 +691,7 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
             onClick={toggleEdit}
           >
             <HugeiconsIcon icon={Edit02Icon} size={14} strokeWidth={2} />
-            {isEditing ? 'Done' : 'Edit'}
+            {isEditing ? t('apps.compose.done') : t('apps.compose.edit')}
           </Button>
         </div>
       </div>
@@ -713,6 +717,7 @@ function LogsTab({
   appId: string
   services?: NonNullable<ReturnType<typeof useApp>['data']>['services']
 }) {
+  const { t } = useTranslation('common')
   const { data: status } = useAppStatus(appId)
   const [selectedService, setSelectedService] = useState<string | undefined>()
   const [tail, setTail] = useState(100)
@@ -748,9 +753,9 @@ function LogsTab({
   return (
     <div className="space-y-4 max-w-4xl">
       <div>
-        <h3 className="text-lg font-semibold">Logs</h3>
+        <h3 className="text-lg font-semibold">{t('apps.logs.title')}</h3>
         <p className="text-sm text-muted-foreground">
-          Watch the logs of the application in real time
+          {t('apps.logs.description')}
         </p>
       </div>
 
@@ -761,7 +766,7 @@ function LogsTab({
           onChange={(e) => setSelectedService(e.target.value || undefined)}
           className="rounded-md border bg-background px-3 py-2 text-sm min-w-[240px]"
         >
-          <option value="">All containers</option>
+          <option value="">{t('apps.logs.allContainers')}</option>
           {containers.length > 0
             ? containers.map((c) => (
                 <option key={c.name} value={c.service}>
@@ -780,10 +785,10 @@ function LogsTab({
           onChange={(e) => setTail(parseInt(e.target.value, 10))}
           className="rounded-md border bg-background px-3 py-2 text-sm"
         >
-          <option value={50}>50 lines</option>
-          <option value={100}>100 lines</option>
-          <option value={500}>500 lines</option>
-          <option value={1000}>1000 lines</option>
+          <option value={50}>50 {t('apps.logs.lines')}</option>
+          <option value={100}>100 {t('apps.logs.lines')}</option>
+          <option value={500}>500 {t('apps.logs.lines')}</option>
+          <option value={1000}>1000 {t('apps.logs.lines')}</option>
         </select>
 
         <div className="flex items-center gap-1 ml-auto">
@@ -794,15 +799,15 @@ function LogsTab({
               strokeWidth={2}
               className={copied ? 'text-green-500' : ''}
             />
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? t('apps.logs.copied') : t('apps.logs.copy')}
           </Button>
           <Button variant="outline" size="sm" onClick={downloadLogs} disabled={!data?.logs}>
             <HugeiconsIcon icon={ArrowLeft01Icon} size={14} strokeWidth={2} className="rotate-[-90deg]" />
-            Download
+            {t('apps.logs.download')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
-            Refresh
+            {t('apps.logs.refresh')}
           </Button>
         </div>
       </div>
@@ -811,12 +816,12 @@ function LogsTab({
         {isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground p-2">
             <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-            Loading logs...
+            {t('status.loading')}
           </div>
         ) : logs.length > 0 ? (
           logs.map((log, i) => <LogLine key={i} message={log.message} type={log.type} />)
         ) : (
-          <span className="text-muted-foreground p-2">No logs available</span>
+          <span className="text-muted-foreground p-2">{t('apps.logs.noLogs')}</span>
         )}
       </div>
     </div>
@@ -825,6 +830,7 @@ function LogsTab({
 
 // Deployments tab - Dokploy style clean list
 function DeploymentsTab({ appId }: { appId: string }) {
+  const { t } = useTranslation('common')
   const { data: deployments, isLoading } = useDeployments(appId)
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null)
 
@@ -839,15 +845,15 @@ function DeploymentsTab({ appId }: { appId: string }) {
   return (
     <div className="max-w-3xl">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold">Deployments</h3>
+        <h3 className="text-lg font-semibold">{t('apps.deployments.title')}</h3>
         <p className="text-sm text-muted-foreground">
-          See the last 10 deployments for this compose
+          {t('apps.deployments.description')}
         </p>
       </div>
 
       {!deployments?.length ? (
         <div className="py-8 text-center text-muted-foreground border rounded-lg">
-          <p>No deployments yet</p>
+          <p>{t('apps.deployments.noDeployments')}</p>
         </div>
       ) : (
         <div className="border rounded-lg divide-y">
@@ -881,15 +887,16 @@ function DeploymentRow({
   number: number
   onViewLogs: () => void
 }) {
+  const { t } = useTranslation('common')
   const getStatusInfo = () => {
     switch (deployment.status) {
       case 'running':
-        return { text: 'Done', color: 'bg-green-500' }
+        return { text: t('apps.deployments.statusDone'), color: 'bg-green-500' }
       case 'failed':
-        return { text: 'Error', color: 'bg-red-500' }
+        return { text: t('apps.deployments.statusError'), color: 'bg-red-500' }
       case 'building':
       case 'pending':
-        return { text: 'Building', color: 'bg-yellow-500' }
+        return { text: t('apps.deployments.statusBuilding'), color: 'bg-yellow-500' }
       default:
         return { text: deployment.status, color: 'bg-gray-400' }
     }
@@ -912,7 +919,7 @@ function DeploymentRow({
           ⏱ {formatDuration(deployment.startedAt, deployment.completedAt)}
         </span>
         <Button size="sm" onClick={onViewLogs}>
-          View
+          {t('apps.deployments.view')}
         </Button>
       </div>
     </div>
@@ -929,6 +936,7 @@ function DeploymentLogsModal({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { t } = useTranslation('common')
   const [copied, setCopied] = useState(false)
 
   const logs = useMemo(() => parseLogs(deployment?.buildLogs ?? ''), [deployment?.buildLogs])
@@ -945,11 +953,11 @@ function DeploymentLogsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!max-w-[90vw] w-[90vw] h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Deployment</DialogTitle>
+          <DialogTitle>{t('apps.deployments.deployment')}</DialogTitle>
           <DialogDescription className="flex items-center gap-2">
-            See all the details of this deployment
+            {t('apps.deployments.seeDetails')}
             <span className="text-muted-foreground">|</span>
-            <span>{logs.length} lines</span>
+            <span>{logs.length} {t('apps.logs.lines')}</span>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyLogs}>
               <HugeiconsIcon
                 icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
@@ -964,7 +972,7 @@ function DeploymentLogsModal({
           {logs.length > 0 ? (
             logs.map((log, i) => <LogLine key={i} message={log.message} type={log.type} />)
           ) : (
-            <span className="text-muted-foreground p-2">No build logs available</span>
+            <span className="text-muted-foreground p-2">{t('apps.deployments.noBuildLogs')}</span>
           )}
         </div>
       </DialogContent>
@@ -974,6 +982,7 @@ function DeploymentLogsModal({
 
 // Environment tab - environment variables
 function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+  const { t } = useTranslation('common')
   const updateApp = useUpdateApp()
 
   // Environment variables state - convert object to "KEY=value" lines
@@ -1012,17 +1021,16 @@ function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['d
   return (
     <div className="space-y-4 max-w-3xl">
       <div>
-        <h3 className="text-lg font-semibold">Environment Variables</h3>
+        <h3 className="text-lg font-semibold">{t('apps.environment.title')}</h3>
         <p className="text-sm text-muted-foreground">
-          Set environment variables for Docker Compose builds. These will be available during the build and in your
-          containers.
+          {t('apps.environment.description')}
         </p>
       </div>
 
       <Textarea
         value={envText}
         onChange={(e) => setEnvText(e.target.value)}
-        placeholder={'DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# Comments are supported'}
+        placeholder={t('apps.environment.placeholder')}
         className="font-mono text-sm min-h-[200px]"
       />
 
@@ -1031,15 +1039,15 @@ function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['d
           {updateApp.isPending ? (
             <>
               <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
-              Saving...
+              {t('status.saving')}
             </>
           ) : envSaved ? (
             <>
               <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} className="text-green-500" />
-              Saved
+              {t('status.saved')}
             </>
           ) : (
-            'Save Environment'
+            t('apps.environment.save')
           )}
         </Button>
       </div>
@@ -1056,6 +1064,7 @@ function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['d
 
 // Domains tab - service exposure and domain configuration
 function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+  const { t } = useTranslation('common')
   const updateApp = useUpdateApp()
 
   // Services/domains state
@@ -1080,6 +1089,9 @@ function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
         })),
       },
     })
+    toast.warning(t('apps.deployToApply'), {
+      description: t('apps.deployToApplyDesc'),
+    })
   }
 
   const updateService = (index: number, updates: Partial<(typeof services)[0]>) => {
@@ -1089,9 +1101,9 @@ function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
   return (
     <div className="space-y-4 max-w-3xl">
       <div>
-        <h3 className="text-lg font-semibold">Domain Configuration</h3>
+        <h3 className="text-lg font-semibold">{t('apps.domains.title')}</h3>
         <p className="text-sm text-muted-foreground">
-          Configure which services are exposed and their domain mappings
+          {t('apps.domains.description')}
         </p>
       </div>
 
@@ -1112,7 +1124,7 @@ function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
                     onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
                   />
                   <Label htmlFor={`expose-${index}`} className="text-sm">
-                    Expose
+                    {t('apps.domains.expose')}
                   </Label>
                 </div>
               </div>
@@ -1120,7 +1132,7 @@ function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
               {service.exposed && (
                 <div className="space-y-2">
                   <Label htmlFor={`domain-${index}`} className="text-sm">
-                    Domain
+                    {t('apps.domains.domain')}
                   </Label>
                   <Input
                     id={`domain-${index}`}
@@ -1135,7 +1147,7 @@ function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
         </div>
       ) : (
         <div className="py-8 text-center text-muted-foreground border rounded-lg">
-          <p>No services configured. Deploy the app first to see available services.</p>
+          <p>{t('apps.domains.noServices')}</p>
         </div>
       )}
 
@@ -1146,10 +1158,10 @@ function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
             {updateApp.isPending ? (
               <>
                 <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
-                Saving...
+                {t('status.saving')}
               </>
             ) : (
-              'Save Domains'
+              t('apps.domains.save')
             )}
           </Button>
         </div>
