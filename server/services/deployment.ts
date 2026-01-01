@@ -8,6 +8,7 @@ import { getDeploymentSettings } from '../lib/settings'
 import { composeBuild } from './docker-compose'
 import {
   ensureSwarmMode,
+  generateSwarmComposeFile,
   stackDeploy,
   stackRemove,
   stackServices,
@@ -185,6 +186,17 @@ export async function deployApp(
       throw new Error(`Build failed: ${buildResult.error}`)
     }
 
+    // Stage 2b: Generate Swarm-compatible compose file
+    // This adds image fields for services with build sections
+    const swarmFileResult = await generateSwarmComposeFile(
+      repo.path,
+      app.composeFile,
+      projectName
+    )
+    if (!swarmFileResult.success) {
+      throw new Error(`Failed to generate Swarm compose file: ${swarmFileResult.error}`)
+    }
+
     // Stage 3: Deploy stack
     onProgress?.({ stage: 'starting', message: 'Deploying stack...' })
 
@@ -192,7 +204,7 @@ export async function deployApp(
       {
         stackName: projectName,
         cwd: repo.path,
-        composeFile: app.composeFile,
+        composeFile: swarmFileResult.swarmFile, // Use the generated Swarm-compatible file
         env,
       },
       (line) => {

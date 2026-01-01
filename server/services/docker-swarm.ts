@@ -1,4 +1,7 @@
 import { spawn } from 'child_process'
+import { readFile, writeFile } from 'fs/promises'
+import { join } from 'path'
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import { log } from '../lib/logger'
 import { getShellEnv } from '../lib/env'
 
@@ -122,6 +125,78 @@ export async function ensureSwarmMode(): Promise<{ initialized: boolean; error?:
 
   const result = await initSwarm()
   return { initialized: result.success, error: result.error }
+}
+
+/**
+ * Generate a Swarm-compatible compose file
+ *
+ * Docker Swarm has different requirements than docker compose:
+ * - Cannot build images inline (needs pre-built images with `image` field)
+ * - Uses `deploy.restart_policy` instead of `restart`
+ *
+ * This function creates a modified compose file that:
+ * 1. Adds `image: {projectName}-{serviceName}` for services with `build` but no `image`
+ * 2. Removes `restart` (Swarm handles this via deploy config)
+ * 3. Writes to `.swarm-compose.yml` in the same directory
+ */
+export async function generateSwarmComposeFile(
+  cwd: string,
+  composeFile: string,
+  projectName: string
+): Promise<{ success: boolean; swarmFile: string; error?: string }> {
+  const swarmFile = '.swarm-compose.yml'
+  const originalPath = join(cwd, composeFile)
+  const swarmPath = join(cwd, swarmFile)
+
+  try {
+    // Read and parse the original compose file
+    const content = await readFile(originalPath, 'utf-8')
+    const parsed = parseYaml(content) as Record<string, unknown>
+
+    if (!parsed || typeof parsed !== 'object') {
+      return { success: false, swarmFile, error: 'Invalid compose file format' }
+    }
+
+    const services = parsed.services as Record<string, Record<string, unknown>> | undefined
+    if (!services) {
+      return { success: false, swarmFile, error: 'No services found in compose file' }
+    }
+
+    // Track which services were modified
+    const modified: string[] = []
+
+    // Process each service
+    for (const [serviceName, serviceConfig] of Object.entries(services)) {
+      // If service has build but no image, add image field
+      // docker compose build creates images as: {projectName}-{serviceName}
+      if (serviceConfig.build && !serviceConfig.image) {
+        serviceConfig.image = `${projectName}-${serviceName}`
+        modified.push(serviceName)
+      }
+
+      // Remove restart (Swarm uses deploy.restart_policy)
+      if (serviceConfig.restart) {
+        delete serviceConfig.restart
+      }
+    }
+
+    // Write the modified compose file
+    const swarmContent = stringifyYaml(parsed)
+    await writeFile(swarmPath, swarmContent, 'utf-8')
+
+    if (modified.length > 0) {
+      log.deploy.info('Generated Swarm compose file', {
+        swarmFile,
+        modifiedServices: modified,
+      })
+    }
+
+    return { success: true, swarmFile }
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.deploy.error('Failed to generate Swarm compose file', { error })
+    return { success: false, swarmFile, error }
+  }
 }
 
 /**
@@ -282,6 +357,66 @@ export async function serviceUpdate(
 }
 
 /**
+ * Check if a service has completed tasks (for one-shot services)
+ * Returns true if the service has at least one "Complete" task and no "Failed" tasks
+ */
+async function hasCompletedTasks(serviceName: string): Promise<boolean> {
+  const result = await runDocker([
+    'service',
+    'ps',
+    serviceName,
+    '--format',
+    '{{.CurrentState}}',
+    '--filter',
+    'desired-state=shutdown',
+  ])
+
+  if (result.exitCode !== 0) {
+    return false
+  }
+
+  const states = result.stdout.trim().split('\n').filter(Boolean)
+
+  // Check if any task completed successfully (state starts with "Complete")
+  const hasComplete = states.some((s) => s.startsWith('Complete'))
+  // Check if any task failed
+  const hasFailed = states.some((s) => s.startsWith('Failed') || s.startsWith('Rejected'))
+
+  return hasComplete && !hasFailed
+}
+
+/**
+ * Check if a service is healthy
+ * - Replicas match (1/1, 2/2, etc.) = healthy
+ * - 0 running with completed tasks (one-shot service) = healthy
+ * - Otherwise = not healthy
+ */
+async function isServiceHealthy(svc: SwarmServiceStatus): Promise<boolean> {
+  const [current, desired] = svc.replicas.split('/').map(Number)
+
+  if (isNaN(current) || isNaN(desired)) {
+    return false
+  }
+
+  // Normal case: replicas match
+  if (current === desired) {
+    return true
+  }
+
+  // One-shot service case: 0 running, but has completed tasks
+  // This handles services like "migrate" that run once and exit
+  if (current === 0 && desired > 0) {
+    const completed = await hasCompletedTasks(svc.name)
+    if (completed) {
+      log.deploy.debug('One-shot service completed', { service: svc.serviceName })
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
  * Wait for all services in a stack to be healthy (replicas match desired)
  */
 export async function waitForServicesHealthy(
@@ -306,9 +441,8 @@ export async function waitForServicesHealthy(
     const unhealthyServices: string[] = []
 
     for (const svc of services) {
-      const [current, desired] = svc.replicas.split('/').map(Number)
-
-      if (isNaN(current) || isNaN(desired) || current !== desired) {
+      const healthy = await isServiceHealthy(svc)
+      if (!healthy) {
         allHealthy = false
         unhealthyServices.push(svc.serviceName)
       }
@@ -333,8 +467,8 @@ export async function waitForServicesHealthy(
   const failedServices: string[] = []
 
   for (const svc of services) {
-    const [current, desired] = svc.replicas.split('/').map(Number)
-    if (isNaN(current) || isNaN(desired) || current !== desired) {
+    const healthy = await isServiceHealthy(svc)
+    if (!healthy) {
       failedServices.push(svc.serviceName)
     }
   }
