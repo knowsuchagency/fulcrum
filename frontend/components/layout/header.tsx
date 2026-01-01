@@ -15,7 +15,7 @@ import {
   GridViewIcon,
   ComputerTerminal01Icon,
   Settings01Icon,
-  LibraryIcon,
+  PackageIcon,
   GitPullRequestIcon,
   BrowserIcon,
   ChartLineData01Icon,
@@ -33,7 +33,7 @@ interface HeaderProps {
 const NAV_ITEMS = [
   { to: '/tasks', icon: GridViewIcon, labelKey: 'header.tasks', matchPrefix: true },
   { to: '/terminals', icon: ComputerTerminal01Icon, labelKey: 'header.terminals', matchPrefix: false },
-  { to: '/repositories', icon: LibraryIcon, labelKey: 'header.repositories', matchPrefix: true },
+  { to: '/repositories', icon: PackageIcon, labelKey: 'header.repositories', matchPrefix: true },
   { to: '/apps', icon: Rocket01Icon, labelKey: 'header.apps', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
   { to: '/monitoring', icon: ChartLineData01Icon, labelKey: 'header.monitoring', matchPrefix: true },

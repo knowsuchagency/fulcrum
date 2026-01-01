@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
-  PlusSignIcon,
+  PackageAddIcon,
   TaskAdd01Icon,
   Folder01Icon,
   Loading03Icon,
@@ -147,7 +147,7 @@ function AddRepositoryButton() {
   return (
     <>
       <Button size="sm" onClick={() => setDialogOpen(true)}>
-        <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+        <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
         <span className="max-sm:hidden">{t('addRepository')}</span>
       </Button>
 
