@@ -102,6 +102,7 @@
       "reload": "Reload",
       "autodeploy": "Autodeploy",
       "noCache": "No-cache",
+      "notifications": "Notifications",
       "services": "Services",
       "noServicesConfigured": "No services configured"
     },

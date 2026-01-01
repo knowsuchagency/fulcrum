@@ -324,6 +324,13 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
     })
   }
 
+  const handleNotificationsToggle = async (enabled: boolean) => {
+    await updateApp.mutateAsync({
+      id: app.id,
+      updates: { notificationsEnabled: enabled },
+    })
+  }
+
   // Get services to display
   const serviceItems = status?.containers && status.containers.length > 0
     ? status.containers.map((container) => {
@@ -388,6 +395,13 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
                 onCheckedChange={(checked) => handleNoCacheToggle(checked === true)}
               />
               <span>{t('apps.general.noCache')}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={app.notificationsEnabled ?? true}
+                onCheckedChange={(checked) => handleNotificationsToggle(checked === true)}
+              />
+              <span>{t('apps.general.notifications')}</span>
             </label>
           </div>
         </div>

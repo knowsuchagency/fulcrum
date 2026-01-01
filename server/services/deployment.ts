@@ -17,6 +17,7 @@ import {
 import { createDnsRecord, deleteDnsRecord, createOriginCACertificate } from './cloudflare'
 import { detectTraefik, addRoute, removeRoute, type TraefikConfig, type AddRouteOptions } from './traefik'
 import { startTraefikContainer, getViboraTraefikConfig, TRAEFIK_CERTS_MOUNT } from './traefik-docker'
+import { sendNotification } from './notification-service'
 import type { Deployment } from '../db/schema'
 
 // Cache detected Traefik config to avoid repeated detection
@@ -412,6 +413,17 @@ export async function deployApp(
       where: eq(deployments.id, deploymentId),
     })
 
+    // Send success notification if enabled for this app
+    if (app.notificationsEnabled !== false) {
+      sendNotification({
+        title: 'Deployment Complete',
+        message: `${app.name} has been deployed successfully`,
+        appId: app.id,
+        appName: app.name,
+        type: 'deployment_success',
+      })
+    }
+
     return { success: true, deployment: deployment! }
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
@@ -436,6 +448,17 @@ export async function deployApp(
       .where(eq(apps.id, appId))
 
     onProgress?.({ stage: 'failed', message: errorMessage })
+
+    // Send failure notification if enabled for this app
+    if (app.notificationsEnabled !== false) {
+      sendNotification({
+        title: 'Deployment Failed',
+        message: `${app.name} deployment failed: ${errorMessage.slice(0, 100)}`,
+        appId: app.id,
+        appName: app.name,
+        type: 'deployment_failed',
+      })
+    }
 
     return { success: false, error: errorMessage }
   }

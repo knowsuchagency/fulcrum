@@ -102,6 +102,7 @@
       "reload": "重新加载",
       "autodeploy": "自动部署",
       "noCache": "无缓存",
+      "notifications": "通知",
       "services": "服务",
       "noServicesConfigured": "未配置服务"
     },

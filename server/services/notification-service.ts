@@ -13,7 +13,9 @@ export interface NotificationPayload {
   message: string
   taskId?: string
   taskTitle?: string
-  type: 'task_status_change' | 'pr_merged' | 'plan_complete'
+  appId?: string
+  appName?: string
+  type: 'task_status_change' | 'pr_merged' | 'plan_complete' | 'deployment_success' | 'deployment_failed'
   url?: string
 }
 
@@ -157,7 +159,11 @@ function broadcastUINotification(
   }
 ): void {
   const notificationType =
-    payload.type === 'pr_merged' || payload.type === 'plan_complete' ? 'success' : 'info'
+    payload.type === 'pr_merged' || payload.type === 'plan_complete' || payload.type === 'deployment_success'
+      ? 'success'
+      : payload.type === 'deployment_failed'
+        ? 'error'
+        : 'info'
 
   broadcast({
     type: 'notification',

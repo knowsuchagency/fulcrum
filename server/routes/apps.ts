@@ -231,6 +231,7 @@ app.patch('/:id', async (c) => {
       autoDeployEnabled?: boolean
       environmentVariables?: Record<string, string>
       noCacheBuild?: boolean
+      notificationsEnabled?: boolean
       services?: Array<{
         id?: string
         serviceName: string
@@ -252,6 +253,9 @@ app.patch('/:id', async (c) => {
     }
     if (body.noCacheBuild !== undefined) {
       updateData.noCacheBuild = body.noCacheBuild
+    }
+    if (body.notificationsEnabled !== undefined) {
+      updateData.notificationsEnabled = body.notificationsEnabled
     }
 
     await db.update(apps).set(updateData).where(eq(apps.id, id))

@@ -87,6 +87,7 @@ export const apps = sqliteTable('apps', {
   autoDeployEnabled: integer('auto_deploy_enabled', { mode: 'boolean' }).default(false),
   environmentVariables: text('environment_variables'), // JSON string: {"KEY": "value", ...}
   noCacheBuild: integer('no_cache_build', { mode: 'boolean' }).default(false),
+  notificationsEnabled: integer('notifications_enabled', { mode: 'boolean' }).default(true),
   lastDeployedAt: text('last_deployed_at'),
   lastDeployCommit: text('last_deploy_commit'),
   createdAt: text('created_at').notNull(),
