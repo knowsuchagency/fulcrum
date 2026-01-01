@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { streamSSE } from 'hono/streaming'
 import { nanoid } from 'nanoid'
 import { eq, desc } from 'drizzle-orm'
 import { db } from '../db'
@@ -311,7 +312,7 @@ app.delete('/:id', async (c) => {
   return c.json({ success: true })
 })
 
-// POST /api/apps/:id/deploy - Trigger deployment
+// POST /api/apps/:id/deploy - Trigger deployment (non-streaming)
 app.post('/:id/deploy', async (c) => {
   const id = c.req.param('id')
 
@@ -331,6 +332,52 @@ app.post('/:id/deploy', async (c) => {
   }
 
   return c.json({ success: true, deployment: result.deployment })
+})
+
+// GET /api/apps/:id/deploy/stream - Stream deployment logs via SSE
+app.get('/:id/deploy/stream', async (c) => {
+  const id = c.req.param('id')
+
+  const existing = await db.query.apps.findFirst({
+    where: eq(apps.id, id),
+  })
+
+  if (!existing) {
+    return c.json({ error: 'App not found' }, 404)
+  }
+
+  // Disable proxy buffering for SSE (required for Cloudflare tunnels)
+  c.header('X-Accel-Buffering', 'no')
+
+  return streamSSE(c, async (stream) => {
+    // Send immediate ping to establish connection
+    await stream.write(': ping\n\n')
+
+    // Start deployment with progress callback
+    const result = await deployApp(
+      id,
+      { deployedBy: 'manual' },
+      async (progress) => {
+        await stream.writeSSE({
+          event: 'progress',
+          data: JSON.stringify(progress),
+        })
+      }
+    )
+
+    // Send final result
+    if (result.success) {
+      await stream.writeSSE({
+        event: 'complete',
+        data: JSON.stringify({ success: true, deployment: result.deployment }),
+      })
+    } else {
+      await stream.writeSSE({
+        event: 'error',
+        data: JSON.stringify({ success: false, error: result.error }),
+      })
+    }
+  })
 })
 
 // POST /api/apps/:id/stop - Stop app

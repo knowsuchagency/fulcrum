@@ -1,6 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useCallback, useRef } from 'react'
 import { fetchJSON } from '@/lib/api'
 import type { App, AppService, Deployment, ParsedComposeFile, ContainerStatus } from '@/types'
+
+export type DeploymentStage = 'pulling' | 'building' | 'starting' | 'configuring' | 'done' | 'failed'
+
+export interface DeploymentProgress {
+  stage: DeploymentStage
+  message: string
+  progress?: number
+}
 
 const API_BASE = ''
 
@@ -112,7 +121,7 @@ export function useDeleteApp() {
   })
 }
 
-// Deploy app
+// Deploy app (non-streaming)
 export function useDeployApp() {
   const queryClient = useQueryClient()
 
@@ -129,6 +138,103 @@ export function useDeployApp() {
       queryClient.invalidateQueries({ queryKey: ['apps', id, 'deployments'] })
     },
   })
+}
+
+// Deploy app with SSE streaming for real-time logs
+export function useDeployAppStream() {
+  const queryClient = useQueryClient()
+  const [isDeploying, setIsDeploying] = useState(false)
+  const [logs, setLogs] = useState<string[]>([])
+  const [stage, setStage] = useState<DeploymentStage | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [deployment, setDeployment] = useState<Deployment | null>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
+
+  const deploy = useCallback(
+    (id: string) => {
+      // Reset state
+      setIsDeploying(true)
+      setLogs([])
+      setStage(null)
+      setError(null)
+      setDeployment(null)
+
+      // Close any existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+      }
+
+      // Create EventSource for SSE
+      const eventSource = new EventSource(`${API_BASE}/api/apps/${id}/deploy/stream`)
+      eventSourceRef.current = eventSource
+
+      eventSource.addEventListener('progress', (e) => {
+        const progress = JSON.parse(e.data) as DeploymentProgress
+        setStage(progress.stage)
+        setLogs((prev) => [...prev, progress.message])
+      })
+
+      eventSource.addEventListener('complete', (e) => {
+        const result = JSON.parse(e.data) as { success: boolean; deployment: Deployment }
+        setDeployment(result.deployment)
+        setIsDeploying(false)
+        eventSource.close()
+
+        // Invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['apps'] })
+        queryClient.invalidateQueries({ queryKey: ['apps', id] })
+        queryClient.invalidateQueries({ queryKey: ['apps', id, 'deployments'] })
+      })
+
+      eventSource.addEventListener('error', (e) => {
+        if (e instanceof MessageEvent) {
+          const result = JSON.parse(e.data) as { success: boolean; error: string }
+          setError(result.error)
+        } else {
+          setError('Connection lost during deployment')
+        }
+        setIsDeploying(false)
+        eventSource.close()
+
+        // Invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['apps'] })
+        queryClient.invalidateQueries({ queryKey: ['apps', id] })
+        queryClient.invalidateQueries({ queryKey: ['apps', id, 'deployments'] })
+      })
+
+      eventSource.onerror = () => {
+        // Only set error if we're still deploying (not already handled by error event)
+        if (isDeploying) {
+          setError('Connection lost during deployment')
+          setIsDeploying(false)
+        }
+        eventSource.close()
+      }
+    },
+    [queryClient, isDeploying]
+  )
+
+  const reset = useCallback(() => {
+    setIsDeploying(false)
+    setLogs([])
+    setStage(null)
+    setError(null)
+    setDeployment(null)
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+  }, [])
+
+  return {
+    deploy,
+    reset,
+    isDeploying,
+    logs,
+    stage,
+    error,
+    deployment,
+  }
 }
 
 // Stop app

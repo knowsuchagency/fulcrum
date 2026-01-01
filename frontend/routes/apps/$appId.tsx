@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   useApp,
-  useDeployApp,
+  useDeployAppStream,
   useStopApp,
   useAppLogs,
   useDeployments,
@@ -11,6 +11,7 @@ import {
   useDeleteApp,
   useComposeFile,
   useWriteComposeFile,
+  type DeploymentStage,
 } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -234,16 +235,27 @@ function AppDetailView() {
 // General tab - dense 2-column layout
 function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
   const { data: status } = useAppStatus(app.id)
-  const deployApp = useDeployApp()
+  const deployStream = useDeployAppStream()
   const stopApp = useStopApp()
   const updateApp = useUpdateApp()
+  const [showStreamingLogs, setShowStreamingLogs] = useState(false)
 
-  const handleDeploy = async () => {
-    await deployApp.mutateAsync(app.id)
+  const handleDeploy = () => {
+    deployStream.deploy(app.id)
+    setShowStreamingLogs(true)
   }
 
   const handleStop = async () => {
     await stopApp.mutateAsync(app.id)
+  }
+
+  // Close modal when deployment completes and reset after a brief delay
+  const handleStreamingLogsClose = (open: boolean) => {
+    setShowStreamingLogs(open)
+    if (!open) {
+      // Small delay before reset so user can still see final state
+      setTimeout(() => deployStream.reset(), 300)
+    }
   }
 
   const handleAutoDeployToggle = async (enabled: boolean) => {
@@ -284,15 +296,15 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
         <div className="rounded-lg border p-4 space-y-3">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Deploy</h4>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={handleDeploy} disabled={deployApp.isPending || app.status === 'building'}>
-              {deployApp.isPending || app.status === 'building' ? (
+            <Button size="sm" onClick={handleDeploy} disabled={deployStream.isDeploying || app.status === 'building'}>
+              {deployStream.isDeploying || app.status === 'building' ? (
                 <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
               ) : (
                 <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
               )}
-              {app.status === 'building' ? 'Building...' : 'Deploy'}
+              {deployStream.isDeploying ? 'Deploying...' : app.status === 'building' ? 'Building...' : 'Deploy'}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDeploy} disabled={deployApp.isPending}>
+            <Button variant="outline" size="sm" onClick={handleDeploy} disabled={deployStream.isDeploying}>
               <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
               Reload
             </Button>
@@ -364,7 +376,123 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
 
       {/* Bottom row: Compose file full width */}
       <ComposeFileEditor app={app} />
+
+      {/* Streaming deployment logs modal */}
+      <StreamingDeploymentModal
+        open={showStreamingLogs}
+        onOpenChange={handleStreamingLogsClose}
+        logs={deployStream.logs}
+        stage={deployStream.stage}
+        error={deployStream.error}
+        isDeploying={deployStream.isDeploying}
+      />
     </div>
+  )
+}
+
+// Streaming deployment logs modal - shows real-time logs during deployment
+function StreamingDeploymentModal({
+  open,
+  onOpenChange,
+  logs,
+  stage,
+  error,
+  isDeploying,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  logs: string[]
+  stage: DeploymentStage | null
+  error: string | null
+  isDeploying: boolean
+}) {
+  const [copied, setCopied] = useState(false)
+  const logsContainerRef = useRef<HTMLDivElement>(null)
+
+  // Parse logs for display
+  const parsedLogs = useMemo(() => parseLogs(logs.join('\n')), [logs])
+
+  // Auto-scroll to bottom when new logs arrive
+  useEffect(() => {
+    if (logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight
+    }
+  }, [logs])
+
+  const copyLogs = async () => {
+    await navigator.clipboard.writeText(logs.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const getStageLabel = (stage: DeploymentStage | null): string => {
+    switch (stage) {
+      case 'pulling':
+        return 'Pulling code...'
+      case 'building':
+        return 'Building containers...'
+      case 'starting':
+        return 'Starting services...'
+      case 'configuring':
+        return 'Configuring routing...'
+      case 'done':
+        return 'Deployment complete!'
+      case 'failed':
+        return 'Deployment failed'
+      default:
+        return 'Preparing...'
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="!max-w-[90vw] w-[90vw] h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            Deployment
+            {isDeploying && (
+              <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
+            )}
+            {!isDeploying && !error && stage === 'done' && (
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} className="text-green-500" />
+            )}
+            {error && (
+              <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} className="text-destructive" />
+            )}
+          </DialogTitle>
+          <DialogDescription className="flex items-center gap-2">
+            {getStageLabel(stage)}
+            <span className="text-muted-foreground">|</span>
+            <span>{parsedLogs.length} lines</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyLogs} disabled={logs.length === 0}>
+              <HugeiconsIcon
+                icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
+                size={14}
+                strokeWidth={2}
+                className={copied ? 'text-green-500' : ''}
+              />
+            </Button>
+          </DialogDescription>
+        </DialogHeader>
+        <div
+          ref={logsContainerRef}
+          className="flex-1 overflow-auto rounded-lg border bg-muted/30 p-2 custom-logs-scrollbar"
+        >
+          {parsedLogs.length > 0 ? (
+            parsedLogs.map((log, i) => <LogLine key={i} message={log.message} type={log.type} />)
+          ) : isDeploying ? (
+            <span className="text-muted-foreground p-2">Waiting for logs...</span>
+          ) : (
+            <span className="text-muted-foreground p-2">No build logs available</span>
+          )}
+          {error && (
+            <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-sm">
+              Error: {error}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
