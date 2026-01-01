@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
 import { log } from '../lib/logger'
 import { getShellEnv } from '../lib/env'
 
@@ -8,6 +8,8 @@ export interface ComposeBuildOptions {
   composeFile?: string
   env?: Record<string, string>
   noCache?: boolean
+  signal?: AbortSignal
+  onProcess?: (proc: ChildProcess) => void
 }
 
 /**
@@ -15,9 +17,21 @@ export interface ComposeBuildOptions {
  */
 async function runCompose(
   args: string[],
-  options: { projectName: string; cwd: string; composeFile?: string; env?: Record<string, string> },
+  options: {
+    projectName: string
+    cwd: string
+    composeFile?: string
+    env?: Record<string, string>
+    signal?: AbortSignal
+    onProcess?: (proc: ChildProcess) => void
+  },
   onOutput?: (line: string) => void
-): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+): Promise<{ stdout: string; stderr: string; exitCode: number; aborted?: boolean }> {
+  // Check if already aborted
+  if (options.signal?.aborted) {
+    return { stdout: '', stderr: 'Aborted', exitCode: -1, aborted: true }
+  }
+
   const fullArgs = ['compose', '-p', options.projectName]
 
   if (options.composeFile) {
@@ -37,8 +51,22 @@ async function runCompose(
       },
     })
 
+    // Allow caller to track the process for cancellation
+    options.onProcess?.(proc)
+
     let stdout = ''
     let stderr = ''
+    let aborted = false
+
+    // Handle abort signal
+    const abortHandler = () => {
+      if (!proc.killed) {
+        log.deploy.info('Aborting docker compose command', { args: fullArgs })
+        aborted = true
+        proc.kill('SIGTERM')
+      }
+    }
+    options.signal?.addEventListener('abort', abortHandler)
 
     proc.stdout.on('data', (data) => {
       const text = data.toString()
@@ -61,12 +89,14 @@ async function runCompose(
     })
 
     proc.on('close', (code) => {
-      resolve({ stdout, stderr, exitCode: code ?? 0 })
+      options.signal?.removeEventListener('abort', abortHandler)
+      resolve({ stdout, stderr, exitCode: code ?? 0, aborted })
     })
 
     proc.on('error', (err) => {
+      options.signal?.removeEventListener('abort', abortHandler)
       log.deploy.error('Docker compose spawn error', { error: String(err) })
-      resolve({ stdout, stderr, exitCode: 1 })
+      resolve({ stdout, stderr, exitCode: 1, aborted })
     })
   })
 }
@@ -80,7 +110,12 @@ async function runCompose(
 export async function composeBuild(
   options: ComposeBuildOptions,
   onOutput?: (line: string) => void
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; aborted?: boolean }> {
+  // Check if already aborted
+  if (options.signal?.aborted) {
+    return { success: false, error: 'Build cancelled', aborted: true }
+  }
+
   log.deploy.info('Building compose stack', { project: options.projectName, noCache: options.noCache })
 
   const args = ['build', '--progress', 'plain']
@@ -89,6 +124,11 @@ export async function composeBuild(
   }
 
   const result = await runCompose(args, options, onOutput)
+
+  if (result.aborted) {
+    log.deploy.info('Compose build cancelled', { project: options.projectName })
+    return { success: false, error: 'Build cancelled', aborted: true }
+  }
 
   if (result.exitCode !== 0) {
     log.deploy.error('Compose build failed', {

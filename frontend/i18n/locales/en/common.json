@@ -76,6 +76,8 @@
     "deploy": "Deploy",
     "deploying": "Deploying...",
     "building": "Building...",
+    "cancelDeploy": "Cancel",
+    "cancelling": "Cancelling...",
     "delete": "Delete",
     "deleting": "Deleting...",
     "searchApps": "Search apps...",
@@ -157,6 +159,7 @@
       "configuring": "Configuring routing...",
       "done": "Deployment complete!",
       "failed": "Deployment failed",
+      "cancelled": "Deployment cancelled",
       "preparing": "Preparing...",
       "waitingForLogs": "Waiting for logs..."
     },

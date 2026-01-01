@@ -76,6 +76,8 @@
     "deploy": "部署",
     "deploying": "部署中...",
     "building": "构建中...",
+    "cancelDeploy": "取消",
+    "cancelling": "取消中...",
     "delete": "删除",
     "deleting": "删除中...",
     "searchApps": "搜索应用...",
@@ -157,6 +159,7 @@
       "configuring": "配置路由...",
       "done": "部署完成！",
       "failed": "部署失败",
+      "cancelled": "部署已取消",
       "preparing": "准备中...",
       "waitingForLogs": "等待日志..."
     },

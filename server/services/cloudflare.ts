@@ -45,69 +45,20 @@ export async function getZoneId(domain: string): Promise<string | null> {
 }
 
 /**
- * Check if a wildcard A record exists pointing to the target IP
- */
-export async function checkWildcardRecord(
-  domain: string,
-  targetIp: string
-): Promise<{ exists: boolean; matchesIp: boolean; currentIp?: string }> {
-  const client = getClient()
-  if (!client) return { exists: false, matchesIp: false }
-
-  try {
-    const zoneId = await getZoneId(domain)
-    if (!zoneId) return { exists: false, matchesIp: false }
-
-    const wildcardName = `*.${domain}`
-    const records = await client.dns.records.list({
-      zone_id: zoneId,
-      type: 'A',
-      name: wildcardName,
-    })
-
-    const wildcard = records.result?.[0]
-    if (!wildcard || wildcard.type !== 'A') {
-      return { exists: false, matchesIp: false }
-    }
-
-    return {
-      exists: true,
-      matchesIp: wildcard.content === targetIp,
-      currentIp: wildcard.content,
-    }
-  } catch (err) {
-    log.deploy.error('Failed to check wildcard record', { domain, error: String(err) })
-    return { exists: false, matchesIp: false }
-  }
-}
-
-/**
- * Create a DNS A record for a subdomain
- * Returns skipped: true if a wildcard record already handles this subdomain
+ * Create or update a DNS A record for a subdomain
  */
 export async function createDnsRecord(
   subdomain: string,
   domain: string,
   ip: string,
   proxied = true
-): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+): Promise<{ success: boolean; error?: string }> {
   const client = getClient()
   if (!client) {
     return { success: false, error: 'Cloudflare API token not configured' }
   }
 
   try {
-    // Check for wildcard first
-    const wildcard = await checkWildcardRecord(domain, ip)
-    if (wildcard.exists && wildcard.matchesIp) {
-      log.deploy.info('Wildcard record exists, skipping subdomain creation', {
-        domain,
-        subdomain,
-        wildcardIp: wildcard.currentIp,
-      })
-      return { success: true, skipped: true }
-    }
-
     const zoneId = await getZoneId(domain)
     if (!zoneId) {
       return { success: false, error: `Zone not found for domain: ${domain}` }

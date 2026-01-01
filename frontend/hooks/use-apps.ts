@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from 'react'
 import { fetchJSON } from '@/lib/api'
 import type { App, AppService, Deployment, ParsedComposeFile, ContainerStatus } from '@/types'
 
-export type DeploymentStage = 'pulling' | 'building' | 'starting' | 'configuring' | 'done' | 'failed'
+export type DeploymentStage = 'pulling' | 'building' | 'starting' | 'configuring' | 'done' | 'failed' | 'cancelled'
 
 export interface DeploymentProgress {
   stage: DeploymentStage
@@ -245,6 +245,22 @@ export function useStopApp() {
   return useMutation({
     mutationFn: (id: string) =>
       fetchJSON<{ success: boolean }>(`${API_BASE}/api/apps/${id}/stop`, {
+        method: 'POST',
+      }),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['apps'] })
+      queryClient.invalidateQueries({ queryKey: ['apps', id] })
+    },
+  })
+}
+
+// Cancel deployment
+export function useCancelDeployment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/apps/${id}/cancel-deploy`, {
         method: 'POST',
       }),
     onSuccess: (_, id) => {

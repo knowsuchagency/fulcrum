@@ -5,6 +5,7 @@ import {
   useApp,
   useDeployAppStream,
   useStopApp,
+  useCancelDeployment,
   useAppLogs,
   useDeployments,
   useAppStatus,
@@ -124,6 +125,24 @@ function AppDetailView() {
   const activeTab = tab || 'general'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  // Deployment state - lifted up so multiple tabs can trigger deploys
+  const deployStream = useDeployAppStream()
+  const [showStreamingLogs, setShowStreamingLogs] = useState(false)
+
+  const handleDeploy = useCallback(() => {
+    if (app) {
+      deployStream.deploy(app.id)
+      setShowStreamingLogs(true)
+    }
+  }, [app, deployStream])
+
+  const handleStreamingLogsClose = useCallback((open: boolean) => {
+    setShowStreamingLogs(open)
+    if (!open) {
+      setTimeout(() => deployStream.reset(), 300)
+    }
+  }, [deployStream])
+
   // Show DNS warning if app has exposed services but Cloudflare is not configured
   const hasExposedServices = app?.services?.some((s) => s.exposed && s.domain)
   const showDnsWarning = hasExposedServices && prereqs && !prereqs.settings.cloudflareConfigured
@@ -238,7 +257,11 @@ function AppDetailView() {
           </div>
 
           <TabsContent value="general">
-            <GeneralTab app={app} />
+            <GeneralTab
+              app={app}
+              onDeploy={handleDeploy}
+              deployStream={deployStream}
+            />
           </TabsContent>
 
           <TabsContent value="deployments">
@@ -254,10 +277,21 @@ function AppDetailView() {
           </TabsContent>
 
           <TabsContent value="domains">
-            <DomainsTab app={app} />
+            <DomainsTab app={app} onDeploy={handleDeploy} />
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Streaming deployment logs modal - at parent level so it works from any tab */}
+      <StreamingDeploymentModal
+        appId={appId}
+        open={showStreamingLogs}
+        onOpenChange={handleStreamingLogsClose}
+        logs={deployStream.logs}
+        stage={deployStream.stage}
+        error={deployStream.error}
+        isDeploying={deployStream.isDeploying}
+      />
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
@@ -284,31 +318,30 @@ function AppDetailView() {
 }
 
 // General tab - dense 2-column layout
-function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+function GeneralTab({
+  app,
+  onDeploy,
+  deployStream,
+}: {
+  app: NonNullable<ReturnType<typeof useApp>['data']>
+  onDeploy: () => void
+  deployStream: ReturnType<typeof useDeployAppStream>
+}) {
   const { t } = useTranslation('common')
   const { data: status } = useAppStatus(app.id)
-  const deployStream = useDeployAppStream()
   const stopApp = useStopApp()
+  const cancelDeployment = useCancelDeployment()
   const updateApp = useUpdateApp()
-  const [showStreamingLogs, setShowStreamingLogs] = useState(false)
-
-  const handleDeploy = () => {
-    deployStream.deploy(app.id)
-    setShowStreamingLogs(true)
-  }
 
   const handleStop = async () => {
     await stopApp.mutateAsync(app.id)
   }
 
-  // Close modal when deployment completes and reset after a brief delay
-  const handleStreamingLogsClose = (open: boolean) => {
-    setShowStreamingLogs(open)
-    if (!open) {
-      // Small delay before reset so user can still see final state
-      setTimeout(() => deployStream.reset(), 300)
-    }
+  const handleCancelDeploy = async () => {
+    await cancelDeployment.mutateAsync(app.id)
   }
+
+  const isBuilding = deployStream.isDeploying || app.status === 'building'
 
   const handleAutoDeployToggle = async (enabled: boolean) => {
     await updateApp.mutateAsync({
@@ -355,31 +388,49 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
         <div className="rounded-lg border p-4 space-y-3">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.general.deploy')}</h4>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={handleDeploy} disabled={deployStream.isDeploying || app.status === 'building'}>
-              {deployStream.isDeploying || app.status === 'building' ? (
+            <Button size="sm" onClick={onDeploy} disabled={isBuilding}>
+              {isBuilding ? (
                 <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
               ) : (
                 <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
               )}
               {deployStream.isDeploying ? t('apps.deploying') : app.status === 'building' ? t('apps.building') : t('apps.deploy')}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDeploy} disabled={deployStream.isDeploying}>
-              <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
-              {t('apps.general.reload')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleStop}
-              disabled={stopApp.isPending || app.status !== 'running'}
-            >
-              {stopApp.isPending ? (
-                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-              ) : (
-                <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
-              )}
-              {t('apps.stop')}
-            </Button>
+            {isBuilding ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleCancelDeploy}
+                disabled={cancelDeployment.isPending}
+              >
+                {cancelDeployment.isPending ? (
+                  <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                ) : (
+                  <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+                )}
+                {cancelDeployment.isPending ? t('apps.cancelling') : t('apps.cancelDeploy')}
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={onDeploy} disabled={isBuilding}>
+                  <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
+                  {t('apps.general.reload')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleStop}
+                  disabled={stopApp.isPending || app.status !== 'running'}
+                >
+                  {stopApp.isPending ? (
+                    <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                  ) : (
+                    <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+                  )}
+                  {t('apps.stop')}
+                </Button>
+              </>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -442,22 +493,13 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
 
       {/* Bottom row: Compose file full width */}
       <ComposeFileEditor app={app} />
-
-      {/* Streaming deployment logs modal */}
-      <StreamingDeploymentModal
-        open={showStreamingLogs}
-        onOpenChange={handleStreamingLogsClose}
-        logs={deployStream.logs}
-        stage={deployStream.stage}
-        error={deployStream.error}
-        isDeploying={deployStream.isDeploying}
-      />
     </div>
   )
 }
 
 // Streaming deployment logs modal - shows real-time logs during deployment
 function StreamingDeploymentModal({
+  appId,
   open,
   onOpenChange,
   logs,
@@ -465,6 +507,7 @@ function StreamingDeploymentModal({
   error,
   isDeploying,
 }: {
+  appId: string
   open: boolean
   onOpenChange: (open: boolean) => void
   logs: string[]
@@ -475,6 +518,7 @@ function StreamingDeploymentModal({
   const { t } = useTranslation('common')
   const [copied, setCopied] = useState(false)
   const logsContainerRef = useRef<HTMLDivElement>(null)
+  const cancelDeployment = useCancelDeployment()
 
   // Parse logs for display
   const parsedLogs = useMemo(() => parseLogs(logs.join('\n')), [logs])
@@ -492,6 +536,10 @@ function StreamingDeploymentModal({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleCancel = async () => {
+    await cancelDeployment.mutateAsync(appId)
+  }
+
   const getStageLabel = (stage: DeploymentStage | null): string => {
     switch (stage) {
       case 'pulling':
@@ -506,6 +554,8 @@ function StreamingDeploymentModal({
         return t('apps.streaming.done')
       case 'failed':
         return t('apps.streaming.failed')
+      case 'cancelled':
+        return t('apps.streaming.cancelled')
       default:
         return t('apps.streaming.preparing')
     }
@@ -529,6 +579,24 @@ function StreamingDeploymentModal({
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
             {getStageLabel(stage)}
+            {isDeploying && (
+              <>
+                <span className="text-muted-foreground">|</span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={cancelDeployment.isPending}
+                >
+                  {cancelDeployment.isPending ? (
+                    <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                  ) : (
+                    <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+                  )}
+                  {cancelDeployment.isPending ? t('apps.cancelling') : t('apps.cancelDeploy')}
+                </Button>
+              </>
+            )}
             <span className="text-muted-foreground">|</span>
             <span>{parsedLogs.length} {t('apps.logs.lines')}</span>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyLogs} disabled={logs.length === 0}>
@@ -1077,7 +1145,13 @@ function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['d
 }
 
 // Domains tab - service exposure and domain configuration
-function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+function DomainsTab({
+  app,
+  onDeploy,
+}: {
+  app: NonNullable<ReturnType<typeof useApp>['data']>
+  onDeploy: () => void
+}) {
   const { t } = useTranslation('common')
   const updateApp = useUpdateApp()
 
@@ -1105,6 +1179,10 @@ function DomainsTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
     })
     toast.warning(t('apps.deployToApply'), {
       description: t('apps.deployToApplyDesc'),
+      action: {
+        label: t('apps.deploy'),
+        onClick: onDeploy,
+      },
     })
   }
 

@@ -14,11 +14,21 @@ import {
   stackServices,
   waitForServicesHealthy,
 } from './docker-swarm'
-import { createDnsRecord, deleteDnsRecord, createOriginCACertificate } from './cloudflare'
+import { createDnsRecord, createOriginCACertificate } from './cloudflare'
 import { detectTraefik, addRoute, removeRoute, type TraefikConfig, type AddRouteOptions } from './traefik'
 import { startTraefikContainer, getViboraTraefikConfig, TRAEFIK_CERTS_MOUNT } from './traefik-docker'
 import { sendNotification } from './notification-service'
+import {
+  registerDeployment,
+  addProcess,
+  cleanupDeployment,
+  cancelDeploymentByAppId,
+  getActiveDeploymentId,
+} from './deployment-controller'
 import type { Deployment } from '../db/schema'
+
+// Re-export for API use
+export { cancelDeploymentByAppId, getActiveDeploymentId }
 
 // Cache detected Traefik config to avoid repeated detection
 let cachedTraefikConfig: TraefikConfig | null = null
@@ -100,7 +110,7 @@ async function ensureTraefik(): Promise<TraefikConfig> {
 }
 
 export interface DeploymentProgress {
-  stage: 'pulling' | 'building' | 'starting' | 'configuring' | 'done' | 'failed'
+  stage: 'pulling' | 'building' | 'starting' | 'configuring' | 'done' | 'failed' | 'cancelled'
   message: string
   progress?: number
 }
@@ -152,7 +162,7 @@ export async function deployApp(
   appId: string,
   options: { deployedBy?: 'manual' | 'auto' | 'rollback' } = {},
   onProgress?: DeploymentProgressCallback
-): Promise<{ success: boolean; deployment?: Deployment; error?: string }> {
+): Promise<{ success: boolean; deployment?: Deployment; error?: string; cancelled?: boolean }> {
   const deployedBy = options.deployedBy ?? 'manual'
 
   // Get app and repository
@@ -191,6 +201,17 @@ export async function deployApp(
     createdAt: now,
   })
 
+  // Register deployment for cancellation tracking
+  const abortController = registerDeployment(deploymentId, appId)
+  const signal = abortController.signal
+
+  // Helper to check if cancelled
+  const checkCancelled = () => {
+    if (signal.aborted) {
+      throw new Error('DEPLOYMENT_CANCELLED')
+    }
+  }
+
   // Update app status
   await db.update(apps).set({ status: 'building', updatedAt: now }).where(eq(apps.id, appId))
 
@@ -221,6 +242,7 @@ export async function deployApp(
     const commitInfo = await getGitCommit(repo.path)
 
     // Stage 2: Build containers
+    checkCancelled()
     onProgress?.({ stage: 'building', message: 'Building containers...' })
 
     const buildResult = await composeBuild(
@@ -230,12 +252,18 @@ export async function deployApp(
         composeFile: app.composeFile,
         env,
         noCache: app.noCacheBuild ?? false,
+        signal,
+        onProcess: (proc) => addProcess(deploymentId, proc),
       },
       (line) => {
         buildLogs.push(line)
         onProgress?.({ stage: 'building', message: line })
       }
     )
+
+    if (buildResult.aborted) {
+      throw new Error('DEPLOYMENT_CANCELLED')
+    }
 
     if (!buildResult.success) {
       throw new Error(`Build failed: ${buildResult.error}`)
@@ -255,6 +283,7 @@ export async function deployApp(
     }
 
     // Stage 3: Deploy stack
+    checkCancelled()
     onProgress?.({ stage: 'starting', message: 'Deploying stack...' })
 
     const deployResult = await stackDeploy(
@@ -263,6 +292,8 @@ export async function deployApp(
         cwd: repo.path,
         composeFile: swarmFileResult.swarmFile, // Use the generated Swarm-compatible file
         env,
+        signal,
+        onProcess: (proc) => addProcess(deploymentId, proc),
       },
       (line) => {
         buildLogs.push(line)
@@ -270,14 +301,22 @@ export async function deployApp(
       }
     )
 
+    if (deployResult.aborted) {
+      throw new Error('DEPLOYMENT_CANCELLED')
+    }
+
     if (!deployResult.success) {
       throw new Error(`Failed to deploy stack: ${deployResult.error}`)
     }
 
     // Wait for services to be healthy
+    checkCancelled()
     onProgress?.({ stage: 'starting', message: 'Waiting for services to be healthy...' })
 
-    const healthResult = await waitForServicesHealthy(projectName, 120000) // 2 minute timeout
+    const healthResult = await waitForServicesHealthy(projectName, 120000, signal) // 2 minute timeout
+    if (healthResult.aborted) {
+      throw new Error('DEPLOYMENT_CANCELLED')
+    }
     if (!healthResult.healthy) {
       log.deploy.warn('Some services did not become healthy', {
         stackName: projectName,
@@ -287,6 +326,7 @@ export async function deployApp(
     }
 
     // Stage 4: Configure routing (DNS + Traefik)
+    checkCancelled()
     onProgress?.({ stage: 'configuring', message: 'Configuring DNS and proxy...' })
 
     const settings = getSettings()
@@ -409,6 +449,9 @@ export async function deployApp(
 
     onProgress?.({ stage: 'done', message: 'Deployment complete!' })
 
+    // Clean up deployment tracking
+    cleanupDeployment(deploymentId)
+
     const deployment = await db.query.deployments.findFirst({
       where: eq(deployments.id, deploymentId),
     })
@@ -427,6 +470,40 @@ export async function deployApp(
     return { success: true, deployment: deployment! }
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
+    const isCancelled = errorMessage === 'DEPLOYMENT_CANCELLED'
+
+    // Clean up deployment tracking
+    cleanupDeployment(deploymentId)
+
+    if (isCancelled) {
+      log.deploy.info('Deployment cancelled', { appId, deploymentId })
+
+      // Update deployment as cancelled
+      await db
+        .update(deployments)
+        .set({
+          status: 'cancelled',
+          buildLogs: buildLogs.join('\n'),
+          errorMessage: 'Deployment cancelled by user',
+          completedAt: new Date().toISOString(),
+        })
+        .where(eq(deployments.id, deploymentId))
+
+      // Update app status back to stopped (not failed)
+      await db
+        .update(apps)
+        .set({ status: 'stopped', updatedAt: new Date().toISOString() })
+        .where(eq(apps.id, appId))
+
+      // Try to clean up any partially deployed stack
+      const projectName = getProjectName(appId)
+      stackRemove(projectName).catch(() => {
+        // Ignore errors during cleanup
+      })
+
+      onProgress?.({ stage: 'cancelled', message: 'Deployment cancelled' })
+      return { success: false, error: 'Deployment cancelled', cancelled: true }
+    }
 
     log.deploy.error('Deployment failed', { appId, error: errorMessage })
 
@@ -466,6 +543,8 @@ export async function deployApp(
 
 /**
  * Stop an app
+ * Note: DNS records are preserved so traffic routes correctly on redeploy.
+ * DNS cleanup happens on domain change or app deletion.
  */
 export async function stopApp(appId: string): Promise<{ success: boolean; error?: string }> {
   const app = await db.query.apps.findFirst({
@@ -493,12 +572,11 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
     return { success: false, error: removeResult.error }
   }
 
-  // Remove routes and DNS records
+  // Remove Traefik routes (but preserve DNS records for quick redeploy)
   const services = await db.query.appServices.findMany({
     where: eq(appServices.appId, appId),
   })
 
-  // Get Traefik config for route removal
   const traefikConfig = await getTraefikConfig()
 
   for (const service of services) {
@@ -506,13 +584,6 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
       // Remove Traefik route
       if (traefikConfig) {
         await removeRoute(traefikConfig, appId)
-      }
-
-      // Remove DNS record
-      const [subdomain, ...domainParts] = service.domain.split('.')
-      const domain = domainParts.join('.')
-      if (domain) {
-        await deleteDnsRecord(subdomain, domain)
       }
 
       // Update service status

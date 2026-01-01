@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
 import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
@@ -20,6 +20,8 @@ export interface StackDeployOptions {
   cwd: string
   composeFile?: string
   env?: Record<string, string>
+  signal?: AbortSignal
+  onProcess?: (proc: ChildProcess) => void
 }
 
 /**
@@ -27,9 +29,19 @@ export interface StackDeployOptions {
  */
 async function runDocker(
   args: string[],
-  options: { cwd?: string; env?: Record<string, string> } = {},
+  options: {
+    cwd?: string
+    env?: Record<string, string>
+    signal?: AbortSignal
+    onProcess?: (proc: ChildProcess) => void
+  } = {},
   onOutput?: (line: string) => void
-): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+): Promise<{ stdout: string; stderr: string; exitCode: number; aborted?: boolean }> {
+  // Check if already aborted
+  if (options.signal?.aborted) {
+    return { stdout: '', stderr: 'Aborted', exitCode: -1, aborted: true }
+  }
+
   log.deploy.debug('Running docker command', { args, cwd: options.cwd })
 
   return new Promise((resolve) => {
@@ -41,8 +53,22 @@ async function runDocker(
       },
     })
 
+    // Allow caller to track the process for cancellation
+    options.onProcess?.(proc)
+
     let stdout = ''
     let stderr = ''
+    let aborted = false
+
+    // Handle abort signal
+    const abortHandler = () => {
+      if (!proc.killed) {
+        log.deploy.info('Aborting docker command', { args })
+        aborted = true
+        proc.kill('SIGTERM')
+      }
+    }
+    options.signal?.addEventListener('abort', abortHandler)
 
     proc.stdout.on('data', (data) => {
       const text = data.toString()
@@ -65,12 +91,14 @@ async function runDocker(
     })
 
     proc.on('close', (code) => {
-      resolve({ stdout, stderr, exitCode: code ?? 0 })
+      options.signal?.removeEventListener('abort', abortHandler)
+      resolve({ stdout, stderr, exitCode: code ?? 0, aborted })
     })
 
     proc.on('error', (err) => {
+      options.signal?.removeEventListener('abort', abortHandler)
       log.deploy.error('Docker spawn error', { error: String(err) })
-      resolve({ stdout, stderr, exitCode: 1 })
+      resolve({ stdout, stderr, exitCode: 1, aborted })
     })
   })
 }
@@ -235,7 +263,12 @@ export async function generateSwarmComposeFile(
 export async function stackDeploy(
   options: StackDeployOptions,
   onOutput?: (line: string) => void
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; aborted?: boolean }> {
+  // Check if already aborted
+  if (options.signal?.aborted) {
+    return { success: false, error: 'Deploy cancelled', aborted: true }
+  }
+
   log.deploy.info('Deploying stack', { stackName: options.stackName })
 
   const args = ['stack', 'deploy']
@@ -247,7 +280,16 @@ export async function stackDeploy(
   // Add stack name
   args.push(options.stackName)
 
-  const result = await runDocker(args, { cwd: options.cwd, env: options.env }, onOutput)
+  const result = await runDocker(
+    args,
+    { cwd: options.cwd, env: options.env, signal: options.signal, onProcess: options.onProcess },
+    onOutput
+  )
+
+  if (result.aborted) {
+    log.deploy.info('Stack deploy cancelled', { stackName: options.stackName })
+    return { success: false, error: 'Deploy cancelled', aborted: true }
+  }
 
   if (result.exitCode !== 0) {
     log.deploy.error('Stack deploy failed', {
@@ -451,14 +493,26 @@ async function isServiceHealthy(svc: SwarmServiceStatus): Promise<boolean> {
  */
 export async function waitForServicesHealthy(
   stackName: string,
-  timeoutMs = 300000 // 5 minutes default
-): Promise<{ healthy: boolean; failedServices: string[] }> {
+  timeoutMs = 300000, // 5 minutes default
+  signal?: AbortSignal
+): Promise<{ healthy: boolean; failedServices: string[]; aborted?: boolean }> {
+  // Check if already aborted
+  if (signal?.aborted) {
+    return { healthy: false, failedServices: [], aborted: true }
+  }
+
   const startTime = Date.now()
   const checkInterval = 5000 // 5 seconds
 
   log.deploy.info('Waiting for services to be healthy', { stackName, timeoutMs })
 
   while (Date.now() - startTime < timeoutMs) {
+    // Check for abort at each iteration
+    if (signal?.aborted) {
+      log.deploy.info('Health check cancelled', { stackName })
+      return { healthy: false, failedServices: [], aborted: true }
+    }
+
     const services = await stackServices(stackName)
 
     if (services.length === 0) {

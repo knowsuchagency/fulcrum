@@ -5,10 +5,12 @@ import { eq, desc } from 'drizzle-orm'
 import { db } from '../db'
 import { apps, appServices, deployments, repositories } from '../db/schema'
 import { findComposeFile } from '../services/compose-parser'
-import { deployApp, stopApp, getDeploymentHistory, getProjectName } from '../services/deployment'
+import { deployApp, stopApp, getDeploymentHistory, getProjectName, cancelDeploymentByAppId } from '../services/deployment'
 import { stackServices, serviceLogs } from '../services/docker-swarm'
 import { checkDockerInstalled, checkDockerRunning } from '../services/docker-compose'
 import { refreshGitWatchers } from '../services/git-watcher'
+import { deleteDnsRecord } from '../services/cloudflare'
+import { log } from '../lib/logger'
 import type { App, AppService } from '../db/schema'
 
 const app = new Hono()
@@ -273,6 +275,34 @@ app.patch('/:id', async (c) => {
         const existing = existingServiceMap.get(service.serviceName)
 
         if (existing) {
+          // Check if domain changed or was removed - clean up old DNS record
+          const oldDomain = existing.domain
+          const newDomain = service.domain ?? null
+          const domainChanged = oldDomain !== newDomain
+          const wasExposed = existing.exposed
+          const nowExposed = service.exposed
+
+          // Delete old DNS record if:
+          // 1. Domain changed (including being removed)
+          // 2. Service was exposed but is no longer exposed
+          if (oldDomain && (domainChanged || (wasExposed && !nowExposed))) {
+            const [subdomain, ...domainParts] = oldDomain.split('.')
+            const rootDomain = domainParts.join('.')
+            if (rootDomain) {
+              log.deploy.info('Cleaning up DNS record for domain change', {
+                oldDomain,
+                newDomain,
+                exposed: nowExposed,
+              })
+              deleteDnsRecord(subdomain, rootDomain).catch((err) => {
+                log.deploy.warn('Failed to delete DNS record during domain change', {
+                  domain: oldDomain,
+                  error: String(err),
+                })
+              })
+            }
+          }
+
           // Update existing service
           await db
             .update(appServices)
@@ -335,9 +365,34 @@ app.delete('/:id', async (c) => {
     return c.json({ error: 'App not found' }, 404)
   }
 
+  // Get services before deletion to clean up DNS
+  const services = await db.query.appServices.findMany({
+    where: eq(appServices.appId, id),
+  })
+
   // Stop containers if running and requested
   if (stopContainers && existing.status === 'running') {
     await stopApp(id)
+  }
+
+  // Clean up DNS records for all exposed services (even if not running)
+  for (const service of services) {
+    if (service.exposed && service.domain) {
+      const [subdomain, ...domainParts] = service.domain.split('.')
+      const rootDomain = domainParts.join('.')
+      if (rootDomain) {
+        log.deploy.info('Cleaning up DNS record on app deletion', {
+          appId: id,
+          domain: service.domain,
+        })
+        deleteDnsRecord(subdomain, rootDomain).catch((err) => {
+          log.deploy.warn('Failed to delete DNS record during app deletion', {
+            domain: service.domain,
+            error: String(err),
+          })
+        })
+      }
+    }
   }
 
   // Delete services
@@ -426,6 +481,27 @@ app.get('/:id/deploy/stream', async (c) => {
       })
     }
   })
+})
+
+// POST /api/apps/:id/cancel-deploy - Cancel active deployment
+app.post('/:id/cancel-deploy', async (c) => {
+  const id = c.req.param('id')
+
+  const existing = await db.query.apps.findFirst({
+    where: eq(apps.id, id),
+  })
+
+  if (!existing) {
+    return c.json({ error: 'App not found' }, 404)
+  }
+
+  const cancelled = await cancelDeploymentByAppId(id)
+
+  if (!cancelled) {
+    return c.json({ error: 'No active deployment to cancel' }, 400)
+  }
+
+  return c.json({ success: true })
 })
 
 // POST /api/apps/:id/stop - Stop app
