@@ -20,6 +20,9 @@ import githubRoutes from './routes/github'
 import { monitoringRoutes } from './routes/monitoring'
 import systemRoutes from './routes/system'
 import execRoutes from './routes/exec'
+import appsRoutes from './routes/apps'
+import composeRoutes from './routes/compose'
+import deploymentRoutes from './routes/deployment'
 import { writeEntry } from './lib/logger'
 import type { LogEntry } from '../shared/logger'
 
@@ -65,6 +68,9 @@ export function createApp() {
   app.route('/api/monitoring', monitoringRoutes)
   app.route('/api/system', systemRoutes)
   app.route('/api/exec', execRoutes)
+  app.route('/api/apps', appsRoutes)
+  app.route('/api/compose', composeRoutes)
+  app.route('/api/deployment', deploymentRoutes)
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {

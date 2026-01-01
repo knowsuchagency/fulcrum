@@ -4,8 +4,8 @@ export default defineConfig({
   title: 'Vibora',
   description: "The Vibe Engineer's Cockpit - Terminal-first AI agent orchestration",
 
-  // Deploy to GitHub Pages at vibora.dev (later) or knowsuchagency.github.io/vibora initially
-  base: '/vibora/',
+  // Deploy to Cloudflare Pages at www.vibora.dev
+  base: '/',
 
   // Clean URLs without .html extension
   cleanUrls: true,
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
 
   head: [
-    ['link', { rel: 'icon', href: '/vibora/logo.png' }],
+    ['link', { rel: 'icon', href: '/logo.png' }],
     ['meta', { name: 'theme-color', content: '#0b7a75' }],
   ],
 
@@ -52,6 +52,7 @@ export default defineConfig({
           text: 'Features',
           items: [
             { text: 'Tasks & Worktrees', link: '/guide/tasks' },
+            { text: 'App Deployment', link: '/guide/apps' },
             { text: 'Terminal Management', link: '/guide/terminals' },
             { text: 'Remote Server', link: '/guide/remote-server' },
             { text: 'Claude Plugin', link: '/guide/claude-plugin' },

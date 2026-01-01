@@ -17,7 +17,8 @@
     "validating": "验证中...",
     "creating": "创建中...",
     "deleting": "删除中...",
-    "loggingIn": "登录中..."
+    "loggingIn": "登录中...",
+    "uploading": "上传中..."
   },
   "time": {
     "justNow": "刚刚",
@@ -45,5 +46,134 @@
     "password": "密码",
     "login": "登录",
     "loginFailed": "登录失败"
+  },
+  "git": {
+    "sentToClaude": "已发送到 Claude Code",
+    "noTerminal": "没有可用的终端",
+    "syncedFromMain": "已从 main 同步",
+    "mergedToMain": "已合并到 main",
+    "pushedToOrigin": "已推送到 origin",
+    "parentSynced": "父仓库已与 origin 同步",
+    "prCreated": "PR 已创建",
+    "prExists": "PR 已存在"
+  },
+  "errors": {
+    "imageUploadFailed": "图片上传失败",
+    "terminalNotConnected": "终端未连接",
+    "terminalNotConnectedDesc": "请等待连接建立"
+  },
+  "apps": {
+    "manualDnsRequired": "需要手动配置 DNS",
+    "manualDnsRequiredDesc": "未配置 Cloudflare API 令牌。您需要手动为域名创建 DNS 记录。",
+    "deployToApply": "部署以应用更改",
+    "deployToApplyDesc": "域名配置已保存。部署应用程序以使更改生效。",
+    "unknownRepo": "未知仓库",
+    "service": "服务",
+    "services": "服务",
+    "exposed": "已暴露",
+    "lastDeployed": "上次部署",
+    "stop": "停止",
+    "deploy": "部署",
+    "deploying": "部署中...",
+    "building": "构建中...",
+    "cancelDeploy": "取消",
+    "cancelling": "取消中...",
+    "delete": "删除",
+    "deleting": "删除中...",
+    "searchApps": "搜索应用...",
+    "allRepos": "所有仓库",
+    "newApp": "新建应用",
+    "createApp": "创建应用",
+    "noAppsYet": "暂无应用。创建您的第一个应用开始使用！",
+    "noAppsMatch": "没有匹配的应用。",
+    "failedToLoadApps": "加载应用失败",
+    "deleteApp": "删除应用",
+    "deleteAppConfirm": "确定要删除 \"{{name}}\" 吗？这将停止所有容器并删除应用配置。此操作无法撤销。",
+    "cancel": "取消",
+    "appNotFound": "应用未找到",
+    "backToApps": "返回应用列表",
+    "tabs": {
+      "general": "概览",
+      "deployments": "部署记录",
+      "logs": "日志",
+      "environment": "环境变量",
+      "domains": "域名"
+    },
+    "general": {
+      "deploy": "部署",
+      "reload": "重新加载",
+      "autodeploy": "自动部署",
+      "noCache": "无缓存",
+      "notifications": "通知",
+      "services": "服务",
+      "noServicesConfigured": "未配置服务"
+    },
+    "compose": {
+      "title": "Compose 文件",
+      "repoNotFound": "未找到仓库路径",
+      "unsaved": "未保存",
+      "edit": "编辑",
+      "done": "完成"
+    },
+    "logs": {
+      "title": "日志",
+      "description": "实时查看应用程序日志",
+      "allContainers": "所有容器",
+      "lines": "行",
+      "copy": "复制",
+      "copied": "已复制",
+      "download": "下载",
+      "refresh": "刷新",
+      "noLogs": "暂无日志"
+    },
+    "deployments": {
+      "title": "部署记录",
+      "description": "查看此 Compose 的最近 10 次部署",
+      "noDeployments": "暂无部署记录",
+      "view": "查看",
+      "statusDone": "完成",
+      "statusError": "错误",
+      "statusBuilding": "构建中",
+      "deployment": "部署",
+      "seeDetails": "查看此部署的详细信息",
+      "noBuildLogs": "暂无构建日志"
+    },
+    "environment": {
+      "title": "环境变量",
+      "description": "设置 Docker Compose 构建的环境变量。这些变量在构建期间和容器中都可用。",
+      "placeholder": "DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# 支持注释",
+      "save": "保存环境变量"
+    },
+    "domains": {
+      "title": "域名配置",
+      "description": "配置要暴露的服务及其域名映射",
+      "expose": "暴露",
+      "exposeRequiresPort": "未配置端口。请在 compose 文件中添加端口映射。",
+      "domain": "域名",
+      "noDomain": "未配置域名",
+      "portRequired": "需要端口",
+      "editDomain": "编辑域名",
+      "noServices": "未配置服务。请先部署应用以查看可用服务。",
+      "save": "保存"
+    },
+    "streaming": {
+      "pulling": "拉取代码...",
+      "building": "构建容器...",
+      "starting": "启动服务...",
+      "configuring": "配置路由...",
+      "done": "部署完成！",
+      "failed": "部署失败",
+      "cancelled": "部署已取消",
+      "preparing": "准备中...",
+      "waitingForLogs": "等待日志..."
+    },
+    "dnsConfigRequired": "需要配置 DNS",
+    "settings": "设置",
+    "status": {
+      "running": "运行中",
+      "building": "构建中",
+      "failed": "失败",
+      "stopped": "已停止"
+    }
   }
 }

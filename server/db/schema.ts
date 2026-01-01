@@ -76,6 +76,53 @@ export const repositories = sqliteTable('repositories', {
   updatedAt: text('updated_at').notNull(),
 })
 
+// Apps - deployed applications from repositories
+export const apps = sqliteTable('apps', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  repositoryId: text('repository_id').notNull(), // FK to repositories
+  branch: text('branch').notNull().default('main'),
+  composeFile: text('compose_file').notNull(), // e.g., "compose.yml"
+  status: text('status').notNull().default('stopped'), // stopped|building|running|failed
+  autoDeployEnabled: integer('auto_deploy_enabled', { mode: 'boolean' }).default(false),
+  environmentVariables: text('environment_variables'), // JSON string: {"KEY": "value", ...}
+  noCacheBuild: integer('no_cache_build', { mode: 'boolean' }).default(false),
+  notificationsEnabled: integer('notifications_enabled', { mode: 'boolean' }).default(true),
+  lastDeployedAt: text('last_deployed_at'),
+  lastDeployCommit: text('last_deploy_commit'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
+// App services - individual services within a compose app
+export const appServices = sqliteTable('app_services', {
+  id: text('id').primaryKey(),
+  appId: text('app_id').notNull(), // FK to apps
+  serviceName: text('service_name').notNull(), // e.g., "web", "api"
+  containerPort: integer('container_port'), // Port exposed by container
+  exposed: integer('exposed', { mode: 'boolean' }).default(false),
+  domain: text('domain'), // e.g., "myapp.example.com"
+  status: text('status').default('stopped'), // stopped|running|failed
+  containerId: text('container_id'), // Docker container ID
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
+// Deployments - deployment history for apps
+export const deployments = sqliteTable('deployments', {
+  id: text('id').primaryKey(),
+  appId: text('app_id').notNull(), // FK to apps
+  status: text('status').notNull(), // pending|building|running|failed|rolled_back
+  gitCommit: text('git_commit'),
+  gitMessage: text('git_message'),
+  deployedBy: text('deployed_by'), // manual|auto|rollback
+  buildLogs: text('build_logs'),
+  errorMessage: text('error_message'),
+  startedAt: text('started_at').notNull(),
+  completedAt: text('completed_at'),
+  createdAt: text('created_at').notNull(),
+})
+
 // System metrics for monitoring - stores historical CPU, memory, disk usage
 export const systemMetrics = sqliteTable('system_metrics', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -101,3 +148,9 @@ export type Terminal = typeof terminals.$inferSelect
 export type NewTerminal = typeof terminals.$inferInsert
 export type TerminalViewState = typeof terminalViewState.$inferSelect
 export type NewTerminalViewState = typeof terminalViewState.$inferInsert
+export type App = typeof apps.$inferSelect
+export type NewApp = typeof apps.$inferInsert
+export type AppService = typeof appServices.$inferSelect
+export type NewAppService = typeof appServices.$inferInsert
+export type Deployment = typeof deployments.$inferSelect
+export type NewDeployment = typeof deployments.$inferInsert

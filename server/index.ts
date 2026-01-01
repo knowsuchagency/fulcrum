@@ -11,6 +11,7 @@ import {
 import { ensureLatestSettings, getSettingByKey } from './lib/settings'
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
+import { startGitWatcher, stopGitWatcher } from './services/git-watcher'
 import { log } from './lib/logger'
 
 // Ensure settings file is up-to-date with latest schema on startup
@@ -100,11 +101,15 @@ startPRMonitor()
 // Start metrics collector for monitoring
 startMetricsCollector()
 
-// Graceful shutdown - detach PTYs but keep tmux sessions running for persistence
+// Start git watcher for auto-deploy
+startGitWatcher()
+
+// Graceful shutdown - detach PTYs but keep dtach sessions running for persistence
 process.on('SIGINT', () => {
   log.server.info('Shutting down (terminals will persist)')
   stopPRMonitor()
   stopMetricsCollector()
+  stopGitWatcher()
   ptyManager.detachAll()
   server.close()
   process.exit(0)
@@ -114,6 +119,7 @@ process.on('SIGTERM', () => {
   log.server.info('Shutting down (terminals will persist)')
   stopPRMonitor()
   stopMetricsCollector()
+  stopGitWatcher()
   ptyManager.detachAll()
   server.close()
   process.exit(0)

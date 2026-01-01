@@ -1,0 +1,1 @@
+ALTER TABLE `apps` ADD `notifications_enabled` integer DEFAULT true;

@@ -17,8 +17,11 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ReviewIndexRouteImport } from './routes/review/index'
 import { Route as RepositoriesIndexRouteImport } from './routes/repositories/index'
 import { Route as MonitoringIndexRouteImport } from './routes/monitoring/index'
+import { Route as AppsIndexRouteImport } from './routes/apps/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories/$repoId'
+import { Route as AppsNewRouteImport } from './routes/apps/new'
+import { Route as AppsAppIdRouteImport } from './routes/apps/$appId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,6 +63,11 @@ const MonitoringIndexRoute = MonitoringIndexRouteImport.update({
   path: '/monitoring/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsIndexRoute = AppsIndexRouteImport.update({
+  id: '/apps/',
+  path: '/apps/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
   id: '/tasks/$taskId',
   path: '/tasks/$taskId',
@@ -70,11 +78,24 @@ const RepositoriesRepoIdRoute = RepositoriesRepoIdRouteImport.update({
   path: '/repositories/$repoId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsNewRoute = AppsNewRouteImport.update({
+  id: '/apps/new',
+  path: '/apps/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppsAppIdRoute = AppsAppIdRouteImport.update({
+  id: '/apps/$appId',
+  path: '/apps/$appId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/apps/$appId': typeof AppsAppIdRoute
+  '/apps/new': typeof AppsNewRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/apps': typeof AppsIndexRoute
   '/monitoring': typeof MonitoringIndexRoute
   '/repositories': typeof RepositoriesIndexRoute
   '/review': typeof ReviewIndexRoute
@@ -85,8 +106,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/apps/$appId': typeof AppsAppIdRoute
+  '/apps/new': typeof AppsNewRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/apps': typeof AppsIndexRoute
   '/monitoring': typeof MonitoringIndexRoute
   '/repositories': typeof RepositoriesIndexRoute
   '/review': typeof ReviewIndexRoute
@@ -98,8 +122,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/apps/$appId': typeof AppsAppIdRoute
+  '/apps/new': typeof AppsNewRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/apps/': typeof AppsIndexRoute
   '/monitoring/': typeof MonitoringIndexRoute
   '/repositories/': typeof RepositoriesIndexRoute
   '/review/': typeof ReviewIndexRoute
@@ -112,8 +139,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/apps/$appId'
+    | '/apps/new'
     | '/repositories/$repoId'
     | '/tasks/$taskId'
+    | '/apps'
     | '/monitoring'
     | '/repositories'
     | '/review'
@@ -124,8 +154,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/apps/$appId'
+    | '/apps/new'
     | '/repositories/$repoId'
     | '/tasks/$taskId'
+    | '/apps'
     | '/monitoring'
     | '/repositories'
     | '/review'
@@ -136,8 +169,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/apps/$appId'
+    | '/apps/new'
     | '/repositories/$repoId'
     | '/tasks/$taskId'
+    | '/apps/'
     | '/monitoring/'
     | '/repositories/'
     | '/review/'
@@ -149,8 +185,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppsAppIdRoute: typeof AppsAppIdRoute
+  AppsNewRoute: typeof AppsNewRoute
   RepositoriesRepoIdRoute: typeof RepositoriesRepoIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
+  AppsIndexRoute: typeof AppsIndexRoute
   MonitoringIndexRoute: typeof MonitoringIndexRoute
   RepositoriesIndexRoute: typeof RepositoriesIndexRoute
   ReviewIndexRoute: typeof ReviewIndexRoute
@@ -218,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MonitoringIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps/': {
+      id: '/apps/'
+      path: '/apps'
+      fullPath: '/apps'
+      preLoaderRoute: typeof AppsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks/$taskId': {
       id: '/tasks/$taskId'
       path: '/tasks/$taskId'
@@ -232,13 +278,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RepositoriesRepoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps/new': {
+      id: '/apps/new'
+      path: '/apps/new'
+      fullPath: '/apps/new'
+      preLoaderRoute: typeof AppsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apps/$appId': {
+      id: '/apps/$appId'
+      path: '/apps/$appId'
+      fullPath: '/apps/$appId'
+      preLoaderRoute: typeof AppsAppIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppsAppIdRoute: AppsAppIdRoute,
+  AppsNewRoute: AppsNewRoute,
   RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
+  AppsIndexRoute: AppsIndexRoute,
   MonitoringIndexRoute: MonitoringIndexRoute,
   RepositoriesIndexRoute: RepositoriesIndexRoute,
   ReviewIndexRoute: ReviewIndexRoute,

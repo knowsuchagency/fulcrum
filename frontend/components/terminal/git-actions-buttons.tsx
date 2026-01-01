@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight03Icon, ArrowLeft03Icon, ArrowUp03Icon, Orbit01Icon, Menu01Icon, GitCommitIcon, GitPullRequestIcon } from '@hugeicons/core-free-icons'
@@ -40,6 +41,7 @@ export function GitActionsButtons({
   terminalId,
   sendInputToTerminal,
 }: GitActionsButtonsProps) {
+  const { t } = useTranslation('common')
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
   const gitPush = useGitPush()
@@ -51,9 +53,9 @@ export function GitActionsButtons({
   const resolveWithClaude = (prompt: string) => {
     if (terminalId && sendInputToTerminal) {
       sendInputToTerminal(terminalId, prompt)
-      toast.info('Sent to Claude Code')
+      toast.info(t('git.sentToClaude'))
     } else {
-      toast.error('No terminal available')
+      toast.error(t('git.noTerminal'))
     }
   }
 
@@ -64,7 +66,7 @@ export function GitActionsButtons({
         worktreePath,
         baseBranch,
       })
-      toast.success('Synced from main')
+      toast.success(t('git.syncedFromMain'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync failed'
       const branch = baseBranch || 'main'
@@ -86,7 +88,7 @@ export function GitActionsButtons({
         worktreePath,
         baseBranch,
       })
-      toast.success('Merged to main')
+      toast.success(t('git.mergedToMain'))
       // Kill Claude if running in the task's terminals
       killClaude.mutate(taskId)
       // Mark task as done after successful merge
@@ -113,7 +115,7 @@ export function GitActionsButtons({
       await gitPush.mutateAsync({
         worktreePath,
       })
-      toast.success('Pushed to origin')
+      toast.success(t('git.pushedToOrigin'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Push failed'
       toast.error(errorMessage, {
@@ -133,7 +135,7 @@ export function GitActionsButtons({
         repoPath,
         baseBranch,
       })
-      toast.success('Parent synced with origin')
+      toast.success(t('git.parentSynced'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync parent failed'
       const branch = baseBranch || 'main'
@@ -166,7 +168,7 @@ export function GitActionsButtons({
         taskId,
         updates: { prUrl: result.prUrl },
       })
-      toast.success('PR created', {
+      toast.success(t('git.prCreated'), {
         action: {
           label: 'View PR',
           onClick: () => openExternalUrl(result.prUrl),
@@ -184,7 +186,7 @@ export function GitActionsButtons({
           taskId,
           updates: { prUrl: existingPrUrl },
         })
-        toast.info('PR already exists', {
+        toast.info(t('git.prExists'), {
           action: {
             label: 'View PR',
             onClick: () => openExternalUrl(existingPrUrl),

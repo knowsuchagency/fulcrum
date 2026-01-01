@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -9,7 +10,7 @@ import {
   Orbit01Icon,
   GitCommitIcon,
   GitPullRequestIcon,
-  LibraryIcon,
+  PackageIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons'
 import {
@@ -64,6 +65,7 @@ export function TaskActionsDropdown({
   terminalId,
   sendInputToTerminal,
 }: TaskActionsDropdownProps) {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const gitSync = useGitSync()
   const gitMerge = useGitMergeToMain()
@@ -78,9 +80,9 @@ export function TaskActionsDropdown({
   const resolveWithClaude = (prompt: string) => {
     if (terminalId && sendInputToTerminal) {
       sendInputToTerminal(terminalId, prompt)
-      toast.info('Sent to Claude Code')
+      toast.info(t('git.sentToClaude'))
     } else {
-      toast.error('No terminal available')
+      toast.error(t('git.noTerminal'))
     }
   }
 
@@ -91,7 +93,7 @@ export function TaskActionsDropdown({
         worktreePath,
         baseBranch,
       })
-      toast.success('Synced from main')
+      toast.success(t('git.syncedFromMain'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync failed'
       const branch = baseBranch || 'main'
@@ -113,7 +115,7 @@ export function TaskActionsDropdown({
         worktreePath,
         baseBranch,
       })
-      toast.success('Merged to main')
+      toast.success(t('git.mergedToMain'))
       killClaude.mutate(taskId)
       updateTask.mutate({
         taskId,
@@ -138,7 +140,7 @@ export function TaskActionsDropdown({
       await gitPush.mutateAsync({
         worktreePath,
       })
-      toast.success('Pushed to origin')
+      toast.success(t('git.pushedToOrigin'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Push failed'
       toast.error(errorMessage, {
@@ -158,7 +160,7 @@ export function TaskActionsDropdown({
         repoPath,
         baseBranch,
       })
-      toast.success('Parent synced with origin')
+      toast.success(t('git.parentSynced'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Sync parent failed'
       const branch = baseBranch || 'main'
@@ -204,7 +206,7 @@ export function TaskActionsDropdown({
         taskId,
         updates: { prUrl: result.prUrl },
       })
-      toast.success('PR created', {
+      toast.success(t('git.prCreated'), {
         action: {
           label: 'View PR',
           onClick: () => openExternalUrl(result.prUrl),
@@ -222,7 +224,7 @@ export function TaskActionsDropdown({
           taskId,
           updates: { prUrl: existingPrUrl },
         })
-        toast.info('PR already exists', {
+        toast.info(t('git.prExists'), {
           action: {
             label: 'View PR',
             onClick: () => openExternalUrl(existingPrUrl),
@@ -319,7 +321,7 @@ export function TaskActionsDropdown({
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleNavigateToRepo}>
             <HugeiconsIcon
-              icon={LibraryIcon}
+              icon={PackageIcon}
               size={12}
               strokeWidth={2}
             />

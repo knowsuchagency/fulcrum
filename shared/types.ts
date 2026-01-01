@@ -277,3 +277,94 @@ export interface ExecSession {
 export interface UpdateExecSessionRequest {
   name?: string
 }
+
+// App deployment types
+export type AppStatus = 'stopped' | 'building' | 'running' | 'failed'
+export type DeploymentStatus = 'pending' | 'building' | 'running' | 'failed' | 'rolled_back'
+export type DeployedBy = 'manual' | 'auto' | 'rollback'
+
+export interface AppService {
+  id: string
+  appId: string
+  serviceName: string
+  containerPort: number | null
+  exposed: boolean
+  domain: string | null
+  status: string | null
+  containerId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface App {
+  id: string
+  name: string
+  repositoryId: string
+  branch: string
+  composeFile: string
+  status: AppStatus
+  autoDeployEnabled: boolean
+  environmentVariables?: Record<string, string>
+  noCacheBuild?: boolean
+  notificationsEnabled?: boolean
+  lastDeployedAt: string | null
+  lastDeployCommit: string | null
+  createdAt: string
+  updatedAt: string
+  services?: AppService[]
+  repository?: {
+    id: string
+    path: string
+    displayName: string
+  }
+}
+
+export interface Deployment {
+  id: string
+  appId: string
+  status: DeploymentStatus
+  gitCommit: string | null
+  gitMessage: string | null
+  deployedBy: DeployedBy | null
+  buildLogs: string | null
+  errorMessage: string | null
+  startedAt: string
+  completedAt: string | null
+  createdAt: string
+}
+
+export interface ComposePort {
+  container: number
+  host?: number
+  protocol?: 'tcp' | 'udp'
+}
+
+export interface ComposeService {
+  name: string
+  build?: {
+    context: string
+    dockerfile?: string
+  }
+  image?: string
+  ports?: ComposePort[]
+  environment?: Record<string, string>
+  depends_on?: string[]
+}
+
+export interface ParsedComposeFile {
+  file: string
+  services: ComposeService[]
+}
+
+export interface ContainerStatus {
+  name: string
+  service: string
+  status: string
+  health?: string
+  ports: string[]
+}
+
+export interface DeploymentSettings {
+  cloudflareApiToken: string | null
+  cloudflareConfigured: boolean
+}

@@ -54,6 +54,11 @@
       "label": "GitHub",
       "description": "用于 Issues 和 PR 的个人访问令牌"
     },
+    "cloudflare": {
+      "label": "Cloudflare",
+      "placeholder": "输入 API 令牌...",
+      "description": "用于自动 DNS 记录的 API 令牌"
+    },
     "zai": {
       "enable": "启用",
       "apiKey": "API 密钥",

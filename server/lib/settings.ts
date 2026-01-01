@@ -30,6 +30,7 @@ export interface Settings {
   integrations: {
     linearApiKey: string | null
     githubPat: string | null
+    cloudflareApiToken: string | null
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS: Settings = {
   integrations: {
     linearApiKey: null,
     githubPat: null,
+    cloudflareApiToken: null,
   },
   appearance: {
     language: null,
@@ -308,6 +310,7 @@ export function getSettings(): Settings {
     integrations: {
       linearApiKey: ((parsed.integrations as Record<string, unknown>)?.linearApiKey as string | null) ?? null,
       githubPat: ((parsed.integrations as Record<string, unknown>)?.githubPat as string | null) ?? null,
+      cloudflareApiToken: ((parsed.integrations as Record<string, unknown>)?.cloudflareApiToken as string | null) ?? null,
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
@@ -340,6 +343,7 @@ export function getSettings(): Settings {
     integrations: {
       linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.integrations.linearApiKey,
       githubPat: process.env.GITHUB_PAT ?? fileSettings.integrations.githubPat,
+      cloudflareApiToken: fileSettings.integrations.cloudflareApiToken,
     },
     appearance: fileSettings.appearance,
   }
@@ -809,6 +813,19 @@ export function ensureLatestSettings(): void {
       merged.zai as Record<string, unknown>,
       DEFAULT_ZAI_SETTINGS as unknown as Record<string, unknown>
     )
+  }
+
+  // Migrate deployment.cloudflareApiToken to integrations.cloudflareApiToken
+  if (merged.deployment && typeof merged.deployment === 'object') {
+    const deployment = merged.deployment as Record<string, unknown>
+    if (deployment.cloudflareApiToken && !((merged.integrations as Record<string, unknown>)?.cloudflareApiToken)) {
+      const integrations = (merged.integrations as Record<string, unknown>) ?? {}
+      integrations.cloudflareApiToken = deployment.cloudflareApiToken
+      merged.integrations = integrations
+      log.settings.info('Migrated cloudflareApiToken from deployment to integrations')
+    }
+    // Remove the deployment section entirely
+    delete merged.deployment
   }
 
   // Always set to current schema version

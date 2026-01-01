@@ -6,6 +6,15 @@
   "viewTasks": "Tasks",
   "terminal": "Terminal",
   "editor": "Editor",
+  "application": "Application",
+  "applications": "Applications",
+  "createApp": "Create App",
+  "createAppDialog": {
+    "title": "Docker Compose Required",
+    "description": "To create an app for deployment, this repository needs a Docker Compose file.",
+    "instructions": "Create a docker-compose.yml file in your repository.",
+    "close": "Got it"
+  },
   "settings": "Settings",
   "addRepository": "Add Repository",
   "scanDirectory": "Scan Directory",

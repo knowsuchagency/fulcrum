@@ -17,7 +17,8 @@
     "validating": "Validating...",
     "creating": "Creating...",
     "deleting": "Deleting...",
-    "loggingIn": "Logging in..."
+    "loggingIn": "Logging in...",
+    "uploading": "Uploading..."
   },
   "time": {
     "justNow": "just now",
@@ -45,5 +46,134 @@
     "password": "Password",
     "login": "Login",
     "loginFailed": "Login failed"
+  },
+  "git": {
+    "sentToClaude": "Sent to Claude Code",
+    "noTerminal": "No terminal available",
+    "syncedFromMain": "Synced from main",
+    "mergedToMain": "Merged to main",
+    "pushedToOrigin": "Pushed to origin",
+    "parentSynced": "Parent synced with origin",
+    "prCreated": "PR created",
+    "prExists": "PR already exists"
+  },
+  "errors": {
+    "imageUploadFailed": "Failed to upload image",
+    "terminalNotConnected": "Terminal not connected",
+    "terminalNotConnectedDesc": "Please wait for the connection to establish"
+  },
+  "apps": {
+    "manualDnsRequired": "Manual DNS required",
+    "manualDnsRequiredDesc": "Cloudflare API token not configured. You must create DNS records manually for your domains.",
+    "deployToApply": "Deploy to apply changes",
+    "deployToApplyDesc": "Domain configuration saved. Deploy the app for changes to take effect.",
+    "unknownRepo": "Unknown repo",
+    "service": "service",
+    "services": "services",
+    "exposed": "exposed",
+    "lastDeployed": "Last deployed",
+    "stop": "Stop",
+    "deploy": "Deploy",
+    "deploying": "Deploying...",
+    "building": "Building...",
+    "cancelDeploy": "Cancel",
+    "cancelling": "Cancelling...",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "searchApps": "Search apps...",
+    "allRepos": "All repos",
+    "newApp": "New App",
+    "createApp": "Create App",
+    "noAppsYet": "No apps yet. Create your first app to get started!",
+    "noAppsMatch": "No apps match your search.",
+    "failedToLoadApps": "Failed to load apps",
+    "deleteApp": "Delete App",
+    "deleteAppConfirm": "Are you sure you want to delete \"{{name}}\"? This will stop all containers and remove the app configuration. This action cannot be undone.",
+    "cancel": "Cancel",
+    "appNotFound": "App not found",
+    "backToApps": "Back to Apps",
+    "tabs": {
+      "general": "General",
+      "deployments": "Deployments",
+      "logs": "Logs",
+      "environment": "Environment",
+      "domains": "Domains"
+    },
+    "general": {
+      "deploy": "Deploy",
+      "reload": "Reload",
+      "autodeploy": "Autodeploy",
+      "noCache": "No-cache",
+      "notifications": "Notifications",
+      "services": "Services",
+      "noServicesConfigured": "No services configured"
+    },
+    "compose": {
+      "title": "Compose File",
+      "repoNotFound": "Repository path not found",
+      "unsaved": "Unsaved",
+      "edit": "Edit",
+      "done": "Done"
+    },
+    "logs": {
+      "title": "Logs",
+      "description": "Watch the logs of the application in real time",
+      "allContainers": "All containers",
+      "lines": "lines",
+      "copy": "Copy",
+      "copied": "Copied",
+      "download": "Download",
+      "refresh": "Refresh",
+      "noLogs": "No logs available"
+    },
+    "deployments": {
+      "title": "Deployments",
+      "description": "See the last 10 deployments for this compose",
+      "noDeployments": "No deployments yet",
+      "view": "View",
+      "statusDone": "Done",
+      "statusError": "Error",
+      "statusBuilding": "Building",
+      "deployment": "Deployment",
+      "seeDetails": "See all the details of this deployment",
+      "noBuildLogs": "No build logs available"
+    },
+    "environment": {
+      "title": "Environment Variables",
+      "description": "Set environment variables for Docker Compose builds. These will be available during the build and in your containers.",
+      "placeholder": "DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# Comments are supported",
+      "save": "Save Environment"
+    },
+    "domains": {
+      "title": "Domain Configuration",
+      "description": "Configure which services are exposed and their domain mappings",
+      "expose": "Expose",
+      "exposeRequiresPort": "No port configured. Add a port mapping to your compose file.",
+      "domain": "Domain",
+      "noDomain": "No domain configured",
+      "portRequired": "Port required",
+      "editDomain": "Edit domain",
+      "noServices": "No services configured. Deploy the app first to see available services.",
+      "save": "Save"
+    },
+    "streaming": {
+      "pulling": "Pulling code...",
+      "building": "Building containers...",
+      "starting": "Starting services...",
+      "configuring": "Configuring routing...",
+      "done": "Deployment complete!",
+      "failed": "Deployment failed",
+      "cancelled": "Deployment cancelled",
+      "preparing": "Preparing...",
+      "waitingForLogs": "Waiting for logs..."
+    },
+    "dnsConfigRequired": "DNS configuration required",
+    "settings": "Settings",
+    "status": {
+      "running": "Running",
+      "building": "Building",
+      "failed": "Failed",
+      "stopped": "Stopped"
+    }
   }
 }

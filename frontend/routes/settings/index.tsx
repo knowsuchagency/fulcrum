@@ -39,6 +39,10 @@ import {
   type EditorApp,
   type ClaudeCodeTheme,
 } from '@/hooks/use-config'
+import {
+  useDeploymentSettings,
+  useUpdateDeploymentSettings,
+} from '@/hooks/use-apps'
 import { useLanguageSync } from '@/hooks/use-language-sync'
 import { useThemeSync } from '@/hooks/use-theme-sync'
 
@@ -70,6 +74,8 @@ function SettingsPage() {
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
+  const { data: deploymentSettings, isLoading: deploymentLoading } = useDeploymentSettings()
+  const updateDeploymentSettings = useUpdateDeploymentSettings()
   const { data: developerMode } = useDeveloperMode()
   const restartVibora = useRestartVibora()
   const { savedLanguage, changeLanguage } = useLanguageSync()
@@ -111,6 +117,9 @@ function SettingsPage() {
   const [zAiHaikuModel, setZAiHaikuModel] = useState('glm-4.5-air')
   const [zAiSonnetModel, setZAiSonnetModel] = useState('glm-4.7')
   const [zAiOpusModel, setZAiOpusModel] = useState('glm-4.7')
+
+  // Deployment settings local state
+  const [localCloudflareToken, setLocalCloudflareToken] = useState('')
 
   // Claude Code theme sync local state
   const [localSyncClaudeCode, setLocalSyncClaudeCode] = useState(false)
@@ -165,6 +174,8 @@ function SettingsPage() {
     }
   }, [zAiSettings])
 
+  // Sync deployment settings - no local state needed, token is masked from API
+
   // Sync Claude Code theme settings
   useEffect(() => {
     if (syncClaudeCode !== undefined) setLocalSyncClaudeCode(syncClaudeCode)
@@ -173,7 +184,7 @@ function SettingsPage() {
   }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading || deploymentLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -187,6 +198,8 @@ function SettingsPage() {
     localSyncClaudeCode !== (syncClaudeCode ?? false) ||
     localClaudeCodeLightTheme !== claudeCodeLightTheme ||
     localClaudeCodeDarkTheme !== claudeCodeDarkTheme
+
+  const hasDeploymentChanges = localCloudflareToken !== '' // New token entered (existing is masked)
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -215,7 +228,8 @@ function SettingsPage() {
     hasEditorChanges ||
     hasNotificationChanges ||
     hasZAiChanges ||
-    hasClaudeCodeChanges
+    hasClaudeCodeChanges ||
+    hasDeploymentChanges
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -371,6 +385,26 @@ function SettingsPage() {
           })
         )
       }
+    }
+
+    // Save deployment settings (cloudflare token)
+    if (hasDeploymentChanges) {
+      promises.push(
+        new Promise((resolve) => {
+          updateDeploymentSettings.mutate(
+            {
+              cloudflareApiToken: localCloudflareToken || undefined,
+            },
+            {
+              onSettled: () => {
+                // Clear the token field after saving (it's masked on reload)
+                setLocalCloudflareToken('')
+                resolve(undefined)
+              },
+            }
+          )
+        })
+      )
     }
 
     await Promise.all(promises)
@@ -754,6 +788,28 @@ function SettingsPage() {
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
                         {t('fields.github.description')}
+                      </p>
+                    </div>
+
+                    {/* Cloudflare API Token */}
+                    <div className="space-y-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                          {t('fields.cloudflare.label')}
+                        </label>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            type="password"
+                            value={localCloudflareToken}
+                            onChange={(e) => setLocalCloudflareToken(e.target.value)}
+                            placeholder={deploymentSettings?.cloudflareConfigured ? '••••••••' : t('fields.cloudflare.placeholder')}
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
+                        {t('fields.cloudflare.description')}
                       </p>
                     </div>
                   </div>

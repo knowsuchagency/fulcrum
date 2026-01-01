@@ -157,6 +157,265 @@ POST /api/repositories
 DELETE /api/repositories/:id
 ```
 
+## Apps
+
+### List Apps
+
+```http
+GET /api/apps
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "app123",
+    "name": "my-app",
+    "repositoryId": "repo456",
+    "status": "running",
+    "composeFile": "docker-compose.yml",
+    "autoDeployEnabled": false,
+    "services": [
+      {
+        "serviceName": "web",
+        "containerPort": 3000,
+        "exposed": true,
+        "domain": "myapp.example.com"
+      }
+    ]
+  }
+]
+```
+
+### Get App
+
+```http
+GET /api/apps/:id
+```
+
+### Create App
+
+```http
+POST /api/apps
+```
+
+**Body:**
+```json
+{
+  "name": "my-app",
+  "repositoryId": "repo456",
+  "branch": "main",
+  "composeFile": "docker-compose.yml",
+  "services": [
+    {
+      "serviceName": "web",
+      "containerPort": 3000,
+      "exposed": true,
+      "domain": "myapp.example.com"
+    }
+  ]
+}
+```
+
+### Update App
+
+```http
+PATCH /api/apps/:id
+```
+
+**Body:**
+```json
+{
+  "name": "updated-name",
+  "autoDeployEnabled": true,
+  "notificationsEnabled": true,
+  "environmentVariables": {
+    "DATABASE_URL": "postgres://..."
+  },
+  "services": [
+    {
+      "serviceName": "web",
+      "containerPort": 3000,
+      "exposed": true,
+      "domain": "myapp.example.com"
+    }
+  ]
+}
+```
+
+### Delete App
+
+```http
+DELETE /api/apps/:id
+```
+
+Stops all containers and removes the Docker stack.
+
+**Query Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `stopContainers` | boolean | Whether to stop containers (default: true) |
+
+### Deploy App
+
+```http
+POST /api/apps/:id/deploy
+```
+
+Triggers a deployment. Returns immediately; check deployments for status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "deployment": {
+    "id": "deploy123",
+    "status": "building",
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+### Deploy App (Streaming)
+
+```http
+GET /api/apps/:id/deploy/stream
+```
+
+Server-Sent Events endpoint for real-time deployment progress.
+
+**Events:**
+- `progress` — Build progress updates
+- `complete` — Deployment finished successfully
+- `error` — Deployment failed
+
+### Stop App
+
+```http
+POST /api/apps/:id/stop
+```
+
+Stops all containers without deleting the app.
+
+### Cancel Deployment
+
+```http
+POST /api/apps/:id/cancel-deploy
+```
+
+Cancels an in-progress deployment.
+
+### Get App Logs
+
+```http
+GET /api/apps/:id/logs
+```
+
+**Query Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `service` | string | Filter by service name |
+| `tail` | number | Number of lines (default: 100) |
+
+### Get App Status
+
+```http
+GET /api/apps/:id/status
+```
+
+**Response:**
+```json
+{
+  "containers": [
+    {
+      "name": "myapp_web.1",
+      "status": "running",
+      "state": "Running"
+    }
+  ]
+}
+```
+
+### Get Deployments
+
+```http
+GET /api/apps/:id/deployments
+```
+
+Returns the last 10 deployments for the app.
+
+### Sync Services
+
+```http
+POST /api/apps/:id/sync-services
+```
+
+Re-parses the compose file and updates service ports.
+
+## Deployment Settings
+
+### Get Prerequisites
+
+```http
+GET /api/deployment/prerequisites
+```
+
+Check if Docker, Traefik, and other prerequisites are configured.
+
+**Response:**
+```json
+{
+  "docker": {
+    "installed": true,
+    "running": true,
+    "version": "24.0.7"
+  },
+  "traefik": {
+    "detected": true,
+    "type": "vibora",
+    "containerName": "traefik",
+    "network": "traefik"
+  },
+  "settings": {
+    "cloudflareConfigured": true
+  },
+  "ready": true
+}
+```
+
+### Get Deployment Settings
+
+```http
+GET /api/deployment/settings
+```
+
+### Update Deployment Settings
+
+```http
+POST /api/deployment/settings
+```
+
+**Body:**
+```json
+{
+  "cloudflareApiToken": "your-token"
+}
+```
+
+### Start Traefik
+
+```http
+POST /api/deployment/traefik/start
+```
+
+Starts Vibora's managed Traefik container.
+
+### Stop Traefik
+
+```http
+POST /api/deployment/traefik/stop
+```
+
 ## Terminals
 
 ### List Terminals

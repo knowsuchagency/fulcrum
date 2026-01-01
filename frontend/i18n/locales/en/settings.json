@@ -54,6 +54,11 @@
       "label": "GitHub",
       "description": "PAT for Issues & PRs"
     },
+    "cloudflare": {
+      "label": "Cloudflare",
+      "placeholder": "Enter API token...",
+      "description": "API token for automatic DNS records"
+    },
     "zai": {
       "enable": "Enable",
       "apiKey": "API Key",

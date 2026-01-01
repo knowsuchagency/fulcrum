@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useStore } from '@/stores'
@@ -14,6 +15,7 @@ import { log } from '@/lib/logger'
  *    (the terminals page creates the terminal via lastCreatedTabId)
  */
 export function useOpenInTerminal() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const store = useStore()
 
@@ -29,8 +31,8 @@ export function useOpenInTerminal() {
 
       if (!store.connected) {
         log.ws.warn('useOpenInTerminal: not connected, aborting')
-        toast.error('Terminal not connected', {
-          description: 'Please wait for the connection to establish',
+        toast.error(t('errors.terminalNotConnected'), {
+          description: t('errors.terminalNotConnectedDesc'),
         })
         return
       }
@@ -70,7 +72,7 @@ export function useOpenInTerminal() {
       // The terminals page will update URL to real ID when server confirms
       navigate({ to: '/terminals', search: { tab: store.pendingTabCreation! } })
     },
-    [store, navigate]
+    [store, navigate, t]
   )
 
   return { openInTerminal, connected: store.connected }
