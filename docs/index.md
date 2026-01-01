@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Vibora
   text: The Vibe Engineer's Cockpit
-  tagline: Orchestrate Claude Code across parallel workstreams from a terminal-first command center
+  tagline: Orchestrate Claude Code. Ship to production. Own your entire workflow.
   image:
     src: /logo.png
     alt: Vibora
@@ -17,29 +17,31 @@ hero:
       link: https://github.com/knowsuchagency/vibora
 
 features:
+  - icon: 🚀
+    title: Full Development Lifecycle
+    details: From isolated worktrees to production deployment. Build, test, and ship—all from one open-source platform on your own hardware.
   - icon: 🖥️
     title: Parallel Agent Orchestration
     details: Run multiple Claude Code sessions across different tasks and worktrees. See and control all sessions in one parallel view.
-  - icon: 🌐
-    title: Local or Remote Execution
-    details: Run on your machine or a remote server. Launch tasks, close your laptop, and your agents keep working.
-  - icon: 🌲
-    title: Git Worktree Isolation
-    details: Each task runs in its own worktree. Your main branch stays clean until you're ready to merge.
+  - icon: 📱
+    title: Work From Anywhere
+    details: Close your laptop—Claude keeps working on your behalf. Pick up where you left off from your phone.
   - icon: 🤖
     title: Deep Claude Integration
-    details: Plugin with automatic status sync and task management. MCP server lets Claude manage tasks directly.
-  - icon: 📋
-    title: Kanban Task Management
-    details: Visual task tracking from planning to done. Tasks automatically spin up isolated git worktrees.
-  - icon: 🔗
-    title: Linear & GitHub Integration
-    details: Sync task status with Linear tickets. Monitor PRs across all your repositories.
+    details: Via MCP, Claude can orchestrate tasks, execute code on your remote machine, and deploy apps—securely and autonomously.
+  - icon: 🐳
+    title: Docker Compose Deployment
+    details: Deploy apps with Docker Compose. Automatic domain routing with Traefik, optional Cloudflare DNS integration, and real-time build logs.
+  - icon: 🔓
+    title: Open Source & Self-Hosted
+    details: No vendor lock-in. Inspect the code, run it anywhere, own your data. From a $5 VPS to your home lab.
 ---
 
 ## What It Does
 
 **Vibora is for developers who take Claude Code seriously.** Not as a novelty, but as their primary interface for getting things done. If you live in the terminal and want to run multiple Claude Code sessions across isolated workstreams, Vibora is your cockpit.
+
+**The complete development lifecycle.** Develop features in isolated worktrees, then deploy them to production—all from the same open-source platform running on your own hardware. No vendor lock-in, no wondering where your data lives.
 
 ## Quick Start
 

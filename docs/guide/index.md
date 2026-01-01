@@ -8,6 +8,10 @@ Vibora is a terminal-first command center for orchestrating AI coding agents acr
 
 ## Key Features
 
+### Full Development Lifecycle
+
+From development to deployment, all from one open-source platform. Develop features in isolated worktrees, then deploy them to production on your own hardware.
+
 ### Task Terminals View
 
 See and control all your Claude Code sessions across every worktree in one parallel view. The killer feature for orchestrating multiple agents simultaneously.
@@ -20,9 +24,9 @@ Client/server architecture lets you run agents on your machine or a remote serve
 
 Each task runs in its own worktree. Your main branch stays clean until you're ready to merge.
 
-### Deep Claude Integration
+### Docker Compose Deployment
 
-Plugin with skill for automatic status sync and task management. MCP server lets Claude manage tasks, list repositories, and send notifications directly.
+Deploy apps with standard Docker Compose files. Automatic domain routing with Traefik, optional Cloudflare DNS integration, and real-time build logs.
 
 ### Persistent Terminals
 
@@ -32,6 +36,7 @@ Named terminal tabs that survive restarts for ongoing work that doesn't fit into
 
 | Feature | Description |
 |---------|-------------|
+| **App Deployment** | Deploy Docker Compose apps with automatic domain routing and DNS |
 | **Parallel Agent Orchestration** | Run multiple Claude Code sessions across different tasks and worktrees |
 | **Local or Remote Execution** | Run on your machine or a remote server; agents continue working when you disconnect |
 | **Git Worktree Isolation** | Safe experimentation without touching your main branch |
@@ -47,4 +52,5 @@ Named terminal tabs that survive restarts for ongoing work that doesn't fit into
 
 - [Quick Start](/guide/quick-start) - Install and run Vibora
 - [Tasks & Worktrees](/guide/tasks) - Learn about task management
+- [App Deployment](/guide/apps) - Deploy Docker Compose applications
 - [Terminal Management](/guide/terminals) - Work with terminals
