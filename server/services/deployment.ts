@@ -335,6 +335,16 @@ export async function deployApp(
       where: eq(appServices.appId, appId),
     })
 
+    // Validate: exposed services with domains must have a container port
+    for (const service of services) {
+      if (service.exposed && service.domain && !service.containerPort) {
+        throw new Error(
+          `Service "${service.serviceName}" is exposed with domain "${service.domain}" but has no container port configured. ` +
+          `Add a port mapping to your compose file or configure the container port in the service settings.`
+        )
+      }
+    }
+
     // Get service status
     const serviceStatuses = await stackServices(projectName)
 
@@ -394,16 +404,33 @@ export async function deployApp(
         }
 
         // Configure Cloudflare DNS
-        if (settings.integrations.cloudflareApiToken && serverPublicIp && rootDomain) {
-          const dnsResult = await createDnsRecord(
-            subdomain,
-            rootDomain,
-            serverPublicIp
-          )
-          if (!dnsResult.success) {
-            log.deploy.warn('Failed to create DNS record', {
+        if (rootDomain) {
+          if (settings.integrations.cloudflareApiToken) {
+            // Cloudflare is configured - DNS creation is required
+            if (!serverPublicIp) {
+              throw new Error(`Failed to detect server public IP for DNS record creation (${service.domain})`)
+            }
+            onProgress?.({ stage: 'configuring', message: `Creating DNS record for ${service.domain}...` })
+            const dnsResult = await createDnsRecord(
+              subdomain,
+              rootDomain,
+              serverPublicIp
+            )
+            if (!dnsResult.success) {
+              throw new Error(`Failed to create DNS record for ${service.domain}: ${dnsResult.error}`)
+            }
+            buildLogs.push(`✓ DNS record created: ${service.domain} → ${serverPublicIp}`)
+          } else {
+            // No Cloudflare token - warn user to configure DNS manually
+            const dnsWarning = `⚠️ DNS not configured automatically for ${service.domain}. ` +
+              (serverPublicIp
+                ? `Create an A record pointing to ${serverPublicIp}`
+                : 'Configure Cloudflare API token in settings or create DNS records manually.')
+            buildLogs.push(dnsWarning)
+            onProgress?.({ stage: 'configuring', message: dnsWarning })
+            log.deploy.warn('DNS not configured - manual setup required', {
               domain: service.domain,
-              error: dnsResult.error,
+              hasPublicIp: !!serverPublicIp,
             })
           }
         }

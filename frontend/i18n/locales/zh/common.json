@@ -148,9 +148,13 @@
       "title": "域名配置",
       "description": "配置要暴露的服务及其域名映射",
       "expose": "暴露",
+      "exposeRequiresPort": "未配置端口。请在 compose 文件中添加端口映射。",
       "domain": "域名",
+      "noDomain": "未配置域名",
+      "portRequired": "需要端口",
+      "editDomain": "编辑域名",
       "noServices": "未配置服务。请先部署应用以查看可用服务。",
-      "save": "保存域名"
+      "save": "保存"
     },
     "streaming": {
       "pulling": "拉取代码...",

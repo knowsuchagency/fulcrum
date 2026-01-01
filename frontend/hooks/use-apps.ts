@@ -370,6 +370,23 @@ export function useWriteComposeFile() {
   })
 }
 
+// Sync services from compose file (updates ports, adds new services)
+export function useSyncServices() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (appId: string) =>
+      fetchJSON<{ success: boolean; services: Array<{ serviceName: string; containerPort: number | null; exposed: boolean; domain: string | null }> }>(
+        `${API_BASE}/api/apps/${appId}/sync-services`,
+        { method: 'POST' }
+      ),
+    onSuccess: (_, appId) => {
+      queryClient.invalidateQueries({ queryKey: ['apps', appId] })
+      queryClient.invalidateQueries({ queryKey: ['apps'] })
+    },
+  })
+}
+
 // Find app by repository ID
 export function useAppByRepository(repositoryId: string | null) {
   const { data: apps } = useApps()

@@ -148,9 +148,13 @@
       "title": "Domain Configuration",
       "description": "Configure which services are exposed and their domain mappings",
       "expose": "Expose",
+      "exposeRequiresPort": "No port configured. Add a port mapping to your compose file.",
       "domain": "Domain",
+      "noDomain": "No domain configured",
+      "portRequired": "Port required",
+      "editDomain": "Edit domain",
       "noServices": "No services configured. Deploy the app first to see available services.",
-      "save": "Save Domains"
+      "save": "Save"
     },
     "streaming": {
       "pulling": "Pulling code...",

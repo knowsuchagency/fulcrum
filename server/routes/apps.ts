@@ -4,9 +4,9 @@ import { nanoid } from 'nanoid'
 import { eq, desc } from 'drizzle-orm'
 import { db } from '../db'
 import { apps, appServices, deployments, repositories } from '../db/schema'
-import { findComposeFile } from '../services/compose-parser'
+import { findComposeFile, parseComposeFile } from '../services/compose-parser'
 import { deployApp, stopApp, getDeploymentHistory, getProjectName, cancelDeploymentByAppId } from '../services/deployment'
-import { stackServices, serviceLogs } from '../services/docker-swarm'
+import { stackServices, serviceLogs, stackRemove } from '../services/docker-swarm'
 import { checkDockerInstalled, checkDockerRunning } from '../services/docker-compose'
 import { refreshGitWatchers } from '../services/git-watcher'
 import { deleteDnsRecord } from '../services/cloudflare'
@@ -370,9 +370,27 @@ app.delete('/:id', async (c) => {
     where: eq(appServices.appId, id),
   })
 
-  // Stop containers if running and requested
-  if (stopContainers && existing.status === 'running') {
-    await stopApp(id)
+  // Cancel any in-progress deployment
+  if (existing.status === 'building') {
+    await cancelDeploymentByAppId(id)
+  }
+
+  // Stop and remove Docker stack if requested
+  if (stopContainers) {
+    if (existing.status === 'running') {
+      // Full stop with Traefik cleanup
+      await stopApp(id)
+    } else {
+      // Still try to remove stack in case of orphaned services from failed/partial deployments
+      const projectName = getProjectName(id)
+      await stackRemove(projectName).catch((err) => {
+        log.deploy.warn('Failed to remove stack during app deletion', {
+          appId: id,
+          projectName,
+          error: String(err),
+        })
+      })
+    }
   }
 
   // Clean up DNS records for all exposed services (even if not running)
@@ -408,6 +426,95 @@ app.delete('/:id', async (c) => {
   refreshGitWatchers().catch(() => {})
 
   return c.json({ success: true })
+})
+
+// POST /api/apps/:id/sync-services - Sync services from compose file
+app.post('/:id/sync-services', async (c) => {
+  const id = c.req.param('id')
+
+  const existing = await db.query.apps.findFirst({
+    where: eq(apps.id, id),
+  })
+
+  if (!existing) {
+    return c.json({ error: 'App not found' }, 404)
+  }
+
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, existing.repositoryId),
+  })
+
+  if (!repo) {
+    return c.json({ error: 'Repository not found' }, 404)
+  }
+
+  try {
+    // Parse compose file
+    const parsed = await parseComposeFile(repo.path, existing.composeFile ?? undefined)
+
+    // Get existing services
+    const existingServices = await db.query.appServices.findMany({
+      where: eq(appServices.appId, id),
+    })
+
+    const now = new Date().toISOString()
+
+    // Update existing services with port info from compose
+    for (const existingService of existingServices) {
+      const composeService = parsed.services.find((s) => s.name === existingService.serviceName)
+      if (composeService) {
+        // Get first port from compose file
+        const containerPort = composeService.ports?.[0]?.container ?? null
+        if (containerPort !== existingService.containerPort) {
+          await db
+            .update(appServices)
+            .set({ containerPort, updatedAt: now })
+            .where(eq(appServices.id, existingService.id))
+        }
+      }
+    }
+
+    // Add any new services from compose that don't exist yet
+    for (const composeService of parsed.services) {
+      const exists = existingServices.find((s) => s.serviceName === composeService.name)
+      if (!exists) {
+        await db.insert(appServices).values({
+          id: nanoid(),
+          appId: id,
+          serviceName: composeService.name,
+          containerPort: composeService.ports?.[0]?.container ?? null,
+          exposed: false,
+          domain: null,
+          status: 'stopped',
+          createdAt: now,
+          updatedAt: now,
+        })
+      }
+    }
+
+    // Fetch updated services
+    const services = await db.query.appServices.findMany({
+      where: eq(appServices.appId, id),
+    })
+
+    log.deploy.info('Synced services from compose file', {
+      appId: id,
+      serviceCount: services.length,
+      updatedPorts: services.filter((s) => s.containerPort).length,
+    })
+
+    return c.json({
+      success: true,
+      services: services.map((s) => ({
+        serviceName: s.serviceName,
+        containerPort: s.containerPort,
+        exposed: s.exposed,
+        domain: s.domain,
+      })),
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to sync services' }, 400)
+  }
 })
 
 // POST /api/apps/:id/deploy - Trigger deployment (non-streaming)

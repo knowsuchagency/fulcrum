@@ -13,6 +13,7 @@ import {
   useDeleteApp,
   useComposeFile,
   useWriteComposeFile,
+  useSyncServices,
   useDeploymentPrerequisites,
   type DeploymentStage,
 } from '@/hooks/use-apps'
@@ -20,7 +21,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -47,12 +47,13 @@ import {
   PlayIcon,
   StopIcon,
   RefreshIcon,
-  Link01Icon,
   CheckmarkCircle02Icon,
   Delete02Icon,
   Copy01Icon,
   Edit02Icon,
+  PencilEdit02Icon,
   ArrowLeft01Icon,
+  Cancel01Icon,
 } from '@hugeicons/core-free-icons'
 import { MonacoEditor } from '@/components/viewer/monaco-editor'
 import type { Deployment } from '@/types'
@@ -555,6 +556,7 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
   const repoPath = app.repository?.path ?? null
   const { data, isLoading, error } = useComposeFile(repoPath, app.composeFile)
   const writeCompose = useWriteComposeFile()
+  const syncServices = useSyncServices()
 
   // Local content state for editing
   const [content, setContent] = useState<string>('')
@@ -593,13 +595,15 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
                 setHasChanges(false)
                 setSaved(true)
                 setTimeout(() => setSaved(false), 2000)
+                // Sync services to update ports from compose file
+                syncServices.mutate(app.id)
               },
             }
           )
         }, 1000)
       }
     },
-    [isEditing, repoPath, app.composeFile, writeCompose]
+    [isEditing, repoPath, app.composeFile, app.id, writeCompose, syncServices]
   )
 
   // Cleanup timeout on unmount
@@ -621,6 +625,8 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
             setHasChanges(false)
             setSaved(true)
             setTimeout(() => setSaved(false), 2000)
+            // Sync services to update ports from compose file
+            syncServices.mutate(app.id)
           },
         }
       )
@@ -1073,10 +1079,25 @@ function ServicesSection({
     app.services?.map((s) => ({
       serviceName: s.serviceName,
       containerPort: s.containerPort,
-      exposed: s.exposed,
       domain: s.domain ?? '',
     })) ?? []
   )
+
+  // Track which service is being edited
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+
+  // Sync services state when app data changes (e.g., after compose file sync)
+  useEffect(() => {
+    if (editingIndex === null) {
+      setServices(
+        app.services?.map((s) => ({
+          serviceName: s.serviceName,
+          containerPort: s.containerPort,
+          domain: s.domain ?? '',
+        })) ?? []
+      )
+    }
+  }, [app.services, editingIndex])
 
   // Get runtime status for each service
   const getServiceStatus = (serviceName: string): string => {
@@ -1094,11 +1115,13 @@ function ServicesSection({
         services: services.map((s) => ({
           serviceName: s.serviceName,
           containerPort: s.containerPort ?? undefined,
-          exposed: s.exposed,
+          // Derive exposed from whether domain is set
+          exposed: !!s.domain,
           domain: s.domain || undefined,
         })),
       },
     })
+    setEditingIndex(null)
     toast.warning(t('apps.deployToApply'), {
       description: t('apps.deployToApplyDesc'),
       action: {
@@ -1112,22 +1135,31 @@ function ServicesSection({
     setServices((prev) => prev.map((s, i) => (i === index ? { ...s, ...updates } : s)))
   }
 
+  const toggleEdit = (index: number) => {
+    if (editingIndex === index) {
+      // Save when exiting edit mode
+      handleSave()
+    } else {
+      setEditingIndex(index)
+    }
+  }
+
+  const cancelEdit = () => {
+    // Reset to original values
+    setServices(
+      app.services?.map((s) => ({
+        serviceName: s.serviceName,
+        containerPort: s.containerPort,
+        domain: s.domain ?? '',
+      })) ?? []
+    )
+    setEditingIndex(null)
+  }
+
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.general.services')}</h4>
-        {services.length > 0 && (
-          <Button size="sm" onClick={handleSave} disabled={updateApp.isPending}>
-            {updateApp.isPending ? (
-              <>
-                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                {t('status.saving')}
-              </>
-            ) : (
-              t('apps.domains.save')
-            )}
-          </Button>
-        )}
       </div>
 
       {services.length > 0 ? (
@@ -1135,7 +1167,9 @@ function ServicesSection({
           {services.map((service, index) => {
             const runtimeStatus = getServiceStatus(service.serviceName)
             const isRunning = runtimeStatus === 'running'
-            const hasActiveDomain = isRunning && service.exposed && service.domain
+            const isEditing = editingIndex === index
+            const hasPort = !!service.containerPort
+            const hasDomain = !!service.domain
 
             return (
               <div key={service.serviceName} className="flex items-center gap-3 text-sm">
@@ -1155,39 +1189,76 @@ function ServicesSection({
                   )}
                 </div>
 
-                {/* Expose toggle */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Checkbox
-                    id={`expose-${index}`}
-                    checked={service.exposed}
-                    onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
-                  />
-                  <Label htmlFor={`expose-${index}`} className="text-xs text-muted-foreground">
-                    {t('apps.domains.expose')}
-                  </Label>
+                {/* Domain - either link, input, or placeholder */}
+                <div className="flex-1 min-w-0">
+                  {isEditing ? (
+                    <Input
+                      value={service.domain}
+                      onChange={(e) => updateService(index, { domain: e.target.value })}
+                      placeholder="app.example.com"
+                      className="h-7 text-xs"
+                      autoFocus
+                      disabled={!hasPort}
+                    />
+                  ) : hasDomain ? (
+                    <a
+                      href={`https://${service.domain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline truncate block"
+                    >
+                      {service.domain}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground/50 text-xs">
+                      {hasPort ? t('apps.domains.noDomain') : t('apps.domains.portRequired')}
+                    </span>
+                  )}
                 </div>
 
-                {/* Domain input (when exposed) */}
-                {service.exposed && (
-                  <Input
-                    value={service.domain}
-                    onChange={(e) => updateService(index, { domain: e.target.value })}
-                    placeholder="app.example.com"
-                    className="flex-1 h-7 text-xs"
-                  />
-                )}
-
-                {/* Link to domain (when running + exposed + has domain) */}
-                {hasActiveDomain && (
-                  <a
-                    href={`https://${service.domain}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 p-1 text-primary hover:text-primary/80 transition-colors"
-                    title={service.domain}
+                {/* Edit/Cancel button */}
+                {isEditing ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => toggleEdit(index)}
+                      disabled={updateApp.isPending}
+                      title={t('apps.domains.save')}
+                    >
+                      {updateApp.isPending ? (
+                        <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                      ) : (
+                        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="text-green-500" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={cancelEdit}
+                      title={t('apps.cancel')}
+                    >
+                      <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} className="text-muted-foreground" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => toggleEdit(index)}
+                    disabled={!hasPort}
+                    title={!hasPort ? t('apps.domains.exposeRequiresPort') : t('apps.domains.editDomain')}
                   >
-                    <HugeiconsIcon icon={Link01Icon} size={14} strokeWidth={2} />
-                  </a>
+                    <HugeiconsIcon
+                      icon={PencilEdit02Icon}
+                      size={14}
+                      strokeWidth={2}
+                      className={hasPort ? 'text-muted-foreground' : 'text-muted-foreground/30'}
+                    />
+                  </Button>
                 )}
               </div>
             )
