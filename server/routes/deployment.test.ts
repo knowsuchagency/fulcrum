@@ -34,13 +34,29 @@ mock.module('../services/traefik-docker', () => ({
 
 describe('Deployment Routes', () => {
   let testEnv: TestEnv
+  let savedCloudflareApiToken: string | undefined
+  let savedCloudflareAccountId: string | undefined
 
   beforeEach(() => {
+    // Save and clear Cloudflare env vars to avoid them overriding test settings
+    savedCloudflareApiToken = process.env.CLOUDFLARE_API_TOKEN
+    savedCloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID
+    delete process.env.CLOUDFLARE_API_TOKEN
+    delete process.env.CLOUDFLARE_ACCOUNT_ID
+
     testEnv = setupTestEnv()
   })
 
   afterEach(() => {
     testEnv.cleanup()
+
+    // Restore Cloudflare env vars
+    if (savedCloudflareApiToken !== undefined) {
+      process.env.CLOUDFLARE_API_TOKEN = savedCloudflareApiToken
+    }
+    if (savedCloudflareAccountId !== undefined) {
+      process.env.CLOUDFLARE_ACCOUNT_ID = savedCloudflareAccountId
+    }
   })
 
   describe('GET /api/deployment/prerequisites', () => {

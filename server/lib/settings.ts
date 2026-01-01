@@ -4,7 +4,7 @@ import * as os from 'os'
 import { log } from './logger'
 
 // Schema version for settings migration
-const CURRENT_SCHEMA_VERSION = 6
+const CURRENT_SCHEMA_VERSION = 7
 
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed' | 'antigravity'
