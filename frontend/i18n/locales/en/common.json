@@ -17,7 +17,8 @@
     "validating": "Validating...",
     "creating": "Creating...",
     "deleting": "Deleting...",
-    "loggingIn": "Logging in..."
+    "loggingIn": "Logging in...",
+    "uploading": "Uploading..."
   },
   "time": {
     "justNow": "just now",
@@ -45,5 +46,20 @@
     "password": "Password",
     "login": "Login",
     "loginFailed": "Login failed"
+  },
+  "git": {
+    "sentToClaude": "Sent to Claude Code",
+    "noTerminal": "No terminal available",
+    "syncedFromMain": "Synced from main",
+    "mergedToMain": "Merged to main",
+    "pushedToOrigin": "Pushed to origin",
+    "parentSynced": "Parent synced with origin",
+    "prCreated": "PR created",
+    "prExists": "PR already exists"
+  },
+  "errors": {
+    "imageUploadFailed": "Failed to upload image",
+    "terminalNotConnected": "Terminal not connected",
+    "terminalNotConnectedDesc": "Please wait for the connection to establish"
   }
 }

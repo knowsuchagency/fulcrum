@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Textarea } from '@/components/ui/textarea'
 import { uploadImage } from '@/lib/upload'
 import { toast } from 'sonner'
@@ -31,6 +32,7 @@ export function DescriptionTextarea({
   disabled,
   ...props
 }: DescriptionTextareaProps) {
+  const { t } = useTranslation('common')
   const [isUploading, setIsUploading] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -65,7 +67,7 @@ export function DescriptionTextarea({
             onValueChange(value + (value ? '\n' : '') + path)
           }
         } catch (error) {
-          toast.error('Failed to upload image')
+          toast.error(t('errors.imageUploadFailed'))
           log.kanban.error('Upload error', { error: String(error) })
         } finally {
           setIsUploading(false)
@@ -89,7 +91,7 @@ export function DescriptionTextarea({
         />
         {isUploading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-md">
-            <span className="text-sm text-muted-foreground">Uploading...</span>
+            <span className="text-sm text-muted-foreground">{t('status.uploading')}</span>
           </div>
         )}
       </div>

@@ -17,7 +17,8 @@
     "validating": "验证中...",
     "creating": "创建中...",
     "deleting": "删除中...",
-    "loggingIn": "登录中..."
+    "loggingIn": "登录中...",
+    "uploading": "上传中..."
   },
   "time": {
     "justNow": "刚刚",
@@ -45,5 +46,20 @@
     "password": "密码",
     "login": "登录",
     "loginFailed": "登录失败"
+  },
+  "git": {
+    "sentToClaude": "已发送到 Claude Code",
+    "noTerminal": "没有可用的终端",
+    "syncedFromMain": "已从 main 同步",
+    "mergedToMain": "已合并到 main",
+    "pushedToOrigin": "已推送到 origin",
+    "parentSynced": "父仓库已与 origin 同步",
+    "prCreated": "PR 已创建",
+    "prExists": "PR 已存在"
+  },
+  "errors": {
+    "imageUploadFailed": "图片上传失败",
+    "terminalNotConnected": "终端未连接",
+    "terminalNotConnectedDesc": "请等待连接建立"
   }
 }
