@@ -52,7 +52,6 @@ import {
   Delete02Icon,
   Copy01Icon,
   Edit02Icon,
-  PackageIcon,
   ArrowLeft01Icon,
 } from '@hugeicons/core-free-icons'
 import { MonacoEditor } from '@/components/viewer/monaco-editor'
@@ -99,19 +98,6 @@ function formatRelativeTime(date: string): string {
   if (hours < 24) return `about ${hours}h ago`
   const days = Math.floor(hours / 24)
   return `about ${days}d ago`
-}
-
-function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-  switch (status) {
-    case 'running':
-      return 'default'
-    case 'building':
-      return 'secondary'
-    case 'failed':
-      return 'destructive'
-    default:
-      return 'outline'
-  }
 }
 
 function AppDetailView() {
@@ -189,54 +175,29 @@ function AppDetailView() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header - Dokploy style */}
-      <div className="flex shrink-0 items-center gap-4 border-b border-border bg-background px-4 py-3">
-        <div className="flex-1">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTab)} className="flex h-full flex-col">
+        {/* Header bar - tabs on left, app info on right */}
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-4 py-2">
+          {/* Tabs on left */}
+          <TabsList variant="line">
+            <TabsTrigger value="general" className="px-3 py-1.5">{t('apps.tabs.general')}</TabsTrigger>
+            <TabsTrigger value="deployments" className="px-3 py-1.5">{t('apps.tabs.deployments')}</TabsTrigger>
+            <TabsTrigger value="logs" className="px-3 py-1.5">{t('apps.tabs.logs')}</TabsTrigger>
+            <TabsTrigger value="environment" className="px-3 py-1.5">{t('apps.tabs.environment')}</TabsTrigger>
+            <TabsTrigger value="domains" className="px-3 py-1.5">{t('apps.tabs.domains')}</TabsTrigger>
+          </TabsList>
+
+          {/* App info on right */}
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold">{app.name}</span>
-            <Badge variant={getStatusBadgeVariant(app.status)}>
-              {t(`apps.status.${app.status}`)}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{app.id.slice(0, 12)}</span>
-            {app.repository && (
-              <>
-                <span>·</span>
-                <Link
-                  to="/repositories/$repoId"
-                  params={{ repoId: app.repository.id }}
-                  className="flex items-center gap-1 hover:text-foreground transition-colors"
-                >
-                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
-                  {app.repository.displayName}
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-destructive"
-          onClick={() => setShowDeleteConfirm(true)}
-        >
-          <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
-        </Button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-4">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTab)}>
-          <div className="mb-4 flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="general">{t('apps.tabs.general')}</TabsTrigger>
-              <TabsTrigger value="deployments">{t('apps.tabs.deployments')}</TabsTrigger>
-              <TabsTrigger value="logs">{t('apps.tabs.logs')}</TabsTrigger>
-              <TabsTrigger value="environment">{t('apps.tabs.environment')}</TabsTrigger>
-              <TabsTrigger value="domains">{t('apps.tabs.domains')}</TabsTrigger>
-            </TabsList>
+            <span className="font-medium text-sm">{app.name}</span>
+            <div
+              className={`h-2 w-2 rounded-full ${
+                app.status === 'running' ? 'bg-green-500' :
+                app.status === 'building' ? 'bg-yellow-500' :
+                app.status === 'failed' ? 'bg-red-500' : 'bg-gray-400'
+              }`}
+              title={t(`apps.status.${app.status}`)}
+            />
             {showDnsWarning && (
               <button
                 onClick={() => {
@@ -248,15 +209,26 @@ function AppDetailView() {
                     },
                   })
                 }}
-                className="p-1.5 text-amber-500 hover:text-amber-400 transition-colors"
+                className="p-1 text-amber-500 hover:text-amber-400 transition-colors"
                 title={t('apps.dnsConfigRequired')}
               >
-                <HugeiconsIcon icon={Alert02Icon} size={18} strokeWidth={2} />
+                <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} />
               </button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+            </Button>
           </div>
+        </div>
 
-          <TabsContent value="general">
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-4">
+          <TabsContent value="general" className="mt-0">
             <GeneralTab
               app={app}
               onDeploy={handleDeploy}
@@ -264,23 +236,23 @@ function AppDetailView() {
             />
           </TabsContent>
 
-          <TabsContent value="deployments">
+          <TabsContent value="deployments" className="mt-0">
             <DeploymentsTab appId={appId} />
           </TabsContent>
 
-          <TabsContent value="logs">
+          <TabsContent value="logs" className="mt-0">
             <LogsTab appId={appId} services={app.services} />
           </TabsContent>
 
-          <TabsContent value="environment">
+          <TabsContent value="environment" className="mt-0">
             <EnvironmentTab app={app} />
           </TabsContent>
 
-          <TabsContent value="domains">
+          <TabsContent value="domains" className="mt-0">
             <DomainsTab app={app} onDeploy={handleDeploy} />
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
 
       {/* Streaming deployment logs modal - at parent level so it works from any tab */}
       <StreamingDeploymentModal
