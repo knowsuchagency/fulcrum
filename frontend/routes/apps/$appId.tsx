@@ -18,9 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
   DialogContent,
@@ -233,7 +231,7 @@ function AppDetailView() {
   )
 }
 
-// General tab - Dokploy style with deploy actions
+// General tab - dense 2-column layout
 function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
   const { data: status } = useAppStatus(app.id)
   const deployApp = useDeployApp()
@@ -255,155 +253,117 @@ function GeneralTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data'
     })
   }
 
+  const handleNoCacheToggle = async (enabled: boolean) => {
+    await updateApp.mutateAsync({
+      id: app.id,
+      updates: { noCacheBuild: enabled },
+    })
+  }
+
+  // Get services to display
+  const serviceItems = status?.containers && status.containers.length > 0
+    ? status.containers.map((container) => {
+        const service = app.services?.find((s) => s.serviceName === container.service)
+        return {
+          name: container.service,
+          status: container.status,
+          domain: service?.exposed && service.domain ? service.domain : null,
+        }
+      })
+    : app.services?.map((service) => ({
+        name: service.serviceName,
+        status: 'stopped',
+        domain: service.exposed && service.domain ? service.domain : null,
+      })) ?? []
+
   return (
-    <div className="space-y-6 max-w-3xl">
-      {/* Deploy Settings Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Deploy Settings</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure and deploy your compose application
-          </p>
+    <div className="space-y-4">
+      {/* Top row: Deploy + Services side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Deploy section */}
+        <div className="rounded-lg border p-4 space-y-3">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Deploy</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={handleDeploy} disabled={deployApp.isPending || app.status === 'building'}>
+              {deployApp.isPending || app.status === 'building' ? (
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
+              )}
+              {app.status === 'building' ? 'Building...' : 'Deploy'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDeploy} disabled={deployApp.isPending}>
+              <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
+              Reload
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleStop}
+              disabled={stopApp.isPending || app.status !== 'running'}
+            >
+              {stopApp.isPending ? (
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+              )}
+              Stop
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={app.autoDeployEnabled ?? false}
+                onCheckedChange={(checked) => handleAutoDeployToggle(checked === true)}
+              />
+              <span>Autodeploy</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={app.noCacheBuild ?? false}
+                onCheckedChange={(checked) => handleNoCacheToggle(checked === true)}
+              />
+              <span>No-cache</span>
+            </label>
+          </div>
         </div>
-        <Badge variant="secondary">Compose</Badge>
-      </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        <Button onClick={handleDeploy} disabled={deployApp.isPending || app.status === 'building'}>
-          {deployApp.isPending || app.status === 'building' ? (
-            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-          ) : (
-            <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
-          )}
-          {app.status === 'building' ? 'Building...' : 'Deploy'}
-        </Button>
-        <Button variant="outline" onClick={handleDeploy} disabled={deployApp.isPending}>
-          <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
-          Reload
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleStop}
-          disabled={stopApp.isPending || app.status !== 'running'}
-        >
-          {stopApp.isPending ? (
-            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-          ) : (
-            <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
-          )}
-          Stop
-        </Button>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="autodeploy"
-            checked={app.autoDeployEnabled ?? false}
-            onCheckedChange={(checked) => handleAutoDeployToggle(checked === true)}
-          />
-          <Label htmlFor="autodeploy" className="text-sm">
-            Autodeploy
-          </Label>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Services Status */}
-      <div>
-        <h4 className="font-medium mb-3">Services</h4>
-        <div className="space-y-2 rounded-lg border p-3">
-          {status?.containers && status.containers.length > 0 ? (
-            status.containers.map((container) => {
-              const service = app.services?.find((s) => s.serviceName === container.service)
-              return (
-                <div key={container.name} className="flex items-center gap-3">
+        {/* Services section */}
+        <div className="rounded-lg border p-4 space-y-3">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Services</h4>
+          {serviceItems.length > 0 ? (
+            <div className="space-y-2">
+              {serviceItems.map((service) => (
+                <div key={service.name} className="flex items-center gap-2 text-sm">
                   <div
                     className={`h-2 w-2 rounded-full ${
-                      container.status === 'running' ? 'bg-green-500' : 'bg-gray-400'
+                      service.status === 'running' ? 'bg-green-500' : 'bg-gray-400'
                     }`}
                   />
-                  <span className="font-medium text-sm">{container.service}</span>
-                  <span className="text-sm text-muted-foreground">{container.status}</span>
-                  {service?.exposed && service.domain && (
+                  <span className="font-medium">{service.name}</span>
+                  <span className="text-muted-foreground">{service.status}</span>
+                  {service.domain && (
                     <a
                       href={`https://${service.domain}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-auto flex items-center gap-1 text-sm text-primary hover:underline"
+                      className="ml-auto flex items-center gap-1 text-primary hover:underline"
                     >
                       <HugeiconsIcon icon={Link01Icon} size={12} strokeWidth={2} />
                       {service.domain}
                     </a>
                   )}
                 </div>
-              )
-            })
-          ) : app.services && app.services.length > 0 ? (
-            app.services.map((service) => (
-              <div key={service.id} className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-gray-400" />
-                <span className="font-medium text-sm">{service.serviceName}</span>
-                <span className="text-sm text-muted-foreground">stopped</span>
-                {service.exposed && service.domain && (
-                  <a
-                    href={`https://${service.domain}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-auto flex items-center gap-1 text-sm text-primary hover:underline"
-                  >
-                    <HugeiconsIcon icon={Link01Icon} size={12} strokeWidth={2} />
-                    {service.domain}
-                  </a>
-                )}
-              </div>
-            ))
+              ))}
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">No services configured</p>
           )}
         </div>
       </div>
 
-      <Separator />
-
-      {/* Compose File */}
+      {/* Bottom row: Compose file full width */}
       <ComposeFileEditor app={app} />
-
-      <Separator />
-
-      {/* Build Settings */}
-      <BuildSettings app={app} />
-    </div>
-  )
-}
-
-// Build settings component
-function BuildSettings({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
-  const updateApp = useUpdateApp()
-  const [noCacheBuild, setNoCacheBuild] = useState(app.noCacheBuild ?? false)
-
-  const handleToggleNoCache = async (checked: boolean) => {
-    setNoCacheBuild(checked)
-    await updateApp.mutateAsync({
-      id: app.id,
-      updates: { noCacheBuild: checked },
-    })
-  }
-
-  return (
-    <div>
-      <h4 className="font-medium mb-3">Build Settings</h4>
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="no-cache-build" className="text-sm font-medium">
-            No Cache Build
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            Rebuild images from scratch without Docker cache
-          </p>
-        </div>
-        <Switch id="no-cache-build" checked={noCacheBuild} onCheckedChange={handleToggleNoCache} />
-      </div>
     </div>
   )
 }
@@ -488,8 +448,8 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
 
   if (!repoPath) {
     return (
-      <div className="py-4">
-        <h4 className="font-medium mb-2">Compose File</h4>
+      <div className="rounded-lg border p-4">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Compose File</h4>
         <p className="text-sm text-muted-foreground">Repository path not found</p>
       </div>
     )
@@ -497,8 +457,8 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
 
   if (isLoading) {
     return (
-      <div className="py-4">
-        <h4 className="font-medium mb-2">Compose File</h4>
+      <div className="rounded-lg border p-4">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Compose File</h4>
         <div className="flex items-center gap-2 text-muted-foreground">
           <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
           <span className="text-sm">Loading...</span>
@@ -509,8 +469,8 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
 
   if (error) {
     return (
-      <div className="py-4">
-        <h4 className="font-medium mb-2">Compose File</h4>
+      <div className="rounded-lg border p-4">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Compose File</h4>
         <div className="flex items-center gap-2 text-destructive">
           <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />
           <span className="text-sm">{error.message}</span>
@@ -520,10 +480,10 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
   }
 
   return (
-    <div>
+    <div className="rounded-lg border p-4 space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="font-medium">Compose File</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Compose File</h4>
         <div className="flex items-center gap-2">
           {/* Status indicators */}
           {hasChanges && isEditing && (
@@ -555,7 +515,7 @@ function ComposeFileEditor({ app }: { app: NonNullable<ReturnType<typeof useApp>
       </div>
 
       {/* Editor */}
-      <div className="h-[300px] rounded-lg border overflow-hidden">
+      <div className="h-[400px] rounded-md border overflow-hidden">
         <MonacoEditor
           filePath={app.composeFile}
           content={content}
