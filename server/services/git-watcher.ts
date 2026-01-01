@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '../db'
 import { apps, repositories } from '../db/schema'
 import { deployApp } from './deployment'
@@ -207,7 +207,7 @@ function watchRepo(repoId: string, repoPath: string, branch: string, appId: stri
 /**
  * Stop watching a repository for an app
  */
-function unwatchRepo(repoPath: string, appId: string): void {
+export function unwatchRepo(repoPath: string, appId: string): void {
   const watched = watchedRepos.get(repoPath)
   if (!watched) return
 
@@ -298,7 +298,7 @@ export async function startGitWatcher(): Promise<void> {
  * Stop the git watcher service
  */
 export function stopGitWatcher(): void {
-  for (const [repoPath, watched] of watchedRepos) {
+  for (const watched of watchedRepos.values()) {
     if (watched.watcher) {
       watched.watcher.close()
     }
