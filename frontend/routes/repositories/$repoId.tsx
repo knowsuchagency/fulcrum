@@ -24,8 +24,7 @@ import {
   GithubIcon,
   ComputerTerminal01Icon,
   VisualStudioCodeIcon,
-  CloudIcon,
-  Add01Icon,
+  Rocket01Icon,
 } from '@hugeicons/core-free-icons'
 import {
   Dialog,
@@ -454,7 +453,7 @@ function RepositoryDetailView() {
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
               >
-                <HugeiconsIcon icon={CloudIcon} size={14} strokeWidth={2} data-slot="icon" />
+                <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
                 <span className="max-sm:hidden">{t('application')}</span>
               </Button>
             </Link>
@@ -466,7 +465,7 @@ function RepositoryDetailView() {
               onClick={handleCreateApp}
               disabled={composeLoading}
             >
-              <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
               <span className="max-sm:hidden">{t('createApp')}</span>
             </Button>
           )}

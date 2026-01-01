@@ -50,7 +50,7 @@ import {
   Delete02Icon,
   Copy01Icon,
   Edit02Icon,
-  Folder01Icon,
+  PackageIcon,
   ArrowLeft01Icon,
 } from '@hugeicons/core-free-icons'
 import { MonacoEditor } from '@/components/viewer/monaco-editor'
@@ -157,7 +157,7 @@ function AppDetailView() {
                   params={{ repoId: app.repository.id }}
                   className="flex items-center gap-1 hover:text-foreground transition-colors"
                 >
-                  <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
+                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
                   {app.repository.displayName}
                 </Link>
               </>
