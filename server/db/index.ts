@@ -123,6 +123,9 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       const hasEnvironmentVariables = sqlite
         .query("SELECT name FROM pragma_table_info('apps') WHERE name='environment_variables'")
         .get()
+      const hasNotificationsEnabled = sqlite
+        .query("SELECT name FROM pragma_table_info('apps') WHERE name='notifications_enabled'")
+        .get()
 
       // Determine which migrations should be marked as applied based on schema state
       const migrationsToMark: Array<{ tag: string; when: number }> = []
@@ -145,6 +148,10 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         }
         // 0015 adds environment_variables to apps
         else if (entry.tag.startsWith('0015') && hasEnvironmentVariables) {
+          shouldMark = true
+        }
+        // 0016 adds notifications_enabled to apps
+        else if (entry.tag.startsWith('0016') && hasNotificationsEnabled) {
           shouldMark = true
         }
 
