@@ -137,12 +137,14 @@ export async function ensureSwarmMode(): Promise<{ initialized: boolean; error?:
  * This function creates a modified compose file that:
  * 1. Adds `image: {projectName}-{serviceName}` for services with `build` but no `image`
  * 2. Removes `restart` (Swarm handles this via deploy config)
- * 3. Writes to `.swarm-compose.yml` in the same directory
+ * 3. Optionally attaches services to an external network (for Traefik routing)
+ * 4. Writes to `.swarm-compose.yml` in the same directory
  */
 export async function generateSwarmComposeFile(
   cwd: string,
   composeFile: string,
-  projectName: string
+  projectName: string,
+  externalNetwork?: string // Optional external network for ingress (e.g., dokploy-network)
 ): Promise<{ success: boolean; swarmFile: string; error?: string }> {
   const swarmFile = '.swarm-compose.yml'
   const originalPath = join(cwd, composeFile)
@@ -178,16 +180,44 @@ export async function generateSwarmComposeFile(
       if (serviceConfig.restart) {
         delete serviceConfig.restart
       }
+
+      // Add external network to service if specified
+      if (externalNetwork) {
+        const existingNetworks = serviceConfig.networks as string[] | Record<string, unknown> | undefined
+
+        if (Array.isArray(existingNetworks)) {
+          // Array format: ["default", "other"]
+          if (!existingNetworks.includes(externalNetwork)) {
+            existingNetworks.push(externalNetwork)
+          }
+        } else if (existingNetworks && typeof existingNetworks === 'object') {
+          // Object format: { default: {}, other: {} }
+          if (!(externalNetwork in existingNetworks)) {
+            existingNetworks[externalNetwork] = {}
+          }
+        } else {
+          // No networks defined, create array with default and external
+          serviceConfig.networks = ['default', externalNetwork]
+        }
+      }
+    }
+
+    // Add external network definition at top level if specified
+    if (externalNetwork) {
+      const networks = (parsed.networks || {}) as Record<string, unknown>
+      networks[externalNetwork] = { external: true }
+      parsed.networks = networks
     }
 
     // Write the modified compose file
     const swarmContent = stringifyYaml(parsed)
     await writeFile(swarmPath, swarmContent, 'utf-8')
 
-    if (modified.length > 0) {
+    if (modified.length > 0 || externalNetwork) {
       log.deploy.info('Generated Swarm compose file', {
         swarmFile,
         modifiedServices: modified,
+        externalNetwork: externalNetwork || null,
       })
     }
 
@@ -453,7 +483,7 @@ export async function waitForServicesHealthy(
       return { healthy: true, failedServices: [] }
     }
 
-    log.deploy.debug('Services not yet healthy', {
+    log.deploy.info('Services not yet healthy', {
       stackName,
       unhealthyServices,
       elapsed: Date.now() - startTime,

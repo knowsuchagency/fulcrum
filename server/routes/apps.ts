@@ -7,6 +7,7 @@ import { apps, appServices, deployments, repositories } from '../db/schema'
 import { findComposeFile } from '../services/compose-parser'
 import { deployApp, stopApp, getDeploymentHistory, getProjectName } from '../services/deployment'
 import { stackServices, serviceLogs } from '../services/docker-swarm'
+import { checkDockerInstalled, checkDockerRunning } from '../services/docker-compose'
 import type { App, AppService } from '../db/schema'
 
 const app = new Hono()
@@ -94,6 +95,34 @@ app.get('/:id', async (c) => {
 // POST /api/apps - Create app
 app.post('/', async (c) => {
   try {
+    // Check Docker prerequisites before allowing app creation
+    const [dockerInstalled, dockerRunning] = await Promise.all([
+      checkDockerInstalled(),
+      checkDockerRunning(),
+    ])
+
+    if (!dockerInstalled) {
+      return c.json(
+        {
+          error: 'Docker is required for the Apps feature',
+          code: 'DOCKER_NOT_INSTALLED',
+          help: 'Install Docker from https://docs.docker.com/get-docker/',
+        },
+        400
+      )
+    }
+
+    if (!dockerRunning) {
+      return c.json(
+        {
+          error: 'Docker daemon is not running',
+          code: 'DOCKER_NOT_RUNNING',
+          help: 'Start Docker and try again',
+        },
+        400
+      )
+    }
+
     const body = await c.req.json<{
       name: string
       repositoryId: string
@@ -354,14 +383,19 @@ app.get('/:id/deploy/stream', async (c) => {
     await stream.write(': ping\n\n')
 
     // Start deployment with progress callback
+    // Wrap in try/catch so client disconnect doesn't crash deployment
     const result = await deployApp(
       id,
       { deployedBy: 'manual' },
       async (progress) => {
-        await stream.writeSSE({
-          event: 'progress',
-          data: JSON.stringify(progress),
-        })
+        try {
+          await stream.writeSSE({
+            event: 'progress',
+            data: JSON.stringify(progress),
+          })
+        } catch {
+          // Client disconnected, but deployment should continue
+        }
       }
     )
 

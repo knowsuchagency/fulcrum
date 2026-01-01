@@ -358,3 +358,109 @@ export function useAppByRepository(repositoryId: string | null) {
   const { data: apps } = useApps()
   return apps?.find((app) => app.repository?.id === repositoryId) ?? null
 }
+
+// Deployment prerequisites
+export interface DeploymentPrerequisites {
+  docker: {
+    installed: boolean
+    running: boolean
+    version: string | null
+  }
+  traefik: {
+    detected: boolean
+    type: 'dokploy' | 'vibora' | 'other' | 'none'
+    containerName: string | null
+    configDir: string | null
+    network: string | null
+    configWritable: boolean
+  }
+  settings: {
+    cloudflareConfigured: boolean
+    serverIpConfigured: boolean
+    defaultDomainConfigured: boolean
+    acmeEmailConfigured: boolean
+  }
+  ready: boolean
+}
+
+export function useDeploymentPrerequisites() {
+  return useQuery({
+    queryKey: ['deployment', 'prerequisites'],
+    queryFn: () => fetchJSON<DeploymentPrerequisites>(`${API_BASE}/api/deployment/prerequisites`),
+    staleTime: 10000, // Cache for 10 seconds
+  })
+}
+
+// Start Traefik container (only for Vibora's own Traefik, not external)
+export function useStartTraefik() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () =>
+      fetchJSON<{ success: boolean; status: string; containerName: string; network: string }>(
+        `${API_BASE}/api/deployment/traefik/start`,
+        { method: 'POST' }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deployment', 'prerequisites'] })
+    },
+  })
+}
+
+// Stop Traefik container (only Vibora's own Traefik)
+export function useStopTraefik() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/deployment/traefik/stop`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deployment', 'prerequisites'] })
+    },
+  })
+}
+
+// Detect public IP
+export function useDetectPublicIp() {
+  return useMutation({
+    mutationFn: () => fetchJSON<{ success: boolean; ip: string }>(`${API_BASE}/api/deployment/detect-ip`),
+  })
+}
+
+// Get deployment settings
+export interface DeploymentSettings {
+  cloudflareApiToken: string | null
+  cloudflareConfigured: boolean
+  defaultDomain: string | null
+  serverPublicIp: string | null
+  acmeEmail: string | null
+}
+
+export function useDeploymentSettings() {
+  return useQuery({
+    queryKey: ['deployment', 'settings'],
+    queryFn: () => fetchJSON<DeploymentSettings>(`${API_BASE}/api/deployment/settings`),
+  })
+}
+
+// Update deployment settings
+export function useUpdateDeploymentSettings() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: {
+      cloudflareApiToken?: string | null
+      defaultDomain?: string | null
+      serverPublicIp?: string | null
+      acmeEmail?: string | null
+    }) =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/deployment/settings`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deployment', 'settings'] })
+      queryClient.invalidateQueries({ queryKey: ['deployment', 'prerequisites'] })
+    },
+  })
+}

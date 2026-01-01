@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { fuzzyScore } from '@/lib/fuzzy-search'
-import { useApps, useDeployApp, useStopApp, useDeleteApp } from '@/hooks/use-apps'
+import { useApps, useDeployApp, useStopApp, useDeleteApp, useDeploymentPrerequisites } from '@/hooks/use-apps'
 import type { AppWithServices } from '@/hooks/use-apps'
+import { DeploymentSetupWizard } from '@/components/apps/deployment-setup-wizard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -171,11 +172,25 @@ function AppCard({
 
 function AppsView() {
   const { data: apps, isLoading, error } = useApps()
+  const { data: prereqs, isLoading: prereqsLoading } = useDeploymentPrerequisites()
   const deployApp = useDeployApp()
   const stopApp = useStopApp()
   const deleteApp = useDeleteApp()
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<AppWithServices | null>(null)
+  const [setupDismissed, setSetupDismissed] = useState(false)
+
+  // Show setup wizard if:
+  // - Prerequisites are not ready
+  // - No apps exist yet
+  // - Setup hasn't been dismissed
+  const showSetupWizard =
+    !prereqsLoading &&
+    prereqs &&
+    !prereqs.ready &&
+    (!apps || apps.length === 0) &&
+    !setupDismissed
 
   const filteredApps = useMemo(() => {
     if (!apps) return []
@@ -205,6 +220,18 @@ function AppsView() {
     if (!deleteTarget) return
     await deleteApp.mutateAsync({ id: deleteTarget.id })
     setDeleteTarget(null)
+  }
+
+  // Show setup wizard when prerequisites aren't met
+  if (showSetupWizard) {
+    return (
+      <div className="flex h-full flex-col overflow-auto p-8">
+        <DeploymentSetupWizard
+          onComplete={() => navigate({ to: '/apps/new' })}
+          onSkip={() => setSetupDismissed(true)}
+        />
+      </div>
+    )
   }
 
   return (

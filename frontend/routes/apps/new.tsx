@@ -51,6 +51,12 @@ function CreateAppWizard() {
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Step 2 state (declared before useEffect that uses them)
+  const [appName, setAppName] = useState('')
+  const [branch, setBranch] = useState('main')
+  const [autoDeployEnabled, setAutoDeployEnabled] = useState(false)
+  const [services, setServices] = useState<ServiceConfig[]>([])
+
   // Auto-select repository if repoId is provided in URL
   useEffect(() => {
     if (repoId && repositories && !selectedRepo) {
@@ -60,13 +66,7 @@ function CreateAppWizard() {
         setAppName(repo.displayName)
       }
     }
-  }, [repoId, repositories, selectedRepo])
-
-  // Step 2 state
-  const [appName, setAppName] = useState('')
-  const [branch, setBranch] = useState('main')
-  const [autoDeployEnabled, setAutoDeployEnabled] = useState(false)
-  const [services, setServices] = useState<ServiceConfig[]>([])
+  }, [repoId, repositories, selectedRepo, setAppName])
 
   // Fetch compose info for selected repo
   const { data: composeInfo, isLoading: composeLoading, error: composeError } = useFindCompose(

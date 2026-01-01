@@ -836,14 +836,14 @@ export interface DeploymentSettings {
   cloudflareApiToken: string | null
   defaultDomain: string | null // e.g., "example.com"
   serverPublicIp: string | null
-  caddyApiUrl: string // Default: 'http://localhost:2019'
+  acmeEmail: string | null // Email for Let's Encrypt certificates
 }
 
 const DEFAULT_DEPLOYMENT_SETTINGS: DeploymentSettings = {
   cloudflareApiToken: null,
   defaultDomain: null,
   serverPublicIp: null,
-  caddyApiUrl: 'http://localhost:2019',
+  acmeEmail: null,
 }
 
 // Get deployment settings from settings.json
@@ -868,7 +868,7 @@ export function getDeploymentSettings(): DeploymentSettings {
       cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? deployment.cloudflareApiToken ?? null,
       defaultDomain: deployment.defaultDomain ?? null,
       serverPublicIp: deployment.serverPublicIp ?? null,
-      caddyApiUrl: deployment.caddyApiUrl ?? DEFAULT_DEPLOYMENT_SETTINGS.caddyApiUrl,
+      acmeEmail: deployment.acmeEmail ?? null,
     }
   } catch {
     return DEFAULT_DEPLOYMENT_SETTINGS
@@ -894,7 +894,7 @@ export function updateDeploymentSettings(updates: Partial<DeploymentSettings>): 
     cloudflareApiToken: updates.cloudflareApiToken !== undefined ? updates.cloudflareApiToken : current.cloudflareApiToken,
     defaultDomain: updates.defaultDomain !== undefined ? updates.defaultDomain : current.defaultDomain,
     serverPublicIp: updates.serverPublicIp !== undefined ? updates.serverPublicIp : current.serverPublicIp,
-    caddyApiUrl: updates.caddyApiUrl ?? current.caddyApiUrl,
+    acmeEmail: updates.acmeEmail !== undefined ? updates.acmeEmail : current.acmeEmail,
   }
 
   parsed.deployment = updated

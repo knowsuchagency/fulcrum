@@ -15,8 +15,56 @@ import {
   waitForServicesHealthy,
 } from './docker-swarm'
 import { createDnsRecord, deleteDnsRecord } from './cloudflare'
-import { addRoute, removeRoute } from './caddy'
+import { detectTraefik, addRoute, removeRoute, type TraefikConfig } from './traefik'
+import { startTraefikContainer, getViboraTraefikConfig } from './traefik-docker'
 import type { Deployment } from '../db/schema'
+
+// Cache detected Traefik config to avoid repeated detection
+let cachedTraefikConfig: TraefikConfig | null = null
+
+/**
+ * Get or detect Traefik configuration
+ * Returns cached config if available, otherwise detects and caches
+ */
+async function getTraefikConfig(): Promise<TraefikConfig | null> {
+  if (cachedTraefikConfig) {
+    return cachedTraefikConfig
+  }
+
+  const detected = await detectTraefik()
+  if (detected) {
+    cachedTraefikConfig = detected
+    return detected
+  }
+
+  return null
+}
+
+/**
+ * Ensure Traefik is available (detect existing or start Vibora's)
+ */
+async function ensureTraefik(): Promise<TraefikConfig> {
+  // First try to detect existing Traefik
+  let config = await getTraefikConfig()
+  if (config) {
+    return config
+  }
+
+  // No Traefik found, start Vibora's
+  const settings = getDeploymentSettings()
+  const acmeEmail = settings.acmeEmail || 'admin@localhost'
+
+  log.deploy.info('No Traefik detected, starting Vibora Traefik')
+
+  const result = await startTraefikContainer(acmeEmail)
+  if (!result.success) {
+    throw new Error(`Failed to start Traefik: ${result.error}`)
+  }
+
+  config = getViboraTraefikConfig()
+  cachedTraefikConfig = config
+  return config
+}
 
 export interface DeploymentProgress {
   stage: 'pulling' | 'building' | 'starting' | 'configuring' | 'done' | 'failed'
@@ -154,6 +202,9 @@ export async function deployApp(
       throw new Error(`Docker Swarm initialization failed: ${swarmResult.error}`)
     }
 
+    // Detect or start Traefik for routing
+    const traefikConfig = await ensureTraefik()
+
     // Stage 1: Pull latest code
     onProgress?.({ stage: 'pulling', message: 'Pulling latest code...' })
 
@@ -188,10 +239,12 @@ export async function deployApp(
 
     // Stage 2b: Generate Swarm-compatible compose file
     // This adds image fields for services with build sections
+    // Also attaches services to the Traefik network for routing
     const swarmFileResult = await generateSwarmComposeFile(
       repo.path,
       app.composeFile,
-      projectName
+      projectName,
+      traefikConfig.network // Attach to Traefik network
     )
     if (!swarmFileResult.success) {
       throw new Error(`Failed to generate Swarm compose file: ${swarmFileResult.error}`)
@@ -229,7 +282,7 @@ export async function deployApp(
       // Don't fail the deployment - services may still start
     }
 
-    // Stage 4: Configure routing (DNS + Caddy)
+    // Stage 4: Configure routing (DNS + Traefik)
     onProgress?.({ stage: 'configuring', message: 'Configuring DNS and proxy...' })
 
     const deploymentSettings = getDeploymentSettings()
@@ -245,12 +298,14 @@ export async function deployApp(
         // Find the swarm service for this app service
         const swarmService = serviceStatuses.find((s) => s.serviceName === service.serviceName)
 
-        // Configure Caddy reverse proxy
-        const caddyResult = await addRoute(service.domain, service.containerPort)
-        if (!caddyResult.success) {
-          log.deploy.warn('Failed to configure Caddy route', {
+        // Configure Traefik reverse proxy
+        // Upstream URL uses Docker service DNS: http://stackName_serviceName:port
+        const upstreamUrl = `http://${projectName}_${service.serviceName}:${service.containerPort}`
+        const traefikResult = await addRoute(traefikConfig, appId, service.domain, upstreamUrl)
+        if (!traefikResult.success) {
+          log.deploy.warn('Failed to configure Traefik route', {
             service: service.serviceName,
-            error: caddyResult.error,
+            error: traefikResult.error,
           })
         }
 
@@ -382,10 +437,15 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
     where: eq(appServices.appId, appId),
   })
 
+  // Get Traefik config for route removal
+  const traefikConfig = await getTraefikConfig()
+
   for (const service of services) {
     if (service.exposed && service.domain) {
-      // Remove Caddy route
-      await removeRoute(service.domain)
+      // Remove Traefik route
+      if (traefikConfig) {
+        await removeRoute(traefikConfig, appId)
+      }
 
       // Remove DNS record
       const [subdomain, ...domainParts] = service.domain.split('.')
