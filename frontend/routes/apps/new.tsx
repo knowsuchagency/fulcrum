@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useRepositories } from '@/hooks/use-repositories'
-import { useParseCompose, useFindCompose, useCreateApp } from '@/hooks/use-apps'
+import { useParseCompose, useFindCompose, useCreateApp, useDeploymentSettings } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
@@ -19,7 +20,7 @@ import {
   Search01Icon,
 } from '@hugeicons/core-free-icons'
 import { fuzzyScore } from '@/lib/fuzzy-search'
-import type { Repository, ComposeService } from '@/types'
+import type { Repository, ComposeService, ExposureMethod } from '@/types'
 
 interface NewAppSearch {
   repoId?: string
@@ -39,13 +40,16 @@ interface ServiceConfig {
   containerPort: number | null
   exposed: boolean
   domain: string
+  exposureMethod: ExposureMethod
 }
 
 function CreateAppWizard() {
   const navigate = useNavigate()
   const { repoId } = Route.useSearch()
   const { data: repositories, isLoading: reposLoading } = useRepositories()
+  const { data: deploymentSettings } = useDeploymentSettings()
   const createApp = useCreateApp()
+  const tunnelsAvailable = deploymentSettings?.tunnelsAvailable ?? false
 
   const [step, setStep] = useState<Step>('select-repo')
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
@@ -98,6 +102,7 @@ function CreateAppWizard() {
         containerPort: s.ports?.[0]?.container ?? null,
         exposed: false,
         domain: '',
+        exposureMethod: 'dns' as ExposureMethod,
       }))
     )
   }
@@ -137,6 +142,7 @@ function CreateAppWizard() {
           containerPort: s.containerPort ?? undefined,
           exposed: s.exposed,
           domain: s.domain || undefined,
+          exposureMethod: s.exposureMethod,
         })),
       })
 
@@ -318,16 +324,52 @@ function CreateAppWizard() {
                         </div>
 
                         {service.exposed && (
-                          <div className="space-y-2">
-                            <Label htmlFor={`domain-${index}`} className="text-sm">
-                              Domain
-                            </Label>
-                            <Input
-                              id={`domain-${index}`}
-                              value={service.domain}
-                              onChange={(e) => updateService(index, { domain: e.target.value })}
-                              placeholder="app.example.com"
-                            />
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor={`domain-${index}`} className="text-sm">
+                                Domain
+                              </Label>
+                              <Input
+                                id={`domain-${index}`}
+                                value={service.domain}
+                                onChange={(e) => updateService(index, { domain: e.target.value })}
+                                placeholder="app.example.com"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-sm">Exposure Method</Label>
+                              <RadioGroup
+                                value={service.exposureMethod}
+                                onValueChange={(v: unknown) => updateService(index, { exposureMethod: v as ExposureMethod })}
+                                className="flex flex-col gap-2"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="dns" id={`dns-${index}`} />
+                                  <Label htmlFor={`dns-${index}`} className="text-sm font-normal cursor-pointer">
+                                    DNS (requires public IP and port forwarding)
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem
+                                    value="tunnel"
+                                    id={`tunnel-${index}`}
+                                    disabled={!tunnelsAvailable}
+                                  />
+                                  <Label
+                                    htmlFor={`tunnel-${index}`}
+                                    className={`text-sm font-normal cursor-pointer ${!tunnelsAvailable ? 'text-muted-foreground' : ''}`}
+                                  >
+                                    Cloudflare Tunnel (no public IP required)
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                              {!tunnelsAvailable && (
+                                <p className="text-xs text-muted-foreground">
+                                  Configure Cloudflare Account ID in settings to enable tunnels
+                                </p>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

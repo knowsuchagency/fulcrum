@@ -102,6 +102,7 @@ export const appServices = sqliteTable('app_services', {
   containerPort: integer('container_port'), // Port exposed by container
   exposed: integer('exposed', { mode: 'boolean' }).default(false),
   domain: text('domain'), // e.g., "myapp.example.com"
+  exposureMethod: text('exposure_method').default('dns'), // 'dns' | 'tunnel'
   status: text('status').default('stopped'), // stopped|running|failed
   containerId: text('container_id'), // Docker container ID
   createdAt: text('created_at').notNull(),
@@ -121,6 +122,18 @@ export const deployments = sqliteTable('deployments', {
   startedAt: text('started_at').notNull(),
   completedAt: text('completed_at'),
   createdAt: text('created_at').notNull(),
+})
+
+// Cloudflare Tunnels - one tunnel per app for multi-service ingress
+export const tunnels = sqliteTable('tunnels', {
+  id: text('id').primaryKey(),
+  appId: text('app_id').notNull().unique(), // FK to apps - one tunnel per app
+  tunnelId: text('tunnel_id').notNull(), // Cloudflare tunnel UUID
+  tunnelName: text('tunnel_name').notNull(), // e.g., "vibora-app-abc123"
+  tunnelToken: text('tunnel_token').notNull(), // Token for cloudflared daemon
+  status: text('status').notNull().default('inactive'), // inactive|active|failed
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 })
 
 // System metrics for monitoring - stores historical CPU, memory, disk usage
@@ -154,3 +167,5 @@ export type AppService = typeof appServices.$inferSelect
 export type NewAppService = typeof appServices.$inferInsert
 export type Deployment = typeof deployments.$inferSelect
 export type NewDeployment = typeof deployments.$inferInsert
+export type Tunnel = typeof tunnels.$inferSelect
+export type NewTunnel = typeof tunnels.$inferInsert

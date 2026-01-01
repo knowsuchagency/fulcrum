@@ -564,3 +564,65 @@ export async function waitForServicesHealthy(
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+export interface CloudflaredServiceConfig {
+  tunnelToken: string
+  network: string // Must be same network as app services for routing
+}
+
+/**
+ * Add cloudflared service to a Swarm compose file
+ * This injects a cloudflare/cloudflared container that runs the tunnel
+ * and connects to the same network as the app services
+ */
+export async function addCloudflaredToStack(
+  cwd: string,
+  swarmFile: string,
+  config: CloudflaredServiceConfig
+): Promise<{ success: boolean; error?: string }> {
+  const swarmPath = join(cwd, swarmFile)
+
+  try {
+    const content = await readFile(swarmPath, 'utf-8')
+    const parsed = parseYaml(content) as Record<string, unknown>
+
+    const services = parsed.services as Record<string, Record<string, unknown>>
+    if (!services) {
+      return { success: false, error: 'No services found in compose file' }
+    }
+
+    // Add cloudflared service
+    services['cloudflared'] = {
+      image: 'cloudflare/cloudflared:latest',
+      command: ['tunnel', '--no-autoupdate', 'run'],
+      environment: {
+        TUNNEL_TOKEN: config.tunnelToken,
+      },
+      networks: ['default', config.network],
+      deploy: {
+        replicas: 1,
+        restart_policy: {
+          condition: 'any',
+          delay: '5s',
+          max_attempts: 3,
+          window: '120s',
+        },
+      },
+    }
+
+    // Ensure the external network is defined
+    const networks = (parsed.networks || {}) as Record<string, unknown>
+    if (!networks[config.network]) {
+      networks[config.network] = { external: true }
+      parsed.networks = networks
+    }
+
+    await writeFile(swarmPath, stringifyYaml(parsed), 'utf-8')
+    log.deploy.info('Added cloudflared service to stack', { swarmFile })
+    return { success: true }
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.deploy.error('Failed to add cloudflared service', { error })
+    return { success: false, error }
+  }
+}

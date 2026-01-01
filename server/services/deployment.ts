@@ -2,7 +2,7 @@ import { spawn } from 'child_process'
 import { nanoid } from 'nanoid'
 import { eq } from 'drizzle-orm'
 import { db } from '../db'
-import { apps, appServices, deployments, repositories } from '../db/schema'
+import { apps, appServices, deployments, repositories, tunnels } from '../db/schema'
 import { log } from '../lib/logger'
 import { getSettings } from '../lib/settings'
 import { composeBuild } from './docker-compose'
@@ -13,8 +13,16 @@ import {
   stackRemove,
   stackServices,
   waitForServicesHealthy,
+  addCloudflaredToStack,
 } from './docker-swarm'
 import { createDnsRecord, createOriginCACertificate } from './cloudflare'
+import {
+  createTunnel,
+  configureTunnelIngress,
+  createTunnelCname,
+  isTunnelAvailable,
+  type TunnelIngress,
+} from './cloudflare-tunnel'
 import { detectTraefik, addRoute, removeRoute, type TraefikConfig, type AddRouteOptions } from './traefik'
 import { startTraefikContainer, getViboraTraefikConfig, TRAEFIK_CERTS_MOUNT } from './traefik-docker'
 import { sendNotification } from './notification-service'
@@ -325,9 +333,9 @@ export async function deployApp(
       // Don't fail the deployment - services may still start
     }
 
-    // Stage 4: Configure routing (DNS + Traefik)
+    // Stage 4: Configure routing (DNS/Tunnel + Traefik)
     checkCancelled()
-    onProgress?.({ stage: 'configuring', message: 'Configuring DNS and proxy...' })
+    onProgress?.({ stage: 'configuring', message: 'Configuring routing...' })
 
     const settings = getSettings()
     const serverPublicIp = await detectPublicIp()
@@ -348,95 +356,189 @@ export async function deployApp(
     // Get service status
     const serviceStatuses = await stackServices(projectName)
 
-    for (const service of services) {
-      if (service.exposed && service.domain && service.containerPort) {
-        // Find the swarm service for this app service
-        const swarmService = serviceStatuses.find((s) => s.serviceName === service.serviceName)
+    // Separate services by exposure method
+    const exposedServices = services.filter((s) => s.exposed && s.domain && s.containerPort)
+    const dnsServices = exposedServices.filter((s) => s.exposureMethod !== 'tunnel')
+    const tunnelServices = exposedServices.filter((s) => s.exposureMethod === 'tunnel')
 
-        // Extract root domain for certificate (e.g., vibora.dev from api.vibora.dev)
-        const [subdomain, ...domainParts] = service.domain.split('.')
-        const rootDomain = domainParts.join('.')
+    // Handle DNS-based services (existing flow: Traefik + DNS A record)
+    for (const service of dnsServices) {
+      // Find the swarm service for this app service
+      const swarmService = serviceStatuses.find((s) => s.serviceName === service.serviceName)
 
-        // Configure Traefik reverse proxy
-        // Upstream URL uses Docker service DNS: http://stackName_serviceName:port
-        const upstreamUrl = `http://${projectName}_${service.serviceName}:${service.containerPort}`
+      // Extract root domain for certificate (e.g., vibora.dev from api.vibora.dev)
+      const [subdomain, ...domainParts] = service.domain!.split('.')
+      const rootDomain = domainParts.join('.')
 
-        // Try to generate Origin CA certificate if Cloudflare is configured
-        let routeOptions: AddRouteOptions | undefined
-        if (settings.integrations.cloudflareApiToken && rootDomain) {
-          onProgress?.({ stage: 'configuring', message: `Generating SSL certificate for ${rootDomain}...` })
+      // Configure Traefik reverse proxy
+      // Upstream URL uses Docker service DNS: http://stackName_serviceName:port
+      const upstreamUrl = `http://${projectName}_${service.serviceName}:${service.containerPort}`
 
-          const certResult = await createOriginCACertificate(rootDomain)
-          if (certResult.success && certResult.certPath && certResult.keyPath) {
-            // Use file-based TLS with paths inside the container
-            routeOptions = {
-              tlsCert: {
-                certFile: `${TRAEFIK_CERTS_MOUNT}/${rootDomain}/cert.pem`,
-                keyFile: `${TRAEFIK_CERTS_MOUNT}/${rootDomain}/key.pem`,
-              },
-            }
-            log.deploy.info('Using Origin CA certificate for TLS', {
-              domain: service.domain,
-              rootDomain,
-            })
-          } else if (certResult.permissionError) {
-            // Log the permission error prominently but continue with ACME fallback
-            log.deploy.warn('Origin CA certificate failed - missing permissions', {
-              domain: rootDomain,
-              error: certResult.error,
-            })
-            buildLogs.push(`⚠️ SSL Certificate: ${certResult.error}`)
-            onProgress?.({ stage: 'configuring', message: `SSL cert generation failed (using fallback): ${certResult.error?.split('\n')[0]}` })
-          } else if (certResult.error) {
-            log.deploy.warn('Origin CA certificate failed', {
-              domain: rootDomain,
-              error: certResult.error,
-            })
+      // Try to generate Origin CA certificate if Cloudflare is configured
+      let routeOptions: AddRouteOptions | undefined
+      if (settings.integrations.cloudflareApiToken && rootDomain) {
+        onProgress?.({ stage: 'configuring', message: `Generating SSL certificate for ${rootDomain}...` })
+
+        const certResult = await createOriginCACertificate(rootDomain)
+        if (certResult.success && certResult.certPath && certResult.keyPath) {
+          // Use file-based TLS with paths inside the container
+          routeOptions = {
+            tlsCert: {
+              certFile: `${TRAEFIK_CERTS_MOUNT}/${rootDomain}/cert.pem`,
+              keyFile: `${TRAEFIK_CERTS_MOUNT}/${rootDomain}/key.pem`,
+            },
           }
-        }
-
-        const traefikResult = await addRoute(traefikConfig, appId, service.domain, upstreamUrl, routeOptions)
-        if (!traefikResult.success) {
-          log.deploy.warn('Failed to configure Traefik route', {
-            service: service.serviceName,
-            error: traefikResult.error,
+          log.deploy.info('Using Origin CA certificate for TLS', {
+            domain: service.domain,
+            rootDomain,
+          })
+        } else if (certResult.permissionError) {
+          // Log the permission error prominently but continue with ACME fallback
+          log.deploy.warn('Origin CA certificate failed - missing permissions', {
+            domain: rootDomain,
+            error: certResult.error,
+          })
+          buildLogs.push(`⚠️ SSL Certificate: ${certResult.error}`)
+          onProgress?.({ stage: 'configuring', message: `SSL cert generation failed (using fallback): ${certResult.error?.split('\n')[0]}` })
+        } else if (certResult.error) {
+          log.deploy.warn('Origin CA certificate failed', {
+            domain: rootDomain,
+            error: certResult.error,
           })
         }
+      }
 
-        // Configure Cloudflare DNS
+      const traefikResult = await addRoute(traefikConfig, appId, service.domain!, upstreamUrl, routeOptions)
+      if (!traefikResult.success) {
+        log.deploy.warn('Failed to configure Traefik route', {
+          service: service.serviceName,
+          error: traefikResult.error,
+        })
+      }
+
+      // Configure Cloudflare DNS
+      if (rootDomain) {
+        if (settings.integrations.cloudflareApiToken) {
+          // Cloudflare is configured - DNS creation is required
+          if (!serverPublicIp) {
+            throw new Error(`Failed to detect server public IP for DNS record creation (${service.domain})`)
+          }
+          onProgress?.({ stage: 'configuring', message: `Creating DNS record for ${service.domain}...` })
+          const dnsResult = await createDnsRecord(
+            subdomain,
+            rootDomain,
+            serverPublicIp
+          )
+          if (!dnsResult.success) {
+            throw new Error(`Failed to create DNS record for ${service.domain}: ${dnsResult.error}`)
+          }
+          buildLogs.push(`✓ DNS record created: ${service.domain} → ${serverPublicIp}`)
+        } else {
+          // No Cloudflare token - warn user to configure DNS manually
+          const dnsWarning = `⚠️ DNS not configured automatically for ${service.domain}. ` +
+            (serverPublicIp
+              ? `Create an A record pointing to ${serverPublicIp}`
+              : 'Configure Cloudflare API token in settings or create DNS records manually.')
+          buildLogs.push(dnsWarning)
+          onProgress?.({ stage: 'configuring', message: dnsWarning })
+          log.deploy.warn('DNS not configured - manual setup required', {
+            domain: service.domain,
+            hasPublicIp: !!serverPublicIp,
+          })
+        }
+      }
+
+      // Update service status
+      const [current, desired] = (swarmService?.replicas || '0/0').split('/').map(Number)
+      const isRunning = !isNaN(current) && !isNaN(desired) && current > 0 && current === desired
+
+      await db
+        .update(appServices)
+        .set({
+          status: isRunning ? 'running' : 'stopped',
+          containerId: swarmService?.name,
+          updatedAt: now,
+        })
+        .where(eq(appServices.id, service.id))
+    }
+
+    // Handle Tunnel-based services (new flow: Cloudflare Tunnel)
+    if (tunnelServices.length > 0) {
+      if (!isTunnelAvailable()) {
+        throw new Error(
+          'Cloudflare Tunnel is not configured. Please add your Cloudflare Account ID in settings to use tunnel exposure.'
+        )
+      }
+
+      onProgress?.({ stage: 'configuring', message: 'Setting up Cloudflare Tunnel...' })
+
+      // Check if app already has a tunnel
+      let tunnelRecord = await db.query.tunnels.findFirst({
+        where: eq(tunnels.appId, appId),
+      })
+
+      if (!tunnelRecord) {
+        // Create new tunnel for this app
+        const tunnelName = `vibora-${projectName}`
+        const tunnelResult = await createTunnel(tunnelName)
+
+        if (!tunnelResult.success) {
+          throw new Error(`Failed to create Cloudflare Tunnel: ${tunnelResult.error}`)
+        }
+
+        // Save tunnel to database
+        const tunnelId = nanoid()
+        await db.insert(tunnels).values({
+          id: tunnelId,
+          appId,
+          tunnelId: tunnelResult.tunnel!.tunnelId,
+          tunnelName: tunnelResult.tunnel!.tunnelName,
+          tunnelToken: tunnelResult.tunnel!.tunnelToken,
+          status: 'inactive',
+          createdAt: now,
+          updatedAt: now,
+        })
+
+        tunnelRecord = await db.query.tunnels.findFirst({
+          where: eq(tunnels.id, tunnelId),
+        })
+
+        buildLogs.push(`✓ Created Cloudflare Tunnel: ${tunnelName}`)
+        log.deploy.info('Created Cloudflare Tunnel', { tunnelId: tunnelResult.tunnel!.tunnelId, name: tunnelName })
+      }
+
+      // Build ingress rules for all tunnel services
+      const ingress: TunnelIngress[] = tunnelServices.map((service) => ({
+        hostname: service.domain!,
+        service: `http://${projectName}_${service.serviceName}:${service.containerPort}`,
+      }))
+
+      // Configure tunnel ingress
+      onProgress?.({ stage: 'configuring', message: 'Configuring tunnel ingress rules...' })
+      const ingressResult = await configureTunnelIngress(tunnelRecord!.tunnelId, ingress)
+      if (!ingressResult.success) {
+        throw new Error(`Failed to configure tunnel ingress: ${ingressResult.error}`)
+      }
+      buildLogs.push(`✓ Configured ${ingress.length} tunnel ingress rule(s)`)
+
+      // Create CNAME records for each tunnel service
+      for (const service of tunnelServices) {
+        const [subdomain, ...domainParts] = service.domain!.split('.')
+        const rootDomain = domainParts.join('.')
+
         if (rootDomain) {
-          if (settings.integrations.cloudflareApiToken) {
-            // Cloudflare is configured - DNS creation is required
-            if (!serverPublicIp) {
-              throw new Error(`Failed to detect server public IP for DNS record creation (${service.domain})`)
-            }
-            onProgress?.({ stage: 'configuring', message: `Creating DNS record for ${service.domain}...` })
-            const dnsResult = await createDnsRecord(
-              subdomain,
-              rootDomain,
-              serverPublicIp
-            )
-            if (!dnsResult.success) {
-              throw new Error(`Failed to create DNS record for ${service.domain}: ${dnsResult.error}`)
-            }
-            buildLogs.push(`✓ DNS record created: ${service.domain} → ${serverPublicIp}`)
+          onProgress?.({ stage: 'configuring', message: `Creating tunnel CNAME for ${service.domain}...` })
+          const cnameResult = await createTunnelCname(subdomain, rootDomain, tunnelRecord!.tunnelId)
+          if (!cnameResult.success) {
+            buildLogs.push(`⚠️ Failed to create CNAME for ${service.domain}: ${cnameResult.error}`)
+            log.deploy.warn('Failed to create tunnel CNAME', { domain: service.domain, error: cnameResult.error })
           } else {
-            // No Cloudflare token - warn user to configure DNS manually
-            const dnsWarning = `⚠️ DNS not configured automatically for ${service.domain}. ` +
-              (serverPublicIp
-                ? `Create an A record pointing to ${serverPublicIp}`
-                : 'Configure Cloudflare API token in settings or create DNS records manually.')
-            buildLogs.push(dnsWarning)
-            onProgress?.({ stage: 'configuring', message: dnsWarning })
-            log.deploy.warn('DNS not configured - manual setup required', {
-              domain: service.domain,
-              hasPublicIp: !!serverPublicIp,
-            })
+            buildLogs.push(`✓ Tunnel CNAME created: ${service.domain}`)
           }
         }
 
         // Update service status
-        // Parse replicas "1/1" to determine if running
+        const swarmService = serviceStatuses.find((s) => s.serviceName === service.serviceName)
         const [current, desired] = (swarmService?.replicas || '0/0').split('/').map(Number)
         const isRunning = !isNaN(current) && !isNaN(desired) && current > 0 && current === desired
 
@@ -444,11 +546,51 @@ export async function deployApp(
           .update(appServices)
           .set({
             status: isRunning ? 'running' : 'stopped',
-            containerId: swarmService?.name, // Use swarm service name
+            containerId: swarmService?.name,
             updatedAt: now,
           })
           .where(eq(appServices.id, service.id))
       }
+
+      // Add cloudflared service to the stack and redeploy
+      onProgress?.({ stage: 'configuring', message: 'Adding cloudflared to stack...' })
+      const cloudflaredResult = await addCloudflaredToStack(
+        repo.path,
+        swarmFileResult.swarmFile,
+        {
+          tunnelToken: tunnelRecord!.tunnelToken,
+          network: traefikConfig.network,
+        }
+      )
+
+      if (!cloudflaredResult.success) {
+        throw new Error(`Failed to add cloudflared to stack: ${cloudflaredResult.error}`)
+      }
+
+      // Redeploy stack with cloudflared service
+      const redeployResult = await stackDeploy(
+        {
+          stackName: projectName,
+          cwd: repo.path,
+          composeFile: swarmFileResult.swarmFile,
+          env,
+          signal,
+          onProcess: (proc) => addProcess(deploymentId, proc),
+        },
+        (line) => buildLogs.push(line)
+      )
+
+      if (!redeployResult.success) {
+        throw new Error(`Failed to redeploy with cloudflared: ${redeployResult.error}`)
+      }
+
+      // Update tunnel status
+      await db
+        .update(tunnels)
+        .set({ status: 'active', updatedAt: now })
+        .where(eq(tunnels.id, tunnelRecord!.id))
+
+      buildLogs.push('✓ Cloudflare Tunnel activated')
     }
 
     // Update deployment as successful

@@ -15,6 +15,7 @@ import {
   useWriteComposeFile,
   useSyncServices,
   useDeploymentPrerequisites,
+  useDeploymentSettings,
   type DeploymentStage,
 } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
@@ -57,12 +58,24 @@ import {
   Cancel01Icon,
 } from '@hugeicons/core-free-icons'
 import { MonacoEditor } from '@/components/viewer/monaco-editor'
-import type { Deployment } from '@/types'
+import type { Deployment, ExposureMethod } from '@/types'
 import { parseLogs } from '@/lib/log-utils'
 import { LogLine } from '@/components/ui/log-line'
 import { toast } from 'sonner'
+import { useDockerStats, type ContainerStats } from '@/hooks/use-monitoring'
+import { RadialBarChart, RadialBar, PolarAngleAxis, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
+import { Card } from '@/components/ui/card'
 
-type AppTab = 'general' | 'deployments' | 'logs'
+type AppTab = 'general' | 'deployments' | 'logs' | 'monitoring'
+
+// Color palette for distribution charts
+const DISTRIBUTION_COLORS = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+]
 
 interface AppDetailSearch {
   tab?: AppTab
@@ -71,7 +84,7 @@ interface AppDetailSearch {
 export const Route = createFileRoute('/apps/$appId')({
   component: AppDetailView,
   validateSearch: (search: Record<string, unknown>): AppDetailSearch => ({
-    tab: ['general', 'deployments', 'logs'].includes(search.tab as string)
+    tab: ['general', 'deployments', 'logs', 'monitoring'].includes(search.tab as string)
       ? (search.tab as AppTab)
       : undefined,
   }),
@@ -184,6 +197,7 @@ function AppDetailView() {
             <TabsTrigger value="general" className="px-3 py-1.5">{t('apps.tabs.general')}</TabsTrigger>
             <TabsTrigger value="deployments" className="px-3 py-1.5">{t('apps.tabs.deployments')}</TabsTrigger>
             <TabsTrigger value="logs" className="px-3 py-1.5">{t('apps.tabs.logs')}</TabsTrigger>
+            <TabsTrigger value="monitoring" className="px-3 py-1.5">{t('apps.tabs.monitoring')}</TabsTrigger>
           </TabsList>
 
           {/* App info on right */}
@@ -235,6 +249,10 @@ function AppDetailView() {
 
           <TabsContent value="logs" className="mt-0">
             <LogsTab appId={appId} services={app.services} />
+          </TabsContent>
+
+          <TabsContent value="monitoring" className="mt-0">
+            <MonitoringTab appName={app.name} services={app.services} />
           </TabsContent>
         </div>
       </Tabs>
@@ -1066,7 +1084,9 @@ function ServicesSection({
 }) {
   const { t } = useTranslation('common')
   const { data: status } = useAppStatus(app.id)
+  const { data: deploymentSettings } = useDeploymentSettings()
   const updateApp = useUpdateApp()
+  const tunnelsAvailable = deploymentSettings?.tunnelsAvailable ?? false
 
   // Services state for editing
   const [services, setServices] = useState(
@@ -1074,6 +1094,7 @@ function ServicesSection({
       serviceName: s.serviceName,
       containerPort: s.containerPort,
       domain: s.domain ?? '',
+      exposureMethod: (s.exposureMethod ?? 'dns') as ExposureMethod,
     })) ?? []
   )
 
@@ -1088,6 +1109,7 @@ function ServicesSection({
           serviceName: s.serviceName,
           containerPort: s.containerPort,
           domain: s.domain ?? '',
+          exposureMethod: (s.exposureMethod ?? 'dns') as ExposureMethod,
         })) ?? []
       )
     }
@@ -1112,6 +1134,7 @@ function ServicesSection({
           // Derive exposed from whether domain is set
           exposed: !!s.domain,
           domain: s.domain || undefined,
+          exposureMethod: s.exposureMethod,
         })),
       },
     })
@@ -1145,6 +1168,7 @@ function ServicesSection({
         serviceName: s.serviceName,
         containerPort: s.containerPort,
         domain: s.domain ?? '',
+        exposureMethod: (s.exposureMethod ?? 'dns') as ExposureMethod,
       })) ?? []
     )
     setEditingIndex(null)
@@ -1184,25 +1208,46 @@ function ServicesSection({
                 </div>
 
                 {/* Domain - either link, input, or placeholder */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 flex items-center gap-2">
                   {isEditing ? (
-                    <Input
-                      value={service.domain}
-                      onChange={(e) => updateService(index, { domain: e.target.value })}
-                      placeholder="app.example.com"
-                      className="h-7 text-xs"
-                      autoFocus
-                      disabled={!hasPort}
-                    />
+                    <>
+                      <Input
+                        value={service.domain}
+                        onChange={(e) => updateService(index, { domain: e.target.value })}
+                        placeholder="app.example.com"
+                        className="h-7 text-xs flex-1"
+                        autoFocus
+                        disabled={!hasPort}
+                      />
+                      <select
+                        value={service.exposureMethod}
+                        onChange={(e) => updateService(index, { exposureMethod: e.target.value as ExposureMethod })}
+                        className="h-7 rounded-md border bg-background px-2 text-xs shrink-0"
+                        disabled={!hasPort}
+                      >
+                        <option value="dns">DNS</option>
+                        <option value="tunnel" disabled={!tunnelsAvailable}>
+                          Tunnel{!tunnelsAvailable ? ' (unavailable)' : ''}
+                        </option>
+                      </select>
+                    </>
                   ) : hasDomain ? (
-                    <a
-                      href={`https://${service.domain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline truncate block"
-                    >
-                      {service.domain}
-                    </a>
+                    <>
+                      <a
+                        href={`https://${service.domain}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline truncate"
+                      >
+                        {service.domain}
+                      </a>
+                      <Badge
+                        variant={service.exposureMethod === 'tunnel' ? 'default' : 'outline'}
+                        className="text-xs px-1.5 py-0 shrink-0"
+                      >
+                        {service.exposureMethod === 'tunnel' ? 'Tunnel' : 'DNS'}
+                      </Badge>
+                    </>
                   ) : (
                     <span className="text-muted-foreground/50 text-xs">
                       {hasPort ? t('apps.domains.noDomain') : t('apps.domains.portRequired')}
@@ -1269,5 +1314,334 @@ function ServicesSection({
         </div>
       )}
     </div>
+  )
+}
+
+// Helper to get gauge color based on usage percentage
+function getGaugeColor(percent: number): string {
+  if (percent >= 90) return 'var(--destructive)'
+  if (percent >= 70) return 'var(--muted-foreground)'
+  return 'var(--chart-system)'
+}
+
+// Helper to get text color class based on usage percentage
+function getUsageTextColor(percent: number): string {
+  if (percent >= 90) return 'text-destructive'
+  if (percent >= 70) return 'text-muted-foreground'
+  return 'text-chart-system'
+}
+
+// Resource gauge component for CPU/Memory visualization
+function ResourceGauge({
+  percent,
+  label,
+  value,
+}: {
+  percent: number
+  label: string
+  value: string
+}) {
+  const data = [{ value: Math.min(percent, 100), fill: getGaugeColor(percent) }]
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative size-20">
+        <RadialBarChart
+          width={80}
+          height={80}
+          cx={40}
+          cy={40}
+          innerRadius={28}
+          outerRadius={38}
+          barSize={8}
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <PolarAngleAxis
+            type="number"
+            domain={[0, 100]}
+            angleAxisId={0}
+            tick={false}
+          />
+          <RadialBar
+            background={{ fill: 'var(--border)' }}
+            dataKey="value"
+            cornerRadius={4}
+            angleAxisId={0}
+          />
+        </RadialBarChart>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`text-sm font-semibold tabular-nums ${getUsageTextColor(percent)}`}>
+            {percent.toFixed(0)}%
+          </span>
+        </div>
+      </div>
+      <span className="text-xs text-muted-foreground mt-1">{label}</span>
+      <span className="text-xs font-medium">{value}</span>
+    </div>
+  )
+}
+
+// Helper to extract service name from container name
+function extractServiceName(containerName: string): string {
+  const parts = containerName.split(/[-_]/)
+  if (parts.length >= 2) {
+    return parts[1]
+  }
+  return containerName
+}
+
+// Donut chart showing resource distribution across containers
+function ResourceDistributionChart({
+  containers,
+  metric,
+  title,
+}: {
+  containers: ContainerStats[]
+  metric: 'cpu' | 'memory'
+  title: string
+}) {
+  const { t } = useTranslation('common')
+
+  const data = useMemo(() => {
+    return containers.map((c, i) => ({
+      name: extractServiceName(c.name),
+      value: metric === 'cpu' ? c.cpuPercent : c.memoryMB,
+      fill: DISTRIBUTION_COLORS[i % DISTRIBUTION_COLORS.length],
+    }))
+  }, [containers, metric])
+
+  const total = useMemo(() => {
+    return data.reduce((sum, d) => sum + d.value, 0)
+  }, [data])
+
+  // Don't render if total is 0 (no usage)
+  if (total === 0) {
+    return (
+      <Card className="p-4">
+        <h4 className="text-sm font-medium mb-2">{title}</h4>
+        <div className="flex items-center justify-center h-[160px] text-muted-foreground text-sm">
+          {t('apps.monitoring.noUsage')}
+        </div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="p-4">
+      <h4 className="text-sm font-medium mb-2">{title}</h4>
+      <div className="flex items-center">
+        <div className="w-[140px] h-[140px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={35}
+                outerRadius={60}
+                dataKey="value"
+                strokeWidth={1}
+                stroke="hsl(var(--background))"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <RechartsTooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const item = payload[0]
+                    const percent = ((item.value as number) / total * 100).toFixed(1)
+                    return (
+                      <div className="bg-popover border rounded-md px-2 py-1 text-xs shadow-md">
+                        <span className="font-medium">{item.name}</span>: {percent}%
+                        {metric === 'memory' && ` (${(item.value as number).toFixed(0)} MB)`}
+                      </div>
+                    )
+                  }
+                  return null
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex-1 ml-4 space-y-1.5">
+          {data.map((item, index) => (
+            <div key={index} className="flex items-center gap-2 text-xs">
+              <div
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: item.fill }}
+              />
+              <span className="truncate flex-1" title={item.name}>{item.name}</span>
+              <span className="text-muted-foreground tabular-nums">
+                {((item.value / total) * 100).toFixed(0)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// Monitoring tab - real-time resource usage for app containers
+function MonitoringTab({
+  appName,
+  services,
+}: {
+  appName: string
+  services?: NonNullable<ReturnType<typeof useApp>['data']>['services']
+}) {
+  const { t } = useTranslation('common')
+  const { data: dockerStats, isLoading } = useDockerStats()
+
+  // Filter containers that belong to this app
+  // Docker Compose container names typically follow the pattern: {project}_{service}_{replica}
+  // or {project}-{service}-{replica} depending on the version
+  const appContainers = useMemo(() => {
+    if (!dockerStats?.containers) return []
+
+    const appNameLower = appName.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+    return dockerStats.containers.filter((container) => {
+      const containerNameLower = container.name.toLowerCase()
+
+      // Check if container name starts with the app name (common pattern)
+      if (containerNameLower.startsWith(appNameLower)) return true
+
+      // Check if container name contains any of our service names
+      if (services?.some((s) => containerNameLower.includes(s.serviceName.toLowerCase()))) {
+        return true
+      }
+
+      return false
+    })
+  }, [dockerStats, appName, services])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <HugeiconsIcon icon={Loading03Icon} size={24} strokeWidth={2} className="animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!dockerStats?.available) {
+    return (
+      <div className="max-w-2xl">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">{t('apps.monitoring.title')}</h3>
+          <p className="text-sm text-muted-foreground">{t('apps.monitoring.description')}</p>
+        </div>
+        <div className="py-8 text-center text-muted-foreground border rounded-lg">
+          <p>{t('apps.monitoring.dockerUnavailable')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (appContainers.length === 0) {
+    return (
+      <div className="max-w-2xl">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">{t('apps.monitoring.title')}</h3>
+          <p className="text-sm text-muted-foreground">{t('apps.monitoring.description')}</p>
+        </div>
+        <div className="py-8 text-center text-muted-foreground border rounded-lg">
+          <p>{t('apps.monitoring.noContainers')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">{t('apps.monitoring.title')}</h3>
+        <p className="text-sm text-muted-foreground">
+          {t('apps.monitoring.description')}
+          {dockerStats.runtime && (
+            <span className="ml-1 text-xs">({dockerStats.runtime})</span>
+          )}
+        </p>
+      </div>
+
+      {/* Distribution charts - only show when there are 2+ containers */}
+      {appContainers.length > 1 && (
+        <div className="grid gap-4 sm:grid-cols-2 mb-6">
+          <ResourceDistributionChart
+            containers={appContainers}
+            metric="cpu"
+            title={t('apps.monitoring.cpuDistribution')}
+          />
+          <ResourceDistributionChart
+            containers={appContainers}
+            metric="memory"
+            title={t('apps.monitoring.memoryDistribution')}
+          />
+        </div>
+      )}
+
+      {/* Per-container cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {appContainers.map((container) => (
+          <ContainerCard key={container.id} container={container} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Card displaying a single container's resource usage
+function ContainerCard({ container }: { container: ContainerStats }) {
+  const { t } = useTranslation('common')
+
+  // Extract service name from container name (remove project prefix and replica suffix)
+  const serviceName = useMemo(() => {
+    const parts = container.name.split(/[-_]/)
+    // Usually the service name is the second part: project_service_1 or project-service-1
+    if (parts.length >= 2) {
+      return parts[1]
+    }
+    return container.name
+  }, [container.name])
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="min-w-0">
+          <h4 className="font-medium truncate" title={container.name}>
+            {serviceName}
+          </h4>
+          <p className="text-xs text-muted-foreground truncate" title={container.name}>
+            {container.name}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-around">
+        <ResourceGauge
+          percent={container.cpuPercent}
+          label={t('apps.monitoring.cpu')}
+          value={`${container.cpuPercent.toFixed(1)}%`}
+        />
+        <ResourceGauge
+          percent={container.memoryPercent}
+          label={t('apps.monitoring.memory')}
+          value={`${container.memoryMB.toFixed(0)} MB`}
+        />
+      </div>
+
+      {container.memoryLimit > 0 && (
+        <div className="mt-3 pt-3 border-t">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{t('apps.monitoring.memoryLimit')}</span>
+            <span>{container.memoryLimit.toFixed(0)} MB</span>
+          </div>
+        </div>
+      )}
+    </Card>
   )
 }

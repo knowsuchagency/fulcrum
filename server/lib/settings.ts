@@ -31,6 +31,7 @@ export interface Settings {
     linearApiKey: string | null
     githubPat: string | null
     cloudflareApiToken: string | null
+    cloudflareAccountId: string | null
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -59,6 +60,7 @@ const DEFAULT_SETTINGS: Settings = {
     linearApiKey: null,
     githubPat: null,
     cloudflareApiToken: null,
+    cloudflareAccountId: null,
   },
   appearance: {
     language: null,
@@ -311,6 +313,7 @@ export function getSettings(): Settings {
       linearApiKey: ((parsed.integrations as Record<string, unknown>)?.linearApiKey as string | null) ?? null,
       githubPat: ((parsed.integrations as Record<string, unknown>)?.githubPat as string | null) ?? null,
       cloudflareApiToken: ((parsed.integrations as Record<string, unknown>)?.cloudflareApiToken as string | null) ?? null,
+      cloudflareAccountId: ((parsed.integrations as Record<string, unknown>)?.cloudflareAccountId as string | null) ?? null,
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
@@ -343,7 +346,8 @@ export function getSettings(): Settings {
     integrations: {
       linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.integrations.linearApiKey,
       githubPat: process.env.GITHUB_PAT ?? fileSettings.integrations.githubPat,
-      cloudflareApiToken: fileSettings.integrations.cloudflareApiToken,
+      cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? fileSettings.integrations.cloudflareApiToken,
+      cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? fileSettings.integrations.cloudflareAccountId,
     },
     appearance: fileSettings.appearance,
   }

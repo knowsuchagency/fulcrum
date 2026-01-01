@@ -282,6 +282,8 @@ export interface UpdateExecSessionRequest {
 export type AppStatus = 'stopped' | 'building' | 'running' | 'failed'
 export type DeploymentStatus = 'pending' | 'building' | 'running' | 'failed' | 'rolled_back'
 export type DeployedBy = 'manual' | 'auto' | 'rollback'
+export type ExposureMethod = 'dns' | 'tunnel'
+export type TunnelStatus = 'inactive' | 'active' | 'failed'
 
 export interface AppService {
   id: string
@@ -290,8 +292,19 @@ export interface AppService {
   containerPort: number | null
   exposed: boolean
   domain: string | null
+  exposureMethod: ExposureMethod
   status: string | null
   containerId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Tunnel {
+  id: string
+  appId: string
+  tunnelId: string
+  tunnelName: string
+  status: TunnelStatus
   createdAt: string
   updatedAt: string
 }

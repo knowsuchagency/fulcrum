@@ -139,6 +139,7 @@ app.post('/', async (c) => {
         containerPort?: number
         exposed: boolean
         domain?: string
+        exposureMethod?: 'dns' | 'tunnel'
       }>
     }>()
 
@@ -188,6 +189,7 @@ app.post('/', async (c) => {
         containerPort: s.containerPort ?? null,
         exposed: s.exposed,
         domain: s.domain ?? null,
+        exposureMethod: s.exposureMethod ?? 'dns',
         status: 'stopped',
         createdAt: now,
         updatedAt: now,
@@ -240,6 +242,7 @@ app.patch('/:id', async (c) => {
         containerPort?: number
         exposed: boolean
         domain?: string
+        exposureMethod?: 'dns' | 'tunnel'
       }>
     }>()
 
@@ -310,6 +313,7 @@ app.patch('/:id', async (c) => {
               containerPort: service.containerPort ?? null,
               exposed: service.exposed,
               domain: service.domain ?? null,
+              exposureMethod: service.exposureMethod ?? existing.exposureMethod ?? 'dns',
               updatedAt: now,
             })
             .where(eq(appServices.id, existing.id))
@@ -322,6 +326,7 @@ app.patch('/:id', async (c) => {
             containerPort: service.containerPort ?? null,
             exposed: service.exposed,
             domain: service.domain ?? null,
+            exposureMethod: service.exposureMethod ?? 'dns',
             status: 'stopped',
             createdAt: now,
             updatedAt: now,
@@ -485,6 +490,7 @@ app.post('/:id/sync-services', async (c) => {
           containerPort: composeService.ports?.[0]?.container ?? null,
           exposed: false,
           domain: null,
+          exposureMethod: 'dns',
           status: 'stopped',
           createdAt: now,
           updatedAt: now,

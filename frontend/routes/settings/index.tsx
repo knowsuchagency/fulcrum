@@ -120,6 +120,7 @@ function SettingsPage() {
 
   // Deployment settings local state
   const [localCloudflareToken, setLocalCloudflareToken] = useState('')
+  const [localCloudflareAccountId, setLocalCloudflareAccountId] = useState('')
 
   // Claude Code theme sync local state
   const [localSyncClaudeCode, setLocalSyncClaudeCode] = useState(false)
@@ -174,11 +175,19 @@ function SettingsPage() {
     }
   }, [zAiSettings])
 
-  // Sync deployment settings
+  // Sync deployment settings (but don't sync masked values - they're just placeholders)
+  // Masked values look like "••••••••" and should not overwrite local state
   useEffect(() => {
-    if (deploymentSettings?.cloudflareApiToken !== undefined) {
-      setLocalCloudflareToken(deploymentSettings.cloudflareApiToken ?? '')
+    // Don't sync masked token values - keep local state empty if we haven't entered a new value
+    // The API returns masked values for display only, not for saving back
+    if (deploymentSettings?.cloudflareAccountId !== undefined) {
+      const accountId = deploymentSettings.cloudflareAccountId ?? ''
+      // Only sync if it's not a masked value
+      if (!accountId.match(/^•+$/)) {
+        setLocalCloudflareAccountId(accountId)
+      }
     }
+    // Never sync the API token - always show empty unless user enters new value
   }, [deploymentSettings])
 
   // Sync Claude Code theme settings
@@ -204,7 +213,19 @@ function SettingsPage() {
     localClaudeCodeLightTheme !== claudeCodeLightTheme ||
     localClaudeCodeDarkTheme !== claudeCodeDarkTheme
 
-  const hasDeploymentChanges = localCloudflareToken !== (deploymentSettings?.cloudflareApiToken ?? '')
+  // Check if deployment settings have changed
+  // For secrets (token), we have changes if user entered a new value (non-empty and non-masked)
+  // For account ID, compare against actual value (if not masked)
+  const hasDeploymentChanges = (() => {
+    // Token: has changes if user entered something (we don't sync masked values to local state)
+    const tokenChanged = localCloudflareToken !== '' && !localCloudflareToken.match(/^•+$/)
+    // Account ID: has changes if different from server value (unless server value is masked)
+    const serverAccountId = deploymentSettings?.cloudflareAccountId ?? ''
+    const accountIdChanged = !serverAccountId.match(/^•+$/)
+      ? localCloudflareAccountId !== serverAccountId
+      : localCloudflareAccountId !== ''
+    return tokenChanged || accountIdChanged
+  })()
 
   const hasNotificationChanges = notificationSettings && (
     notificationsEnabled !== notificationSettings.enabled ||
@@ -392,20 +413,29 @@ function SettingsPage() {
       }
     }
 
-    // Save deployment settings (cloudflare token)
+    // Save deployment settings (cloudflare token/account ID)
+    // Only send values that were actually changed by the user (not masked placeholders)
     if (hasDeploymentChanges) {
-      promises.push(
-        new Promise((resolve) => {
-          updateDeploymentSettings.mutate(
-            {
-              cloudflareApiToken: localCloudflareToken || null,
-            },
-            {
-              onSettled: resolve,
-            }
-          )
-        })
-      )
+      const updates: { cloudflareApiToken?: string | null; cloudflareAccountId?: string | null } = {}
+
+      // Only send token if user entered a new one (not empty and not masked)
+      if (localCloudflareToken && !localCloudflareToken.match(/^•+$/)) {
+        updates.cloudflareApiToken = localCloudflareToken
+      }
+
+      // Send account ID if changed
+      const serverAccountId = deploymentSettings?.cloudflareAccountId ?? ''
+      if (!serverAccountId.match(/^•+$/) ? localCloudflareAccountId !== serverAccountId : localCloudflareAccountId !== '') {
+        updates.cloudflareAccountId = localCloudflareAccountId || null
+      }
+
+      if (Object.keys(updates).length > 0) {
+        promises.push(
+          new Promise((resolve) => {
+            updateDeploymentSettings.mutate(updates, { onSettled: resolve })
+          })
+        )
+      }
     }
 
     await Promise.all(promises)
@@ -811,6 +841,28 @@ function SettingsPage() {
                       </div>
                       <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
                         {t('fields.cloudflare.description')}
+                      </p>
+                    </div>
+
+                    {/* Cloudflare Account ID */}
+                    <div className="space-y-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-20 sm:shrink-0">
+                          Account ID
+                        </label>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            type="password"
+                            value={localCloudflareAccountId}
+                            onChange={(e) => setLocalCloudflareAccountId(e.target.value)}
+                            placeholder="Cloudflare Account ID"
+                            disabled={isLoading}
+                            className="flex-1 font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:ml-20 sm:pl-2">
+                        Required for Cloudflare Tunnel. Find in your dashboard URL: dash.cloudflare.com/{'<account_id>'}/...
                       </p>
                     </div>
                   </div>

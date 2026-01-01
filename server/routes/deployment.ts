@@ -201,18 +201,25 @@ app.post('/settings', async (c) => {
   try {
     const body = await c.req.json<{
       cloudflareApiToken?: string | null
+      cloudflareAccountId?: string | null
     }>()
 
     if (body.cloudflareApiToken !== undefined) {
       updateSettingByPath('integrations.cloudflareApiToken', body.cloudflareApiToken)
     }
 
+    if (body.cloudflareAccountId !== undefined) {
+      updateSettingByPath('integrations.cloudflareAccountId', body.cloudflareAccountId)
+    }
+
     const settings = getSettings()
+    const { cloudflareApiToken, cloudflareAccountId } = settings.integrations
 
     return c.json({
       success: true,
       settings: {
-        cloudflareConfigured: !!settings.integrations.cloudflareApiToken,
+        cloudflareConfigured: !!cloudflareApiToken,
+        tunnelsAvailable: !!(cloudflareApiToken && cloudflareAccountId),
       },
     })
   } catch (err) {
@@ -230,12 +237,66 @@ app.post('/settings', async (c) => {
 app.get('/settings', async (c) => {
   const settings = getSettings()
   const token = settings.integrations.cloudflareApiToken
+  const accountId = settings.integrations.cloudflareAccountId
 
   return c.json({
     // Mask the token but preserve its length for consistent UI display
     cloudflareApiToken: token ? '•'.repeat(token.length) : null,
+    cloudflareAccountId: accountId ? '•'.repeat(accountId.length) : null,
     cloudflareConfigured: !!token,
+    tunnelsAvailable: !!(token && accountId),
   })
+})
+
+// GET /api/deployment/verify-tunnel-api - Verify tunnel API access
+app.get('/verify-tunnel-api', async (c) => {
+  const settings = getSettings()
+  const token = settings.integrations.cloudflareApiToken
+  const accountId = settings.integrations.cloudflareAccountId
+
+  if (!token || !accountId) {
+    return c.json({
+      success: false,
+      error: 'Cloudflare API token and Account ID must both be configured',
+    })
+  }
+
+  try {
+    // Use dynamic import to avoid issues if module isn't loaded
+    const { verifyAccountId, listTunnels } = await import('../services/cloudflare-tunnel')
+
+    // First verify the account ID is valid
+    const verifyResult = await verifyAccountId()
+    if (!verifyResult.valid) {
+      return c.json({
+        success: false,
+        error: `Account verification failed: ${verifyResult.error}`,
+        suggestion: 'Check that your Account ID is correct and your API token has "Account > Cloudflare Tunnel > Edit" permission',
+      })
+    }
+
+    // Try listing tunnels to verify full access
+    const listResult = await listTunnels()
+    if (!listResult.success) {
+      return c.json({
+        success: false,
+        error: `Failed to list tunnels: ${listResult.error}`,
+        suggestion: 'Your API token may need "Account > Cloudflare Tunnel > Edit" permission',
+      })
+    }
+
+    return c.json({
+      success: true,
+      message: 'Tunnel API access verified successfully',
+      existingTunnels: listResult.tunnels?.length ?? 0,
+    })
+  } catch (err) {
+    return c.json({
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+      errorType: err?.constructor?.name,
+    })
+  }
 })
 
 // Legacy Caddy endpoints (redirect to Traefik for backwards compatibility)

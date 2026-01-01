@@ -97,7 +97,8 @@
       "deployments": "Deployments",
       "logs": "Logs",
       "environment": "Environment",
-      "domains": "Domains"
+      "domains": "Domains",
+      "monitoring": "Monitoring"
     },
     "general": {
       "deploy": "Deploy",
@@ -174,6 +175,18 @@
       "building": "Building",
       "failed": "Failed",
       "stopped": "Stopped"
+    },
+    "monitoring": {
+      "title": "Resource Usage",
+      "description": "Real-time CPU and memory usage for each service",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "memoryLimit": "Memory Limit",
+      "noContainers": "No running containers found",
+      "dockerUnavailable": "Docker stats not available",
+      "cpuDistribution": "CPU Distribution",
+      "memoryDistribution": "Memory Distribution",
+      "noUsage": "No usage"
     }
   }
 }

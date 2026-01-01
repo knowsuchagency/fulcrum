@@ -56,6 +56,7 @@ export function useCreateApp() {
         containerPort?: number
         exposed: boolean
         domain?: string
+        exposureMethod?: 'dns' | 'tunnel'
       }>
     }) =>
       fetchJSON<AppWithServices>(`${API_BASE}/api/apps`, {
@@ -91,6 +92,7 @@ export function useUpdateApp() {
           containerPort?: number
           exposed: boolean
           domain?: string
+          exposureMethod?: 'dns' | 'tunnel'
         }>
       }
     }) =>
@@ -461,7 +463,9 @@ export function useDetectPublicIp() {
 // Get deployment settings
 export interface DeploymentSettings {
   cloudflareApiToken: string | null
+  cloudflareAccountId: string | null
   cloudflareConfigured: boolean
+  tunnelsAvailable: boolean
 }
 
 export function useDeploymentSettings() {
@@ -478,6 +482,7 @@ export function useUpdateDeploymentSettings() {
   return useMutation({
     mutationFn: (data: {
       cloudflareApiToken?: string | null
+      cloudflareAccountId?: string | null
     }) =>
       fetchJSON<{ success: boolean }>(`${API_BASE}/api/deployment/settings`, {
         method: 'POST',
