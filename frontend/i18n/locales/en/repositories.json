@@ -11,8 +11,7 @@
   "createAppDialog": {
     "title": "Docker Compose Required",
     "description": "To create an app for deployment, this repository needs a Docker Compose file.",
-    "instructions": "Create one of the following files in your repository:",
-    "files": "docker-compose.yml, docker-compose.yaml, docker.yml, or docker.yaml",
+    "instructions": "Create a docker-compose.yml file in your repository.",
     "close": "Got it"
   },
   "settings": "Settings",

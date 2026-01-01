@@ -725,12 +725,9 @@ function RepositoryDetailView() {
               {t('createAppDialog.description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 text-sm">
-            <p>{t('createAppDialog.instructions')}</p>
-            <code className="block rounded bg-muted px-3 py-2 font-mono text-xs">
-              {t('createAppDialog.files')}
-            </code>
-          </div>
+          <p className="text-sm">
+            {t('createAppDialog.instructions')}
+          </p>
           <DialogFooter>
             <Button onClick={() => setComposeWarningOpen(false)}>
               {t('createAppDialog.close')}
