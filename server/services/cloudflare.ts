@@ -77,7 +77,7 @@ export async function createDnsRecord(
   subdomain: string,
   domain: string,
   ip: string,
-  proxied = false
+  proxied = true
 ): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
   const client = getClient()
   if (!client) {
