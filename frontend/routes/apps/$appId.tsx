@@ -60,7 +60,7 @@ import { parseLogs } from '@/lib/log-utils'
 import { LogLine } from '@/components/ui/log-line'
 import { toast } from 'sonner'
 
-type AppTab = 'general' | 'deployments' | 'logs' | 'environment' | 'domains'
+type AppTab = 'general' | 'deployments' | 'logs'
 
 interface AppDetailSearch {
   tab?: AppTab
@@ -69,7 +69,7 @@ interface AppDetailSearch {
 export const Route = createFileRoute('/apps/$appId')({
   component: AppDetailView,
   validateSearch: (search: Record<string, unknown>): AppDetailSearch => ({
-    tab: ['general', 'deployments', 'logs', 'environment', 'domains'].includes(search.tab as string)
+    tab: ['general', 'deployments', 'logs'].includes(search.tab as string)
       ? (search.tab as AppTab)
       : undefined,
   }),
@@ -183,8 +183,6 @@ function AppDetailView() {
             <TabsTrigger value="general" className="px-3 py-1.5">{t('apps.tabs.general')}</TabsTrigger>
             <TabsTrigger value="deployments" className="px-3 py-1.5">{t('apps.tabs.deployments')}</TabsTrigger>
             <TabsTrigger value="logs" className="px-3 py-1.5">{t('apps.tabs.logs')}</TabsTrigger>
-            <TabsTrigger value="environment" className="px-3 py-1.5">{t('apps.tabs.environment')}</TabsTrigger>
-            <TabsTrigger value="domains" className="px-3 py-1.5">{t('apps.tabs.domains')}</TabsTrigger>
           </TabsList>
 
           {/* App info on right */}
@@ -242,14 +240,6 @@ function AppDetailView() {
 
           <TabsContent value="logs" className="mt-0">
             <LogsTab appId={appId} services={app.services} />
-          </TabsContent>
-
-          <TabsContent value="environment" className="mt-0">
-            <EnvironmentTab app={app} />
-          </TabsContent>
-
-          <TabsContent value="domains" className="mt-0">
-            <DomainsTab app={app} onDeploy={handleDeploy} />
           </TabsContent>
         </div>
       </Tabs>
@@ -461,6 +451,12 @@ function GeneralTab({
             <p className="text-sm text-muted-foreground">{t('apps.general.noServicesConfigured')}</p>
           )}
         </div>
+      </div>
+
+      {/* Environment and Domains row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <EnvironmentSection app={app} />
+        <DomainsSection app={app} onDeploy={onDeploy} />
       </div>
 
       {/* Bottom row: Compose file full width */}
@@ -1034,8 +1030,8 @@ function DeploymentLogsModal({
   )
 }
 
-// Environment tab - environment variables
-function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
+// Environment section - environment variables (inline in General tab)
+function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp>['data']> }) {
   const { t } = useTranslation('common')
   const updateApp = useUpdateApp()
 
@@ -1073,31 +1069,18 @@ function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['d
   }
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <div>
-        <h3 className="text-lg font-semibold">{t('apps.environment.title')}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t('apps.environment.description')}
-        </p>
-      </div>
-
-      <Textarea
-        value={envText}
-        onChange={(e) => setEnvText(e.target.value)}
-        placeholder={t('apps.environment.placeholder')}
-        className="font-mono text-sm min-h-[200px]"
-      />
-
-      <div className="flex justify-end">
-        <Button onClick={handleSaveEnv} disabled={updateApp.isPending}>
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.environment.title')}</h4>
+        <Button size="sm" onClick={handleSaveEnv} disabled={updateApp.isPending}>
           {updateApp.isPending ? (
             <>
-              <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
+              <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
               {t('status.saving')}
             </>
           ) : envSaved ? (
             <>
-              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} className="text-green-500" />
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="text-green-500" />
               {t('status.saved')}
             </>
           ) : (
@@ -1106,9 +1089,16 @@ function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['d
         </Button>
       </div>
 
+      <Textarea
+        value={envText}
+        onChange={(e) => setEnvText(e.target.value)}
+        placeholder={t('apps.environment.placeholder')}
+        className="font-mono text-sm min-h-[120px]"
+      />
+
       {updateApp.error && (
-        <div className="flex items-center gap-2 text-destructive mt-4">
-          <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />
+        <div className="flex items-center gap-2 text-destructive">
+          <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} />
           <span className="text-sm">{updateApp.error.message}</span>
         </div>
       )}
@@ -1116,8 +1106,8 @@ function EnvironmentTab({ app }: { app: NonNullable<ReturnType<typeof useApp>['d
   )
 }
 
-// Domains tab - service exposure and domain configuration
-function DomainsTab({
+// Domains section - service exposure and domain configuration (inline in General tab)
+function DomainsSection({
   app,
   onDeploy,
 }: {
@@ -1163,77 +1153,60 @@ function DomainsTab({
   }
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <div>
-        <h3 className="text-lg font-semibold">{t('apps.domains.title')}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t('apps.domains.description')}
-        </p>
-      </div>
-
-      {/* Services */}
-      {services.length > 0 ? (
-        <div className="space-y-4">
-          {services.map((service, index) => (
-            <div key={service.serviceName} className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{service.serviceName}</span>
-                  {service.containerPort && <Badge variant="secondary">:{service.containerPort}</Badge>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id={`expose-${index}`}
-                    checked={service.exposed}
-                    onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
-                  />
-                  <Label htmlFor={`expose-${index}`} className="text-sm">
-                    {t('apps.domains.expose')}
-                  </Label>
-                </div>
-              </div>
-
-              {service.exposed && (
-                <div className="space-y-2">
-                  <Label htmlFor={`domain-${index}`} className="text-sm">
-                    {t('apps.domains.domain')}
-                  </Label>
-                  <Input
-                    id={`domain-${index}`}
-                    value={service.domain}
-                    onChange={(e) => updateService(index, { domain: e.target.value })}
-                    placeholder="app.example.com"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="py-8 text-center text-muted-foreground border rounded-lg">
-          <p>{t('apps.domains.noServices')}</p>
-        </div>
-      )}
-
-      {/* Save button */}
-      {services.length > 0 && (
-        <div className="flex justify-end">
-          <Button onClick={handleSaveDomains} disabled={updateApp.isPending}>
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.domains.title')}</h4>
+        {services.length > 0 && (
+          <Button size="sm" onClick={handleSaveDomains} disabled={updateApp.isPending}>
             {updateApp.isPending ? (
               <>
-                <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
                 {t('status.saving')}
               </>
             ) : (
               t('apps.domains.save')
             )}
           </Button>
+        )}
+      </div>
+
+      {services.length > 0 ? (
+        <div className="space-y-3">
+          {services.map((service, index) => (
+            <div key={service.serviceName} className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-medium">{service.serviceName}</span>
+                {service.containerPort && <Badge variant="secondary">:{service.containerPort}</Badge>}
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`expose-${index}`}
+                  checked={service.exposed}
+                  onCheckedChange={(checked) => updateService(index, { exposed: checked === true })}
+                />
+                <Label htmlFor={`expose-${index}`} className="text-sm">
+                  {t('apps.domains.expose')}
+                </Label>
+              </div>
+              {service.exposed && (
+                <Input
+                  id={`domain-${index}`}
+                  value={service.domain}
+                  onChange={(e) => updateService(index, { domain: e.target.value })}
+                  placeholder="app.example.com"
+                  className="flex-1 h-8"
+                />
+              )}
+            </div>
+          ))}
         </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">{t('apps.domains.noServices')}</p>
       )}
 
       {updateApp.error && (
         <div className="flex items-center gap-2 text-destructive">
-          <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />
+          <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} />
           <span className="text-sm">{updateApp.error.message}</span>
         </div>
       )}
