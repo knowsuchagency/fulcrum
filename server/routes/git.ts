@@ -5,15 +5,20 @@ import * as path from 'path'
 import * as os from 'os'
 
 // Execute git command and return output
-function gitExec(cwd: string, args: string): string {
+function gitExec(cwd: string, args: string, timeoutMs = 30_000): string {
   try {
     return execSync(`git ${args}`, {
       cwd,
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024, // 10MB for large diffs
+      timeout: timeoutMs,
       stdio: ['pipe', 'pipe', 'pipe'], // Capture stderr for better error messages
     }).trim()
   } catch (err) {
+    // Handle timeout
+    if (err && typeof err === 'object' && 'killed' in err && err.killed) {
+      throw new Error(`Git command timed out after ${timeoutMs}ms: git ${args}`)
+    }
     // Include stderr in error message for better debugging
     if (err && typeof err === 'object' && 'stderr' in err && err.stderr) {
       throw new Error(String(err.stderr).trim() || String(err))
@@ -344,10 +349,10 @@ app.get('/diff', (c) => {
       diff = ''
     }
 
-    // Get status summary
+    // Get status summary (10s timeout)
     let status = ''
     try {
-      status = gitExec(worktreePath, 'status --short')
+      status = gitExec(worktreePath, 'status --short', 10_000)
     } catch {
       status = ''
     }
@@ -462,10 +467,10 @@ app.get('/status', (c) => {
       // No upstream tracking
     }
 
-    // Get status
+    // Get status (10s timeout - this is frequently polled for UI)
     let status = ''
     try {
-      status = gitExec(worktreePath, 'status --short')
+      status = gitExec(worktreePath, 'status --short', 10_000)
     } catch {
       status = ''
     }

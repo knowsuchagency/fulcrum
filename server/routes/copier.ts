@@ -274,6 +274,29 @@ app.post('/create', async (c) => {
       return c.json({ error: errorMessage }, 500)
     }
 
+    // Initialize git repo if not already initialized
+    // (copier templates typically exclude .git, so we need to create a new repo)
+    const gitPath = join(fullOutputPath, '.git')
+    if (!existsSync(gitPath)) {
+      try {
+        execSync('git init', {
+          cwd: fullOutputPath,
+          encoding: 'utf-8',
+          stdio: 'pipe',
+        })
+        // Create initial commit
+        execSync('git add -A && git commit -m "Initial commit from template"', {
+          cwd: fullOutputPath,
+          encoding: 'utf-8',
+          stdio: 'pipe',
+        })
+        log.api.info('Initialized git repository', { path: fullOutputPath })
+      } catch (gitErr) {
+        // Non-fatal: log warning but continue
+        log.api.warn('Failed to initialize git repository', { path: fullOutputPath, error: String(gitErr) })
+      }
+    }
+
     // Auto-add created project as repository
     const now = new Date().toISOString()
     const newRepoId = crypto.randomUUID()
