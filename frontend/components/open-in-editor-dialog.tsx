@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon } from '@hugeicons/core-free-icons'
-import { useEditorApp, useEditorHost, useEditorSshPort, useDefaultGitReposDir } from '@/hooks/use-config'
+import { useEditorApp, useEditorHost, useEditorSshPort, useHomeDir } from '@/hooks/use-config'
 import { expandTildePath } from '@/lib/path-utils'
 import { buildEditorUrl, openExternalUrl, getEditorDisplayName } from '@/lib/editor-url'
 
@@ -31,7 +31,7 @@ export function OpenInEditorDialog({ open, onOpenChange }: OpenInEditorDialogPro
   const { data: editorApp } = useEditorApp()
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
-  const { data: defaultGitReposDir } = useDefaultGitReposDir()
+  const { data: homeDir } = useHomeDir()
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -44,7 +44,7 @@ export function OpenInEditorDialog({ open, onOpenChange }: OpenInEditorDialogPro
     if (!path.trim()) return
 
     // Expand ~ to home directory before building URL
-    const expandedPath = expandTildePath(path.trim(), defaultGitReposDir ?? '')
+    const expandedPath = expandTildePath(path.trim(), homeDir)
 
     const url = buildEditorUrl(
       expandedPath,

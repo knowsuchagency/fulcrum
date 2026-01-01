@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import os from 'node:os'
 import {
   getSettings,
   updateSettingByPath,
@@ -277,6 +278,9 @@ app.get('/:key', (c) => {
   // Handle special read-only keys
   if (key === 'worktree_base_path') {
     return c.json({ key, value: getWorktreeBasePath(), isDefault: true })
+  }
+  if (key === 'home_dir') {
+    return c.json({ key, value: os.homedir(), isDefault: true })
   }
 
   // Resolve key to nested path

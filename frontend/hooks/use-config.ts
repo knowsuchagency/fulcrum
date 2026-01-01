@@ -14,6 +14,7 @@ interface ConfigResponse {
 export const CONFIG_KEYS = {
   PORT: 'server.port',
   WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only, derived from VIBORA_DIR
+  HOME_DIR: 'home_dir', // Read-only, system home directory
   DEFAULT_GIT_REPOS_DIR: 'paths.defaultGitReposDir',
   EDITOR_APP: 'editor.app',
   EDITOR_HOST: 'editor.host',
@@ -53,6 +54,16 @@ export function usePort() {
 // Read-only: derived from VIBORA_DIR on server
 export function useWorktreeBasePath() {
   const query = useConfig(CONFIG_KEYS.WORKTREE_BASE_PATH)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? '',
+  }
+}
+
+// Read-only: system home directory for tilde expansion
+export function useHomeDir() {
+  const query = useConfig(CONFIG_KEYS.HOME_DIR)
 
   return {
     ...query,
