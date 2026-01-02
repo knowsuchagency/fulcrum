@@ -390,12 +390,27 @@ app.delete('/:id', async (c) => {
 
   // Stop and remove Docker stack if requested
   if (stopContainers) {
+    const projectName = getProjectName(id, repo?.displayName)
+
     if (existing.status === 'running') {
       // Full stop with Traefik cleanup
-      await stopApp(id)
+      const stopResult = await stopApp(id)
+      if (!stopResult.success) {
+        log.deploy.warn('stopApp failed during app deletion, attempting direct stack removal', {
+          appId: id,
+          error: stopResult.error,
+        })
+        // Fallback: try direct stack removal
+        await stackRemove(projectName).catch((err) => {
+          log.deploy.warn('Fallback stack remove also failed during app deletion', {
+            appId: id,
+            projectName,
+            error: String(err),
+          })
+        })
+      }
     } else {
       // Still try to remove stack in case of orphaned services from failed/partial deployments
-      const projectName = getProjectName(id, repo?.displayName)
       await stackRemove(projectName).catch((err) => {
         log.deploy.warn('Failed to remove stack during app deletion', {
           appId: id,
