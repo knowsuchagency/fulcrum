@@ -48,6 +48,38 @@ ask_yes_no() {
     esac
 }
 
+# Install system prerequisites (build tools, unzip)
+install_prerequisites() {
+    print_step "Installing system prerequisites..."
+
+    if command -v apt &> /dev/null; then
+        # Debian/Ubuntu - install build-essential and unzip
+        if sudo apt update && sudo apt install -y build-essential unzip; then
+            print_success "System prerequisites installed"
+            return 0
+        fi
+    elif command -v dnf &> /dev/null; then
+        # Fedora/RHEL
+        if sudo dnf install -y gcc gcc-c++ make unzip; then
+            print_success "System prerequisites installed"
+            return 0
+        fi
+    elif command -v pacman &> /dev/null; then
+        # Arch
+        if sudo pacman -S --noconfirm base-devel unzip; then
+            print_success "System prerequisites installed"
+            return 0
+        fi
+    else
+        print_warning "Could not detect package manager for prerequisites"
+        echo "  Please ensure build tools (gcc, make) and unzip are installed"
+        return 0  # Continue anyway, individual tools will fail if needed
+    fi
+
+    print_warning "Could not install prerequisites"
+    return 1
+}
+
 # Check for git (required, won't install)
 check_git() {
     print_step "Checking for git..."
@@ -453,6 +485,9 @@ main() {
 
     # Check required dependencies
     check_git
+
+    # Install system prerequisites (build tools, unzip)
+    install_prerequisites
 
     # Install all tools
     install_bun
