@@ -13,6 +13,10 @@ import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { startGitWatcher, stopGitWatcher } from './services/git-watcher'
 import { log } from './lib/logger'
+import { clearSensitiveEnvVars } from './lib/env'
+
+// Clear sensitive env vars inherited from parent shell before reading settings
+clearSensitiveEnvVars()
 
 // Ensure settings file is up-to-date with latest schema on startup
 ensureLatestSettings()

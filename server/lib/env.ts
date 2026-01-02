@@ -1,4 +1,27 @@
 import { getZAiSettings } from './settings'
+import { log } from './logger'
+
+// Sensitive env vars that should be cleared on server startup
+// These are settings that should come from settings.json, not inherited from parent shell
+const SENSITIVE_ENV_VARS = [
+  'CLOUDFLARE_API_TOKEN',
+  'CLOUDFLARE_ACCOUNT_ID',
+  'LINEAR_API_KEY',
+  'GITHUB_PAT',
+]
+
+/**
+ * Clear sensitive env vars on server startup to prevent parent shell from
+ * overriding settings.json values. Must be called before any settings are read.
+ */
+export function clearSensitiveEnvVars(): void {
+  for (const key of SENSITIVE_ENV_VARS) {
+    if (process.env[key]) {
+      log.server.debug('Clearing inherited env var', { key })
+      delete process.env[key]
+    }
+  }
+}
 
 // Server-specific env vars to filter from spawned shells
 const SERVER_ENV_VARS = [

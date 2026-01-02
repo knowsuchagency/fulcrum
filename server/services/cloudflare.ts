@@ -19,8 +19,9 @@ To fix this:
  */
 function getClient(): Cloudflare | null {
   const settings = getSettings()
-  if (!settings.integrations.cloudflareApiToken) return null
-  return new Cloudflare({ apiToken: settings.integrations.cloudflareApiToken })
+  const token = settings.integrations.cloudflareApiToken
+  if (!token) return null
+  return new Cloudflare({ apiToken: token })
 }
 
 /**
