@@ -130,8 +130,20 @@ export type DeploymentProgressCallback = (progress: DeploymentProgress) => void
  * Get the project name for docker compose (used for container naming)
  * Docker compose project names must be lowercase alphanumeric, hyphens, underscores
  */
-export function getProjectName(appId: string): string {
-  return `vibora-${appId.slice(0, 8).toLowerCase()}`
+export function getProjectName(appId: string, repoName?: string): string {
+  const suffix = appId.slice(0, 8).toLowerCase()
+  if (repoName) {
+    // Sanitize repo name for Docker: lowercase, alphanumeric + hyphens only, max 20 chars
+    const sanitized = repoName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 20)
+      .replace(/-$/, '') // Remove trailing hyphen if truncation created one
+    return `vibora-${sanitized}-${suffix}`
+  }
+  return `vibora-${suffix}`
 }
 
 /**
@@ -224,7 +236,7 @@ export async function deployApp(
   // Update app status
   await db.update(apps).set({ status: 'building', updatedAt: now }).where(eq(apps.id, appId))
 
-  const projectName = getProjectName(app.id)
+  const projectName = getProjectName(app.id, repo.displayName)
   const buildLogs: string[] = []
 
   // Parse environment variables from app
@@ -675,7 +687,7 @@ export async function deployApp(
         .where(eq(apps.id, appId))
 
       // Try to clean up any partially deployed stack
-      const projectName = getProjectName(appId)
+      const projectName = getProjectName(appId, repo.displayName)
       stackRemove(projectName).catch(() => {
         // Ignore errors during cleanup
       })
@@ -742,7 +754,7 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
     return { success: false, error: 'Repository not found' }
   }
 
-  const projectName = getProjectName(app.id)
+  const projectName = getProjectName(app.id, repo.displayName)
 
   // Remove stack
   const removeResult = await stackRemove(projectName)

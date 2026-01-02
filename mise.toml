@@ -72,19 +72,20 @@ echo "Bumped version: $current → $new_version"
 description = "Start frontend and backend dev servers"
 depends = ["install"]
 usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
+env = { VIBORA_DIR = "~/tmp/vibora" }
 run = """
 # Determine host binding
 if [ "$usage_host" = "true" ]; then
-  export VITE_HOST="--host"
+  VITE_HOST="--host"
 else
-  export VITE_HOST=""
+  VITE_HOST=""
 fi
-export VITE_BACKEND_PORT="$PORT"
-export DEBUG="1"
+VITE_BACKEND_PORT="$PORT"
+DEBUG="1"
 # Pass through env vars explicitly since they may not inherit through concurrently/bunx
 bunx concurrently -n server,client -c blue,green \
-  'VIBORA_DIR="$VIBORA_DIR" PORT="$PORT" mise run server' \
-  'DEBUG="$DEBUG" VITE_BACKEND_PORT="$VITE_BACKEND_PORT" VITE_HOST="$VITE_HOST" mise run client'
+  "VIBORA_DIR=$VIBORA_DIR PORT=$PORT mise run server" \
+  "DEBUG=$DEBUG VITE_BACKEND_PORT=$VITE_BACKEND_PORT VITE_HOST=$VITE_HOST mise run client"
 """
 
 [tasks.server]

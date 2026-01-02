@@ -378,6 +378,11 @@ app.delete('/:id', async (c) => {
     where: eq(appServices.appId, id),
   })
 
+  // Get repository for project naming
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, existing.repositoryId),
+  })
+
   // Cancel any in-progress deployment
   if (existing.status === 'building') {
     await cancelDeploymentByAppId(id)
@@ -390,7 +395,7 @@ app.delete('/:id', async (c) => {
       await stopApp(id)
     } else {
       // Still try to remove stack in case of orphaned services from failed/partial deployments
-      const projectName = getProjectName(id)
+      const projectName = getProjectName(id, repo?.displayName)
       await stackRemove(projectName).catch((err) => {
         log.deploy.warn('Failed to remove stack during app deletion', {
           appId: id,
@@ -665,7 +670,11 @@ app.get('/:id/logs', async (c) => {
     return c.json({ error: 'App not found' }, 404)
   }
 
-  const projectName = getProjectName(id)
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, appRecord.repositoryId),
+  })
+
+  const projectName = getProjectName(id, repo?.displayName)
 
   // Get logs for specific service or all services
   if (service) {
@@ -701,7 +710,11 @@ app.get('/:id/status', async (c) => {
     return c.json({ error: 'App not found' }, 404)
   }
 
-  const projectName = getProjectName(id)
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, appRecord.repositoryId),
+  })
+
+  const projectName = getProjectName(id, repo?.displayName)
   const services = await stackServices(projectName)
 
   // Map swarm services to container-like format for frontend compatibility
