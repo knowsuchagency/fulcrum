@@ -494,13 +494,3 @@ export function useUpdateDeploymentSettings() {
     },
   })
 }
-
-// Recreate Docker Swarm ingress network (fixes IPVS routing mesh issues)
-export function useRecreateIngress() {
-  return useMutation({
-    mutationFn: () =>
-      fetchJSON<{ success: boolean; message: string }>(`${API_BASE}/api/deployment/ingress/recreate`, {
-        method: 'POST',
-      }),
-  })
-}

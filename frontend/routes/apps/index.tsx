@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { fuzzyScore } from '@/lib/fuzzy-search'
-import { useApps, useDeployApp, useStopApp, useDeleteApp, useDeploymentPrerequisites, useRecreateIngress } from '@/hooks/use-apps'
+import { useApps, useDeployApp, useStopApp, useDeleteApp, useDeploymentPrerequisites } from '@/hooks/use-apps'
 import type { AppWithServices } from '@/hooks/use-apps'
 import { DeploymentSetupWizard } from '@/components/apps/deployment-setup-wizard'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,6 @@ import {
   Rocket01Icon,
   Link01Icon,
   FilterIcon,
-  AlertDiamondIcon,
 } from '@hugeicons/core-free-icons'
 import { Input } from '@/components/ui/input'
 import {
@@ -196,12 +195,10 @@ function AppsView() {
   const deployApp = useDeployApp()
   const stopApp = useStopApp()
   const deleteApp = useDeleteApp()
-  const recreateIngress = useRecreateIngress()
   const navigate = useNavigate()
   const { repo: repoFilter } = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<AppWithServices | null>(null)
-  const [showIngressDialog, setShowIngressDialog] = useState(false)
 
   const setRepoFilter = useCallback(
     (repo: string | null) => {
@@ -320,15 +317,6 @@ function AppsView() {
           </SelectContent>
         </Select>
         <div className="hidden sm:block flex-1" />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowIngressDialog(true)}
-          className="text-muted-foreground hover:text-amber-500"
-          title={t('apps.recreateIngress')}
-        >
-          <HugeiconsIcon icon={AlertDiamondIcon} size={16} strokeWidth={2} data-slot="icon" />
-        </Button>
         <Link to="/apps/new">
           <Button size="sm">
             <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
@@ -401,35 +389,6 @@ function AppsView() {
             <AlertDialogCancel>{t('apps.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {t('apps.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Recreate ingress network confirmation dialog */}
-      <AlertDialog open={showIngressDialog} onOpenChange={setShowIngressDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('apps.recreateIngressTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('apps.recreateIngressDescription')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('apps.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                recreateIngress.mutate(undefined, {
-                  onSuccess: () => setShowIngressDialog(false),
-                })
-              }}
-              className="bg-amber-600 text-white hover:bg-amber-700"
-              disabled={recreateIngress.isPending}
-            >
-              {recreateIngress.isPending ? (
-                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin mr-2" />
-              ) : null}
-              {t('apps.recreateIngressConfirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -157,46 +157,6 @@ export async function ensureSwarmMode(): Promise<{ initialized: boolean; error?:
 }
 
 /**
- * Recreate the Docker Swarm ingress network
- *
- * This fixes IPVS routing mesh corruption that can occur after service updates,
- * causing connections to hang. The ingress network must be recreated to restore
- * proper load balancer routing.
- *
- * WARNING: This will briefly interrupt all services using ingress port publishing.
- */
-export async function recreateIngressNetwork(): Promise<{ success: boolean; error?: string }> {
-  log.deploy.warn('Recreating Docker Swarm ingress network')
-
-  // First, remove the existing ingress network
-  const removeResult = await runDocker(['network', 'rm', 'ingress'])
-
-  if (removeResult.exitCode !== 0) {
-    // Check if network doesn't exist (that's ok)
-    if (!removeResult.stderr.includes('not found') && !removeResult.stderr.includes('No such network')) {
-      log.deploy.error('Failed to remove ingress network', { stderr: removeResult.stderr })
-      return { success: false, error: removeResult.stderr || 'Failed to remove ingress network' }
-    }
-  }
-
-  // Create a new ingress network
-  const createResult = await runDocker([
-    'network', 'create',
-    '--driver', 'overlay',
-    '--ingress',
-    'ingress',
-  ])
-
-  if (createResult.exitCode !== 0) {
-    log.deploy.error('Failed to create ingress network', { stderr: createResult.stderr })
-    return { success: false, error: createResult.stderr || 'Failed to create ingress network' }
-  }
-
-  log.deploy.info('Ingress network recreated successfully')
-  return { success: true }
-}
-
-/**
  * Generate a Swarm-compatible compose file
  *
  * Docker Swarm has different requirements than docker compose:
