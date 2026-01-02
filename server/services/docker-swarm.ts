@@ -246,6 +246,19 @@ export async function generateSwarmComposeFile(
         )
       }
 
+      // Convert ports to host mode to bypass ingress routing mesh
+      // The Docker Swarm ingress network can become corrupted after service updates,
+      // causing connections to hang. Host mode binds directly to the node.
+      if (Array.isArray(serviceConfig.ports)) {
+        serviceConfig.ports = serviceConfig.ports.map((port: unknown) =>
+          convertPortToHostMode(port)
+        )
+        log.deploy.debug('Converted ports to host mode', {
+          service: serviceName,
+          ports: serviceConfig.ports,
+        })
+      }
+
       // Remove fields not supported by Docker Swarm
       // These would cause "unsupported" errors or be silently ignored
       const unsupportedFields = [
@@ -632,6 +645,83 @@ export async function waitForServicesHealthy(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
+}
+
+interface SwarmPortConfig {
+  target: number
+  published: number
+  protocol?: string
+  mode: 'host' | 'ingress'
+}
+
+/**
+ * Convert a port specification to host mode format
+ * Docker Swarm ports can be specified as:
+ * - Short syntax: "3000:3000" or "8080:80/tcp"
+ * - Long syntax: { target: 80, published: 8080, protocol: tcp, mode: ingress }
+ *
+ * We convert all to long syntax with mode: host to bypass the ingress routing mesh
+ */
+function convertPortToHostMode(port: unknown): SwarmPortConfig {
+  if (typeof port === 'string') {
+    // Parse short syntax: "published:target", "published:target/protocol", or just "port"
+    // Handle env var syntax like "${PORT:-3001}:${PORT:-3001}"
+    const [portPart, protocol] = port.split('/')
+
+    // Expand env vars in port parts (use splitRespectingEnvVars for ${VAR:-default} syntax)
+    const rawParts = splitRespectingEnvVars(portPart)
+    const parts = rawParts.map((p) => {
+      const expanded = expandEnvVar(p)
+      return expanded ? Number(expanded) : NaN
+    })
+
+    // Handle "3001" (single port) vs "3001:3001" (published:target)
+    const published = parts[0]
+    const target = parts.length > 1 ? parts[1] : parts[0]
+
+    // If we still have NaN, the port can't be statically resolved
+    // Skip port conversion and log a warning
+    if (isNaN(published) || isNaN(target)) {
+      log.deploy.warn('Could not parse port specification, skipping host mode conversion', {
+        port,
+        parsed: { published, target },
+      })
+      // Return a placeholder that will cause docker to fail with a clear error
+      // rather than silently producing invalid config
+      throw new Error(`Cannot parse port specification: ${port}`)
+    }
+
+    return {
+      target,
+      published,
+      protocol: protocol || 'tcp',
+      mode: 'host',
+    }
+  }
+
+  if (typeof port === 'number') {
+    // Just a port number
+    return {
+      target: port,
+      published: port,
+      protocol: 'tcp',
+      mode: 'host',
+    }
+  }
+
+  if (typeof port === 'object' && port !== null) {
+    // Already long syntax, just ensure host mode
+    const p = port as Record<string, unknown>
+    return {
+      target: (p.target as number) || (p.published as number),
+      published: (p.published as number) || (p.target as number),
+      protocol: (p.protocol as string) || 'tcp',
+      mode: 'host',
+    }
+  }
+
+  // Fallback - shouldn't happen
+  throw new Error(`Invalid port specification: ${JSON.stringify(port)}`)
 }
 
 /**
