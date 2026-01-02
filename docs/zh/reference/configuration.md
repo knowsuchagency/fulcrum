@@ -2,6 +2,14 @@
 
 Vibora 通过配置文件和环境变量进行配置。
 
+## z.ai 支持 <Badge type="tip" text="中国可用" />
+
+::: tip 🇨🇳 中国用户友好
+Vibora 内置 [z.ai](https://z.ai) 支持。在设置页面启用 z.ai，即可在中国大陆正常使用 Claude Code。
+
+[了解更多 →](https://docs.z.ai/devpack/tool/claude)
+:::
+
 ## 配置文件位置
 
 配置存储在 `.vibora/settings.json`。vibora 目录按以下顺序解析：
