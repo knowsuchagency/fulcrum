@@ -543,12 +543,11 @@ async function fetchDockerApiStats(): Promise<ContainerStats[] | null> {
       State: string
     }>
 
-    const containers: ContainerStats[] = []
+    // Filter running containers
+    const runningContainers = containerList.filter((c) => c.State === 'running')
 
-    // Fetch stats for each container
-    for (const container of containerList) {
-      if (container.State !== 'running') continue
-
+    // Fetch stats for all containers in parallel
+    const statsPromises = runningContainers.map(async (container): Promise<ContainerStats | null> => {
       try {
         const statsUrl = `http://localhost/containers/${container.Id}/stats?stream=false`
         const statsResponse = await fetch(statsUrl, {
@@ -556,7 +555,7 @@ async function fetchDockerApiStats(): Promise<ContainerStats[] | null> {
           unix: socketPath,
         })
 
-        if (!statsResponse.ok) continue
+        if (!statsResponse.ok) return null
 
         const stats = await statsResponse.json() as {
           cpu_stats: {
@@ -588,19 +587,21 @@ async function fetchDockerApiStats(): Promise<ContainerStats[] | null> {
         const memoryLimitMB = memoryLimit / (1024 * 1024)
         const memoryPercent = memoryLimit > 0 ? (memoryBytes / memoryLimit) * 100 : 0
 
-        containers.push({
+        return {
           id: container.Id.slice(0, 12),
           name: (container.Names[0] || 'unknown').replace(/^\//, ''),
           cpuPercent: Math.round(cpuPercent * 10) / 10,
           memoryMB: Math.round(memoryMB * 10) / 10,
           memoryLimit: Math.round(memoryLimitMB * 10) / 10,
           memoryPercent: Math.round(memoryPercent * 10) / 10,
-        })
+        }
       } catch {
-        // Skip this container
-        continue
+        return null
       }
-    }
+    })
+
+    const results = await Promise.all(statsPromises)
+    const containers = results.filter((c): c is ContainerStats => c !== null)
 
     return containers
   } catch {
