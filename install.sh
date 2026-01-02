@@ -116,6 +116,50 @@ install_bun() {
     return 1
 }
 
+# Install Node.js
+install_node() {
+    print_step "Checking for Node.js..."
+
+    if command -v node &> /dev/null; then
+        print_success "Node.js is already installed ($(node --version))"
+        return 0
+    fi
+
+    print_warning "Node.js not found. Installing..."
+
+    # Try Homebrew first (works on both macOS and Linux)
+    if command -v brew &> /dev/null; then
+        if brew install node; then
+            print_success "Node.js installed via Homebrew"
+            return 0
+        fi
+    fi
+
+    # Fallback to system package managers
+    if command -v apt &> /dev/null; then
+        # Use NodeSource for a recent LTS version
+        if curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && \
+           sudo apt install -y nodejs; then
+            print_success "Node.js installed via apt"
+            return 0
+        fi
+    elif command -v dnf &> /dev/null; then
+        if sudo dnf install -y nodejs; then
+            print_success "Node.js installed via dnf"
+            return 0
+        fi
+    elif command -v pacman &> /dev/null; then
+        if sudo pacman -S --noconfirm nodejs npm; then
+            print_success "Node.js installed via pacman"
+            return 0
+        fi
+    fi
+
+    print_warning "Could not install Node.js automatically"
+    echo "  Install manually: https://nodejs.org/"
+    return 1
+}
+
 # Install dtach
 install_dtach() {
     print_step "Checking for dtach..."
@@ -446,10 +490,11 @@ start_vibora() {
         echo "Open http://localhost:7777 in your browser"
         echo ""
         echo "Commands:"
-        echo "  vibora status    # Check server status"
-        echo "  vibora doctor    # Check all dependencies"
-        echo "  vibora down      # Stop server"
-        echo "  vibora up        # Start server"
+        echo "  vibora status           # Check server status"
+        echo "  vibora doctor           # Check all dependencies"
+        echo "  vibora down             # Stop server"
+        echo "  vibora up               # Start server"
+        echo "  npx vibora@latest up    # Update and start"
     else
         print_error "Failed to start vibora server"
         echo "  Try: vibora up --help"
@@ -467,6 +512,7 @@ main() {
     echo ""
     echo "This will install:"
     echo "  - bun (JavaScript runtime)"
+    echo "  - Node.js (JavaScript runtime)"
     echo "  - dtach (terminal persistence)"
     echo "  - uv (Python package manager)"
     echo "  - Claude Code (AI coding agent)"
@@ -491,6 +537,7 @@ main() {
 
     # Install all tools
     install_bun
+    install_node
     install_dtach
     install_uv
     install_claude_code
