@@ -143,7 +143,9 @@
       "title": "Environment Variables",
       "description": "Set environment variables for Docker Compose builds. These will be available during the build and in your containers.",
       "placeholder": "DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# Comments are supported",
-      "save": "Save Environment"
+      "save": "Save Environment",
+      "showValues": "Show values",
+      "hideValues": "Hide values"
     },
     "domains": {
       "title": "Domain Configuration",

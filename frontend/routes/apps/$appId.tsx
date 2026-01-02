@@ -64,6 +64,8 @@ import {
   Cancel01Icon,
   Menu01Icon,
   PackageIcon,
+  ViewOffIcon,
+  EyeIcon,
 } from '@hugeicons/core-free-icons'
 import { MonacoEditor } from '@/components/viewer/monaco-editor'
 import type { Deployment, ExposureMethod } from '@/types'
@@ -1042,6 +1044,25 @@ function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp
       .join('\n')
   })
   const [envSaved, setEnvSaved] = useState(false)
+  const [masked, setMasked] = useState(true)
+
+  // Mask values in the display text (KEY=value -> KEY=••••••)
+  const maskedEnvText = useMemo(() => {
+    if (!masked) return envText
+    return envText
+      .split('\n')
+      .map((line) => {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#')) return line
+        const eqIndex = trimmed.indexOf('=')
+        if (eqIndex > 0) {
+          const key = trimmed.slice(0, eqIndex)
+          return `${key}=••••••`
+        }
+        return line
+      })
+      .join('\n')
+  }, [envText, masked])
 
   const handleSaveEnv = async () => {
     // Parse "KEY=value" lines back to object
@@ -1071,28 +1092,47 @@ function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp
     <div className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.environment.title')}</h4>
-        <Button size="sm" onClick={handleSaveEnv} disabled={updateApp.isPending}>
-          {updateApp.isPending ? (
-            <>
-              <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-              {t('status.saving')}
-            </>
-          ) : envSaved ? (
-            <>
-              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="text-green-500" />
-              {t('status.saved')}
-            </>
-          ) : (
-            t('apps.environment.save')
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              onClick={() => setMasked(!masked)}
+            >
+              <HugeiconsIcon icon={masked ? ViewOffIcon : EyeIcon} size={14} strokeWidth={2} />
+            </TooltipTrigger>
+            <TooltipContent>{masked ? t('apps.environment.showValues') : t('apps.environment.hideValues')}</TooltipContent>
+          </Tooltip>
+          <Button size="sm" onClick={handleSaveEnv} disabled={updateApp.isPending}>
+            {updateApp.isPending ? (
+              <>
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                {t('status.saving')}
+              </>
+            ) : envSaved ? (
+              <>
+                <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="text-green-500" />
+                {t('status.saved')}
+              </>
+            ) : (
+              t('apps.environment.save')
+            )}
+          </Button>
+        </div>
       </div>
 
       <Textarea
-        value={envText}
-        onChange={(e) => setEnvText(e.target.value)}
+        value={masked ? maskedEnvText : envText}
+        onChange={(e) => {
+          if (!masked) {
+            setEnvText(e.target.value)
+          }
+        }}
+        onFocus={() => {
+          if (masked) setMasked(false)
+        }}
         placeholder={t('apps.environment.placeholder')}
         className="font-mono text-sm min-h-[120px]"
+        readOnly={masked}
       />
 
       {updateApp.error && (
