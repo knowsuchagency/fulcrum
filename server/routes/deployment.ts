@@ -4,6 +4,7 @@ import {
   checkDockerRunning,
   getDockerVersion,
 } from '../services/docker-compose'
+import { recreateIngressNetwork } from '../services/docker-swarm'
 import {
   detectTraefik,
   checkConfigDirWritable,
@@ -302,6 +303,41 @@ app.get('/verify-tunnel-api', async (c) => {
       errorType: err?.constructor?.name,
     })
   }
+})
+
+// POST /api/deployment/ingress/recreate - Recreate Docker Swarm ingress network
+// This fixes IPVS routing mesh corruption that can cause connections to hang
+app.post('/ingress/recreate', async (c) => {
+  // First check if Docker is running
+  const dockerRunning = await checkDockerRunning()
+  if (!dockerRunning) {
+    return c.json(
+      {
+        success: false,
+        error: 'Docker is not running. Please start Docker first.',
+        code: 'DOCKER_NOT_RUNNING',
+      },
+      400
+    )
+  }
+
+  const result = await recreateIngressNetwork()
+
+  if (!result.success) {
+    return c.json(
+      {
+        success: false,
+        error: result.error,
+        code: 'INGRESS_RECREATE_FAILED',
+      },
+      500
+    )
+  }
+
+  return c.json({
+    success: true,
+    message: 'Ingress network recreated successfully. Services using ingress ports may need to be redeployed.',
+  })
 })
 
 // Legacy Caddy endpoints (redirect to Traefik for backwards compatibility)

@@ -90,6 +90,10 @@
     "deleteApp": "Delete App",
     "deleteAppConfirm": "Are you sure you want to delete \"{{name}}\"? This will stop all containers and remove the app configuration. This action cannot be undone.",
     "cancel": "Cancel",
+    "recreateIngress": "Fix network routing",
+    "recreateIngressTitle": "Recreate Ingress Network",
+    "recreateIngressDescription": "This will recreate the Docker Swarm ingress network to fix routing issues. All services using published ports will be briefly interrupted and may need to be redeployed.",
+    "recreateIngressConfirm": "Recreate Network",
     "appNotFound": "App not found",
     "backToApps": "Back to Apps",
     "tabs": {
