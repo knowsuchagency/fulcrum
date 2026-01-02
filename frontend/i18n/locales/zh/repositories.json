@@ -36,7 +36,8 @@
     "description": "从 URL 或本地路径添加 Git 仓库，或扫描目录。",
     "tabs": {
       "add": "添加",
-      "scan": "扫描"
+      "scan": "扫描",
+      "template": "从模板创建"
     },
     "inputLabel": "仓库 URL 或路径",
     "inputPlaceholder": "https://github.com/user/repo 或 /local/path",
@@ -100,15 +101,19 @@
         "customUrlHelp": "Copier 模板的 Git URL 或本地路径。"
       },
       "questions": {
+        "title": "模板问题",
         "description": "配置您的项目。",
         "noQuestions": "此模板没有配置问题。"
       },
       "output": {
+        "title": "输出位置",
         "description": "选择项目创建位置。",
         "projectName": "项目名称",
         "outputDirectory": "输出目录",
         "selectDirectory": "选择目录...",
-        "willCreate": "将创建"
+        "willCreate": "将创建",
+        "trustTemplate": "信任此模板",
+        "trustWarning": "此模板在项目创建期间运行代码。仅在您信任来源时启用。"
       },
       "creating": {
         "description": "正在创建您的项目...",

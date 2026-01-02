@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   Dialog,
@@ -11,9 +12,19 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Loading03Icon,
@@ -22,6 +33,7 @@ import {
   Link01Icon,
   CheckmarkCircle02Icon,
   Search01Icon,
+  HelpCircleIcon,
 } from '@hugeicons/core-free-icons'
 import { useDefaultGitReposDir } from '@/hooks/use-config'
 import {
@@ -31,6 +43,12 @@ import {
   useBulkCreateRepositories,
   type ScannedRepository,
 } from '@/hooks/use-repositories'
+import {
+  useCopierTemplates,
+  useCopierQuestions,
+  useCreateProjectFromTemplate,
+} from '@/hooks/use-copier'
+import type { CopierQuestion } from '@/types'
 
 /**
  * Check if a string looks like a git URL
@@ -74,7 +92,9 @@ interface AddRepositoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: (repoId: string) => void
-  initialTab?: 'add' | 'scan'
+  initialTab?: 'add' | 'scan' | 'template'
+  /** Pre-select a template by ID (switches to template tab) */
+  initialTemplateSource?: string
 }
 
 export function AddRepositoryDialog({
@@ -82,11 +102,13 @@ export function AddRepositoryDialog({
   onOpenChange,
   onSuccess,
   initialTab = 'add',
+  initialTemplateSource,
 }: AddRepositoryDialogProps) {
   const { t } = useTranslation('repositories')
+  const navigate = useNavigate()
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<string>(initialTab)
+  // Tab state - if initialTemplateSource provided, start on template tab
+  const [activeTab, setActiveTab] = useState<string>(initialTemplateSource ? 'template' : initialTab)
 
   // Add tab state
   const [input, setInput] = useState('')
@@ -103,11 +125,32 @@ export function AddRepositoryDialog({
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanBrowserOpen, setScanBrowserOpen] = useState(false)
 
+  // Template tab state
+  const [templateSource, setTemplateSource] = useState(initialTemplateSource ?? '')
+  const [customTemplateUrl, setCustomTemplateUrl] = useState('')
+  const [answers, setAnswers] = useState<Record<string, unknown>>({})
+  const [outputPath, setOutputPath] = useState('')
+  const [projectName, setProjectName] = useState('')
+  const [templateError, setTemplateError] = useState<string | null>(null)
+  const [trust, setTrust] = useState(false)
+  const [needsTrust, setNeedsTrust] = useState(false)
+  const [outputBrowserOpen, setOutputBrowserOpen] = useState(false)
+
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const createRepository = useCreateRepository()
   const cloneRepository = useCloneRepository()
   const scanMutation = useScanRepositories()
   const bulkCreateMutation = useBulkCreateRepositories()
+
+  // Template tab queries
+  const { data: templates } = useCopierTemplates()
+  const effectiveTemplateSource = templateSource || customTemplateUrl
+  const {
+    data: questionsData,
+    isLoading: questionsLoading,
+    error: questionsError,
+  } = useCopierQuestions(activeTab === 'template' && effectiveTemplateSource ? effectiveTemplateSource : null)
+  const createProject = useCreateProjectFromTemplate()
 
   // Add tab computed values
   const isUrl = useMemo(() => isGitUrl(input.trim()), [input])
@@ -145,6 +188,42 @@ export function AddRepositoryDialog({
 
   const isAddPending = createRepository.isPending || cloneRepository.isPending
   const isScanPending = scanMutation.isPending || bulkCreateMutation.isPending
+  const isTemplatePending = createProject.isPending
+
+  // Initialize template answers with defaults when questions load
+  useEffect(() => {
+    if (questionsData?.questions) {
+      setAnswers((prev) => {
+        const merged = { ...prev }
+        for (const q of questionsData.questions) {
+          if (merged[q.name] === undefined && q.default !== undefined) {
+            merged[q.name] = q.default
+          }
+        }
+        return merged
+      })
+    }
+  }, [questionsData])
+
+  // Initialize outputPath with default when dialog opens
+  useEffect(() => {
+    if (open && defaultGitReposDir && !outputPath) {
+      setOutputPath(defaultGitReposDir)
+    }
+  }, [open, defaultGitReposDir, outputPath])
+
+  // Template tab computed values
+  const missingRequiredQuestions = questionsData?.questions.filter((q) => {
+    const hasDefault = q.default !== undefined &&
+      !(typeof q.default === 'string' && q.default.includes('{{'))
+    if (hasDefault) return false
+    const answer = answers[q.name]
+    if (answer === undefined || answer === null || answer === '') return true
+    return false
+  }) ?? []
+
+  const canCreateFromTemplate = effectiveTemplateSource && projectName.trim() && outputPath.trim() &&
+    !questionsLoading && missingRequiredQuestions.length === 0
 
   // Add tab handlers
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -287,13 +366,144 @@ export function AddRepositoryDialog({
     setScanError(null)
   }
 
+  const resetTemplateState = () => {
+    setTemplateSource(initialTemplateSource ?? '')
+    setCustomTemplateUrl('')
+    setAnswers({})
+    setOutputPath(defaultGitReposDir || '')
+    setProjectName('')
+    setTemplateError(null)
+    setTrust(false)
+    setNeedsTrust(false)
+  }
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       resetAddState()
       resetScanState()
-      setActiveTab(initialTab)
+      resetTemplateState()
+      setActiveTab(initialTemplateSource ? 'template' : initialTab)
     }
     onOpenChange(nextOpen)
+  }
+
+  // Template tab handlers
+  // Auto-trust saved templates (they're already in Vibora), only require explicit trust for custom URLs
+  const isSavedTemplate = !!templateSource
+  const shouldTrust = isSavedTemplate || trust
+
+  const handleCreateFromTemplate = () => {
+    setTemplateError(null)
+    createProject.mutate(
+      {
+        templateSource: effectiveTemplateSource,
+        outputPath,
+        answers,
+        projectName,
+        trust: shouldTrust,
+      },
+      {
+        onSuccess: (data) => {
+          resetTemplateState()
+          onOpenChange(false)
+          navigate({ to: '/repositories/$repoId', params: { repoId: data.repositoryId } })
+        },
+        onError: (error) => {
+          setTemplateError(error.message)
+          if (error.message.includes('unsafe') || error.message.includes('--trust')) {
+            setNeedsTrust(true)
+          }
+        },
+      }
+    )
+  }
+
+  const handleOutputBrowseSelect = (path: string) => {
+    setOutputPath(path)
+    setOutputBrowserOpen(false)
+  }
+
+  const renderQuestionField = (question: CopierQuestion) => {
+    const value = answers[question.name]
+    const setValue = (v: unknown) => setAnswers((prev) => ({ ...prev, [question.name]: v }))
+
+    const isRequired = question.default === undefined ||
+      (typeof question.default === 'string' && question.default.includes('{{'))
+    const labelText = isRequired ? `${question.name} *` : question.name
+
+    switch (question.type) {
+      case 'bool':
+        return (
+          <Field key={question.name}>
+            <div className="flex items-center gap-2">
+              <Checkbox checked={value as boolean} onCheckedChange={setValue} />
+              <FieldLabel className="cursor-pointer">{labelText}</FieldLabel>
+            </div>
+            {question.help && <FieldDescription>{question.help}</FieldDescription>}
+          </Field>
+        )
+
+      case 'int':
+      case 'float':
+        return (
+          <Field key={question.name}>
+            <FieldLabel>{labelText}</FieldLabel>
+            <Input
+              type="number"
+              value={value as number}
+              onChange={(e) =>
+                setValue(
+                  question.type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value)
+                )
+              }
+              step={question.type === 'float' ? 'any' : 1}
+            />
+            {question.help && <FieldDescription>{question.help}</FieldDescription>}
+          </Field>
+        )
+
+      case 'str':
+      default: {
+        if (question.choices && question.choices.length > 0) {
+          return (
+            <Field key={question.name}>
+              <FieldLabel>{labelText}</FieldLabel>
+              <Select value={String(value ?? '')} onValueChange={setValue}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {question.choices.map((choice) => (
+                    <SelectItem key={String(choice.value)} value={String(choice.value)}>
+                      {choice.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {question.help && <FieldDescription>{question.help}</FieldDescription>}
+            </Field>
+          )
+        }
+
+        const isMultiline = question.type === 'yaml' || question.type === 'json'
+
+        return (
+          <Field key={question.name}>
+            <FieldLabel>{labelText}</FieldLabel>
+            {isMultiline ? (
+              <Textarea
+                value={String(value ?? '')}
+                onChange={(e) => setValue(e.target.value)}
+                rows={4}
+              />
+            ) : (
+              <Input value={String(value ?? '')} onChange={(e) => setValue(e.target.value)} />
+            )}
+            {question.help && <FieldDescription>{question.help}</FieldDescription>}
+          </Field>
+        )
+      }
+    }
   }
 
   return (
@@ -312,6 +522,9 @@ export function AddRepositoryDialog({
               </TabsTrigger>
               <TabsTrigger value="scan" className="flex-1">
                 {t('addModal.tabs.scan')}
+              </TabsTrigger>
+              <TabsTrigger value="template" className="flex-1">
+                {t('addModal.tabs.template')}
               </TabsTrigger>
             </TabsList>
 
@@ -615,6 +828,245 @@ export function AddRepositoryDialog({
                 </DialogFooter>
               </div>
             </TabsContent>
+
+            {/* Template Tab */}
+            <TabsContent value="template">
+              <div className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto">
+                {/* Template Source */}
+                <FieldGroup>
+                  <Field>
+                    <div className="flex items-center gap-2">
+                      <FieldLabel>{t('newProject.steps.template.savedTemplates')}</FieldLabel>
+                      <Tooltip>
+                        <TooltipTrigger className="text-muted-foreground hover:text-foreground transition-colors">
+                          <HugeiconsIcon icon={HelpCircleIcon} size={14} strokeWidth={2} />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p>
+                            {t('newProject.steps.template.help')}{' '}
+                            <a
+                              href="https://copier.readthedocs.io/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline hover:opacity-80"
+                            >
+                              {t('newProject.steps.template.learnMore')}
+                            </a>
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="flex gap-2">
+                      <Select
+                        value={templateSource}
+                        onValueChange={(v) => {
+                          setTemplateSource(v ?? '')
+                          setCustomTemplateUrl('')
+                          setAnswers({})
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {templateSource ? (
+                              templates?.find((t) => t.id === templateSource)?.displayName
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {t('newProject.steps.template.selectTemplate')}
+                              </span>
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates?.map((repo) => (
+                            <SelectItem key={repo.id} value={repo.id}>
+                              {repo.displayName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {templateSource && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setTemplateSource('')
+                            setAnswers({})
+                          }}
+                          disabled={isTemplatePending}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </Field>
+
+                  {!templateSource && (
+                    <>
+                      <div className="text-center text-muted-foreground text-xs py-1">
+                        {t('newProject.steps.template.or')}
+                      </div>
+
+                      <Field>
+                        <FieldLabel>{t('newProject.steps.template.customUrl')}</FieldLabel>
+                        <Input
+                          value={customTemplateUrl}
+                          onChange={(e) => {
+                            setCustomTemplateUrl(e.target.value)
+                            setTemplateSource('')
+                            setAnswers({})
+                          }}
+                          placeholder="https://github.com/user/template or /path/to/template"
+                          disabled={isTemplatePending}
+                        />
+                        <FieldDescription>{t('newProject.steps.template.customUrlHelp')}</FieldDescription>
+                      </Field>
+                    </>
+                  )}
+                </FieldGroup>
+
+                {/* Template Questions */}
+                {effectiveTemplateSource && (
+                  <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      {t('newProject.steps.questions.title')}
+                    </div>
+
+                    {questionsLoading && (
+                      <div className="flex items-center justify-center py-4">
+                        <HugeiconsIcon
+                          icon={Loading03Icon}
+                          size={20}
+                          strokeWidth={2}
+                          className="animate-spin text-muted-foreground"
+                        />
+                      </div>
+                    )}
+
+                    {questionsError && (
+                      <div className="text-destructive text-sm py-2">{questionsError.message}</div>
+                    )}
+
+                    {questionsData && (
+                      <FieldGroup>
+                        {questionsData.questions.length === 0 ? (
+                          <div className="text-muted-foreground text-sm py-2">
+                            {t('newProject.steps.questions.noQuestions')}
+                          </div>
+                        ) : (
+                          questionsData.questions.map(renderQuestionField)
+                        )}
+                      </FieldGroup>
+                    )}
+                  </div>
+                )}
+
+                {/* Output Location */}
+                {effectiveTemplateSource && !questionsLoading && (
+                  <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      {t('newProject.steps.output.title')}
+                    </div>
+
+                    <Field>
+                      <FieldLabel>{t('newProject.steps.output.projectName')}</FieldLabel>
+                      <Input
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        placeholder="my-new-project"
+                        disabled={isTemplatePending}
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel>{t('newProject.steps.output.outputDirectory')}</FieldLabel>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start font-normal"
+                        onClick={() => setOutputBrowserOpen(true)}
+                        disabled={isTemplatePending}
+                      >
+                        <HugeiconsIcon
+                          icon={Folder01Icon}
+                          size={14}
+                          strokeWidth={2}
+                          className="mr-2"
+                        />
+                        {outputPath || t('newProject.steps.output.selectDirectory')}
+                      </Button>
+                    </Field>
+
+                    {projectName && outputPath && (
+                      <FieldDescription className="font-mono text-xs">
+                        {t('newProject.steps.output.willCreate')}: {outputPath}/{projectName}
+                      </FieldDescription>
+                    )}
+
+                    {/* Only show trust checkbox for custom URLs - saved templates are auto-trusted */}
+                    {needsTrust && !isSavedTemplate && (
+                      <Field>
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={trust}
+                            onCheckedChange={(checked) => setTrust(checked === true)}
+                            className="mt-0.5"
+                            disabled={isTemplatePending}
+                          />
+                          <div>
+                            <FieldLabel className="cursor-pointer">
+                              {t('newProject.steps.output.trustTemplate')}
+                            </FieldLabel>
+                            <FieldDescription>
+                              {t('newProject.steps.output.trustWarning')}
+                            </FieldDescription>
+                          </div>
+                        </div>
+                      </Field>
+                    )}
+                  </div>
+                )}
+
+                {/* Creating state */}
+                {isTemplatePending && (
+                  <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+                    <HugeiconsIcon
+                      icon={Loading03Icon}
+                      size={16}
+                      strokeWidth={2}
+                      className="animate-spin"
+                    />
+                    {t('newProject.steps.creating.inProgress')}
+                  </div>
+                )}
+
+                {/* Error state */}
+                {templateError && (
+                  <div className="flex items-start gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    <HugeiconsIcon
+                      icon={Alert02Icon}
+                      size={14}
+                      strokeWidth={2}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span>{templateError}</span>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" disabled={isTemplatePending} />}>
+                    {t('addModal.cancel')}
+                  </DialogClose>
+                  <Button
+                    onClick={handleCreateFromTemplate}
+                    disabled={!canCreateFromTemplate || isTemplatePending}
+                  >
+                    {t('newProject.create')}
+                  </Button>
+                </DialogFooter>
+              </div>
+            </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
@@ -637,6 +1089,12 @@ export function AddRepositoryDialog({
         onOpenChange={setScanBrowserOpen}
         onSelect={handleScanBrowseSelect}
         initialPath={effectiveScanDirectory || undefined}
+      />
+      <FilesystemBrowser
+        open={outputBrowserOpen}
+        onOpenChange={setOutputBrowserOpen}
+        onSelect={handleOutputBrowseSelect}
+        initialPath={outputPath || defaultGitReposDir || undefined}
       />
     </>
   )

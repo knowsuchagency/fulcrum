@@ -39,7 +39,7 @@ import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { DeleteRepositoryDialog } from '@/components/repositories/delete-repository-dialog'
-import { NewProjectDialog } from '@/components/repositories/new-project-dialog'
+import { AddRepositoryDialog } from '@/components/repositories/add-repository-dialog'
 import { useAppByRepository, useFindCompose } from '@/hooks/use-apps'
 import { ClaudeOptionsEditor } from '@/components/repositories/claude-options-editor'
 import { FilesViewer } from '@/components/viewer/files-viewer'
@@ -732,11 +732,10 @@ function RepositoryDetailView() {
         onDelete={handleDelete}
       />
 
-      <NewProjectDialog
-        initialTemplateId={repository.id}
+      <AddRepositoryDialog
+        initialTemplateSource={repository.id}
         open={newProjectDialogOpen}
         onOpenChange={setNewProjectDialogOpen}
-        trigger={null}
       />
 
       <Dialog open={composeWarningOpen} onOpenChange={setComposeWarningOpen}>

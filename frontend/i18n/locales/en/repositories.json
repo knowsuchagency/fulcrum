@@ -36,7 +36,8 @@
     "description": "Add a git repository from a URL or local path, or scan a directory.",
     "tabs": {
       "add": "Add",
-      "scan": "Scan"
+      "scan": "Scan",
+      "template": "From Template"
     },
     "inputLabel": "Repository URL or path",
     "inputPlaceholder": "https://github.com/user/repo or /local/path",
@@ -84,10 +85,12 @@
         "customUrlHelp": "Git URL or local path to a Copier template."
       },
       "questions": {
+        "title": "Template Questions",
         "description": "Configure your project.",
         "noQuestions": "This template has no configuration questions."
       },
       "output": {
+        "title": "Output Location",
         "description": "Choose where to create your project.",
         "projectName": "Project Name",
         "outputDirectory": "Output Directory",

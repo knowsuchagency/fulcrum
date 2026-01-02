@@ -29,7 +29,6 @@ import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
-import { NewProjectDialog } from '@/components/repositories/new-project-dialog'
 import { AddRepositoryDialog } from '@/components/repositories/add-repository-dialog'
 import { DeleteRepositoryDialog } from '@/components/repositories/delete-repository-dialog'
 import { Input } from '@/components/ui/input'
@@ -253,7 +252,6 @@ function RepositoriesView() {
         </div>
         <div className="hidden sm:block flex-1" />
         <AddRepositoryButton />
-        <NewProjectDialog />
       </div>
 
       <div className="flex-1 overflow-auto p-4">
