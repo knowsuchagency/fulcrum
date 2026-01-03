@@ -398,10 +398,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                       inputValue={repoSearchQuery}
                       onInputValueChange={(value) => {
                         setRepoSearchQuery(value)
-                        // Clear selection if user starts typing something different
-                        if (selectedRepo && value !== selectedRepo.displayName) {
-                          setSelectedRepoId(null)
-                        }
+                        // Don't clear selection when typing - user must explicitly select
+                        // This ensures startupScript/copyFiles are preserved from the selected repo
                       }}
                       itemToStringLabel={(id) =>
                         repositories?.find((r) => r.id === id)?.displayName || ''
