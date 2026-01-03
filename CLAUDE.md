@@ -95,7 +95,7 @@ vibora notify <title> <message>  # Send notification
 | Table | Purpose |
 |-------|---------|
 | `tasks` | Task metadata, git worktree paths, status, Linear/PR integration |
-| `repositories` | Git repositories with startupScript, copyFiles, claudeOptions |
+| `repositories` | Git repositories with startupScript, copyFiles, agent, agentOptions |
 | `terminalTabs` | Tab entities for terminal organization |
 | `terminals` | Terminal instances with tmux session backing |
 | `terminalViewState` | Singleton UI state persistence |
