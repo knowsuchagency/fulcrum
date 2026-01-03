@@ -65,16 +65,17 @@ const claudeBuilder: AgentCommandBuilder = {
  * OpenCode command builder
  * https://opencode.ai/docs/cli/
  *
- * OpenCode uses a different CLI structure:
- * - `opencode run <prompt>` for non-interactive mode
- * - `--agent Build` (default) or `--agent Plan` for mode selection
- * - `--session` for session management
- * - System prompts via custom agent config (we use --agent with inline config)
+ * OpenCode TUI mode:
+ * - `opencode` starts the interactive TUI
+ * - `--agent build` (default) or `--agent plan` for mode selection
+ * - `--prompt` to pre-fill the initial prompt
+ * - System prompts prepended to user prompt (no --system-prompt flag available)
  */
 const opencodeBuilder: AgentCommandBuilder = {
-  buildCommand({ prompt, systemPrompt, sessionId, mode, additionalOptions }) {
-    // OpenCode uses --agent flag to select Build (full) or Plan (restricted) mode
-    const agentMode = mode === 'plan' ? 'Plan' : 'Build'
+  buildCommand({ prompt, systemPrompt, mode, additionalOptions }) {
+    // OpenCode uses --agent flag to select build (full) or plan (restricted) mode
+    // Note: agent names are lowercase in OpenCode
+    const agentMode = mode === 'plan' ? 'plan' : 'build'
 
     // Build additional CLI options
     let extraFlags = ''
@@ -86,12 +87,11 @@ const opencodeBuilder: AgentCommandBuilder = {
 
     // OpenCode doesn't have a direct --system-prompt flag like Claude.
     // For now, we prepend the system prompt to the user prompt.
-    // A more sophisticated approach would create a temporary custom agent config.
     const fullPrompt = `${systemPrompt}\n\n${prompt}`
     const escapedFullPrompt = escapeForShell(fullPrompt)
 
-    // Use session flag for continuity
-    return `opencode run ${escapedFullPrompt} --agent ${agentMode} --session "${sessionId}"${extraFlags}`
+    // Start interactive TUI with pre-filled prompt
+    return `opencode --agent ${agentMode} --prompt ${escapedFullPrompt}${extraFlags}`
   },
   notFoundPatterns: [
     /opencode: command not found/,
