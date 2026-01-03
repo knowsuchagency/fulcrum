@@ -1,4 +1,4 @@
-import { writeFile, unlink, access, constants } from 'fs/promises'
+import { writeFile, unlink, access, constants, readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import { stringify as stringifyYaml } from 'yaml'
 import { log } from '../lib/logger'
@@ -193,6 +193,47 @@ function getConfigFilename(appId: string): string {
   return `vibora-${appId}.yml`
 }
 
+/**
+ * Check for conflicting routes in other Vibora config files
+ * Returns the conflicting app ID if found, null otherwise
+ */
+async function checkRouteConflict(
+  configDir: string,
+  domain: string,
+  currentAppId: string
+): Promise<{ conflictingAppId: string; conflictingFile: string } | null> {
+  try {
+    const files = await readdir(configDir)
+    const viboraFiles = files.filter(
+      (f) => f.startsWith('vibora-') && f.endsWith('.yml') && f !== getConfigFilename(currentAppId)
+    )
+
+    for (const file of viboraFiles) {
+      const filepath = join(configDir, file)
+      const content = await readFile(filepath, 'utf-8')
+
+      // Check if this file routes to the same domain
+      // Look for Host(`domain`) pattern
+      if (content.includes(`Host(\`${domain}\`)`)) {
+        // Extract app ID from filename: vibora-{appId}.yml
+        const match = file.match(/^vibora-(.+)\.yml$/)
+        const conflictingAppId = match ? match[1] : 'unknown'
+        return { conflictingAppId, conflictingFile: filepath }
+      }
+    }
+
+    return null
+  } catch (err) {
+    // If we can't read the directory, log and continue (don't block deployment)
+    log.deploy.warn('Failed to check for route conflicts', {
+      configDir,
+      domain,
+      error: String(err),
+    })
+    return null
+  }
+}
+
 export interface AddRouteOptions {
   /** Use file-based TLS certificate instead of ACME resolver */
   tlsCert?: {
@@ -213,6 +254,19 @@ export async function addRoute(
   upstreamUrl: string,
   options?: AddRouteOptions
 ): Promise<{ success: boolean; error?: string }> {
+  // Check for conflicting routes from other apps
+  const conflict = await checkRouteConflict(config.configDir, domain, appId)
+  if (conflict) {
+    const error = `Route conflict: domain "${domain}" is already routed by app ${conflict.conflictingAppId}. Delete the conflicting app or remove its Traefik config at ${conflict.conflictingFile}`
+    log.deploy.error('Route conflict detected', {
+      appId,
+      domain,
+      conflictingAppId: conflict.conflictingAppId,
+      conflictingFile: conflict.conflictingFile,
+    })
+    return { success: false, error }
+  }
+
   const routerId = `vibora-${appId}`
   const filename = getConfigFilename(appId)
   const filepath = join(config.configDir, filename)

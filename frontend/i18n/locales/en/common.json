@@ -102,7 +102,6 @@
     },
     "general": {
       "deploy": "Deploy",
-      "reload": "Reload",
       "autodeploy": "Autodeploy",
       "noCache": "No-cache",
       "notifications": "Notifications",
@@ -145,7 +144,8 @@
       "placeholder": "DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# Comments are supported",
       "save": "Save Environment",
       "showValues": "Show values",
-      "hideValues": "Hide values"
+      "hideValues": "Hide values",
+      "unsavedChanges": "You have unsaved changes"
     },
     "domains": {
       "title": "Domain Configuration",

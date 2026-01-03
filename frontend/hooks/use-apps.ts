@@ -11,7 +11,7 @@ export interface DeploymentProgress {
   progress?: number
 }
 
-const API_BASE = ''
+export const API_BASE = ''
 
 // App types with services
 export interface AppWithServices extends App {
@@ -152,11 +152,13 @@ export function useDeployAppStream() {
   const [error, setError] = useState<string | null>(null)
   const [deployment, setDeployment] = useState<Deployment | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const isDeployingRef = useRef(false) // Track deploying state for closures
 
   const deploy = useCallback(
     (id: string) => {
       // Reset state
       setIsDeploying(true)
+      isDeployingRef.current = true
       setLogs([])
       setStage(null)
       setError(null)
@@ -181,6 +183,7 @@ export function useDeployAppStream() {
         const result = JSON.parse(e.data) as { success: boolean; deployment: Deployment }
         setDeployment(result.deployment)
         setIsDeploying(false)
+        isDeployingRef.current = false
         eventSource.close()
 
         // Invalidate queries
@@ -197,6 +200,7 @@ export function useDeployAppStream() {
           setError('Connection lost during deployment')
         }
         setIsDeploying(false)
+        isDeployingRef.current = false
         eventSource.close()
 
         // Invalidate queries
@@ -207,18 +211,21 @@ export function useDeployAppStream() {
 
       eventSource.onerror = () => {
         // Only set error if we're still deploying (not already handled by error event)
-        if (isDeploying) {
+        // Use ref to avoid stale closure
+        if (isDeployingRef.current) {
           setError('Connection lost during deployment')
           setIsDeploying(false)
+          isDeployingRef.current = false
         }
         eventSource.close()
       }
     },
-    [queryClient, isDeploying]
+    [queryClient]
   )
 
   const reset = useCallback(() => {
     setIsDeploying(false)
+    isDeployingRef.current = false
     setLogs([])
     setStage(null)
     setError(null)

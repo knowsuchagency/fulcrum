@@ -164,4 +164,5 @@ export const log = {
   repoTerminal: createLogger('RepoTerminal'),
   kanban: createLogger('Kanban'),
   viewer: createLogger('Viewer'),
+  deployment: createLogger('Deployment'),
 }

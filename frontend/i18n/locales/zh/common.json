@@ -101,7 +101,6 @@
     },
     "general": {
       "deploy": "部署",
-      "reload": "重新加载",
       "autodeploy": "自动部署",
       "noCache": "无缓存",
       "notifications": "通知",
@@ -144,7 +143,8 @@
       "placeholder": "DATABASE_URL=postgres://...\nAPI_KEY=your-api-key\n# 支持注释",
       "save": "保存环境变量",
       "showValues": "显示值",
-      "hideValues": "隐藏值"
+      "hideValues": "隐藏值",
+      "unsavedChanges": "您有未保存的更改"
     },
     "domains": {
       "title": "域名配置",

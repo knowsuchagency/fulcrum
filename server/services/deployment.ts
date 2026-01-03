@@ -16,7 +16,7 @@ import {
   waitForServicesHealthy,
   addCloudflaredToStack,
 } from './docker-swarm'
-import { createDnsRecord, createOriginCACertificate } from './cloudflare'
+import { createDnsRecord, createOriginCACertificate, deleteDnsRecord } from './cloudflare'
 import {
   createTunnel,
   configureTunnelIngress,
@@ -763,7 +763,7 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
     return { success: false, error: removeResult.error }
   }
 
-  // Remove Traefik routes (but preserve DNS records for quick redeploy)
+  // Remove Traefik routes and DNS records
   const services = await db.query.appServices.findMany({
     where: eq(appServices.appId, appId),
   })
@@ -775,6 +775,18 @@ export async function stopApp(appId: string): Promise<{ success: boolean; error?
       // Remove Traefik route
       if (traefikConfig) {
         await removeRoute(traefikConfig, appId)
+      }
+
+      // Delete DNS record (both A records and CNAMEs use same function)
+      const [subdomain, ...domainParts] = service.domain.split('.')
+      const rootDomain = domainParts.join('.')
+      if (rootDomain) {
+        deleteDnsRecord(subdomain, rootDomain).catch((err) => {
+          log.deploy.warn('Failed to delete DNS record during app stop', {
+            domain: service.domain,
+            error: String(err),
+          })
+        })
       }
 
       // Update service status

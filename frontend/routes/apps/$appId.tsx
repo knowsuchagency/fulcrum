@@ -1,9 +1,10 @@
 import { useMemo, useEffect, useCallback, useRef, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { observer } from 'mobx-react-lite'
+import { reaction } from 'mobx'
 import {
   useApp,
-  useDeployAppStream,
   useStopApp,
   useCancelDeployment,
   useAppLogs,
@@ -16,8 +17,8 @@ import {
   useSyncServices,
   useDeploymentPrerequisites,
   useDeploymentSettings,
-  type DeploymentStage,
 } from '@/hooks/use-apps'
+import { useDeploymentStore, DeploymentStoreProvider, type DeploymentStage } from '@/stores'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -82,8 +83,17 @@ interface AppDetailSearch {
   tab?: AppTab
 }
 
+// Wrap AppDetailView with DeploymentStoreProvider so all child components can access deployment state
+function AppDetailViewWithProvider() {
+  return (
+    <DeploymentStoreProvider>
+      <AppDetailView />
+    </DeploymentStoreProvider>
+  )
+}
+
 export const Route = createFileRoute('/apps/$appId')({
-  component: AppDetailView,
+  component: AppDetailViewWithProvider,
   validateSearch: (search: Record<string, unknown>): AppDetailSearch => ({
     tab: ['general', 'deployments', 'logs', 'monitoring'].includes(search.tab as string)
       ? (search.tab as AppTab)
@@ -116,7 +126,7 @@ function formatRelativeTime(date: string): string {
   return `about ${days}d ago`
 }
 
-function AppDetailView() {
+const AppDetailView = observer(function AppDetailView() {
   const { t } = useTranslation('common')
   const { appId } = Route.useParams()
   const { tab } = Route.useSearch()
@@ -127,23 +137,25 @@ function AppDetailView() {
   const activeTab = tab || 'general'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Deployment state - lifted up so multiple tabs can trigger deploys
-  const deployStream = useDeployAppStream()
+  // Deployment state from MST store - provides predictable state and logging
+  const deployStore = useDeploymentStore()
   const [showStreamingLogs, setShowStreamingLogs] = useState(false)
 
   const handleDeploy = useCallback(() => {
     if (app) {
-      deployStream.deploy(app.id)
+      deployStore.deploy(app.id)
       setShowStreamingLogs(true)
     }
-  }, [app, deployStream])
+  }, [app, deployStore])
 
   const handleStreamingLogsClose = useCallback((open: boolean) => {
     setShowStreamingLogs(open)
-    if (!open) {
-      setTimeout(() => deployStream.reset(), 300)
+    // Only reset logs after modal closes if deployment is complete AND no logs to show
+    // This preserves logs when modal is closed and reopened during/after deployment
+    if (!open && !deployStore.isDeploying && deployStore.logs.length === 0 && !deployStore.error) {
+      setTimeout(() => deployStore.reset(), 300)
     }
-  }, [deployStream])
+  }, [deployStore])
 
   // Show DNS warning if Cloudflare is not configured
   const showDnsWarning = prereqs && !prereqs.settings.cloudflareConfigured
@@ -272,12 +284,11 @@ function AppDetailView() {
             <GeneralTab
               app={app}
               onDeploy={handleDeploy}
-              deployStream={deployStream}
             />
           </TabsContent>
 
           <TabsContent value="deployments" className="mt-0">
-            <DeploymentsTab appId={appId} />
+            <DeploymentsTab appId={appId} onViewStreamingLogs={() => setShowStreamingLogs(true)} />
           </TabsContent>
 
           <TabsContent value="logs" className="mt-0">
@@ -295,10 +306,6 @@ function AppDetailView() {
         appId={appId}
         open={showStreamingLogs}
         onOpenChange={handleStreamingLogsClose}
-        logs={deployStream.logs}
-        stage={deployStream.stage}
-        error={deployStream.error}
-        isDeploying={deployStream.isDeploying}
       />
 
       {/* Delete confirmation dialog */}
@@ -323,22 +330,21 @@ function AppDetailView() {
       </AlertDialog>
     </div>
   )
-}
+})
 
 // General tab - dense 2-column layout
-function GeneralTab({
+const GeneralTab = observer(function GeneralTab({
   app,
   onDeploy,
-  deployStream,
 }: {
   app: NonNullable<ReturnType<typeof useApp>['data']>
   onDeploy: () => void
-  deployStream: ReturnType<typeof useDeployAppStream>
 }) {
   const { t } = useTranslation('common')
   const stopApp = useStopApp()
   const cancelDeployment = useCancelDeployment()
   const updateApp = useUpdateApp()
+  const deployStore = useDeploymentStore()
 
   const handleStop = async () => {
     await stopApp.mutateAsync(app.id)
@@ -348,7 +354,7 @@ function GeneralTab({
     await cancelDeployment.mutateAsync(app.id)
   }
 
-  const isBuilding = deployStream.isDeploying || app.status === 'building'
+  const isBuilding = deployStore.isDeploying || app.status === 'building'
 
   const handleAutoDeployToggle = async (enabled: boolean) => {
     await updateApp.mutateAsync({
@@ -385,7 +391,7 @@ function GeneralTab({
               ) : (
                 <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
               )}
-              {deployStream.isDeploying ? t('apps.deploying') : app.status === 'building' ? t('apps.building') : t('apps.deploy')}
+              {deployStore.isDeploying ? t('apps.deploying') : app.status === 'building' ? t('apps.building') : t('apps.deploy')}
             </Button>
             {isBuilding ? (
               <Button
@@ -402,25 +408,19 @@ function GeneralTab({
                 {cancelDeployment.isPending ? t('apps.cancelling') : t('apps.cancelDeploy')}
               </Button>
             ) : (
-              <>
-                <Button variant="outline" size="sm" onClick={onDeploy} disabled={isBuilding}>
-                  <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} />
-                  {t('apps.general.reload')}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleStop}
-                  disabled={stopApp.isPending || app.status !== 'running'}
-                >
-                  {stopApp.isPending ? (
-                    <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                  ) : (
-                    <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
-                  )}
-                  {t('apps.stop')}
-                </Button>
-              </>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleStop}
+                disabled={stopApp.isPending || app.status !== 'running'}
+              >
+                {stopApp.isPending ? (
+                  <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                ) : (
+                  <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+                )}
+                {t('apps.stop')}
+              </Button>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -459,40 +459,83 @@ function GeneralTab({
       <ComposeFileEditor app={app} />
     </div>
   )
-}
+})
 
 // Streaming deployment logs modal - shows real-time logs during deployment
+// Uses reaction() instead of observer for logs to ensure updates work when modal is closed/reopened
 function StreamingDeploymentModal({
   appId,
   open,
   onOpenChange,
-  logs,
-  stage,
-  error,
-  isDeploying,
 }: {
   appId: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  logs: string[]
-  stage: DeploymentStage | null
-  error: string | null
-  isDeploying: boolean
 }) {
   const { t } = useTranslation('common')
   const [copied, setCopied] = useState(false)
   const logsContainerRef = useRef<HTMLDivElement>(null)
   const cancelDeployment = useCancelDeployment()
+  const deployStore = useDeploymentStore()
+
+  // Use React state for logs, synced from store via reaction
+  // This ensures updates work regardless of Dialog mount/unmount behavior
+  const [logs, setLogs] = useState<string[]>(() => deployStore.logsSnapshot)
+  const [stage, setStage] = useState(deployStore.typedStage)
+  const [error, setError] = useState(deployStore.error)
+  const [isDeploying, setIsDeploying] = useState(deployStore.isDeploying)
+
+  // Sync store state to React state using reaction
+  // This runs whenever any tracked observable changes
+  useEffect(() => {
+    // Initial sync when modal opens
+    setLogs(deployStore.logsSnapshot)
+    setStage(deployStore.typedStage)
+    setError(deployStore.error)
+    setIsDeploying(deployStore.isDeploying)
+
+    // Set up reaction to sync logs
+    const disposeLogsReaction = reaction(
+      () => deployStore.logCount,
+      () => {
+        console.log('[StreamingDeploymentModal] reaction: logs changed', deployStore.logCount)
+        setLogs(deployStore.logsSnapshot)
+      }
+    )
+
+    // Set up reaction to sync other state
+    const disposeStateReaction = reaction(
+      () => ({
+        stage: deployStore.typedStage,
+        error: deployStore.error,
+        isDeploying: deployStore.isDeploying,
+      }),
+      (state) => {
+        console.log('[StreamingDeploymentModal] reaction: state changed', state)
+        setStage(state.stage)
+        setError(state.error)
+        setIsDeploying(state.isDeploying)
+      }
+    )
+
+    return () => {
+      disposeLogsReaction()
+      disposeStateReaction()
+    }
+  }, [deployStore])
+
+  // Debug: log renders
+  console.log('[StreamingDeploymentModal] render', { logCount: logs.length, isDeploying, stage, open })
 
   // Parse logs for display
-  const parsedLogs = useMemo(() => parseLogs(logs.join('\n')), [logs])
+  const parsedLogs = parseLogs(logs.join('\n'))
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
     if (logsContainerRef.current) {
       logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight
     }
-  }, [logs])
+  }, [logs.length])
 
   const copyLogs = async () => {
     await navigator.clipboard.writeText(logs.join('\n'))
@@ -880,10 +923,26 @@ function LogsTab({
 }
 
 // Deployments tab - Dokploy style clean list
-function DeploymentsTab({ appId }: { appId: string }) {
+function DeploymentsTab({
+  appId,
+  onViewStreamingLogs,
+}: {
+  appId: string
+  onViewStreamingLogs: () => void
+}) {
   const { t } = useTranslation('common')
   const { data: deployments, isLoading } = useDeployments(appId)
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null)
+
+  const handleViewLogs = (deployment: Deployment) => {
+    // If deployment is in progress (building/pending), show streaming modal
+    // Otherwise show the database logs modal
+    if (deployment.status === 'building' || deployment.status === 'pending') {
+      onViewStreamingLogs()
+    } else {
+      setSelectedDeployment(deployment)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -913,7 +972,7 @@ function DeploymentsTab({ appId }: { appId: string }) {
               key={deployment.id}
               deployment={deployment}
               number={index + 1}
-              onViewLogs={() => setSelectedDeployment(deployment)}
+              onViewLogs={() => handleViewLogs(deployment)}
             />
           ))}
         </div>
@@ -939,6 +998,16 @@ function DeploymentRow({
   onViewLogs: () => void
 }) {
   const { t } = useTranslation('common')
+  const isInProgress = deployment.status === 'building' || deployment.status === 'pending'
+
+  // Force re-render every second while deployment is in progress to update duration
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!isInProgress) return
+    const interval = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(interval)
+  }, [isInProgress])
+
   const getStatusInfo = () => {
     switch (deployment.status) {
       case 'running':
@@ -966,7 +1035,7 @@ function DeploymentRow({
         <span className="text-sm text-muted-foreground">
           {formatRelativeTime(deployment.startedAt)}
         </span>
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-muted-foreground tabular-nums">
           ⏱ {formatDuration(deployment.startedAt, deployment.completedAt)}
         </span>
         <Button size="sm" onClick={onViewLogs}>
@@ -1036,33 +1105,37 @@ function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp
   const { t } = useTranslation('common')
   const updateApp = useUpdateApp()
 
-  // Environment variables state - convert object to "KEY=value" lines
-  const [envText, setEnvText] = useState(() => {
-    const envVars = app.environmentVariables ?? {}
-    return Object.entries(envVars)
+  // Convert app env vars to text format
+  const envVarsToText = (envVars: Record<string, string> | null | undefined) => {
+    return Object.entries(envVars ?? {})
       .map(([k, v]) => `${k}=${v}`)
       .join('\n')
-  })
+  }
+
+  // Environment variables state - convert object to "KEY=value" lines
+  const [envText, setEnvText] = useState(() => envVarsToText(app.environmentVariables))
+  const [savedEnvText, setSavedEnvText] = useState(() => envVarsToText(app.environmentVariables))
   const [envSaved, setEnvSaved] = useState(false)
   const [masked, setMasked] = useState(true)
 
-  // Mask values in the display text (KEY=value -> KEY=••••••)
-  const maskedEnvText = useMemo(() => {
-    if (!masked) return envText
-    return envText
-      .split('\n')
-      .map((line) => {
-        const trimmed = line.trim()
-        if (!trimmed || trimmed.startsWith('#')) return line
-        const eqIndex = trimmed.indexOf('=')
-        if (eqIndex > 0) {
-          const key = trimmed.slice(0, eqIndex)
-          return `${key}=••••••`
-        }
-        return line
-      })
-      .join('\n')
-  }, [envText, masked])
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = envText !== savedEnvText
+
+  // Parse env vars for masked display with colored dots matching actual lengths
+  const maskedLines = useMemo(() => {
+    return envText.split('\n').map((line, i) => {
+      const trimmed = line.trim()
+      if (!trimmed) return { type: 'empty' as const, id: i }
+      if (trimmed.startsWith('#')) return { type: 'comment' as const, text: line, id: i }
+      const eqIndex = trimmed.indexOf('=')
+      if (eqIndex > 0) {
+        const keyLen = trimmed.slice(0, eqIndex).length
+        const valueLen = trimmed.slice(eqIndex + 1).length
+        return { type: 'env' as const, keyLen, valueLen, id: i }
+      }
+      return { type: 'other' as const, text: line, id: i }
+    })
+  }, [envText])
 
   const handleSaveEnv = async () => {
     // Parse "KEY=value" lines back to object
@@ -1084,6 +1157,7 @@ function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp
       id: app.id,
       updates: { environmentVariables: env },
     })
+    setSavedEnvText(envText)
     setEnvSaved(true)
     setTimeout(() => setEnvSaved(false), 2000)
   }
@@ -1091,7 +1165,12 @@ function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.environment.title')}</h4>
+        <div className="flex items-center gap-2">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('apps.environment.title')}</h4>
+          {hasUnsavedChanges && (
+            <span className="text-xs text-amber-500">({t('apps.environment.unsavedChanges')})</span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger
@@ -1120,20 +1199,39 @@ function EnvironmentSection({ app }: { app: NonNullable<ReturnType<typeof useApp
         </div>
       </div>
 
-      <Textarea
-        value={masked ? maskedEnvText : envText}
-        onChange={(e) => {
-          if (!masked) {
-            setEnvText(e.target.value)
-          }
-        }}
-        onFocus={() => {
-          if (masked) setMasked(false)
-        }}
-        placeholder={t('apps.environment.placeholder')}
-        className="font-mono text-sm min-h-[120px]"
-        readOnly={masked}
-      />
+      {masked ? (
+        <div
+          className="font-mono text-sm min-h-[120px] rounded-md border bg-background px-3 py-2 cursor-pointer"
+          onClick={() => setMasked(false)}
+        >
+          {maskedLines.length === 0 || (maskedLines.length === 1 && maskedLines[0].type === 'empty') ? (
+            <span className="text-muted-foreground">{t('apps.environment.placeholder')}</span>
+          ) : (
+            maskedLines.map((line) => (
+              <div key={line.id} className="leading-6">
+                {line.type === 'empty' ? (
+                  <span>&nbsp;</span>
+                ) : line.type === 'comment' || line.type === 'other' ? (
+                  <span className="text-muted-foreground">{line.text}</span>
+                ) : (
+                  <>
+                    <span style={{ color: 'var(--chart-1)' }}>{'•'.repeat(line.keyLen)}</span>
+                    <span style={{ color: 'var(--chart-3)' }}>•</span>
+                    <span style={{ color: 'var(--chart-2)' }}>{'•'.repeat(line.valueLen)}</span>
+                  </>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        <Textarea
+          value={envText}
+          onChange={(e) => setEnvText(e.target.value)}
+          placeholder={t('apps.environment.placeholder')}
+          className="font-mono text-sm min-h-[120px]"
+        />
+      )}
 
       {updateApp.error && (
         <div className="flex items-center gap-2 text-destructive">
@@ -1286,19 +1384,19 @@ function ServicesSection({
                         value={service.domain}
                         onChange={(e) => updateService(index, { domain: e.target.value })}
                         placeholder="app.example.com"
-                        className="h-7 text-xs flex-1"
+                        className="h-7 text-xs flex-1 min-w-0"
                         autoFocus
                         disabled={!hasPort}
                       />
                       <select
                         value={service.exposureMethod}
                         onChange={(e) => updateService(index, { exposureMethod: e.target.value as ExposureMethod })}
-                        className="h-7 rounded-md border bg-background px-2 text-xs shrink-0"
+                        className="h-7 w-20 rounded-md border bg-background px-2 text-xs shrink-0"
                         disabled={!hasPort}
                       >
                         <option value="dns">DNS</option>
                         <option value="tunnel" disabled={!tunnelsAvailable}>
-                          Tunnel{!tunnelsAvailable ? ' (unavailable)' : ''}
+                          Tunnel
                         </option>
                       </select>
                     </>

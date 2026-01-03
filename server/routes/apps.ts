@@ -12,6 +12,7 @@ import { stackServices, serviceLogs, stackRemove } from '../services/docker-swar
 import { checkDockerInstalled, checkDockerRunning } from '../services/docker-compose'
 import { refreshGitWatchers } from '../services/git-watcher'
 import { deleteDnsRecord } from '../services/cloudflare'
+import { detectTraefik, removeRoute } from '../services/traefik'
 import { log } from '../lib/logger'
 import { getViboraDir } from '../lib/settings'
 import type { App, AppService } from '../db/schema'
@@ -419,6 +420,17 @@ app.delete('/:id', async (c) => {
         })
       })
     }
+  }
+
+  // Clean up Traefik routes (always, regardless of app status)
+  const traefikConfig = await detectTraefik()
+  if (traefikConfig) {
+    await removeRoute(traefikConfig, id).catch((err) => {
+      log.deploy.warn('Failed to remove Traefik route during app deletion', {
+        appId: id,
+        error: String(err),
+      })
+    })
   }
 
   // Clean up DNS records for all exposed services (even if not running)

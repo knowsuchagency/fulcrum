@@ -22,6 +22,11 @@ export type { UseFilesStoreReturn } from './hooks'
 export { FilesStore, createFilesStore } from './files-store'
 export type { IFilesStore, IFile } from './files-store'
 
+// Re-export deployment store
+export { useDeploymentStore, DeploymentStoreProvider } from './hooks/use-deployment-store'
+export { DeploymentStreamStore } from './deployment-store'
+export type { IDeploymentStreamStore, DeploymentStage, Deployment } from './deployment-store'
+
 /**
  * React context for the MST store
  */
