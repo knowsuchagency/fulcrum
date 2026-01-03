@@ -130,10 +130,11 @@ jobs:
         id: changelog
         run: |
           PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]' | head -2 | tail -1)
+          CURRENT_TAG="${{ steps.version.outputs.tag }}"
           if [ -z "$PREVIOUS_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s" HEAD)
+            CHANGELOG=$(git log --pretty=format:"- %s" "$CURRENT_TAG")
           else
-            CHANGELOG=$(git log --pretty=format:"- %s" ${PREVIOUS_TAG}..HEAD~1)
+            CHANGELOG=$(git log --pretty=format:"- %s" "${PREVIOUS_TAG}..${CURRENT_TAG}")
           fi
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
