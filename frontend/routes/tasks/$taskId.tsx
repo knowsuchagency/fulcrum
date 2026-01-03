@@ -916,10 +916,11 @@ function TaskView() {
               key={terminalKey}
               taskName={task.title}
               cwd={task.worktreePath}
+              agent={task.agent}
               aiMode={aiMode}
               description={aiModeDescription}
               startupScript={task.startupScript}
-              claudeOptions={task.claudeOptions}
+              agentOptions={task.agentOptions}
               serverPort={serverPort}
             />
           </TabsContent>
@@ -970,10 +971,11 @@ function TaskView() {
               key={terminalKey}
               taskName={task.title}
               cwd={task.worktreePath}
+              agent={task.agent}
               aiMode={aiMode}
               description={aiModeDescription}
               startupScript={task.startupScript}
-              claudeOptions={task.claudeOptions}
+              agentOptions={task.agentOptions}
               serverPort={serverPort}
             />
           </ResizablePanel>

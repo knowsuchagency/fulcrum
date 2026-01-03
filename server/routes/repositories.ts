@@ -15,7 +15,7 @@ const app = new Hono()
 function toApiResponse(row: typeof repositories.$inferSelect): Repository {
   return {
     ...row,
-    claudeOptions: row.claudeOptions ? JSON.parse(row.claudeOptions) : null,
+    agentOptions: row.agentOptions ? JSON.parse(row.agentOptions) : null,
   }
 }
 
@@ -51,7 +51,8 @@ app.post('/', async (c) => {
       displayName: string
       startupScript?: string | null
       copyFiles?: string | null
-      claudeOptions?: Record<string, string> | null
+      agent?: string
+      agentOptions?: Record<string, string> | null
       isCopierTemplate?: boolean
     }>()
 
@@ -86,7 +87,8 @@ app.post('/', async (c) => {
       displayName,
       startupScript: body.startupScript || null,
       copyFiles: body.copyFiles || null,
-      claudeOptions: body.claudeOptions ? JSON.stringify(body.claudeOptions) : null,
+      agent: body.agent || 'claude',
+      agentOptions: body.agentOptions ? JSON.stringify(body.agentOptions) : null,
       isCopierTemplate: body.isCopierTemplate ?? false,
       createdAt: now,
       updatedAt: now,
@@ -240,7 +242,8 @@ app.patch('/:id', async (c) => {
       displayName?: string
       startupScript?: string | null
       copyFiles?: string | null
-      claudeOptions?: Record<string, string> | null
+      agent?: string
+      agentOptions?: Record<string, string> | null
       isCopierTemplate?: boolean
     }>()
 
@@ -268,10 +271,10 @@ app.patch('/:id', async (c) => {
 
     const now = new Date().toISOString()
 
-    // Serialize claudeOptions if provided
+    // Serialize agentOptions if provided
     const updateData: Record<string, unknown> = { ...body, updatedAt: now }
-    if ('claudeOptions' in body) {
-      updateData.claudeOptions = body.claudeOptions ? JSON.stringify(body.claudeOptions) : null
+    if ('agentOptions' in body) {
+      updateData.agentOptions = body.agentOptions ? JSON.stringify(body.agentOptions) : null
     }
 
     db.update(repositories)

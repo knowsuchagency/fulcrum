@@ -16,8 +16,9 @@ export const tasks = sqliteTable('tasks', {
   linearTicketId: text('linear_ticket_id'), // e.g., "TEAM-123"
   linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
   startupScript: text('startup_script'), // Command to run after worktree creation
-  aiMode: text('ai_mode'), // 'default' | 'plan' | null - AI mode for Claude startup
-  claudeOptions: text('claude_options'), // JSON: { [flag]: value } - CLI options for Claude
+  agent: text('agent').notNull().default('claude'), // AI agent: 'claude' | 'opencode' | 'codex' | 'gemini'
+  aiMode: text('ai_mode'), // 'default' | 'plan' | null - AI mode for agent startup
+  agentOptions: text('agent_options'), // JSON: { [flag]: value } - CLI options for agent
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
@@ -68,7 +69,8 @@ export const repositories = sqliteTable('repositories', {
   displayName: text('display_name').notNull(),
   startupScript: text('startup_script'), // Command to run after worktree creation
   copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
-  claudeOptions: text('claude_options'), // JSON: { [flag]: value } - CLI options for Claude
+  agent: text('agent').notNull().default('claude'), // AI agent: 'claude' | 'opencode' | 'codex' | 'gemini'
+  agentOptions: text('agent_options'), // JSON: { [flag]: value } - CLI options for agent
   remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
   isCopierTemplate: integer('is_copier_template', { mode: 'boolean' }).default(false), // Mark as Copier template
   lastUsedAt: text('last_used_at'), // Timestamp of last task creation with this repo

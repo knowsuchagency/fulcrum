@@ -213,6 +213,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
       {
         title: title.trim(),
         description: description.trim(),
+        agent: selectedRepo?.agent || 'claude',
         aiMode,
         repoPath,
         repoName,
@@ -221,7 +222,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         worktreePath,
         copyFiles: selectedRepo?.copyFiles || undefined,
         startupScript: selectedRepo?.startupScript || undefined,
-        claudeOptions: selectedRepo?.claudeOptions || undefined,
+        agentOptions: selectedRepo?.agentOptions || undefined,
       },
       {
         onSuccess: (task) => {

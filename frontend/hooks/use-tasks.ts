@@ -27,6 +27,7 @@ export function useCreateTask() {
     mutationFn: (data: {
       title: string
       description: string
+      agent?: string
       aiMode?: 'default' | 'plan'
       repoPath: string
       repoName: string
@@ -36,7 +37,7 @@ export function useCreateTask() {
       prUrl?: string | null
       copyFiles?: string
       startupScript?: string
-      claudeOptions?: Record<string, string> | null
+      agentOptions?: Record<string, string> | null
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks`, {
         method: 'POST',

@@ -127,6 +127,13 @@
       "when": 1767296913565,
       "tag": "0017_fine_nocturne",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1767420000000,
+      "tag": "0018_add_agent_support",
+      "breakpoints": true
     }
   ]
 }

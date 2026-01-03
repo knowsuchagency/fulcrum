@@ -110,7 +110,7 @@ function RepositoryDetailView() {
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
   const [copyFiles, setCopyFiles] = useState('')
-  const [claudeOptions, setClaudeOptions] = useState<Record<string, string>>({})
+  const [agentOptions, setAgentOptions] = useState<Record<string, string>>({})
   const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
@@ -209,7 +209,7 @@ function RepositoryDetailView() {
       setDisplayName(repository.displayName)
       setStartupScript(repository.startupScript || '')
       setCopyFiles(repository.copyFiles || '')
-      setClaudeOptions(repository.claudeOptions || {})
+      setAgentOptions(repository.agentOptions || {})
       setIsCopierTemplate(repository.isCopierTemplate ?? false)
       setHasChanges(false)
     }
@@ -222,11 +222,11 @@ function RepositoryDetailView() {
         displayName !== repository.displayName ||
         startupScript !== (repository.startupScript || '') ||
         copyFiles !== (repository.copyFiles || '') ||
-        JSON.stringify(claudeOptions) !== JSON.stringify(repository.claudeOptions || {}) ||
+        JSON.stringify(agentOptions) !== JSON.stringify(repository.agentOptions || {}) ||
         isCopierTemplate !== (repository.isCopierTemplate ?? false)
       setHasChanges(changed)
     }
-  }, [displayName, startupScript, copyFiles, claudeOptions, isCopierTemplate, repository])
+  }, [displayName, startupScript, copyFiles, agentOptions, isCopierTemplate, repository])
 
   const handleSave = () => {
     if (!repository) return
@@ -238,7 +238,7 @@ function RepositoryDetailView() {
           displayName: displayName.trim() || repository.path.split('/').pop() || 'repo',
           startupScript: startupScript.trim() || null,
           copyFiles: copyFiles.trim() || null,
-          claudeOptions: Object.keys(claudeOptions).length > 0 ? claudeOptions : null,
+          agentOptions: Object.keys(agentOptions).length > 0 ? agentOptions : null,
           isCopierTemplate,
         },
       },
@@ -567,8 +567,8 @@ function RepositoryDetailView() {
                       {t('detailView.settings.claudeOptionsDescription')}
                     </FieldDescription>
                     <ClaudeOptionsEditor
-                      value={claudeOptions}
-                      onChange={setClaudeOptions}
+                      value={agentOptions}
+                      onChange={setAgentOptions}
                     />
                   </Field>
 

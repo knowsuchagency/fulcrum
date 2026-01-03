@@ -11,22 +11,24 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon, Loading03Icon, Alert02Icon, Cancel01Icon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
-import { escapeForShell } from '@/lib/shell-escape'
 import { useTheme } from 'next-themes'
 import { lightTheme, darkTheme } from './terminal-theme'
+import { buildAgentCommand, matchesAgentNotFound } from '@/lib/agent-commands'
+import { AGENT_DISPLAY_NAMES, AGENT_INSTALL_COMMANDS, AGENT_DOC_URLS, type AgentType } from '@shared/types'
 
 interface TaskTerminalProps {
   taskName: string
   cwd: string | null
   className?: string
+  agent?: AgentType
   aiMode?: 'default' | 'plan'
   description?: string
   startupScript?: string | null
-  claudeOptions?: Record<string, string> | null
+  agentOptions?: Record<string, string> | null
   serverPort?: number
 }
 
-export function TaskTerminal({ taskName, cwd, className, aiMode, description, startupScript, claudeOptions, serverPort = 7777 }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMode, description, startupScript, agentOptions, serverPort = 7777 }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -34,9 +36,9 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
   const attachedRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
-  const [isStartingClaude, setIsStartingClaude] = useState(false)
+  const [isStartingAgent, setIsStartingAgent] = useState(false)
   const [xtermOpened, setXtermOpened] = useState(false)
-  const [showClaudeNotFound, setShowClaudeNotFound] = useState(false)
+  const [agentNotFound, setAgentNotFound] = useState<AgentType | null>(null)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const terminalTheme = isDark ? darkTheme : lightTheme
@@ -234,7 +236,8 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
         // component unmount/remount (fixes race condition with React strict mode)
         startup: {
           startupScript,
-          claudeOptions,
+          agent,
+          agentOptions,
           aiMode,
           description,
           taskName,
@@ -317,8 +320,16 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
       if (pendingStartup) {
         log.taskTerminal.info('onAttached: running startup commands', { terminalId: actualTerminalId })
-        setIsStartingClaude(true)
-        const { startupScript: currentStartupScript, claudeOptions: currentClaudeOptions, aiMode: currentAiMode, description: currentDescription, taskName: currentTaskName, serverPort: currentServerPort } = pendingStartup
+        setIsStartingAgent(true)
+        const {
+          startupScript: currentStartupScript,
+          agent: currentAgent = 'claude',
+          agentOptions: currentAgentOptions,
+          aiMode: currentAiMode,
+          description: currentDescription,
+          taskName: currentTaskName,
+          serverPort: currentServerPort,
+        } = pendingStartup
 
         // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
         // Use source with heredoc so exports persist in the current shell
@@ -330,7 +341,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           }, 100)
         }
 
-        // 2. Then run Claude with the task prompt
+        // 2. Build the agent command using the command builder abstraction
         const effectivePort = currentServerPort ?? 7777
         const portFlag = effectivePort !== 7777 ? ` --port=${effectivePort}` : ''
         const systemPrompt = 'You are working in a Vibora task worktree. ' +
@@ -341,27 +352,25 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           `For notifications: vibora notify "Title" "Message"${portFlag}.`
         const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
 
-        // Build additional CLI options from claudeOptions
-        let additionalOptions = ''
-        if (currentClaudeOptions && Object.keys(currentClaudeOptions).length > 0) {
-          additionalOptions = Object.entries(currentClaudeOptions)
-            .map(([key, value]) => ` --${key} ${escapeForShell(value)}`)
-            .join('')
-        }
+        // Use the agent command builder to construct the appropriate CLI command
+        const taskCommand = buildAgentCommand(currentAgent as AgentType, {
+          prompt: taskInfo,
+          systemPrompt,
+          sessionId: actualTerminalId,
+          mode: currentAiMode === 'plan' ? 'plan' : 'default',
+          additionalOptions: currentAgentOptions ?? {},
+        })
 
-        const taskCommand = currentAiMode === 'plan'
-          ? `claude ${escapeForShell(taskInfo)} --append-system-prompt ${escapeForShell(systemPrompt)} --session-id "${actualTerminalId}" --allow-dangerously-skip-permissions --permission-mode plan${additionalOptions}`
-          : `claude ${escapeForShell(taskInfo)} --append-system-prompt ${escapeForShell(systemPrompt)} --session-id "${actualTerminalId}" --dangerously-skip-permissions${additionalOptions}`
-
-        // Wait longer for startup script to complete before sending Claude command
+        // Wait longer for startup script to complete before sending agent command
         // 5 seconds should be enough for most scripts (mise trust, mkdir, export, etc.)
         setTimeout(() => {
-          log.taskTerminal.debug('writing claude command to terminal', {
+          log.taskTerminal.debug('writing agent command to terminal', {
             terminalId: actualTerminalId,
+            agent: currentAgent,
             taskCommand: taskCommand.substring(0, 50) + '...',
           })
           writeToTerminalRef.current(actualTerminalId, taskCommand + '\r')
-          setIsStartingClaude(false)
+          setIsStartingAgent(false)
           // Clear the MST store's isStartingUp flag (for /terminals view)
           clearStartingUpRef.current(actualTerminalId)
         }, currentStartupScript ? 5000 : 100)
@@ -391,27 +400,23 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     termRef.current.options.theme = terminalTheme
   }, [terminalTheme])
 
-  // Detect "command not found" for Claude CLI
-  // This helps users who haven't installed Claude Code yet
+  // Detect "command not found" for any AI agent CLI
+  // This helps users who haven't installed the required agent yet
   useEffect(() => {
-    if (!termRef.current || showClaudeNotFound) return
+    if (!termRef.current || agentNotFound) return
 
     const term = termRef.current
-    const checkForClaudeNotFound = () => {
+    const checkForAgentNotFound = () => {
       const buffer = term.buffer.active
       // Check the last few lines of the terminal buffer
       for (let i = Math.max(0, buffer.cursorY - 3); i <= buffer.cursorY; i++) {
         const line = buffer.getLine(i)
         if (line) {
           const text = line.translateToString()
-          // Match common "command not found" patterns for claude
-          if (
-            text.includes('claude: command not found') ||
-            text.includes('claude: not found') ||
-            text.includes("'claude' is not recognized") ||
-            text.includes('command not found: claude')
-          ) {
-            setShowClaudeNotFound(true)
+          // Use the agent command builder's not-found patterns
+          const notFoundAgent = matchesAgentNotFound(text, agent)
+          if (notFoundAgent) {
+            setAgentNotFound(notFoundAgent)
             return
           }
         }
@@ -419,12 +424,12 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
     }
 
     // Check on line feed (new line added)
-    const disposable = term.onLineFeed(checkForClaudeNotFound)
+    const disposable = term.onLineFeed(checkForAgentNotFound)
 
     return () => {
       disposable.dispose()
     }
-  }, [showClaudeNotFound])
+  }, [agentNotFound, agent])
 
   // Callback for mobile terminal controls
   const handleMobileSend = useCallback((data: string) => {
@@ -484,8 +489,8 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
           </div>
         )}
 
-        {/* Loading overlay - shown while Claude is starting */}
-        {isStartingClaude && (
+        {/* Loading overlay - shown while agent is starting */}
+        {isStartingAgent && (
           <div className="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center bg-terminal-background/90">
             <div className="flex flex-col items-center gap-3">
               <HugeiconsIcon
@@ -495,14 +500,14 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
                 className={cn('animate-spin', isDark ? 'text-white/60' : 'text-black/60')}
               />
               <span className={cn('font-mono text-sm', isDark ? 'text-white/60' : 'text-black/60')}>
-                Starting Claude Code...
+                Starting {AGENT_DISPLAY_NAMES[agent]}...
               </span>
             </div>
           </div>
         )}
 
-        {/* Claude not found overlay - shown when "command not found" is detected */}
-        {showClaudeNotFound && (
+        {/* Agent not found overlay - shown when "command not found" is detected */}
+        {agentNotFound && (
           <div className="absolute bottom-4 left-4 right-4 z-10">
             <div className={cn(
               'flex items-start gap-3 rounded-lg border p-4',
@@ -516,16 +521,16 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
               />
               <div className="flex-1 space-y-2">
                 <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                  Claude Code CLI not found
+                  {AGENT_DISPLAY_NAMES[agentNotFound]} CLI not found
                 </p>
                 <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
                   Install it with:{' '}
                   <code className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono">
-                    npm install -g @anthropic/claude-code
+                    {AGENT_INSTALL_COMMANDS[agentNotFound]}
                   </code>
                 </p>
                 <a
-                  href="https://docs.anthropic.com/en/docs/claude-code/overview"
+                  href={AGENT_DOC_URLS[agentNotFound]}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block text-xs font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 underline"
@@ -534,7 +539,7 @@ export function TaskTerminal({ taskName, cwd, className, aiMode, description, st
                 </a>
               </div>
               <button
-                onClick={() => setShowClaudeNotFound(false)}
+                onClick={() => setAgentNotFound(null)}
                 className="shrink-0 p-1 rounded text-amber-600 hover:text-amber-700 hover:bg-amber-500/20 dark:text-amber-400 dark:hover:text-amber-300"
               >
                 <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />

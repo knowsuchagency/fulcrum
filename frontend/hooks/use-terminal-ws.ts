@@ -53,7 +53,8 @@ interface CreateTerminalOptions {
   /** Startup info for task terminals - stored in volatile to survive component unmount */
   startup?: {
     startupScript?: string | null
-    claudeOptions?: Record<string, string> | null
+    agent?: string
+    agentOptions?: Record<string, string> | null
     aiMode?: 'default' | 'plan'
     description?: string
     taskName: string
@@ -63,7 +64,8 @@ interface CreateTerminalOptions {
 
 interface PendingStartupInfo {
   startupScript?: string | null
-  claudeOptions?: Record<string, string> | null
+  agent?: string
+  agentOptions?: Record<string, string> | null
   aiMode?: 'default' | 'plan'
   description?: string
   taskName: string

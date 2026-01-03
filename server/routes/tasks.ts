@@ -117,11 +117,11 @@ function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: s
 const app = new Hono()
 
 // Helper to parse JSON fields from database
-function toApiResponse(task: Task): Task & { viewState: unknown; claudeOptions: Record<string, string> | null } {
+function toApiResponse(task: Task): Task & { viewState: unknown; agentOptions: Record<string, string> | null } {
   return {
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
-    claudeOptions: task.claudeOptions ? JSON.parse(task.claudeOptions) : null,
+    agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
   }
 }
 
@@ -138,7 +138,8 @@ app.post('/', async (c) => {
       Omit<NewTask, 'id' | 'createdAt' | 'updatedAt'> & {
         copyFiles?: string
         startupScript?: string
-        claudeOptions?: Record<string, string> | null
+        agent?: string
+        agentOptions?: Record<string, string> | null
       }
     >()
 
@@ -163,8 +164,9 @@ app.post('/', async (c) => {
       branch: body.branch || null,
       worktreePath: body.worktreePath || null,
       startupScript: body.startupScript || null,
+      agent: body.agent || 'claude',
       aiMode: body.aiMode || null,
-      claudeOptions: body.claudeOptions ? JSON.stringify(body.claudeOptions) : null,
+      agentOptions: body.agentOptions ? JSON.stringify(body.agentOptions) : null,
       createdAt: now,
       updatedAt: now,
     }

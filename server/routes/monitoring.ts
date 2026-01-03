@@ -8,11 +8,21 @@ import { getPTYManager } from '../terminal/pty-instance'
 import { getDtachService } from '../terminal/dtach-service'
 import { getMetrics, getCurrentMetrics } from '../services/metrics-collector'
 import { getZAiSettings } from '../lib/settings'
+import type { AgentType } from '@shared/types'
 
 const isMacOS = process.platform === 'darwin'
 
-interface ClaudeInstance {
+// Agent process patterns for detection
+const AGENT_PATTERNS: Record<AgentType, RegExp> = {
+  claude: /\bclaude\b/i,
+  opencode: /\bopencode\b/i,
+  codex: /\bcodex\b/i,
+  gemini: /\bgemini(-cli)?\b/i,
+}
+
+interface AgentInstance {
   pid: number
+  agent: AgentType
   cwd: string
   ramMB: number
   startedAt: number | null
@@ -23,6 +33,9 @@ interface ClaudeInstance {
   worktreePath: string | null
   isViboraManaged: boolean
 }
+
+// Legacy alias for backward compatibility
+type ClaudeInstance = AgentInstance
 
 // Parse time window string to seconds
 function parseWindow(window: string): number {
@@ -38,9 +51,25 @@ function parseWindow(window: string): number {
   return 3600
 }
 
-// Find all Claude processes on the system
-function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
-  const claudeProcesses: Array<{ pid: number; cmdline: string }> = []
+// Detect which agent type a command line matches
+function detectAgentType(cmdline: string): AgentType | null {
+  for (const [agentType, pattern] of Object.entries(AGENT_PATTERNS)) {
+    if (pattern.test(cmdline)) {
+      return agentType as AgentType
+    }
+  }
+  return null
+}
+
+// Find all agent processes on the system (Claude, OpenCode, Codex, Gemini)
+function findAllAgentProcesses(agentFilter?: AgentType[]): Array<{ pid: number; cmdline: string; agent: AgentType }> {
+  const agentProcesses: Array<{ pid: number; cmdline: string; agent: AgentType }> = []
+
+  // Build combined pattern for efficiency
+  const patternsToCheck = agentFilter
+    ? agentFilter.map((t) => AGENT_PATTERNS[t])
+    : Object.values(AGENT_PATTERNS)
+  const combinedPattern = new RegExp(patternsToCheck.map((p) => p.source).join('|'), 'i')
 
   try {
     const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d))
@@ -48,9 +77,11 @@ function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
       const pid = parseInt(pidStr, 10)
       try {
         const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-        // Check for claude process (claude, claude-code, @anthropic/claude-code, etc.)
-        if (/\bclaude\b/i.test(cmdline)) {
-          claudeProcesses.push({ pid, cmdline })
+        if (combinedPattern.test(cmdline)) {
+          const agent = detectAgentType(cmdline)
+          if (agent && (!agentFilter || agentFilter.includes(agent))) {
+            agentProcesses.push({ pid, cmdline, agent })
+          }
         }
       } catch {
         // Process may have exited, skip
@@ -58,25 +89,37 @@ function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
     }
   } catch {
     // /proc not available (non-Linux), fallback to pgrep
-    try {
-      const result = execSync('pgrep -f claude', { encoding: 'utf-8' })
-      for (const line of result.trim().split('\n')) {
-        const pid = parseInt(line, 10)
-        if (!isNaN(pid)) {
-          try {
-            const cmdline = execSync(`ps -p ${pid} -o args=`, { encoding: 'utf-8' }).trim()
-            claudeProcesses.push({ pid, cmdline })
-          } catch {
-            claudeProcesses.push({ pid, cmdline: 'claude' })
+    // Try each agent pattern separately
+    const agentsToCheck = agentFilter ?? (['claude', 'opencode', 'codex', 'gemini'] as AgentType[])
+    for (const agentType of agentsToCheck) {
+      try {
+        const result = execSync(`pgrep -f ${agentType}`, { encoding: 'utf-8' })
+        for (const line of result.trim().split('\n')) {
+          const pid = parseInt(line, 10)
+          if (!isNaN(pid)) {
+            try {
+              const cmdline = execSync(`ps -p ${pid} -o args=`, { encoding: 'utf-8' }).trim()
+              const detected = detectAgentType(cmdline)
+              if (detected === agentType) {
+                agentProcesses.push({ pid, cmdline, agent: agentType })
+              }
+            } catch {
+              agentProcesses.push({ pid, cmdline: agentType, agent: agentType })
+            }
           }
         }
+      } catch {
+        // No matches for this agent
       }
-    } catch {
-      // No matches
     }
   }
 
-  return claudeProcesses
+  return agentProcesses
+}
+
+// Legacy wrapper for backward compatibility
+function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
+  return findAllAgentProcesses(['claude']).map(({ pid, cmdline }) => ({ pid, cmdline }))
 }
 
 // Get process working directory
