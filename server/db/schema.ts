@@ -69,8 +69,8 @@ export const repositories = sqliteTable('repositories', {
   displayName: text('display_name').notNull(),
   startupScript: text('startup_script'), // Command to run after worktree creation
   copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
-  agent: text('agent').notNull().default('claude'), // AI agent: 'claude' | 'opencode' | 'codex' | 'gemini'
-  agentOptions: text('agent_options'), // JSON: { [flag]: value } - CLI options for agent
+  claudeOptions: text('claude_options'), // JSON: { [flag]: value } - CLI options for Claude Code
+  opencodeOptions: text('opencode_options'), // JSON: { [flag]: value } - CLI options for OpenCode
   remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
   isCopierTemplate: integer('is_copier_template', { mode: 'boolean' }).default(false), // Mark as Copier template
   lastUsedAt: text('last_used_at'), // Timestamp of last task creation with this repo

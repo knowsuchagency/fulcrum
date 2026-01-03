@@ -12,6 +12,7 @@
       "description": "描述",
       "descriptionPlaceholder": "实现 OAuth2 登录流程...",
       "aiMode": "AI 模式",
+      "agent": "AI 代理",
       "repository": "仓库",
       "baseBranch": "基础分支",
       "branchName": "分支名称",

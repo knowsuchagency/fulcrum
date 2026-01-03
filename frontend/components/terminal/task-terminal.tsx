@@ -14,7 +14,7 @@ import { log } from '@/lib/logger'
 import { useTheme } from 'next-themes'
 import { lightTheme, darkTheme } from './terminal-theme'
 import { buildAgentCommand, matchesAgentNotFound } from '@/lib/agent-commands'
-import { AGENT_DISPLAY_NAMES, AGENT_INSTALL_COMMANDS, AGENT_DOC_URLS, type AgentType } from '@shared/types'
+import { AGENT_DISPLAY_NAMES, AGENT_INSTALL_COMMANDS, AGENT_DOC_URLS, type AgentType } from '@/types'
 
 interface TaskTerminalProps {
   taskName: string

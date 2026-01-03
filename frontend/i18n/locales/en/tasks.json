@@ -12,6 +12,7 @@
       "description": "Description",
       "descriptionPlaceholder": "Implement OAuth2 login flow...",
       "aiMode": "AI Mode",
+      "agent": "AI Agent",
       "repository": "Repository",
       "baseBranch": "Base Branch",
       "branchName": "Branch Name",

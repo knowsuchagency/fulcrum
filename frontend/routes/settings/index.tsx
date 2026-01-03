@@ -23,6 +23,7 @@ import {
   useEditorSshPort,
   useLinearApiKey,
   useGitHubPat,
+  useDefaultAgent,
   useUpdateConfig,
   useResetConfig,
   useNotificationSettings,
@@ -39,6 +40,7 @@ import {
   type EditorApp,
   type ClaudeCodeTheme,
 } from '@/hooks/use-config'
+import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import {
   useDeploymentSettings,
   useUpdateDeploymentSettings,
@@ -72,6 +74,7 @@ function SettingsPage() {
   const { data: editorSshPort, isLoading: editorSshPortLoading } = useEditorSshPort()
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
+  const { data: defaultAgent, isLoading: defaultAgentLoading } = useDefaultAgent()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
   const { data: deploymentSettings, isLoading: deploymentLoading } = useDeploymentSettings()
@@ -95,6 +98,7 @@ function SettingsPage() {
   const [localEditorSshPort, setLocalEditorSshPort] = useState('')
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
   const [localGitHubPat, setLocalGitHubPat] = useState('')
+  const [localDefaultAgent, setLocalDefaultAgent] = useState<AgentType>('claude')
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -144,7 +148,8 @@ function SettingsPage() {
     if (editorSshPort !== undefined) setLocalEditorSshPort(String(editorSshPort))
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
-  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, linearApiKey, githubPat])
+    if (defaultAgent !== undefined) setLocalDefaultAgent(defaultAgent)
+  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, defaultAgent])
 
   // Sync notification settings
   useEffect(() => {
@@ -195,7 +200,7 @@ function SettingsPage() {
   }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || notificationsLoading || zAiLoading || deploymentLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || defaultAgentLoading || notificationsLoading || zAiLoading || deploymentLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -242,11 +247,14 @@ function SettingsPage() {
     localEditorHost !== editorHost ||
     localEditorSshPort !== String(editorSshPort)
 
+  const hasAgentChanges = localDefaultAgent !== defaultAgent
+
   const hasChanges =
     localPort !== String(port) ||
     localReposDir !== defaultGitReposDir ||
     localLinearApiKey !== linearApiKey ||
     localGitHubPat !== githubPat ||
+    hasAgentChanges ||
     hasEditorChanges ||
     hasNotificationChanges ||
     hasZAiChanges ||
@@ -331,6 +339,18 @@ function SettingsPage() {
         new Promise((resolve) => {
           updateConfig.mutate(
             { key: CONFIG_KEYS.GITHUB_PAT, value: localGitHubPat },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    // Save agent setting
+    if (hasAgentChanges) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.DEFAULT_AGENT, value: localDefaultAgent },
             { onSettled: resolve }
           )
         })
@@ -494,6 +514,14 @@ function SettingsPage() {
     resetConfig.mutate(CONFIG_KEYS.GITHUB_PAT, {
       onSuccess: (data) => {
         setLocalGitHubPat(data.value !== null && data.value !== undefined ? String(data.value) : '')
+      },
+    })
+  }
+
+  const handleResetDefaultAgent = () => {
+    resetConfig.mutate(CONFIG_KEYS.DEFAULT_AGENT, {
+      onSuccess: (data) => {
+        setLocalDefaultAgent((data.value as AgentType) ?? 'claude')
       },
     })
   }
@@ -987,6 +1015,47 @@ function SettingsPage() {
                       </div>
                     </>
                   )}
+                </div>
+              </SettingsSection>
+
+              {/* Agent */}
+              <SettingsSection title={t('sections.agent')}>
+                <div className="space-y-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                      {t('fields.agent.default.label')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={localDefaultAgent}
+                        onValueChange={(v) => setLocalDefaultAgent(v as AgentType)}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(AGENT_DISPLAY_NAMES) as AgentType[]).map((agent) => (
+                            <SelectItem key={agent} value={agent}>
+                              {AGENT_DISPLAY_NAMES[agent]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={handleResetDefaultAgent}
+                        disabled={isLoading || resetConfig.isPending}
+                        title={tc('buttons.reset')}
+                      >
+                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                    {t('fields.agent.default.description')}
+                  </p>
                 </div>
               </SettingsSection>
 

@@ -1,27 +1,21 @@
 // Shared types between server, frontend, and CLI
 
 // Supported AI coding agents
-export type AgentType = 'claude' | 'opencode' | 'codex' | 'gemini'
+export type AgentType = 'claude' | 'opencode'
 
 export const AGENT_DISPLAY_NAMES: Record<AgentType, string> = {
   claude: 'Claude Code',
   opencode: 'OpenCode',
-  codex: 'Codex',
-  gemini: 'Gemini CLI',
 }
 
 export const AGENT_INSTALL_COMMANDS: Record<AgentType, string> = {
   claude: 'npm install -g @anthropic-ai/claude-code',
   opencode: 'npm install -g opencode-ai@latest',
-  codex: 'npm install -g @openai/codex',
-  gemini: 'npm install -g @anthropic-ai/gemini-cli',
 }
 
 export const AGENT_DOC_URLS: Record<AgentType, string> = {
   claude: 'https://docs.anthropic.com/en/docs/claude-code/overview',
   opencode: 'https://opencode.ai/docs/',
-  codex: 'https://platform.openai.com/docs/guides/code',
-  gemini: 'https://ai.google.dev/gemini-api/docs',
 }
 
 export type TaskStatus =
@@ -158,8 +152,8 @@ export interface Repository {
   displayName: string
   startupScript: string | null
   copyFiles: string | null
-  agent: AgentType
-  agentOptions: Record<string, string> | null
+  claudeOptions: Record<string, string> | null
+  opencodeOptions: Record<string, string> | null
   remoteUrl: string | null
   isCopierTemplate: boolean
   createdAt: string

@@ -21,6 +21,7 @@ export const CONFIG_KEYS = {
   EDITOR_SSH_PORT: 'editor.sshPort',
   LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
+  DEFAULT_AGENT: 'agent.defaultAgent',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
@@ -128,6 +129,18 @@ export function useGitHubPat() {
   return {
     ...query,
     data: (query.data?.value as string) ?? '',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+import type { AgentType } from '@/types'
+
+export function useDefaultAgent() {
+  const query = useConfig(CONFIG_KEYS.DEFAULT_AGENT)
+
+  return {
+    ...query,
+    data: (query.data?.value as AgentType) ?? 'claude',
     isDefault: query.data?.isDefault ?? true,
   }
 }

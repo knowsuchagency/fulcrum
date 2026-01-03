@@ -7,6 +7,7 @@
     "editor": "Editor",
     "integrations": "Integrations",
     "zai": "z.ai",
+    "agent": "Agent",
     "notifications": "Notifications",
     "appearance": "Appearance",
     "developer": "Developer"
@@ -67,6 +68,12 @@
       "haiku": "Haiku",
       "sonnet": "Sonnet",
       "opus": "Opus"
+    },
+    "agent": {
+      "default": {
+        "label": "Default Agent",
+        "description": "The AI coding agent to use for new tasks"
+      }
     },
     "language": {
       "label": "Language",

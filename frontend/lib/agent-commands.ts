@@ -1,11 +1,11 @@
 /**
  * Agent command builder abstraction
  *
- * Builds CLI commands for different AI coding agents (Claude, OpenCode, Codex, Gemini).
+ * Builds CLI commands for different AI coding agents (Claude Code, OpenCode).
  * Each agent has its own CLI interface with different flags and options.
  */
 
-import type { AgentType } from '@shared/types'
+import type { AgentType } from '@/types'
 import { escapeForShell } from './shell-escape'
 
 export interface AgentCommandOptions {
@@ -103,77 +103,11 @@ const opencodeBuilder: AgentCommandBuilder = {
 }
 
 /**
- * OpenAI Codex command builder
- * https://platform.openai.com/docs/codex
- *
- * Note: Codex CLI interface may vary. This is a placeholder implementation.
- */
-const codexBuilder: AgentCommandBuilder = {
-  buildCommand({ prompt, systemPrompt, mode, additionalOptions }) {
-    // Combine system prompt with user prompt
-    const fullPrompt = `${systemPrompt}\n\n${prompt}`
-    const escapedPrompt = escapeForShell(fullPrompt)
-
-    let extraFlags = ''
-    if (additionalOptions && Object.keys(additionalOptions).length > 0) {
-      extraFlags = Object.entries(additionalOptions)
-        .map(([key, value]) => ` --${key} ${escapeForShell(value)}`)
-        .join('')
-    }
-
-    // Codex uses --full-auto for autonomous mode
-    const autoFlag = mode === 'plan' ? '' : ' --full-auto'
-
-    return `codex ${escapedPrompt}${autoFlag}${extraFlags}`
-  },
-  notFoundPatterns: [
-    /codex: command not found/,
-    /codex: not found/,
-    /'codex' is not recognized/,
-    /command not found: codex/,
-  ],
-  processPattern: /\bcodex\b/i,
-}
-
-/**
- * Gemini CLI command builder
- * https://ai.google.dev/gemini-api/docs
- *
- * Note: Gemini CLI interface may vary. This is a placeholder implementation.
- */
-const geminiBuilder: AgentCommandBuilder = {
-  buildCommand({ prompt, systemPrompt, additionalOptions }) {
-    let extraFlags = ''
-    if (additionalOptions && Object.keys(additionalOptions).length > 0) {
-      extraFlags = Object.entries(additionalOptions)
-        .map(([key, value]) => ` --${key} ${escapeForShell(value)}`)
-        .join('')
-    }
-
-    // Gemini CLI structure - combine system prompt with user prompt
-    const fullPrompt = `${systemPrompt}\n\n${prompt}`
-    const escapedPrompt = escapeForShell(fullPrompt)
-
-    return `gemini ${escapedPrompt}${extraFlags}`
-  },
-  notFoundPatterns: [
-    /gemini: command not found/,
-    /gemini: not found/,
-    /'gemini' is not recognized/,
-    /command not found: gemini/,
-    /gemini-cli: command not found/,
-  ],
-  processPattern: /\bgemini(-cli)?\b/i,
-}
-
-/**
  * Map of agent types to their command builders
  */
 export const AGENT_BUILDERS: Record<AgentType, AgentCommandBuilder> = {
   claude: claudeBuilder,
   opencode: opencodeBuilder,
-  codex: codexBuilder,
-  gemini: geminiBuilder,
 }
 
 /**

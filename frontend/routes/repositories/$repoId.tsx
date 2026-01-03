@@ -42,14 +42,6 @@ import { DeleteRepositoryDialog } from '@/components/repositories/delete-reposit
 import { AddRepositoryDialog } from '@/components/repositories/add-repository-dialog'
 import { useAppByRepository, useFindCompose } from '@/hooks/use-apps'
 import { AgentOptionsEditor } from '@/components/repositories/agent-options-editor'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { type AgentType, AGENT_DISPLAY_NAMES } from '@shared/types'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { Terminal } from '@/components/terminal/terminal'
@@ -118,8 +110,8 @@ function RepositoryDetailView() {
   const [displayName, setDisplayName] = useState('')
   const [startupScript, setStartupScript] = useState('')
   const [copyFiles, setCopyFiles] = useState('')
-  const [agent, setAgent] = useState<AgentType>('claude')
-  const [agentOptions, setAgentOptions] = useState<Record<string, string>>({})
+  const [claudeOptions, setClaudeOptions] = useState<Record<string, string>>({})
+  const [opencodeOptions, setOpencodeOptions] = useState<Record<string, string>>({})
   const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
@@ -218,8 +210,8 @@ function RepositoryDetailView() {
       setDisplayName(repository.displayName)
       setStartupScript(repository.startupScript || '')
       setCopyFiles(repository.copyFiles || '')
-      setAgent(repository.agent || 'claude')
-      setAgentOptions(repository.agentOptions || {})
+      setClaudeOptions(repository.claudeOptions || {})
+      setOpencodeOptions(repository.opencodeOptions || {})
       setIsCopierTemplate(repository.isCopierTemplate ?? false)
       setHasChanges(false)
     }
@@ -232,12 +224,12 @@ function RepositoryDetailView() {
         displayName !== repository.displayName ||
         startupScript !== (repository.startupScript || '') ||
         copyFiles !== (repository.copyFiles || '') ||
-        agent !== (repository.agent || 'claude') ||
-        JSON.stringify(agentOptions) !== JSON.stringify(repository.agentOptions || {}) ||
+        JSON.stringify(claudeOptions) !== JSON.stringify(repository.claudeOptions || {}) ||
+        JSON.stringify(opencodeOptions) !== JSON.stringify(repository.opencodeOptions || {}) ||
         isCopierTemplate !== (repository.isCopierTemplate ?? false)
       setHasChanges(changed)
     }
-  }, [displayName, startupScript, copyFiles, agent, agentOptions, isCopierTemplate, repository])
+  }, [displayName, startupScript, copyFiles, claudeOptions, opencodeOptions, isCopierTemplate, repository])
 
   const handleSave = () => {
     if (!repository) return
@@ -249,8 +241,8 @@ function RepositoryDetailView() {
           displayName: displayName.trim() || repository.path.split('/').pop() || 'repo',
           startupScript: startupScript.trim() || null,
           copyFiles: copyFiles.trim() || null,
-          agent,
-          agentOptions: Object.keys(agentOptions).length > 0 ? agentOptions : null,
+          claudeOptions: Object.keys(claudeOptions).length > 0 ? claudeOptions : null,
+          opencodeOptions: Object.keys(opencodeOptions).length > 0 ? opencodeOptions : null,
           isCopierTemplate,
         },
       },
@@ -574,32 +566,24 @@ function RepositoryDetailView() {
                   </Field>
 
                   <Field>
-                    <FieldLabel>{t('detailView.settings.agent')}</FieldLabel>
-                    <Select value={agent} onValueChange={(value) => setAgent(value as AgentType)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(AGENT_DISPLAY_NAMES) as AgentType[]).map((agentType) => (
-                          <SelectItem key={agentType} value={agentType}>
-                            {AGENT_DISPLAY_NAMES[agentType]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FieldDescription>
-                      {t('detailView.settings.agentDescription')}
+                    <FieldLabel>{t('detailView.settings.claudeOptions')}</FieldLabel>
+                    <FieldDescription className="mb-2">
+                      {t('detailView.settings.claudeOptionsDescription')}
                     </FieldDescription>
+                    <AgentOptionsEditor
+                      value={claudeOptions}
+                      onChange={setClaudeOptions}
+                    />
                   </Field>
 
                   <Field>
-                    <FieldLabel>{t('detailView.settings.agentOptions')}</FieldLabel>
+                    <FieldLabel>{t('detailView.settings.opencodeOptions')}</FieldLabel>
                     <FieldDescription className="mb-2">
-                      {t('detailView.settings.agentOptionsDescription')}
+                      {t('detailView.settings.opencodeOptionsDescription')}
                     </FieldDescription>
                     <AgentOptionsEditor
-                      value={agentOptions}
-                      onChange={setAgentOptions}
+                      value={opencodeOptions}
+                      onChange={setOpencodeOptions}
                     />
                   </Field>
 
