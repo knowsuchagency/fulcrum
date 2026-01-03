@@ -155,4 +155,5 @@ export const log = {
   server: createLogger('Server'),
   settings: createLogger('Settings'),
   deploy: createLogger('Deploy'),
+  jobs: createLogger('Jobs'),
 }

@@ -1,0 +1,90 @@
+{
+  "title": "Jobs",
+  "description": "Manage scheduled tasks with systemd timers",
+  "searchPlaceholder": "Search jobs...",
+  "noJobs": "No scheduled jobs found",
+  "noJobsMatch": "No jobs match your search",
+  "createJob": "Create Job",
+  "scope": {
+    "all": "All",
+    "user": "User",
+    "system": "System"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "failed": "Failed",
+    "waiting": "Waiting",
+    "disabled": "Disabled"
+  },
+  "nextRun": "Next",
+  "lastRun": "Last",
+  "systemTimerReadonly": "System timers are read-only",
+  "actions": {
+    "enable": "Enable",
+    "disable": "Disable",
+    "start": "Start",
+    "stop": "Stop",
+    "runNow": "Run Now",
+    "edit": "Edit",
+    "delete": "Delete",
+    "viewLogs": "View Logs"
+  },
+  "detail": {
+    "tabs": {
+      "general": "General",
+      "logs": "Logs",
+      "edit": "Edit"
+    },
+    "schedule": "Schedule",
+    "nextRun": "Next Run",
+    "lastRun": "Last Run",
+    "lastResult": "Last Result",
+    "description": "Description",
+    "command": "Command",
+    "workingDir": "Working Directory",
+    "systemTimer": "System timer (read-only)",
+    "timerFile": "Timer File",
+    "serviceFile": "Service File",
+    "executionStats": "Last Execution",
+    "duration": "Duration",
+    "cpuTime": "CPU Time",
+    "noStats": "No execution data available"
+  },
+  "create": {
+    "title": "Create Scheduled Job",
+    "name": "Job Name",
+    "namePlaceholder": "backup-daily",
+    "nameHelp": "Alphanumeric, hyphens, and underscores only",
+    "description": "Description",
+    "descriptionPlaceholder": "Daily backup of important files",
+    "schedule": "Schedule",
+    "scheduleHelp": "OnCalendar expression (e.g., *-*-* 02:00:00, daily, weekly)",
+    "command": "Command",
+    "commandPlaceholder": "/home/user/scripts/backup.sh",
+    "workingDir": "Working Directory",
+    "workingDirPlaceholder": "/home/user",
+    "persistent": "Persistent",
+    "persistentHelp": "Run missed executions when system starts",
+    "cancel": "Cancel",
+    "create": "Create Job"
+  },
+  "delete": {
+    "title": "Delete Job",
+    "confirm": "Are you sure you want to delete \"{{name}}\"? This will remove both the timer and service files.",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "logs": {
+    "title": "Job Logs",
+    "noLogs": "No logs available",
+    "lines": "lines",
+    "refresh": "Refresh"
+  },
+  "errors": {
+    "loadFailed": "Failed to load jobs",
+    "createFailed": "Failed to create job",
+    "updateFailed": "Failed to update job",
+    "deleteFailed": "Failed to delete job"
+  }
+}

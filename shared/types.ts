@@ -381,3 +381,62 @@ export interface DeploymentSettings {
   cloudflareApiToken: string | null
   cloudflareConfigured: boolean
 }
+
+// Scheduled jobs (systemd timers) types
+export type JobScope = 'user' | 'system'
+export type JobState = 'active' | 'inactive' | 'failed' | 'waiting'
+
+export interface SystemdTimer {
+  name: string
+  scope: JobScope
+  description: string | null
+  state: JobState
+  enabled: boolean
+  nextRun: string | null
+  lastRun: string | null
+  lastResult: 'success' | 'failed' | 'unknown' | null
+  schedule: string | null
+  serviceName: string
+  unitPath: string | null
+}
+
+export interface SystemdTimerDetail extends SystemdTimer {
+  timerContent: string | null
+  serviceContent: string | null
+  command: string | null
+  workingDirectory: string | null
+  // Execution stats from last run
+  lastRunStart: string | null
+  lastRunEnd: string | null
+  lastRunDurationMs: number | null
+  lastRunCpuTimeMs: number | null
+}
+
+export interface CreateTimerRequest {
+  name: string
+  description: string
+  schedule: string
+  command: string
+  workingDirectory?: string
+  environment?: Record<string, string>
+  persistent?: boolean
+}
+
+export interface UpdateTimerRequest {
+  description?: string
+  schedule?: string
+  command?: string
+  workingDirectory?: string
+  environment?: Record<string, string>
+  persistent?: boolean
+}
+
+export interface JobLogEntry {
+  timestamp: string
+  message: string
+  priority: 'info' | 'warning' | 'error'
+}
+
+export interface JobLogsResponse {
+  entries: JobLogEntry[]
+}
