@@ -47,6 +47,8 @@ The Kanban board shows all tasks organized by status. Drag tasks between columns
 
 See all Claude Code sessions across every task in one parallel view. This is the killer feature for orchestrating multiple agents.
 
+![Task Terminals View](/screenshots/terminals-view-with-tests.png)
+
 ### Task Detail View
 
 Click on a task to open the detail view with a split-pane layout:
