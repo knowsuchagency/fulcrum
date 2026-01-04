@@ -30,6 +30,14 @@ Settings are stored in `.vibora/settings.json`. The vibora directory is resolved
 |---------|---------|---------|-------------|
 | `editor.sshPort` | `VIBORA_SSH_PORT` | `22` | SSH port for remote editor connections |
 
+### Agent
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `agent.defaultAgent` | `claude` | Default AI agent (`claude` or `opencode`) |
+
+The default agent can be overridden per-repository and per-task.
+
 ### Integrations
 
 | Setting | Env Var | Default | Description |
@@ -121,6 +129,9 @@ Available levels: `debug`, `info`, `warn`, `error`
   },
   "editor": {
     "sshPort": 22
+  },
+  "agent": {
+    "defaultAgent": "claude"
   },
   "integrations": {
     "linearApiKey": null,

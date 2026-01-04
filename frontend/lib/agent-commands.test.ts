@@ -223,7 +223,7 @@ describe('Agent Commands', () => {
     })
 
     test('each builder has required properties', () => {
-      for (const [name, builder] of Object.entries(AGENT_BUILDERS)) {
+      for (const builder of Object.values(AGENT_BUILDERS)) {
         expect(builder.buildCommand).toBeInstanceOf(Function)
         expect(builder.notFoundPatterns).toBeInstanceOf(Array)
         expect(builder.notFoundPatterns.length).toBeGreaterThan(0)

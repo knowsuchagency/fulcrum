@@ -6,18 +6,21 @@
 
 ## What It Does
 
-Run multiple Claude Code sessions in parallel across isolated git worktrees. Monitor them all from one screen. Close your laptop—they keep working. Deploy to production when ready. Self-hosted and open source.
+Run multiple AI coding agent sessions in parallel across isolated git worktrees. Monitor them all from one screen. Close your laptop—they keep working. Deploy to production when ready. Self-hosted and open source.
+
+Vibora supports **Claude Code** and **OpenCode** with per-repository and per-task agent selection.
 
 - **Full Development Lifecycle** — Develop features in isolated git worktrees, then deploy to production with Docker Compose. No context switching, no vendor lock-in.
-- **Parallel Agent Orchestration** — Run multiple Claude Code sessions across different tasks and worktrees. See and control all sessions in one parallel view.
-- **Work From Anywhere** — Close your laptop—Claude keeps working on your behalf. Pick up where you left off from your phone.
-- **Deep Claude Integration** — Via MCP, Claude can orchestrate tasks, execute code on your remote machine, and deploy apps—securely and autonomously.
+- **Parallel Agent Orchestration** — Run multiple AI agent sessions across different tasks and worktrees. See and control all sessions in one parallel view.
+- **Work From Anywhere** — Close your laptop—your agents keep working on your behalf. Pick up where you left off from your phone.
+- **Multi-Agent Support** — Choose between Claude Code and OpenCode. Set a global default, override per-repository, or select per-task.
 - **Open Source & Self-Hosted** — Inspect the code, run it anywhere, own your data. From a $5 VPS to your home lab.
 
 ## Key Features
 
 - **App Deployment** — Deploy with Docker Compose, automatic Traefik routing, optional Cloudflare DNS integration
-- **Parallel Agent Orchestration** — Run multiple Claude Code sessions across different tasks and worktrees
+- **Parallel Agent Orchestration** — Run multiple AI coding agent sessions across different tasks and worktrees
+- **Multi-Agent Support** — Use Claude Code or OpenCode, configurable globally, per-repo, or per-task
 - **Work From Anywhere** — Run on a remote server; agents continue working when you disconnect
 - **Git Worktree Isolation** — Safe experimentation without touching your main branch
 - **Claude Code Plugin** — Skill for task management, automatic status sync, session continuity
@@ -34,7 +37,7 @@ npx vibora@latest up
 ```
 
 That's it! Vibora will:
-- Check for required dependencies (bun, dtach, Claude Code, uv)
+- Check for required dependencies (bun, dtach, AI agent CLI, uv)
 - Offer to install any that are missing
 - Start the server on http://localhost:7777
 - Show getting started tips
@@ -78,7 +81,7 @@ For remote servers or VPS, use the install script—it auto-installs all depende
 curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.sh | bash
 ```
 
-This installs bun, dtach, uv, Claude Code, GitHub CLI, Docker, cloudflared, and the vibora CLI + Claude Code plugin.
+This installs bun, dtach, uv, Claude Code, OpenCode, GitHub CLI, Docker, cloudflared, and the vibora CLI + Claude Code plugin.
 
 ### Claude Code Plugin
 
@@ -93,13 +96,13 @@ claude plugin install vibora@vibora --scope user
 
 ### Kanban Board
 
-Track tasks from planning to done. Create tasks that automatically spin up isolated git worktrees, and watch their status update in real-time as you work with Claude Code.
+Track tasks from planning to done. Create tasks that automatically spin up isolated git worktrees, and watch their status update in real-time as you work with your AI agents.
 
 ![Kanban Board](./screenshots/tasks-kanban-board.png)
 
 ### Task Terminals View
 
-See all your Claude Code sessions across every task and worktree in a single parallel view. Each task runs in an isolated git worktree, and you can monitor and interact with all of them simultaneously.
+See all your AI agent sessions across every task and worktree in a single parallel view. Each task runs in an isolated git worktree, and you can monitor and interact with all of them simultaneously.
 
 ![Task Terminals View](./screenshots/terminals-view-with-tests.png)
 
@@ -117,7 +120,7 @@ Manage your projects with quick actions. Create new tasks, open terminals, and c
 
 ### Browser Preview
 
-Preview your app alongside the agent terminal in a split-pane view. Watch changes in real-time as Claude iterates on your code.
+Preview your app alongside the agent terminal in a split-pane view. Watch changes in real-time as your AI agent iterates on your code.
 
 ![Browser Preview](./screenshots/browser-preview-split-view.png)
 
@@ -126,6 +129,17 @@ Preview your app alongside the agent terminal in a split-pane view. Watch change
 Keep an eye on system resources while your agents work. CPU, memory, and disk usage at a glance.
 
 ![System Monitoring](./screenshots/monitoring-system-metrics.png)
+
+## Supported Agents
+
+Vibora supports multiple AI coding agents:
+
+| Agent | Description |
+|-------|-------------|
+| **Claude Code** | Anthropic's CLI coding agent with deep MCP integration |
+| **OpenCode** | Open-source coding agent with GPT-4 and other model support |
+
+Configure your default agent globally in settings, override per-repository, or select per-task when creating new tasks.
 
 ## Claude Code Plugin
 
