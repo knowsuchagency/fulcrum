@@ -4,6 +4,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 describe('Settings', () => {
+  describe('schema version sync', () => {
+    test('CURRENT_SCHEMA_VERSION matches package.json major version', async () => {
+      const { CURRENT_SCHEMA_VERSION } = await import('./settings')
+      const packageJson = await import('../../package.json')
+      const majorVersion = parseInt(packageJson.version.split('.')[0], 10)
+
+      expect(CURRENT_SCHEMA_VERSION).toBe(majorVersion)
+    })
+  })
+
   let tempDir: string
   let originalEnv: Record<string, string | undefined>
 

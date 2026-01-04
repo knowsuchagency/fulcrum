@@ -5,7 +5,9 @@ import { log } from './logger'
 import type { AgentType } from '@shared/types'
 
 // Schema version for settings migration
-const CURRENT_SCHEMA_VERSION = 8
+// IMPORTANT: This must match the major version in package.json
+// When bumping schema version, also bump major version with: mise run bump major
+export const CURRENT_SCHEMA_VERSION = 8
 
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed' | 'antigravity'
