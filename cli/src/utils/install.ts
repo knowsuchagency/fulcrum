@@ -67,11 +67,28 @@ export function installBun(): boolean {
 }
 
 /**
- * Install Claude Code CLI via npm.
+ * Check if OpenCode CLI is installed.
+ */
+export function isOpencodeInstalled(): boolean {
+  return isCommandInstalled('opencode')
+}
+
+/**
+ * Install Claude Code CLI.
  * Returns true if installation succeeded.
  */
 export function installClaude(): boolean {
   const dep = getDependency('claude')
+  if (!dep) return false
+  return installDep(dep)
+}
+
+/**
+ * Install OpenCode CLI.
+ * Returns true if installation succeeded.
+ */
+export function installOpencode(): boolean {
+  const dep = getDependency('opencode')
   if (!dep) return false
   return installDep(dep)
 }

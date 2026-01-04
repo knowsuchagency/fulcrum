@@ -1,7 +1,7 @@
 {
   "name": "vibora",
   "private": true,
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "Harness Attention. Orchestrate Agents. Ship.",
   "license": "PolyForm-Shield-1.0.0",
   "type": "module",

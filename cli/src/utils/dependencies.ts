@@ -60,9 +60,18 @@ export const DEPENDENCIES: Dependency[] = [
     name: 'claude',
     command: 'claude',
     description: 'Claude Code CLI for AI agents',
-    required: true,
+    required: false,
     install: {
-      npm: 'npm install -g @anthropic-ai/claude-code',
+      curl: 'curl -fsSL https://claude.ai/install.sh | bash',
+    },
+  },
+  {
+    name: 'opencode',
+    command: 'opencode',
+    description: 'OpenCode CLI for AI agents',
+    required: false,
+    install: {
+      curl: 'curl -fsSL https://opencode.ai/install | bash',
     },
   },
   {

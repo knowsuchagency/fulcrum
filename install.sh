@@ -257,6 +257,69 @@ install_claude_code() {
     return 1
 }
 
+# Install OpenCode
+install_opencode() {
+    print_step "Checking for OpenCode..."
+
+    if command -v opencode &> /dev/null; then
+        print_success "OpenCode is already installed"
+        return 0
+    fi
+
+    print_warning "OpenCode not found. Installing..."
+
+    # Use OpenCode's official installer
+    if curl -fsSL https://opencode.ai/install | bash; then
+        print_success "OpenCode installed"
+        # Source common installation paths
+        export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+        return 0
+    fi
+
+    print_warning "Could not install OpenCode automatically"
+    echo "  Install manually: curl -fsSL https://opencode.ai/install | bash"
+    return 1
+}
+
+# Interactive agent selection
+select_and_install_agents() {
+    echo ""
+    print_step "AI Agent Selection"
+    echo ""
+    echo "Vibora can orchestrate these AI coding agents:"
+    echo "  1) Claude Code - Anthropic's AI coding assistant"
+    echo "  2) OpenCode - Open-source AI coding agent"
+    echo "  3) Both"
+    echo "  4) Neither (install later)"
+    echo ""
+
+    local choice
+    read -r -p "Which agent(s) would you like to install? [1/2/3/4] " choice
+    choice=${choice:-1}  # Default to Claude Code
+
+    case "$choice" in
+        1)
+            install_claude_code
+            ;;
+        2)
+            install_opencode
+            ;;
+        3)
+            install_claude_code
+            install_opencode
+            ;;
+        4)
+            print_warning "Skipping agent installation"
+            echo "  You can install agents later:"
+            echo "    Claude Code: curl -fsSL https://claude.ai/install.sh | bash"
+            echo "    OpenCode:    curl -fsSL https://opencode.ai/install | bash"
+            ;;
+        *)
+            print_warning "Invalid choice, skipping agent installation"
+            ;;
+    esac
+}
+
 # Install GitHub CLI
 install_gh() {
     print_step "Checking for GitHub CLI..."
@@ -515,7 +578,7 @@ main() {
     echo "  - Node.js (JavaScript runtime)"
     echo "  - dtach (terminal persistence)"
     echo "  - uv (Python package manager)"
-    echo "  - Claude Code (AI coding agent)"
+    echo "  - AI agent (Claude Code and/or OpenCode - you choose)"
     echo "  - GitHub CLI (PR creation)"
     echo "  - Docker (app deployment)"
     echo "  - cloudflared (secure tunnels)"
@@ -540,7 +603,7 @@ main() {
     install_node
     install_dtach
     install_uv
-    install_claude_code
+    select_and_install_agents
     install_gh
     install_docker
     install_cloudflared

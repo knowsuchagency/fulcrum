@@ -13,7 +13,7 @@ import {
   installDtach,
   installBun,
   isClaudeInstalled,
-  installClaude,
+  isOpencodeInstalled,
   isUvInstalled,
   installUv,
 } from '../utils/install'
@@ -88,29 +88,6 @@ export async function handleUpCommand(flags: Record<string, string>) {
       throw new CliError(
         'MISSING_DEPENDENCY',
         `dtach is required. Install manually: ${getInstallCommand(dtachDep)}`,
-        ExitCodes.ERROR
-      )
-    }
-  }
-
-  // Check if Claude Code CLI is installed (required for AI agent orchestration)
-  if (!isClaudeInstalled()) {
-    const claudeDep = getDependency('claude')!
-    const method = getInstallMethod(claudeDep)
-    console.error('Claude Code CLI is required but is not installed.')
-    console.error('  Claude Code is the AI coding agent that Vibora orchestrates.')
-
-    const shouldInstall = autoYes || (await confirm(`Would you like to install Claude Code via ${method}?`))
-    if (shouldInstall) {
-      const success = installClaude()
-      if (!success) {
-        throw new CliError('INSTALL_FAILED', 'Failed to install Claude Code', ExitCodes.ERROR)
-      }
-      console.error('Claude Code installed successfully!')
-    } else {
-      throw new CliError(
-        'MISSING_DEPENDENCY',
-        `Claude Code is required. Install manually: ${getInstallCommand(claudeDep)}`,
         ExitCodes.ERROR
       )
     }
@@ -215,7 +192,8 @@ export async function handleUpCommand(flags: Record<string, string>) {
       VIBORA_VERSION: pkg.version,
       BUN_PTY_LIB: ptyLibPath,
       // Pass CLI's alias-aware detection to the server (which can't detect aliases)
-      VIBORA_CLAUDE_INSTALLED: '1',
+      ...(isClaudeInstalled() && { VIBORA_CLAUDE_INSTALLED: '1' }),
+      ...(isOpencodeInstalled() && { VIBORA_OPENCODE_INSTALLED: '1' }),
       ...(debug && { LOG_LEVEL: 'debug', DEBUG: '1' }),
     },
   })
@@ -246,14 +224,15 @@ export async function handleUpCommand(flags: Record<string, string>) {
     })
   } else {
     // Show getting started tips for human-readable output
-    showGettingStartedTips(port)
+    const hasAgent = isClaudeInstalled() || isOpencodeInstalled()
+    showGettingStartedTips(port, hasAgent)
   }
 }
 
 /**
  * Display getting started tips after successful server start.
  */
-function showGettingStartedTips(port: number): void {
+function showGettingStartedTips(port: number, hasAgent: boolean): void {
   console.error(`
 Vibora is running at http://localhost:${port}
 
@@ -261,11 +240,18 @@ Getting Started:
   1. Open http://localhost:${port} in your browser
   2. Add a repository to get started
   3. Create a task to spin up an isolated worktree
-  4. Run Claude Code in the task terminal
+  4. Run your AI agent in the task terminal
 
 Commands:
   vibora status    Check server status
   vibora doctor    Check all dependencies
   vibora down      Stop the server
 `)
+
+  if (!hasAgent) {
+    console.error(`Note: No AI agents detected. Install one to get started:
+  Claude Code: curl -fsSL https://claude.ai/install.sh | bash
+  OpenCode:    curl -fsSL https://opencode.ai/install | bash
+`)
+  }
 }
