@@ -530,7 +530,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
       )}
 
       {/* Terminal */}
-      <div className="relative min-h-0 flex-1">
+      <div className="relative min-h-0 min-w-0 flex-1">
         <div
           ref={containerRef}
           className={cn('h-full w-full overflow-hidden p-2 bg-terminal-background', className)}
@@ -555,7 +555,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
 
         {/* Loading overlay - shown while agent is starting */}
         {isStartingAgent && (
-          <div className="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center bg-terminal-background/90">
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-terminal-background/90">
             <div className="flex flex-col items-center gap-3">
               <HugeiconsIcon
                 icon={Loading03Icon}
@@ -572,9 +572,9 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
 
         {/* Agent not found overlay - shown when "command not found" is detected */}
         {agentNotFound && (
-          <div className="absolute bottom-4 left-4 right-4 z-10">
+          <div className="pointer-events-none absolute bottom-4 left-4 right-4 z-10">
             <div className={cn(
-              'flex items-start gap-3 rounded-lg border p-4',
+              'pointer-events-auto flex items-start gap-3 rounded-lg border p-4',
               'bg-amber-500/10 border-amber-500/30'
             )}>
               <HugeiconsIcon

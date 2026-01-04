@@ -574,31 +574,6 @@ function RepositoryDetailView() {
                     </Field>
 
                     <Field>
-                      <FieldLabel>{t('detailView.settings.defaultAgent')}</FieldLabel>
-                      <Select
-                        value={defaultAgent ?? 'inherit'}
-                        onValueChange={(value) => setDefaultAgent(value === 'inherit' ? null : value as AgentType)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent alignItemWithTrigger={false}>
-                          <SelectItem value="inherit">
-                            {t('detailView.settings.defaultAgentInherit')}
-                          </SelectItem>
-                          {(Object.keys(AGENT_DISPLAY_NAMES) as AgentType[]).map((agentType) => (
-                            <SelectItem key={agentType} value={agentType}>
-                              {AGENT_DISPLAY_NAMES[agentType]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FieldDescription>
-                        {t('detailView.settings.defaultAgentDescription')}
-                      </FieldDescription>
-                    </Field>
-
-                    <Field>
                       <FieldLabel htmlFor="startupScript">{t('detailView.settings.startupScript')}</FieldLabel>
                       <Textarea
                         id="startupScript"
@@ -644,6 +619,31 @@ function RepositoryDetailView() {
                 <div className="flex-1 bg-card rounded-lg p-6 border border-border">
                   <h3 className="text-sm font-medium mb-4">{t('detailView.settings.agentTitle')}</h3>
                   <FieldGroup>
+                    <Field>
+                      <FieldLabel>{t('detailView.settings.defaultAgent')}</FieldLabel>
+                      <Select
+                        value={defaultAgent ?? 'inherit'}
+                        onValueChange={(value) => setDefaultAgent(value === 'inherit' ? null : value as AgentType)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectItem value="inherit">
+                            {t('detailView.settings.defaultAgentInherit')}
+                          </SelectItem>
+                          {(Object.keys(AGENT_DISPLAY_NAMES) as AgentType[]).map((agentType) => (
+                            <SelectItem key={agentType} value={agentType}>
+                              {AGENT_DISPLAY_NAMES[agentType]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FieldDescription>
+                        {t('detailView.settings.defaultAgentDescription')}
+                      </FieldDescription>
+                    </Field>
+
                     <Field>
                       <FieldLabel>{t('detailView.settings.claudeOptions')}</FieldLabel>
                       <FieldDescription className="mb-2">

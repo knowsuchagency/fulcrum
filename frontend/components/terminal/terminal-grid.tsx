@@ -140,7 +140,7 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
         <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} terminalId={terminal.id} setupImagePaste={setupImagePaste} onFocus={onFocus} />
         {/* Loading overlay - shown while Claude is starting */}
         {isStartingClaude && (
-          <div className="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center bg-terminal-background/90">
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-terminal-background/90">
             <div className="flex flex-col items-center gap-3">
               <HugeiconsIcon
                 icon={Loading03Icon}
