@@ -62,6 +62,12 @@
     "terminalNotConnected": "终端未连接",
     "terminalNotConnectedDesc": "请等待连接建立"
   },
+  "opencode": {
+    "notInstalled": "OpenCode 未安装",
+    "selectModel": "选择模型",
+    "useDefault": "使用默认",
+    "noModelsFound": "未找到模型"
+  },
   "apps": {
     "manualDnsRequired": "需要手动配置 DNS",
     "manualDnsRequiredDesc": "未配置 Cloudflare API 令牌。您需要手动为域名创建 DNS 记录。",

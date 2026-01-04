@@ -60,6 +60,7 @@ import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-confi
 import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
+import { ModelPicker } from '@/components/opencode/model-picker'
 
 /**
  * Convert a git URL (SSH or HTTPS) to a web-browsable HTTPS URL
@@ -120,6 +121,7 @@ function RepositoryDetailView() {
   const [copyFiles, setCopyFiles] = useState('')
   const [claudeOptions, setClaudeOptions] = useState<Record<string, string>>({})
   const [opencodeOptions, setOpencodeOptions] = useState<Record<string, string>>({})
+  const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
   const [defaultAgent, setDefaultAgent] = useState<AgentType | null>(null)
   const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
@@ -221,6 +223,7 @@ function RepositoryDetailView() {
       setCopyFiles(repository.copyFiles || '')
       setClaudeOptions(repository.claudeOptions || {})
       setOpencodeOptions(repository.opencodeOptions || {})
+      setOpencodeModel(repository.opencodeModel ?? null)
       setDefaultAgent(repository.defaultAgent ?? null)
       setIsCopierTemplate(repository.isCopierTemplate ?? false)
       setHasChanges(false)
@@ -236,11 +239,12 @@ function RepositoryDetailView() {
         copyFiles !== (repository.copyFiles || '') ||
         JSON.stringify(claudeOptions) !== JSON.stringify(repository.claudeOptions || {}) ||
         JSON.stringify(opencodeOptions) !== JSON.stringify(repository.opencodeOptions || {}) ||
+        opencodeModel !== (repository.opencodeModel ?? null) ||
         defaultAgent !== (repository.defaultAgent ?? null) ||
         isCopierTemplate !== (repository.isCopierTemplate ?? false)
       setHasChanges(changed)
     }
-  }, [displayName, startupScript, copyFiles, claudeOptions, opencodeOptions, defaultAgent, isCopierTemplate, repository])
+  }, [displayName, startupScript, copyFiles, claudeOptions, opencodeOptions, opencodeModel, defaultAgent, isCopierTemplate, repository])
 
   const handleSave = () => {
     if (!repository) return
@@ -254,6 +258,7 @@ function RepositoryDetailView() {
           copyFiles: copyFiles.trim() || null,
           claudeOptions: Object.keys(claudeOptions).length > 0 ? claudeOptions : null,
           opencodeOptions: Object.keys(opencodeOptions).length > 0 ? opencodeOptions : null,
+          opencodeModel,
           defaultAgent,
           isCopierTemplate,
         },
@@ -622,6 +627,18 @@ function RepositoryDetailView() {
                       value={opencodeOptions}
                       onChange={setOpencodeOptions}
                     />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>{t('detailView.settings.opencodeModel')}</FieldLabel>
+                    <ModelPicker
+                      value={opencodeModel}
+                      onChange={setOpencodeModel}
+                      placeholder={t('detailView.settings.opencodeModelPlaceholder')}
+                    />
+                    <FieldDescription>
+                      {t('detailView.settings.opencodeModelDescription')}
+                    </FieldDescription>
                   </Field>
 
                   <Field>

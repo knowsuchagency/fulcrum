@@ -140,6 +140,7 @@ app.post('/', async (c) => {
         startupScript?: string
         agent?: string
         agentOptions?: Record<string, string> | null
+        opencodeModel?: string | null
       }
     >()
 
@@ -167,6 +168,7 @@ app.post('/', async (c) => {
       agent: body.agent || 'claude',
       aiMode: body.aiMode || null,
       agentOptions: body.agentOptions ? JSON.stringify(body.agentOptions) : null,
+      opencodeModel: body.opencodeModel || null,
       createdAt: now,
       updatedAt: now,
     }

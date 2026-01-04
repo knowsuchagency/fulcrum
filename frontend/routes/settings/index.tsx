@@ -24,6 +24,7 @@ import {
   useLinearApiKey,
   useGitHubPat,
   useDefaultAgent,
+  useOpencodeModel,
   useUpdateConfig,
   useResetConfig,
   useNotificationSettings,
@@ -41,6 +42,7 @@ import {
   type ClaudeCodeTheme,
 } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
+import { ModelPicker } from '@/components/opencode/model-picker'
 import {
   useDeploymentSettings,
   useUpdateDeploymentSettings,
@@ -75,6 +77,7 @@ function SettingsPage() {
   const { data: linearApiKey, isLoading: linearApiKeyLoading } = useLinearApiKey()
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: defaultAgent, isLoading: defaultAgentLoading } = useDefaultAgent()
+  const { data: globalOpencodeModel, isLoading: opcodeModelLoading } = useOpencodeModel()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
   const { data: deploymentSettings, isLoading: deploymentLoading } = useDeploymentSettings()
@@ -99,6 +102,7 @@ function SettingsPage() {
   const [localLinearApiKey, setLocalLinearApiKey] = useState('')
   const [localGitHubPat, setLocalGitHubPat] = useState('')
   const [localDefaultAgent, setLocalDefaultAgent] = useState<AgentType>('claude')
+  const [localOpencodeModel, setLocalOpencodeModel] = useState<string | null>(null)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -149,7 +153,8 @@ function SettingsPage() {
     if (linearApiKey !== undefined) setLocalLinearApiKey(linearApiKey)
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
     if (defaultAgent !== undefined) setLocalDefaultAgent(defaultAgent)
-  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, defaultAgent])
+    if (globalOpencodeModel !== undefined) setLocalOpencodeModel(globalOpencodeModel)
+  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, defaultAgent, globalOpencodeModel])
 
   // Sync notification settings
   useEffect(() => {
@@ -200,7 +205,7 @@ function SettingsPage() {
   }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || defaultAgentLoading || notificationsLoading || zAiLoading || deploymentLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || notificationsLoading || zAiLoading || deploymentLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -247,7 +252,7 @@ function SettingsPage() {
     localEditorHost !== editorHost ||
     localEditorSshPort !== String(editorSshPort)
 
-  const hasAgentChanges = localDefaultAgent !== defaultAgent
+  const hasAgentChanges = localDefaultAgent !== defaultAgent || localOpencodeModel !== (globalOpencodeModel ?? null)
 
   const hasChanges =
     localPort !== String(port) ||
@@ -345,12 +350,23 @@ function SettingsPage() {
       )
     }
 
-    // Save agent setting
-    if (hasAgentChanges) {
+    // Save agent settings
+    if (localDefaultAgent !== defaultAgent) {
       promises.push(
         new Promise((resolve) => {
           updateConfig.mutate(
             { key: CONFIG_KEYS.DEFAULT_AGENT, value: localDefaultAgent },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localOpencodeModel !== (globalOpencodeModel ?? null)) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.OPENCODE_MODEL, value: localOpencodeModel },
             { onSettled: resolve }
           )
         })
@@ -522,6 +538,14 @@ function SettingsPage() {
     resetConfig.mutate(CONFIG_KEYS.DEFAULT_AGENT, {
       onSuccess: (data) => {
         setLocalDefaultAgent((data.value as AgentType) ?? 'claude')
+      },
+    })
+  }
+
+  const handleResetOpencodeModel = () => {
+    resetConfig.mutate(CONFIG_KEYS.OPENCODE_MODEL, {
+      onSuccess: (data) => {
+        setLocalOpencodeModel(data.value !== null && data.value !== undefined ? String(data.value) : null)
       },
     })
   }
@@ -1020,42 +1044,73 @@ function SettingsPage() {
 
               {/* Agent */}
               <SettingsSection title={t('sections.agent')}>
-                <div className="space-y-1">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
-                      {t('fields.agent.default.label')}
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={localDefaultAgent}
-                        onValueChange={(v) => setLocalDefaultAgent(v as AgentType)}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(Object.keys(AGENT_DISPLAY_NAMES) as AgentType[]).map((agent) => (
-                            <SelectItem key={agent} value={agent}>
-                              {AGENT_DISPLAY_NAMES[agent]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={handleResetDefaultAgent}
-                        disabled={isLoading || resetConfig.isPending}
-                        title={tc('buttons.reset')}
-                      >
-                        <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
-                      </Button>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.agent.default.label')}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={localDefaultAgent}
+                          onValueChange={(v) => setLocalDefaultAgent(v as AgentType)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(AGENT_DISPLAY_NAMES) as AgentType[]).map((agent) => (
+                              <SelectItem key={agent} value={agent}>
+                                {AGENT_DISPLAY_NAMES[agent]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetDefaultAgent}
+                          disabled={isLoading || resetConfig.isPending}
+                          title={tc('buttons.reset')}
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
                     </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.agent.default.description')}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                    {t('fields.agent.default.description')}
-                  </p>
+
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.agent.opencodeModel.label')}
+                      </label>
+                      <div className="flex flex-1 items-center gap-2">
+                        <ModelPicker
+                          value={localOpencodeModel}
+                          onChange={setLocalOpencodeModel}
+                          placeholder={t('fields.agent.opencodeModel.placeholder')}
+                          className="w-64"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={handleResetOpencodeModel}
+                          disabled={isLoading || resetConfig.isPending}
+                          title={tc('buttons.reset')}
+                        >
+                          <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.agent.opencodeModel.description')}
+                    </p>
+                  </div>
                 </div>
               </SettingsSection>
 

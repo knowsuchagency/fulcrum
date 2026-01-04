@@ -38,11 +38,12 @@ import { TaskAdd01Icon, Folder01Icon } from '@hugeicons/core-free-icons'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCreateTask } from '@/hooks/use-tasks'
 import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
-import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent } from '@/hooks/use-config'
+import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import { useRepositories, useCreateRepository } from '@/hooks/use-repositories'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import type { Repository } from '@/types'
+import { ModelPicker } from '@/components/opencode/model-picker'
 
 function slugify(text: string): string {
   return text
@@ -90,6 +91,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [repoSearchQuery, setRepoSearchQuery] = useState('')
   const [repoError, setRepoError] = useState<string | null>(null)
   const [isValidatingRepo, setIsValidatingRepo] = useState(false)
+  const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
 
   const navigate = useNavigate()
   const createTask = useCreateTask()
@@ -98,6 +100,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const { data: worktreeBasePath } = useWorktreeBasePath()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const { data: defaultAgent } = useDefaultAgent()
+  const { data: globalOpencodeModel } = useOpencodeModel()
   const { data: repositories } = useRepositories()
   const { data: branchData, isLoading: branchesLoading } = useBranches(
     repoPath || null
@@ -144,6 +147,15 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         setAgent(defaultAgent)
       }
 
+      // Set OpenCode model: repository default > global default > null
+      if (selectedRepo?.opencodeModel) {
+        setOpencodeModel(selectedRepo.opencodeModel)
+      } else if (globalOpencodeModel) {
+        setOpencodeModel(globalOpencodeModel)
+      } else {
+        setOpencodeModel(null)
+      }
+
       if (defaultRepository) {
         // Use provided default repository
         setSelectedRepoId(defaultRepository.id)
@@ -159,7 +171,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         setRepoTab('saved')
       }
     }
-  }, [open, defaultRepository, repositories, defaultAgent])
+  }, [open, defaultRepository, repositories, defaultAgent, globalOpencodeModel])
 
   // Set default base branch when branches are loaded, reset when repo changes
   useEffect(() => {
@@ -241,6 +253,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         copyFiles: selectedRepo?.copyFiles || undefined,
         startupScript: selectedRepo?.startupScript || undefined,
         agentOptions: agentOptions || undefined,
+        opencodeModel: agent === 'opencode' ? opencodeModel : undefined,
       },
       {
         onSuccess: (task) => {
@@ -257,6 +270,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
           setAiMode('default')
           setAiModeManuallySet(false)
           setAgent(defaultAgent || 'claude')
+          setOpencodeModel(null)
           setSelectedRepoId(null)
           setRepoSearchQuery('')
           setRepoError(null)
@@ -373,6 +387,17 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                 </Select>
               </Field>
 
+              {agent === 'opencode' && (
+                <Field>
+                  <FieldLabel>{t('createModal.fields.opencodeModel')}</FieldLabel>
+                  <ModelPicker
+                    value={opencodeModel}
+                    onChange={setOpencodeModel}
+                    placeholder={t('createModal.fields.opencodeModelPlaceholder')}
+                  />
+                </Field>
+              )}
+
               <Field>
                 <FieldLabel>{t('createModal.fields.repository')}</FieldLabel>
                 <Tabs
@@ -403,6 +428,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                           if (repo.defaultAgent) {
                             setAgent(repo.defaultAgent)
                           }
+                          // Update OpenCode model: repo default > global default
+                          setOpencodeModel(repo.opencodeModel ?? globalOpencodeModel ?? null)
                         }
                       }}
                       inputValue={repoSearchQuery}

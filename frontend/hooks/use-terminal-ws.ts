@@ -55,6 +55,7 @@ interface CreateTerminalOptions {
     startupScript?: string | null
     agent?: string
     agentOptions?: Record<string, string> | null
+    opencodeModel?: string | null
     aiMode?: 'default' | 'plan'
     description?: string
     taskName: string
@@ -66,6 +67,7 @@ interface PendingStartupInfo {
   startupScript?: string | null
   agent?: string
   agentOptions?: Record<string, string> | null
+  opencodeModel?: string | null
   aiMode?: 'default' | 'plan'
   description?: string
   taskName: string

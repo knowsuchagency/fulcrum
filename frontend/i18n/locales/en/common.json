@@ -62,6 +62,12 @@
     "terminalNotConnected": "Terminal not connected",
     "terminalNotConnectedDesc": "Please wait for the connection to establish"
   },
+  "opencode": {
+    "notInstalled": "OpenCode not installed",
+    "selectModel": "Select model",
+    "useDefault": "Use default",
+    "noModelsFound": "No models found"
+  },
   "apps": {
     "manualDnsRequired": "Manual DNS required",
     "manualDnsRequiredDesc": "Cloudflare API token not configured. You must create DNS records manually for your domains.",

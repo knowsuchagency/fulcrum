@@ -73,6 +73,11 @@
       "default": {
         "label": "Default Agent",
         "description": "The AI coding agent to use for new tasks"
+      },
+      "opencodeModel": {
+        "label": "OpenCode Model",
+        "placeholder": "Select model",
+        "description": "Default model used when launching OpenCode tasks"
       }
     },
     "language": {

@@ -19,6 +19,7 @@ export const tasks = sqliteTable('tasks', {
   agent: text('agent').notNull().default('claude'), // AI agent: 'claude' | 'opencode'
   aiMode: text('ai_mode'), // 'default' | 'plan' | null - AI mode for agent startup
   agentOptions: text('agent_options'), // JSON: { [flag]: value } - CLI options for agent
+  opencodeModel: text('opencode_model'), // OpenCode model in format 'provider/model' - null means use default
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
@@ -71,6 +72,7 @@ export const repositories = sqliteTable('repositories', {
   copyFiles: text('copy_files'), // Comma-separated glob patterns (e.g., ".env, config.local.json")
   claudeOptions: text('claude_options'), // JSON: { [flag]: value } - CLI options for Claude Code
   opencodeOptions: text('opencode_options'), // JSON: { [flag]: value } - CLI options for OpenCode
+  opencodeModel: text('opencode_model'), // OpenCode model in format 'provider/model' - null means use global default
   defaultAgent: text('default_agent'), // 'claude' | 'opencode' | null - null means use global default
   remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
   isCopierTemplate: integer('is_copier_template', { mode: 'boolean' }).default(false), // Mark as Copier template

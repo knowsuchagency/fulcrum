@@ -19,6 +19,8 @@ export interface AgentCommandOptions {
   mode: 'default' | 'plan'
   /** Additional CLI options from agentOptions */
   additionalOptions: Record<string, string>
+  /** OpenCode model in format provider/model (e.g., 'anthropic/claude-opus-4-5') */
+  opencodeModel?: string | null
 }
 
 export interface AgentCommandBuilder {
@@ -72,7 +74,7 @@ const claudeBuilder: AgentCommandBuilder = {
  * - System prompts prepended to user prompt (no --system-prompt flag available)
  */
 const opencodeBuilder: AgentCommandBuilder = {
-  buildCommand({ prompt, systemPrompt, mode, additionalOptions }) {
+  buildCommand({ prompt, systemPrompt, mode, additionalOptions, opencodeModel }) {
     // OpenCode uses --agent flag to select build (full) or plan (restricted) mode
     // Note: agent names are lowercase in OpenCode
     const agentMode = mode === 'plan' ? 'plan' : 'build'
@@ -83,6 +85,12 @@ const opencodeBuilder: AgentCommandBuilder = {
       extraFlags = Object.entries(additionalOptions)
         .map(([key, value]) => ` --${key} ${escapeForShell(value)}`)
         .join('')
+    }
+
+    // Add --model flag if a specific model is configured
+    // This ensures OpenCode uses the user's preferred model even with --prompt
+    if (opencodeModel) {
+      extraFlags += ` --model ${escapeForShell(opencodeModel)}`
     }
 
     // OpenCode doesn't have a direct --system-prompt flag like Claude.

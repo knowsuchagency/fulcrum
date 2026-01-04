@@ -7,7 +7,7 @@ import type { AgentType } from '@shared/types'
 // Schema version for settings migration
 // IMPORTANT: This must match the major version in package.json
 // When bumping schema version, also bump major version with: mise run bump major
-export const CURRENT_SCHEMA_VERSION = 8
+export const CURRENT_SCHEMA_VERSION = 9
 
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed' | 'antigravity'
@@ -38,6 +38,7 @@ export interface Settings {
   }
   agent: {
     defaultAgent: AgentType
+    opencodeModel: string | null
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -70,6 +71,7 @@ const DEFAULT_SETTINGS: Settings = {
   },
   agent: {
     defaultAgent: 'claude',
+    opencodeModel: null,
   },
   appearance: {
     language: null,
@@ -326,6 +328,7 @@ export function getSettings(): Settings {
     },
     agent: {
       defaultAgent: ((parsed.agent as Record<string, unknown>)?.defaultAgent as AgentType) ?? DEFAULT_SETTINGS.agent.defaultAgent,
+      opencodeModel: ((parsed.agent as Record<string, unknown>)?.opencodeModel as string | null) ?? null,
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,

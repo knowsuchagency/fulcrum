@@ -77,6 +77,7 @@ export interface Task {
   agent: AgentType
   aiMode: 'default' | 'plan' | null
   agentOptions: Record<string, string> | null
+  opencodeModel: string | null
   createdAt: string
   updatedAt: string
 }
@@ -154,6 +155,7 @@ export interface Repository {
   copyFiles: string | null
   claudeOptions: Record<string, string> | null
   opencodeOptions: Record<string, string> | null
+  opencodeModel: string | null
   defaultAgent: AgentType | null
   remoteUrl: string | null
   isCopierTemplate: boolean

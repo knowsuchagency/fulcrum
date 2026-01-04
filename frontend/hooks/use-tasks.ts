@@ -38,6 +38,7 @@ export function useCreateTask() {
       copyFiles?: string
       startupScript?: string
       agentOptions?: Record<string, string> | null
+      opencodeModel?: string | null
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks`, {
         method: 'POST',

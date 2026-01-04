@@ -25,10 +25,11 @@ interface TaskTerminalProps {
   description?: string
   startupScript?: string | null
   agentOptions?: Record<string, string> | null
+  opencodeModel?: string | null
   serverPort?: number
 }
 
-export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMode, description, startupScript, agentOptions, serverPort = 7777 }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMode, description, startupScript, agentOptions, opencodeModel, serverPort = 7777 }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -238,6 +239,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
           startupScript,
           agent,
           agentOptions,
+          opencodeModel,
           aiMode,
           description,
           taskName,
@@ -325,6 +327,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
           startupScript: currentStartupScript,
           agent: currentAgent = 'claude',
           agentOptions: currentAgentOptions,
+          opencodeModel: currentOpencodeModel,
           aiMode: currentAiMode,
           description: currentDescription,
           taskName: currentTaskName,
@@ -359,6 +362,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
           sessionId: actualTerminalId,
           mode: currentAiMode === 'plan' ? 'plan' : 'default',
           additionalOptions: currentAgentOptions ?? {},
+          opencodeModel: currentOpencodeModel,
         })
 
         // Wait longer for startup script to complete before sending agent command

@@ -13,6 +13,8 @@
       "descriptionPlaceholder": "Implement OAuth2 login flow...",
       "aiMode": "AI Mode",
       "agent": "AI Agent",
+      "opencodeModel": "OpenCode Model",
+      "opencodeModelPlaceholder": "Select model",
       "repository": "Repository",
       "baseBranch": "Base Branch",
       "branchName": "Branch Name",

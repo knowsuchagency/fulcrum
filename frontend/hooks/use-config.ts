@@ -22,6 +22,7 @@ export const CONFIG_KEYS = {
   LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
   DEFAULT_AGENT: 'agent.defaultAgent',
+  OPENCODE_MODEL: 'agent.opencodeModel',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
@@ -141,6 +142,16 @@ export function useDefaultAgent() {
   return {
     ...query,
     data: (query.data?.value as AgentType) ?? 'claude',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useOpencodeModel() {
+  const query = useConfig(CONFIG_KEYS.OPENCODE_MODEL)
+
+  return {
+    ...query,
+    data: (query.data?.value as string | null) ?? null,
     isDefault: query.data?.isDefault ?? true,
   }
 }
