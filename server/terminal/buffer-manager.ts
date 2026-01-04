@@ -48,8 +48,25 @@ export class BufferManager {
     }
   }
 
+  /**
+   * Filter out alternate screen buffer escape sequences.
+   * TUI applications like OpenCode use these to switch to a full-screen mode
+   * that doesn't preserve scrollback. By filtering them, we ensure the content
+   * goes to the main buffer where scrollback is preserved.
+   */
+  private filterAlternateScreenSequences(data: string): string {
+    return data
+      // ESC[?1049h/l - save cursor & switch to/from alternate screen (most common)
+      .replace(/\x1b\[\?1049[hl]/g, '')
+      // ESC[?47h/l - older alternate screen switch
+      .replace(/\x1b\[\?47[hl]/g, '')
+      // ESC[?1047h/l - alternate screen without cursor save
+      .replace(/\x1b\[\?1047[hl]/g, '')
+  }
+
   getContents(): string {
-    return this.chunks.map((c) => c.data).join('')
+    const raw = this.chunks.map((c) => c.data).join('')
+    return this.filterAlternateScreenSequences(raw)
   }
 
   clear(): void {

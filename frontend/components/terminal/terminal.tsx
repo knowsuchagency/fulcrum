@@ -70,6 +70,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       fontFamily: 'JetBrains Mono Variable, PureNerdFont, Menlo, Monaco, monospace',
       lineHeight: 1.2,
       theme: terminalTheme,
+      scrollback: 10000,
     })
 
     const fitAddon = new FitAddon()

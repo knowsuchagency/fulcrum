@@ -101,6 +101,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
       fontFamily: 'JetBrains Mono Variable, PureNerdFont, Menlo, Monaco, monospace',
       lineHeight: 1.2,
       theme: terminalTheme,
+      scrollback: 10000,
     })
 
     const fitAddon = new FitAddon()
