@@ -22,11 +22,6 @@ interface BufferChunk {
   timestamp: number
 }
 
-interface BufferFileV2 {
-  version: 2
-  content: string // base64 encoded
-}
-
 interface BufferFileV3 {
   version: 3
   content: string // base64 encoded
