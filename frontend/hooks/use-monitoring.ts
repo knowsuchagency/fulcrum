@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchJSON } from '@/lib/api'
+import type { AgentType } from '@shared/types'
 
 const API_BASE = ''
 
@@ -8,6 +9,7 @@ export type ClaudeFilter = 'vibora' | 'all'
 
 export interface ClaudeInstance {
   pid: number
+  agent: AgentType
   cwd: string
   ramMB: number
   startedAt: number | null

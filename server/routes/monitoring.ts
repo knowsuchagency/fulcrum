@@ -242,8 +242,8 @@ export const monitoringRoutes = new Hono()
 monitoringRoutes.get('/claude-instances', (c) => {
   const filter = c.req.query('filter') || 'vibora'
 
-  // Find all Claude processes on the system
-  const allClaudeProcesses = findAllClaudeProcesses()
+  // Find all agent processes on the system (Claude, OpenCode, etc.)
+  const allAgentProcesses = findAllAgentProcesses()
 
   // Get Vibora terminals and their process trees
   const viboraManagedPids = new Map<number, { terminalId: string; terminalName: string; cwd: string }>()
@@ -320,10 +320,10 @@ monitoringRoutes.get('/claude-instances', (c) => {
     allTasks.filter((t) => t.worktreePath).map((t) => [t.worktreePath!, t])
   )
 
-  // Build Claude instances list
-  const instances: ClaudeInstance[] = []
+  // Build agent instances list
+  const instances: AgentInstance[] = []
 
-  for (const { pid } of allClaudeProcesses) {
+  for (const { pid, agent } of allAgentProcesses) {
     const viboraInfo = viboraManagedPids.get(pid)
     const isViboraManaged = !!viboraInfo
 
@@ -352,6 +352,7 @@ monitoringRoutes.get('/claude-instances', (c) => {
 
     instances.push({
       pid,
+      agent,
       cwd,
       ramMB,
       startedAt,
@@ -406,7 +407,7 @@ monitoringRoutes.post('/claude-instances/:terminalId/kill', (c) => {
 })
 
 // POST /api/monitoring/claude-instances/:pid/kill-pid
-// Kill a Claude process by PID (for non-Vibora managed instances)
+// Kill an agent process by PID (for non-Vibora managed instances)
 monitoringRoutes.post('/claude-instances/:pid/kill-pid', (c) => {
   const pidStr = c.req.param('pid')
   const pid = parseInt(pidStr, 10)
@@ -416,10 +417,11 @@ monitoringRoutes.post('/claude-instances/:pid/kill-pid', (c) => {
   }
 
   try {
-    // Verify it's actually a Claude process before killing
+    // Verify it's actually an agent process before killing
     const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-    if (!/\bclaude\b/i.test(cmdline)) {
-      return c.json({ error: 'Process is not a Claude instance' }, 400)
+    const agent = detectAgentType(cmdline)
+    if (!agent) {
+      return c.json({ error: 'Process is not a recognized AI agent' }, 400)
     }
 
     process.kill(pid, 'SIGTERM')

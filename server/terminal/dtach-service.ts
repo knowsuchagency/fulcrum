@@ -52,19 +52,21 @@ function getDescendantPids(pid: number): number[] {
   return descendants
 }
 
-// Check if a process is a Claude process by examining its command line
-function isClaudeProcess(pid: number): boolean {
+// Combined pattern for all supported AI agents
+const AGENT_PATTERN = /\b(claude|opencode|codex|gemini)\b/i
+
+// Check if a process is an AI agent process by examining its command line
+function isAgentProcess(pid: number): boolean {
   try {
     const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-    // Check for claude command (claude, claude-code, etc.)
-    return /\bclaude\b/i.test(cmdline)
+    return AGENT_PATTERN.test(cmdline)
   } catch {
     // /proc not available (non-Linux), try ps
     try {
       const result = execSync(`ps -p ${pid} -o args= 2>/dev/null || true`, {
         encoding: 'utf-8',
       })
-      return /\bclaude\b/i.test(result)
+      return AGENT_PATTERN.test(result)
     } catch {
       return false
     }
@@ -140,8 +142,8 @@ export class DtachService {
     }
   }
 
-  // Kill Claude processes within a dtach session (but keep shell running)
-  killClaudeInSession(terminalId: string): boolean {
+  // Kill AI agent processes within a dtach session (but keep shell running)
+  killAgentInSession(terminalId: string): boolean {
     const socketPath = this.getSocketPath(terminalId)
 
     // Find dtach process(es) using this socket
@@ -152,9 +154,9 @@ export class DtachService {
       // Get all descendant processes
       const descendants = getDescendantPids(dtachPid)
 
-      // Find claude processes among descendants
+      // Find agent processes among descendants
       for (const pid of descendants) {
-        if (isClaudeProcess(pid)) {
+        if (isAgentProcess(pid)) {
           killProcessTree(pid)
           killedAny = true
         }
@@ -162,6 +164,11 @@ export class DtachService {
     }
 
     return killedAny
+  }
+
+  // Legacy alias for backward compatibility
+  killClaudeInSession(terminalId: string): boolean {
+    return this.killAgentInSession(terminalId)
   }
 
   // Check if dtach is available
