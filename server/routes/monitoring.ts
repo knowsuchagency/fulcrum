@@ -13,11 +13,11 @@ import type { AgentType } from '@shared/types'
 const isMacOS = process.platform === 'darwin'
 
 // Agent process patterns for detection
+// Must be preceded by / or start, and followed by whitespace/null/end
+// This avoids matching directory paths like /vibora/opencode/sockets/ or /worktrees/claude-test/
 const AGENT_PATTERNS: Record<AgentType, RegExp> = {
-  claude: /\bclaude\b/i,
-  opencode: /\bopencode\b/i,
-  codex: /\bcodex\b/i,
-  gemini: /\bgemini(-cli)?\b/i,
+  claude: /(^|\/)claude(\s|\0|$)/i,
+  opencode: /(^|\/)opencode(\s|\0|$)/i,
 }
 
 interface AgentInstance {
@@ -33,9 +33,6 @@ interface AgentInstance {
   worktreePath: string | null
   isViboraManaged: boolean
 }
-
-// Legacy alias for backward compatibility
-type ClaudeInstance = AgentInstance
 
 // Parse time window string to seconds
 function parseWindow(window: string): number {
@@ -61,7 +58,7 @@ function detectAgentType(cmdline: string): AgentType | null {
   return null
 }
 
-// Find all agent processes on the system (Claude, OpenCode, Codex, Gemini)
+// Find all agent processes on the system (Claude Code, OpenCode)
 function findAllAgentProcesses(agentFilter?: AgentType[]): Array<{ pid: number; cmdline: string; agent: AgentType }> {
   const agentProcesses: Array<{ pid: number; cmdline: string; agent: AgentType }> = []
 
@@ -90,7 +87,7 @@ function findAllAgentProcesses(agentFilter?: AgentType[]): Array<{ pid: number; 
   } catch {
     // /proc not available (non-Linux), fallback to pgrep
     // Try each agent pattern separately
-    const agentsToCheck = agentFilter ?? (['claude', 'opencode', 'codex', 'gemini'] as AgentType[])
+    const agentsToCheck = agentFilter ?? (['claude', 'opencode'] as AgentType[])
     for (const agentType of agentsToCheck) {
       try {
         const result = execSync(`pgrep -f ${agentType}`, { encoding: 'utf-8' })
@@ -115,11 +112,6 @@ function findAllAgentProcesses(agentFilter?: AgentType[]): Array<{ pid: number; 
   }
 
   return agentProcesses
-}
-
-// Legacy wrapper for backward compatibility
-function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
-  return findAllAgentProcesses(['claude']).map(({ pid, cmdline }) => ({ pid, cmdline }))
 }
 
 // Get process working directory

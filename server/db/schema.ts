@@ -16,7 +16,7 @@ export const tasks = sqliteTable('tasks', {
   linearTicketId: text('linear_ticket_id'), // e.g., "TEAM-123"
   linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
   startupScript: text('startup_script'), // Command to run after worktree creation
-  agent: text('agent').notNull().default('claude'), // AI agent: 'claude' | 'opencode' | 'codex' | 'gemini'
+  agent: text('agent').notNull().default('claude'), // AI agent: 'claude' | 'opencode'
   aiMode: text('ai_mode'), // 'default' | 'plan' | null - AI mode for agent startup
   agentOptions: text('agent_options'), // JSON: { [flag]: value } - CLI options for agent
   createdAt: text('created_at').notNull(),

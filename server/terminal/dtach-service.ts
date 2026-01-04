@@ -52,8 +52,10 @@ function getDescendantPids(pid: number): number[] {
   return descendants
 }
 
-// Combined pattern for all supported AI agents
-const AGENT_PATTERN = /\b(claude|opencode|codex|gemini)\b/i
+// Combined pattern for all supported AI agents (Claude Code, OpenCode)
+// Must be preceded by / or start, and followed by whitespace/null/end
+// This avoids matching directory paths like /vibora/opencode/sockets/ or /worktrees/claude-test/
+const AGENT_PATTERN = /(^|\/)(claude|opencode)(\s|\0|$)/i
 
 // Check if a process is an AI agent process by examining its command line
 function isAgentProcess(pid: number): boolean {

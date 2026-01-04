@@ -3,7 +3,7 @@
 Vibora is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating AI coding agents across isolated git worktrees.
 
 **Philosophy**:
-- Terminal-first AI agent orchestration. Agents (Claude Code, Codex, etc.) run in terminals as-is—no abstraction layer, no wrapper APIs.
+- Terminal-first AI agent orchestration. Agents (Claude Code, OpenCode, etc.) run in terminals as-is—no abstraction layer, no wrapper APIs.
 - Currently tasks create isolated git worktrees, but the architecture supports evolution toward more general task types.
 - Persistent terminals organized in tabs for work that doesn't fit neatly into task worktrees.
 - App deployment via Docker Compose with automatic DNS/tunnel routing.
