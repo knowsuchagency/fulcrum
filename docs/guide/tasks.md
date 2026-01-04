@@ -1,13 +1,13 @@
 # Tasks & Worktrees
 
-Tasks are the core unit of work in Vibora. Each task represents a piece of work that runs in an isolated git worktree.
+Tasks are the core unit of work in Vibora. Each task represents a piece of work that runs in an isolated git worktree with an AI coding agent (Claude Code or OpenCode).
 
 ## How Tasks Work
 
 When you create a task:
 
 1. **A new git worktree is created** from your repository's main branch
-2. **A terminal is opened** in the worktree directory
+2. **A terminal is opened** with your configured AI agent (Claude Code or OpenCode)
 3. **The task appears on the Kanban board** in the "In Progress" column
 4. **Status syncs automatically** when using the Claude Code plugin
 
@@ -45,7 +45,7 @@ The Kanban board shows all tasks organized by status. Drag tasks between columns
 
 ### Task Terminals View
 
-See all Claude Code sessions across every task in one parallel view. This is the killer feature for orchestrating multiple agents.
+See all AI agent sessions across every task in one parallel view. This is the killer feature for orchestrating multiple agents.
 
 ![Task Terminals View](/screenshots/terminals-view-with-tests.png)
 
@@ -55,10 +55,10 @@ Click on a task to open the detail view with a split-pane layout:
 
 ![Task Detail View](/screenshots/task-detail-split-view.png)
 
-The left panel shows the Claude Code terminal. The right panel has three tabs:
+The left panel shows the AI agent terminal. The right panel has three tabs:
 
 - **Diff** — View all changes made in the worktree compared to the base branch
-- **Browser** — Integrated browser to preview your app as Claude works on it
+- **Browser** — Integrated browser to preview your app as your agent works on it
 - **Files** — Browse and edit files in the worktree
 
 The header contains quick-action buttons for common git operations:
@@ -79,7 +79,7 @@ The diagram below shows how these operations relate to each other:
 
 ![Git Workflow](/screenshots/task-detail-git-workflow.png)
 
-If a git operation fails, you'll see a toast with a "Resolve with Claude" button that sends a detailed prompt to Claude Code to help fix the issue.
+If a git operation fails, you'll see a toast with a "Resolve with Agent" button that sends a detailed prompt to your AI agent to help fix the issue.
 
 ## Git Worktrees
 

@@ -4,6 +4,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 describe('Settings', () => {
+  describe('schema version sync', () => {
+    test('CURRENT_SCHEMA_VERSION matches package.json major version', async () => {
+      const { CURRENT_SCHEMA_VERSION } = await import('./settings')
+      const packageJson = await import('../../package.json')
+      const majorVersion = parseInt(packageJson.version.split('.')[0], 10)
+
+      expect(CURRENT_SCHEMA_VERSION).toBe(majorVersion)
+    })
+  })
+
   let tempDir: string
   let originalEnv: Record<string, string | undefined>
 
@@ -148,7 +158,7 @@ describe('Settings', () => {
 
       // File should be updated with nested structure
       const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(migrated._schemaVersion).toBe(7) // Current schema version
+      expect(migrated._schemaVersion).toBe(8) // Current schema version
       expect(migrated.server?.port).toBe(8888)
       expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
       expect(migrated.integrations?.linearApiKey).toBe('migrated-key')
@@ -178,7 +188,7 @@ describe('Settings', () => {
     test('skips migration if already at current schema version', async () => {
       const settingsPath = join(tempDir, 'settings.json')
       const originalContent = {
-        _schemaVersion: 7, // Current schema version
+        _schemaVersion: 8, // Current schema version
         server: { port: 8888 },
       }
       writeFileSync(settingsPath, JSON.stringify(originalContent))
@@ -465,7 +475,7 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // Schema version should be set to current
-      expect(file._schemaVersion).toBe(7)
+      expect(file._schemaVersion).toBe(8)
     })
 
     test('creates settings file with all defaults if none exists', async () => {
@@ -480,7 +490,7 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // All default sections should exist
-      expect(file._schemaVersion).toBe(7)
+      expect(file._schemaVersion).toBe(8)
       expect(file.server.port).toBe(7777)
       expect(file.editor.app).toBe('vscode')
       expect(file.notifications.enabled).toBe(true)
@@ -533,6 +543,74 @@ describe('Settings', () => {
       expect(file.zai.enabled).toBe(false)
       expect(file.zai.apiKey).toBeNull()
       expect(file.zai.haikuModel).toBe('glm-4.5-air')
+    })
+  })
+
+  describe('agent settings', () => {
+    test('returns default agent as claude when not configured', async () => {
+      const { getSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      const settings = getSettings()
+
+      expect(settings.agent.defaultAgent).toBe('claude')
+    })
+
+    test('reads agent.defaultAgent from file', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 8,
+          agent: { defaultAgent: 'opencode' },
+        })
+      )
+
+      const { getSettings } = await import('./settings')
+      const settings = getSettings()
+
+      expect(settings.agent.defaultAgent).toBe('opencode')
+    })
+
+    test('updates agent.defaultAgent via updateSettingByPath', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 8,
+          agent: { defaultAgent: 'claude' },
+        })
+      )
+
+      const { updateSettingByPath, getSettings } = await import('./settings')
+      updateSettingByPath('agent.defaultAgent', 'opencode')
+
+      const settings = getSettings()
+      expect(settings.agent.defaultAgent).toBe('opencode')
+
+      // Verify persistence
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+      expect(file.agent.defaultAgent).toBe('opencode')
+    })
+
+    test('ensureLatestSettings adds missing agent section', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 7, // Old version without agent section
+          server: { port: 7777 },
+        })
+      )
+
+      const { ensureLatestSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // Agent section should be added with defaults
+      expect(file.agent).toBeDefined()
+      expect(file.agent.defaultAgent).toBe('claude')
     })
   })
 

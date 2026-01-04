@@ -51,6 +51,7 @@ import { useJobs, useJobsAvailable, useEnableJob, useDisableJob, useRunJobNow, u
 import type { SystemdTimer } from '@/types'
 import { cn } from '@/lib/utils'
 import type { Worktree, TaskStatus } from '@/types'
+import { AGENT_DISPLAY_NAMES } from '@shared/types'
 import {
   useClaudeInstances,
   useSystemMetrics,
@@ -248,7 +249,7 @@ function ClaudeInstancesTab() {
       {instances && instances.length > 0 && (
         <div className="space-y-2">
           {/* Header - desktop only */}
-          <div className="hidden lg:grid grid-cols-[32px_60px_150px_1fr_1fr_80px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
+          <div className="hidden lg:grid grid-cols-[32px_60px_100px_150px_1fr_1fr_80px_80px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground">
             <div className="flex items-center justify-center">
               <Checkbox
                 checked={selectedPids.size === instances.length}
@@ -257,6 +258,7 @@ function ClaudeInstancesTab() {
               />
             </div>
             <span>{t('claude.headers.pid')}</span>
+            <span>{t('claude.headers.agent')}</span>
             <span>{t('claude.headers.terminal')}</span>
             <span>{t('claude.headers.task')}</span>
             <span>{t('claude.headers.workingDirectory')}</span>
@@ -276,6 +278,16 @@ function ClaudeInstancesTab() {
                       disabled={isAnyKilling}
                       className="shrink-0"
                     />
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'shrink-0 text-xs',
+                        instance.agent === 'claude' && 'border-purple-500/50 text-purple-600 dark:text-purple-400',
+                        instance.agent === 'opencode' && 'border-teal-500/50 text-teal-600 dark:text-teal-400'
+                      )}
+                    >
+                      {AGENT_DISPLAY_NAMES[instance.agent] || instance.agent}
+                    </Badge>
                     <span className="text-sm font-medium truncate">
                       {instance.taskId ? (
                         <Link
@@ -311,7 +323,7 @@ function ClaudeInstancesTab() {
               </div>
 
               {/* Desktop: grid layout */}
-              <div className="hidden lg:grid grid-cols-[32px_60px_150px_1fr_1fr_80px_80px] items-center gap-4">
+              <div className="hidden lg:grid grid-cols-[32px_60px_100px_150px_1fr_1fr_80px_80px] items-center gap-4">
                 <div className="flex items-center justify-center">
                   <Checkbox
                     checked={selectedPids.has(instance.pid)}
@@ -320,6 +332,16 @@ function ClaudeInstancesTab() {
                   />
                 </div>
                 <span className="font-mono text-xs">{instance.pid}</span>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs justify-center',
+                    instance.agent === 'claude' && 'border-purple-500/50 text-purple-600 dark:text-purple-400',
+                    instance.agent === 'opencode' && 'border-teal-500/50 text-teal-600 dark:text-teal-400'
+                  )}
+                >
+                  {AGENT_DISPLAY_NAMES[instance.agent] || instance.agent}
+                </Badge>
                 <span className="truncate text-sm">
                   {instance.isViboraManaged ? (
                     <span>{instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}</span>

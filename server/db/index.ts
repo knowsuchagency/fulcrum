@@ -130,6 +130,9 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       const hasTunnelsTable = sqlite
         .query("SELECT name FROM sqlite_master WHERE type='table' AND name='tunnels'")
         .get()
+      const hasAgentColumn = sqlite
+        .query("SELECT name FROM pragma_table_info('tasks') WHERE name='agent'")
+        .get()
 
       // Determine which migrations should be marked as applied based on schema state
       const migrationsToMark: Array<{ tag: string; when: number }> = []
@@ -160,6 +163,10 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         }
         // 0017 creates tunnels table and adds exposure_method to app_services
         else if (entry.tag.startsWith('0017') && hasTunnelsTable) {
+          shouldMark = true
+        }
+        // 0018 adds agent column to tasks and opencode_options to repositories
+        else if (entry.tag.startsWith('0018') && hasAgentColumn) {
           shouldMark = true
         }
 

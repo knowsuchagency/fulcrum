@@ -25,8 +25,10 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./frontend/*"]
+      "@/*": ["./frontend/*"],
+      "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["frontend"]
+  "include": ["frontend", "shared"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"]
 }

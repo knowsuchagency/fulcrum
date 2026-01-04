@@ -7,7 +7,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./frontend/*"]
+      "@/*": ["./frontend/*"],
+      "@shared/*": ["./shared/*"]
     }
   }
 }

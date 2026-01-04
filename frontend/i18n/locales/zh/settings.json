@@ -7,6 +7,7 @@
     "editor": "编辑器",
     "integrations": "集成",
     "zai": "z.ai",
+    "agent": "AI 代理",
     "notifications": "通知",
     "appearance": "外观",
     "developer": "开发者"
@@ -67,6 +68,12 @@
       "haiku": "Haiku",
       "sonnet": "Sonnet",
       "opus": "Opus"
+    },
+    "agent": {
+      "default": {
+        "label": "默认代理",
+        "description": "新任务使用的 AI 编码代理"
+      }
     },
     "language": {
       "label": "语言",

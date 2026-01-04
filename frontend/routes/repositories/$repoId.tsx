@@ -41,7 +41,7 @@ import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { DeleteRepositoryDialog } from '@/components/repositories/delete-repository-dialog'
 import { AddRepositoryDialog } from '@/components/repositories/add-repository-dialog'
 import { useAppByRepository, useFindCompose } from '@/hooks/use-apps'
-import { ClaudeOptionsEditor } from '@/components/repositories/claude-options-editor'
+import { AgentOptionsEditor } from '@/components/repositories/agent-options-editor'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { Terminal } from '@/components/terminal/terminal'
@@ -111,6 +111,7 @@ function RepositoryDetailView() {
   const [startupScript, setStartupScript] = useState('')
   const [copyFiles, setCopyFiles] = useState('')
   const [claudeOptions, setClaudeOptions] = useState<Record<string, string>>({})
+  const [opencodeOptions, setOpencodeOptions] = useState<Record<string, string>>({})
   const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
@@ -210,6 +211,7 @@ function RepositoryDetailView() {
       setStartupScript(repository.startupScript || '')
       setCopyFiles(repository.copyFiles || '')
       setClaudeOptions(repository.claudeOptions || {})
+      setOpencodeOptions(repository.opencodeOptions || {})
       setIsCopierTemplate(repository.isCopierTemplate ?? false)
       setHasChanges(false)
     }
@@ -223,10 +225,11 @@ function RepositoryDetailView() {
         startupScript !== (repository.startupScript || '') ||
         copyFiles !== (repository.copyFiles || '') ||
         JSON.stringify(claudeOptions) !== JSON.stringify(repository.claudeOptions || {}) ||
+        JSON.stringify(opencodeOptions) !== JSON.stringify(repository.opencodeOptions || {}) ||
         isCopierTemplate !== (repository.isCopierTemplate ?? false)
       setHasChanges(changed)
     }
-  }, [displayName, startupScript, copyFiles, claudeOptions, isCopierTemplate, repository])
+  }, [displayName, startupScript, copyFiles, claudeOptions, opencodeOptions, isCopierTemplate, repository])
 
   const handleSave = () => {
     if (!repository) return
@@ -239,6 +242,7 @@ function RepositoryDetailView() {
           startupScript: startupScript.trim() || null,
           copyFiles: copyFiles.trim() || null,
           claudeOptions: Object.keys(claudeOptions).length > 0 ? claudeOptions : null,
+          opencodeOptions: Object.keys(opencodeOptions).length > 0 ? opencodeOptions : null,
           isCopierTemplate,
         },
       },
@@ -566,9 +570,20 @@ function RepositoryDetailView() {
                     <FieldDescription className="mb-2">
                       {t('detailView.settings.claudeOptionsDescription')}
                     </FieldDescription>
-                    <ClaudeOptionsEditor
+                    <AgentOptionsEditor
                       value={claudeOptions}
                       onChange={setClaudeOptions}
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>{t('detailView.settings.opencodeOptions')}</FieldLabel>
+                    <FieldDescription className="mb-2">
+                      {t('detailView.settings.opencodeOptionsDescription')}
+                    </FieldDescription>
+                    <AgentOptionsEditor
+                      value={opencodeOptions}
+                      onChange={setOpencodeOptions}
                     />
                   </Field>
 

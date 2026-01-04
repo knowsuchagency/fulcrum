@@ -11,7 +11,7 @@ npx vibora@latest up
 ```
 
 Vibora 将会：
-- 检查所需依赖项（bun、dtach、Claude Code、uv）
+- 检查所需依赖项（bun、dtach、AI 代理 CLI、uv）
 - 提示安装缺失的依赖
 - 在 http://localhost:7777 启动服务器
 - 显示入门提示
@@ -44,12 +44,52 @@ vibora doctor
 4. 在弹出对话框中确认点击 **仍要打开**
 :::
 
-### 安装脚本
+### 安装脚本（推荐用于远程服务器）
 
 用于自动化安装（适用于远程服务器）：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.sh | bash
+```
+
+安装脚本会安装 bun、dtach、uv、Claude Code、OpenCode、GitHub CLI、Docker、cloudflared 以及 vibora CLI + Claude Code 插件。
+
+## 依赖项
+
+### 必需
+
+这些必须安装才能使 Vibora 正常工作：
+
+| 依赖项 | 用途 |
+|------------|---------|
+| **git** | 版本控制（必须预先安装） |
+| **bun** | JavaScript 运行时 |
+| **dtach** | 终端会话持久化 |
+
+### AI 代理（至少需要一个）
+
+| 代理 | 描述 |
+|-------|-------------|
+| **Claude Code** | Anthropic 的 CLI 编程代理，深度 MCP 集成 |
+| **OpenCode** | 开源编程代理，支持 GPT-4 及其他模型 |
+
+在设置 > 代理中配置您首选的代理。
+
+### 可选
+
+这些启用额外功能：
+
+| 依赖项 | 功能 |
+|------------|---------|
+| **uv** | Python 包管理器，用于基于 Python 的技能 |
+| **gh** (GitHub CLI) | PR 创建和 GitHub 集成 |
+| **Docker** | 使用 Docker Compose 部署应用 |
+| **cloudflared** | Cloudflare 隧道，用于安全远程访问 |
+
+检查您的安装环境：
+
+```bash
+vibora doctor
 ```
 
 ## 安装 Claude Code 插件
@@ -77,7 +117,7 @@ claude plugin install vibora@vibora --scope user
 
 您的任务现在运行在独立的工作树中。您可以：
 - 在编辑器中打开
-- 在终端中启动 Claude Code
+- 在终端中启动您的 AI 代理
 - 在看板上跟踪进度
 
 ## 下一步

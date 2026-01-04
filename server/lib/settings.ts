@@ -2,9 +2,12 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import { log } from './logger'
+import type { AgentType } from '@shared/types'
 
 // Schema version for settings migration
-const CURRENT_SCHEMA_VERSION = 7
+// IMPORTANT: This must match the major version in package.json
+// When bumping schema version, also bump major version with: mise run bump major
+export const CURRENT_SCHEMA_VERSION = 8
 
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed' | 'antigravity'
@@ -32,6 +35,9 @@ export interface Settings {
     githubPat: string | null
     cloudflareApiToken: string | null
     cloudflareAccountId: string | null
+  }
+  agent: {
+    defaultAgent: AgentType
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -61,6 +67,9 @@ const DEFAULT_SETTINGS: Settings = {
     githubPat: null,
     cloudflareApiToken: null,
     cloudflareAccountId: null,
+  },
+  agent: {
+    defaultAgent: 'claude',
   },
   appearance: {
     language: null,
@@ -315,6 +324,9 @@ export function getSettings(): Settings {
       cloudflareApiToken: ((parsed.integrations as Record<string, unknown>)?.cloudflareApiToken as string | null) ?? null,
       cloudflareAccountId: ((parsed.integrations as Record<string, unknown>)?.cloudflareAccountId as string | null) ?? null,
     },
+    agent: {
+      defaultAgent: ((parsed.agent as Record<string, unknown>)?.defaultAgent as AgentType) ?? DEFAULT_SETTINGS.agent.defaultAgent,
+    },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
       theme: ((parsed.appearance as Record<string, unknown>)?.theme as 'system' | 'light' | 'dark' | null) ?? null,
@@ -349,6 +361,7 @@ export function getSettings(): Settings {
       cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? fileSettings.integrations.cloudflareApiToken,
       cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? fileSettings.integrations.cloudflareAccountId,
     },
+    agent: fileSettings.agent,
     appearance: fileSettings.appearance,
   }
 }

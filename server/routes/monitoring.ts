@@ -8,11 +8,21 @@ import { getPTYManager } from '../terminal/pty-instance'
 import { getDtachService } from '../terminal/dtach-service'
 import { getMetrics, getCurrentMetrics } from '../services/metrics-collector'
 import { getZAiSettings } from '../lib/settings'
+import type { AgentType } from '@shared/types'
 
 const isMacOS = process.platform === 'darwin'
 
-interface ClaudeInstance {
+// Agent process patterns for detection
+// Must be preceded by / or start, and followed by whitespace/null/end
+// This avoids matching directory paths like /vibora/opencode/sockets/ or /worktrees/claude-test/
+const AGENT_PATTERNS: Record<AgentType, RegExp> = {
+  claude: /(^|\/)claude(\s|\0|$)/i,
+  opencode: /(^|\/)opencode(\s|\0|$)/i,
+}
+
+interface AgentInstance {
   pid: number
+  agent: AgentType
   cwd: string
   ramMB: number
   startedAt: number | null
@@ -38,9 +48,25 @@ function parseWindow(window: string): number {
   return 3600
 }
 
-// Find all Claude processes on the system
-function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
-  const claudeProcesses: Array<{ pid: number; cmdline: string }> = []
+// Detect which agent type a command line matches
+function detectAgentType(cmdline: string): AgentType | null {
+  for (const [agentType, pattern] of Object.entries(AGENT_PATTERNS)) {
+    if (pattern.test(cmdline)) {
+      return agentType as AgentType
+    }
+  }
+  return null
+}
+
+// Find all agent processes on the system (Claude Code, OpenCode)
+function findAllAgentProcesses(agentFilter?: AgentType[]): Array<{ pid: number; cmdline: string; agent: AgentType }> {
+  const agentProcesses: Array<{ pid: number; cmdline: string; agent: AgentType }> = []
+
+  // Build combined pattern for efficiency
+  const patternsToCheck = agentFilter
+    ? agentFilter.map((t) => AGENT_PATTERNS[t])
+    : Object.values(AGENT_PATTERNS)
+  const combinedPattern = new RegExp(patternsToCheck.map((p) => p.source).join('|'), 'i')
 
   try {
     const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d))
@@ -48,9 +74,11 @@ function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
       const pid = parseInt(pidStr, 10)
       try {
         const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-        // Check for claude process (claude, claude-code, @anthropic/claude-code, etc.)
-        if (/\bclaude\b/i.test(cmdline)) {
-          claudeProcesses.push({ pid, cmdline })
+        if (combinedPattern.test(cmdline)) {
+          const agent = detectAgentType(cmdline)
+          if (agent && (!agentFilter || agentFilter.includes(agent))) {
+            agentProcesses.push({ pid, cmdline, agent })
+          }
         }
       } catch {
         // Process may have exited, skip
@@ -58,25 +86,32 @@ function findAllClaudeProcesses(): Array<{ pid: number; cmdline: string }> {
     }
   } catch {
     // /proc not available (non-Linux), fallback to pgrep
-    try {
-      const result = execSync('pgrep -f claude', { encoding: 'utf-8' })
-      for (const line of result.trim().split('\n')) {
-        const pid = parseInt(line, 10)
-        if (!isNaN(pid)) {
-          try {
-            const cmdline = execSync(`ps -p ${pid} -o args=`, { encoding: 'utf-8' }).trim()
-            claudeProcesses.push({ pid, cmdline })
-          } catch {
-            claudeProcesses.push({ pid, cmdline: 'claude' })
+    // Try each agent pattern separately
+    const agentsToCheck = agentFilter ?? (['claude', 'opencode'] as AgentType[])
+    for (const agentType of agentsToCheck) {
+      try {
+        const result = execSync(`pgrep -f ${agentType}`, { encoding: 'utf-8' })
+        for (const line of result.trim().split('\n')) {
+          const pid = parseInt(line, 10)
+          if (!isNaN(pid)) {
+            try {
+              const cmdline = execSync(`ps -p ${pid} -o args=`, { encoding: 'utf-8' }).trim()
+              const detected = detectAgentType(cmdline)
+              if (detected === agentType) {
+                agentProcesses.push({ pid, cmdline, agent: agentType })
+              }
+            } catch {
+              agentProcesses.push({ pid, cmdline: agentType, agent: agentType })
+            }
           }
         }
+      } catch {
+        // No matches for this agent
       }
-    } catch {
-      // No matches
     }
   }
 
-  return claudeProcesses
+  return agentProcesses
 }
 
 // Get process working directory
@@ -199,8 +234,8 @@ export const monitoringRoutes = new Hono()
 monitoringRoutes.get('/claude-instances', (c) => {
   const filter = c.req.query('filter') || 'vibora'
 
-  // Find all Claude processes on the system
-  const allClaudeProcesses = findAllClaudeProcesses()
+  // Find all agent processes on the system (Claude, OpenCode, etc.)
+  const allAgentProcesses = findAllAgentProcesses()
 
   // Get Vibora terminals and their process trees
   const viboraManagedPids = new Map<number, { terminalId: string; terminalName: string; cwd: string }>()
@@ -277,10 +312,10 @@ monitoringRoutes.get('/claude-instances', (c) => {
     allTasks.filter((t) => t.worktreePath).map((t) => [t.worktreePath!, t])
   )
 
-  // Build Claude instances list
-  const instances: ClaudeInstance[] = []
+  // Build agent instances list
+  const instances: AgentInstance[] = []
 
-  for (const { pid } of allClaudeProcesses) {
+  for (const { pid, agent } of allAgentProcesses) {
     const viboraInfo = viboraManagedPids.get(pid)
     const isViboraManaged = !!viboraInfo
 
@@ -309,6 +344,7 @@ monitoringRoutes.get('/claude-instances', (c) => {
 
     instances.push({
       pid,
+      agent,
       cwd,
       ramMB,
       startedAt,
@@ -363,7 +399,7 @@ monitoringRoutes.post('/claude-instances/:terminalId/kill', (c) => {
 })
 
 // POST /api/monitoring/claude-instances/:pid/kill-pid
-// Kill a Claude process by PID (for non-Vibora managed instances)
+// Kill an agent process by PID (for non-Vibora managed instances)
 monitoringRoutes.post('/claude-instances/:pid/kill-pid', (c) => {
   const pidStr = c.req.param('pid')
   const pid = parseInt(pidStr, 10)
@@ -373,10 +409,11 @@ monitoringRoutes.post('/claude-instances/:pid/kill-pid', (c) => {
   }
 
   try {
-    // Verify it's actually a Claude process before killing
+    // Verify it's actually an agent process before killing
     const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf-8')
-    if (!/\bclaude\b/i.test(cmdline)) {
-      return c.json({ error: 'Process is not a Claude instance' }, 400)
+    const agent = detectAgentType(cmdline)
+    if (!agent) {
+      return c.json({ error: 'Process is not a recognized AI agent' }, 400)
     }
 
     process.kill(pid, 'SIGTERM')

@@ -189,6 +189,8 @@ export const RootStore = types
      */
     terminalsPendingStartup: new Map<string, {
       startupScript?: string | null
+      agent?: string
+      agentOptions?: Record<string, string> | null
       aiMode?: 'default' | 'plan'
       description?: string
       taskName: string
@@ -368,6 +370,8 @@ export const RootStore = types
         /** Startup info for task terminals - stored in volatile to survive component unmount */
         startup?: {
           startupScript?: string | null
+          agent?: string
+          agentOptions?: Record<string, string> | null
           aiMode?: 'default' | 'plan'
           description?: string
           taskName: string

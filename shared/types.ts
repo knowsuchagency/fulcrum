@@ -1,5 +1,23 @@
 // Shared types between server, frontend, and CLI
 
+// Supported AI coding agents
+export type AgentType = 'claude' | 'opencode'
+
+export const AGENT_DISPLAY_NAMES: Record<AgentType, string> = {
+  claude: 'Claude Code',
+  opencode: 'OpenCode',
+}
+
+export const AGENT_INSTALL_COMMANDS: Record<AgentType, string> = {
+  claude: 'npm install -g @anthropic-ai/claude-code',
+  opencode: 'npm install -g opencode-ai@latest',
+}
+
+export const AGENT_DOC_URLS: Record<AgentType, string> = {
+  claude: 'https://docs.anthropic.com/en/docs/claude-code/overview',
+  opencode: 'https://opencode.ai/docs/',
+}
+
 export type TaskStatus =
   | 'IN_PROGRESS'
   | 'IN_REVIEW'
@@ -56,8 +74,9 @@ export interface Task {
   linearTicketId: string | null
   linearTicketUrl: string | null
   startupScript: string | null
+  agent: AgentType
   aiMode: 'default' | 'plan' | null
-  claudeOptions: Record<string, string> | null
+  agentOptions: Record<string, string> | null
   createdAt: string
   updatedAt: string
 }
@@ -134,6 +153,7 @@ export interface Repository {
   startupScript: string | null
   copyFiles: string | null
   claudeOptions: Record<string, string> | null
+  opencodeOptions: Record<string, string> | null
   remoteUrl: string | null
   isCopierTemplate: boolean
   createdAt: string

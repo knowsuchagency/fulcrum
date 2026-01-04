@@ -33,6 +33,7 @@ export const CONFIG_KEYS = {
   EDITOR_SSH_PORT: 'editor.sshPort',
   LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
+  DEFAULT_AGENT: 'agent.defaultAgent',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
@@ -339,6 +340,11 @@ app.put('/:key', async (c) => {
       const validApps: EditorApp[] = ['vscode', 'cursor', 'windsurf', 'zed', 'antigravity']
       if (!validApps.includes(value as EditorApp)) {
         return c.json({ error: `Editor app must be one of: ${validApps.join(', ')}` }, 400)
+      }
+    } else if (path === CONFIG_KEYS.DEFAULT_AGENT) {
+      const validAgents = ['claude', 'opencode']
+      if (!validAgents.includes(value as string)) {
+        return c.json({ error: `Default agent must be one of: ${validAgents.join(', ')}` }, 400)
       }
     } else if (typeof value === 'string' && value === '') {
       // Convert empty strings to null for nullable fields

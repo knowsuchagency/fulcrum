@@ -16,6 +16,7 @@ function toApiResponse(row: typeof repositories.$inferSelect): Repository {
   return {
     ...row,
     claudeOptions: row.claudeOptions ? JSON.parse(row.claudeOptions) : null,
+    opencodeOptions: row.opencodeOptions ? JSON.parse(row.opencodeOptions) : null,
   }
 }
 
@@ -52,6 +53,7 @@ app.post('/', async (c) => {
       startupScript?: string | null
       copyFiles?: string | null
       claudeOptions?: Record<string, string> | null
+      opencodeOptions?: Record<string, string> | null
       isCopierTemplate?: boolean
     }>()
 
@@ -87,6 +89,7 @@ app.post('/', async (c) => {
       startupScript: body.startupScript || null,
       copyFiles: body.copyFiles || null,
       claudeOptions: body.claudeOptions ? JSON.stringify(body.claudeOptions) : null,
+      opencodeOptions: body.opencodeOptions ? JSON.stringify(body.opencodeOptions) : null,
       isCopierTemplate: body.isCopierTemplate ?? false,
       createdAt: now,
       updatedAt: now,
@@ -241,6 +244,7 @@ app.patch('/:id', async (c) => {
       startupScript?: string | null
       copyFiles?: string | null
       claudeOptions?: Record<string, string> | null
+      opencodeOptions?: Record<string, string> | null
       isCopierTemplate?: boolean
     }>()
 
@@ -268,10 +272,13 @@ app.patch('/:id', async (c) => {
 
     const now = new Date().toISOString()
 
-    // Serialize claudeOptions if provided
+    // Serialize agent options if provided
     const updateData: Record<string, unknown> = { ...body, updatedAt: now }
     if ('claudeOptions' in body) {
       updateData.claudeOptions = body.claudeOptions ? JSON.stringify(body.claudeOptions) : null
+    }
+    if ('opencodeOptions' in body) {
+      updateData.opencodeOptions = body.opencodeOptions ? JSON.stringify(body.opencodeOptions) : null
     }
 
     db.update(repositories)

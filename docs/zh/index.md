@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Vibora
   text: 掌控注意力，编排代理，发布产品
-  tagline: 并行运行多个 Claude Code 会话，部署到生产环境，自托管
+  tagline: 并行运行 AI 编程代理（Claude Code、OpenCode），部署到生产环境，自托管
   image:
     src: /logo.png
     alt: Vibora
@@ -42,7 +42,7 @@ features:
 
 ## 功能概述
 
-在隔离的 git 工作树中并行运行多个 Claude Code 会话。在一个屏幕上监控所有会话。合上笔记本电脑——它们继续工作。准备就绪后部署到生产环境。自托管且开源。
+在隔离的 git 工作树中并行运行多个 AI 编程代理会话。支持 **Claude Code** 和 **OpenCode**，可按仓库和任务选择代理。在一个屏幕上监控所有会话。合上笔记本电脑——它们继续工作。准备就绪后部署到生产环境。自托管且开源。
 
 ## 快速开始
 

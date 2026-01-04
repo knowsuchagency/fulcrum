@@ -11,7 +11,7 @@ npx vibora@latest up
 ```
 
 Vibora will:
-- Check for required dependencies (bun, dtach, Claude Code, uv)
+- Check for required dependencies (bun, dtach, AI agent CLI, uv)
 - Offer to install any that are missing
 - Start the server on http://localhost:7777
 - Show getting started tips
@@ -52,7 +52,7 @@ For remote servers or VPS, use the install script—it auto-installs all depende
 curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.sh | bash
 ```
 
-This installs bun, dtach, uv, Claude Code, GitHub CLI, Docker, cloudflared, and the vibora CLI + Claude Code plugin.
+This installs bun, dtach, uv, Claude Code, OpenCode, GitHub CLI, Docker, cloudflared, and the vibora CLI + Claude Code plugin.
 
 ## Dependencies
 
@@ -65,7 +65,15 @@ These must be installed for Vibora to work:
 | **git** | Version control (must be pre-installed) |
 | **bun** | JavaScript runtime |
 | **dtach** | Terminal session persistence |
-| **Claude Code** | AI coding agent |
+
+### AI Agents (at least one required)
+
+| Agent | Description |
+|-------|-------------|
+| **Claude Code** | Anthropic's CLI coding agent with deep MCP integration |
+| **OpenCode** | Open-source coding agent with GPT-4 and other model support |
+
+Configure your preferred agent in Settings > Agent.
 
 ### Optional
 
@@ -109,7 +117,7 @@ The plugin enables:
 
 Your task is now running in its own worktree. You can:
 - Open it in your editor
-- Start Claude Code in the terminal
+- Start your AI agent in the terminal
 - Track progress on the Kanban board
 
 ## Next Steps

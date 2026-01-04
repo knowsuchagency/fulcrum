@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 
-interface ClaudeOptionsEditorProps {
+interface AgentOptionsEditorProps {
   value: Record<string, string>
   onChange: (value: Record<string, string>) => void
 }
@@ -16,7 +16,7 @@ interface OptionRow {
   value: string
 }
 
-export function ClaudeOptionsEditor({ value, onChange }: ClaudeOptionsEditorProps) {
+export function AgentOptionsEditor({ value, onChange }: AgentOptionsEditorProps) {
   const { t } = useTranslation('repositories')
 
   // Convert object to rows for editing
@@ -97,10 +97,10 @@ export function ClaudeOptionsEditor({ value, onChange }: ClaudeOptionsEditorProp
             <thead>
               <tr className="bg-muted/50">
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground w-[40%]">
-                  {t('detailView.settings.claudeOptionsFlag')}
+                  {t('detailView.settings.agentOptionsFlag')}
                 </th>
                 <th className="text-left px-3 py-2 font-medium text-muted-foreground">
-                  {t('detailView.settings.claudeOptionsValue')}
+                  {t('detailView.settings.agentOptionsValue')}
                 </th>
                 <th className="w-10"></th>
               </tr>
@@ -149,7 +149,7 @@ export function ClaudeOptionsEditor({ value, onChange }: ClaudeOptionsEditorProp
         className="w-full"
       >
         <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} data-slot="icon" />
-        {t('detailView.settings.addClaudeOption')}
+        {t('detailView.settings.addAgentOption')}
       </Button>
     </div>
   )

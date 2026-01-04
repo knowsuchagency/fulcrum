@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Vibora
   text: Harness Attention. Orchestrate Agents. Ship.
-  tagline: Run parallel Claude Code sessions. Deploy to production. Self-hosted.
+  tagline: Run parallel AI coding agents. Deploy to production. Self-hosted.
   image:
     src: /logo.png
     alt: Vibora
@@ -22,13 +22,13 @@ features:
     details: From isolated worktrees to production deployment. Build, test, and ship—all from one open-source platform on your own hardware.
   - icon: 🖥️
     title: Parallel Agent Orchestration
-    details: Run multiple Claude Code sessions across different tasks and worktrees. See and control all sessions in one parallel view.
+    details: Run multiple AI agent sessions across different tasks and worktrees. See and control all sessions in one parallel view.
   - icon: 📱
     title: Work From Anywhere
-    details: Close your laptop—Claude keeps working on your behalf. Pick up where you left off from your phone.
+    details: Close your laptop—your agents keep working on your behalf. Pick up where you left off from your phone.
   - icon: 🤖
-    title: Deep Claude Integration
-    details: Via MCP, Claude can orchestrate tasks, execute code on your remote machine, and deploy apps—securely and autonomously.
+    title: Multi-Agent Support
+    details: Choose between Claude Code and OpenCode. Configure globally, per-repository, or per-task.
   - icon: 🐳
     title: Docker Compose Deployment
     details: Deploy apps with Docker Compose. Automatic domain routing with Traefik, optional Cloudflare DNS integration, and real-time build logs.
@@ -39,7 +39,7 @@ features:
 
 ## What It Does
 
-Run multiple Claude Code sessions in parallel across isolated git worktrees. Monitor them all from one screen. Close your laptop—they keep working. Deploy to production when ready. Self-hosted and open source.
+Run multiple AI coding agent sessions in parallel across isolated git worktrees. Supports **Claude Code** and **OpenCode** with per-repository and per-task agent selection. Monitor them all from one screen. Close your laptop—they keep working. Deploy to production when ready. Self-hosted and open source.
 
 ## Quick Start
 

@@ -1,7 +1,7 @@
 {
   "title": "Monitoring",
   "tabs": {
-    "claude": "Claude Instances",
+    "claude": "AI Agents",
     "system": "System Metrics",
     "processes": "Processes",
     "vibora": "Vibora Servers",
@@ -13,6 +13,7 @@
     "instanceCount": "{{count}} instance(s) running",
     "totalRam": "{{ram}} MB total",
     "headers": {
+      "agent": "Agent",
       "terminal": "Terminal",
       "task": "Task",
       "ram": "RAM",
@@ -29,9 +30,9 @@
       "vibora": "Vibora: {{name}}",
       "external": "External"
     },
-    "empty": "No Claude instances running",
+    "empty": "No AI agent instances running",
     "emptyVibora": " in Vibora terminals",
-    "error": "Failed to load Claude instances: {{message}}"
+    "error": "Failed to load AI agent instances: {{message}}"
   },
   "system": {
     "cpuUsage": "CPU Usage",

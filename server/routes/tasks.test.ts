@@ -146,6 +146,73 @@ describe('Tasks Routes', () => {
       expect(body1.position).toBe(0)
       expect(body2.position).toBe(1)
     })
+
+    test('defaults agent to claude when not specified', async () => {
+      const { post } = createTestApp()
+
+      const res = await post('/api/tasks', {
+        title: 'Default Agent Task',
+        repoPath: repo.path,
+        repoName: 'test-repo',
+        baseBranch: repo.defaultBranch,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.agent).toBe('claude')
+    })
+
+    test('creates task with opencode agent', async () => {
+      const { post } = createTestApp()
+
+      const res = await post('/api/tasks', {
+        title: 'OpenCode Task',
+        repoPath: repo.path,
+        repoName: 'test-repo',
+        baseBranch: repo.defaultBranch,
+        agent: 'opencode',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.agent).toBe('opencode')
+    })
+
+    test('stores agentOptions as JSON', async () => {
+      const { post } = createTestApp()
+
+      const res = await post('/api/tasks', {
+        title: 'Task with Options',
+        repoPath: repo.path,
+        repoName: 'test-repo',
+        baseBranch: repo.defaultBranch,
+        agentOptions: { model: 'claude-3-opus', 'max-tokens': '4000' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.agentOptions).toEqual({ model: 'claude-3-opus', 'max-tokens': '4000' })
+    })
+
+    test('creates task with both agent and agentOptions', async () => {
+      const { post } = createTestApp()
+
+      const res = await post('/api/tasks', {
+        title: 'Full Agent Config Task',
+        repoPath: repo.path,
+        repoName: 'test-repo',
+        baseBranch: repo.defaultBranch,
+        agent: 'opencode',
+        aiMode: 'plan',
+        agentOptions: { model: 'gpt-4', temperature: '0.7' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.agent).toBe('opencode')
+      expect(body.aiMode).toBe('plan')
+      expect(body.agentOptions).toEqual({ model: 'gpt-4', temperature: '0.7' })
+    })
   })
 
   describe('GET /api/tasks/:id', () => {
@@ -181,6 +248,37 @@ describe('Tasks Routes', () => {
 
       expect(res.status).toBe(404)
       expect(body.error).toContain('not found')
+    })
+
+    test('returns agent and agentOptions as parsed JSON', async () => {
+      const now = new Date().toISOString()
+      db.insert(tasks)
+        .values({
+          id: 'agent-task-123',
+          title: 'Agent Task',
+          status: 'IN_PROGRESS',
+          position: 0,
+          repoPath: repo.path,
+          repoName: 'test-repo',
+          baseBranch: repo.defaultBranch,
+          agent: 'opencode',
+          aiMode: 'plan',
+          agentOptions: JSON.stringify({ model: 'gpt-4', temperature: '0.5' }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { get } = createTestApp()
+      const res = await get('/api/tasks/agent-task-123')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.agent).toBe('opencode')
+      expect(body.aiMode).toBe('plan')
+      // agentOptions should be parsed, not a JSON string
+      expect(body.agentOptions).toEqual({ model: 'gpt-4', temperature: '0.5' })
+      expect(typeof body.agentOptions).toBe('object')
     })
   })
 
