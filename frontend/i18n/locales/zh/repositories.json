@@ -143,6 +143,8 @@
       "files": "文件"
     },
     "settings": {
+      "generalTitle": "常规",
+      "agentTitle": "代理选项",
       "displayName": "显示名称",
       "defaultAgent": "默认代理",
       "defaultAgentInherit": "使用全局默认",

@@ -145,6 +145,8 @@
       "files": "Files"
     },
     "settings": {
+      "generalTitle": "General",
+      "agentTitle": "Agent Options",
       "displayName": "Display Name",
       "defaultAgent": "Default Agent",
       "defaultAgentInherit": "Use global default",
