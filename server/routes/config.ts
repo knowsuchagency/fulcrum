@@ -34,6 +34,7 @@ export const CONFIG_KEYS = {
   LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
   DEFAULT_AGENT: 'agent.defaultAgent',
+  OPENCODE_MODEL: 'agent.opencodeModel',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
@@ -345,6 +346,15 @@ app.put('/:key', async (c) => {
       const validAgents = ['claude', 'opencode']
       if (!validAgents.includes(value as string)) {
         return c.json({ error: `Default agent must be one of: ${validAgents.join(', ')}` }, 400)
+      }
+    } else if (path === CONFIG_KEYS.OPENCODE_MODEL) {
+      // OpenCode model can be null or a string like "anthropic/claude-opus-4-5"
+      if (value !== null && typeof value !== 'string') {
+        return c.json({ error: 'OpenCode model must be a string or null' }, 400)
+      }
+      // Convert empty string to null
+      if (value === '') {
+        value = null
       }
     } else if (typeof value === 'string' && value === '') {
       // Convert empty strings to null for nullable fields

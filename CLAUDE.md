@@ -30,6 +30,8 @@ mise run desktop:package  # Package desktop app for current platform
 mise run docs:dev     # Start documentation dev server
 ```
 
+For type checking, just run `mise run build` - it catches type errors and is faster than running separate typecheck commands.
+
 ## CLI
 
 The `vibora` package provides a global CLI:
@@ -106,6 +108,24 @@ vibora notify <title> <message>  # Send notification
 | `systemMetrics` | CPU/memory/disk metrics (24h rolling) |
 
 Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
+
+### Migrations
+
+Always use `mise run db:generate` to create migrations from schema changes. If you must write a migration manually:
+
+1. **Use backticks** around table and column names
+2. **Use `--> statement-breakpoint`** between multiple SQL statements
+3. **Add entry to `drizzle/meta/_journal.json`** with incremented idx and unique timestamp
+
+Example migration format:
+```sql
+ALTER TABLE `repositories` ADD `new_column` text;--> statement-breakpoint
+ALTER TABLE `tasks` ADD `new_column` text;
+```
+
+**Never use standard SQL syntax** like `ADD COLUMN column_name TYPE` - Drizzle won't parse it correctly.
+
+**Never use `db:push`** - It syncs schema directly without creating migration files. End users need migrations to upgrade their databases. Always use `db:generate` instead.
 
 ## Configuration
 

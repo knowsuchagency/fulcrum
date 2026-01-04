@@ -3,5 +3,5 @@
 -- For repositories: NULL means use global default from settings
 -- For tasks: NULL means use repository default, then global default
 
-ALTER TABLE repositories ADD COLUMN opencode_model TEXT;
-ALTER TABLE tasks ADD COLUMN opencode_model TEXT;
+ALTER TABLE `repositories` ADD `opencode_model` text;--> statement-breakpoint
+ALTER TABLE `tasks` ADD `opencode_model` text;

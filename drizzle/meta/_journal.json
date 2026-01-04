@@ -141,6 +141,13 @@
       "when": 1767500000000,
       "tag": "0019_repository_default_agent",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1767570000000,
+      "tag": "0020_opencode_model",
+      "breakpoints": true
     }
   ]
 }
