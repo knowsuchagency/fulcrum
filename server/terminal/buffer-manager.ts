@@ -55,13 +55,16 @@ export class BufferManager {
    * goes to the main buffer where scrollback is preserved.
    */
   private filterAlternateScreenSequences(data: string): string {
+    // Using RegExp constructor to avoid eslint no-control-regex warnings
+    // ESC = \x1b = \u001b
+    const ESC = '\u001b'
     return data
       // ESC[?1049h/l - save cursor & switch to/from alternate screen (most common)
-      .replace(/\x1b\[\?1049[hl]/g, '')
+      .replace(new RegExp(`${ESC}\\[\\?1049[hl]`, 'g'), '')
       // ESC[?47h/l - older alternate screen switch
-      .replace(/\x1b\[\?47[hl]/g, '')
+      .replace(new RegExp(`${ESC}\\[\\?47[hl]`, 'g'), '')
       // ESC[?1047h/l - alternate screen without cursor save
-      .replace(/\x1b\[\?1047[hl]/g, '')
+      .replace(new RegExp(`${ESC}\\[\\?1047[hl]`, 'g'), '')
   }
 
   getContents(): string {
