@@ -113,6 +113,7 @@ description = "Build for production"
 depends = ["install"]
 run = """
 rm -rf dist
+bunx drizzle-kit generate
 bunx tsc -b --force && bunx vite build
 """
 
@@ -120,6 +121,7 @@ bunx tsc -b --force && bunx vite build
 description = "Build for production with debug logging enabled"
 run = """
 rm -rf dist
+bunx drizzle-kit generate
 bunx tsc -b --force && DEBUG=1 bunx vite build
 """
 
