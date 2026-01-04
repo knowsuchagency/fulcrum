@@ -325,43 +325,22 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
       // Run startup commands only if this is a newly created terminal (not restored from persistence)
       if (!pendingStartup) {
         // No startup commands - focus immediately if autoFocus is enabled
-        log.taskTerminal.info('onAttached: no pending startup', {
-          autoFocus: autoFocusRef.current,
-          hasFocused: hasFocusedRef.current,
-          hasTermRef: !!termRef.current,
-        })
         if (autoFocusRef.current && !hasFocusedRef.current && termRef.current) {
-          const focusTerminal = (attempt: number) => {
+          const focusTerminal = () => {
             const term = termRef.current
-            log.taskTerminal.info('focusTerminal attempt (no startup)', {
-              attempt,
-              hasFocused: hasFocusedRef.current,
-              hasTermRef: !!term,
-              hasTextarea: !!term?.textarea,
-              activeElementBefore: document.activeElement?.tagName,
-            })
             if (!hasFocusedRef.current && term) {
               term.focus()
-              const success = term.textarea === document.activeElement
-              log.taskTerminal.info('focusTerminal result (no startup)', {
-                attempt,
-                success,
-                activeElementAfter: document.activeElement?.tagName,
-                textareaElement: term.textarea?.tagName,
-              })
-              if (success) {
+              if (term.textarea === document.activeElement) {
                 hasFocusedRef.current = true
               }
             }
           }
-          setTimeout(() => focusTerminal(1), 50)
-          setTimeout(() => focusTerminal(2), 200)
-          setTimeout(() => focusTerminal(3), 500)
+          setTimeout(focusTerminal, 50)
+          setTimeout(focusTerminal, 200)
+          setTimeout(focusTerminal, 500)
         }
         return
       }
-
-      log.taskTerminal.info('onAttached: running startup commands', { terminalId: actualTerminalId })
       setIsStartingAgent(true)
       const {
         startupScript: currentStartupScript,
@@ -406,49 +385,24 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
       // Wait longer for startup script to complete before sending agent command
       // 5 seconds should be enough for most scripts (mise trust, mkdir, export, etc.)
       setTimeout(() => {
-        log.taskTerminal.debug('writing agent command to terminal', {
-          terminalId: actualTerminalId,
-          agent: currentAgent,
-          taskCommand: taskCommand.substring(0, 50) + '...',
-        })
         writeToTerminalRef.current(actualTerminalId, taskCommand + '\r')
         setIsStartingAgent(false)
         // Clear the MST store's isStartingUp flag (for /terminals view)
         clearStartingUpRef.current(actualTerminalId)
         // Auto-focus terminal after agent starts
-        log.taskTerminal.info('after agent command: checking focus', {
-          autoFocus: autoFocusRef.current,
-          hasFocused: hasFocusedRef.current,
-          hasTermRef: !!termRef.current,
-        })
         if (autoFocusRef.current && !hasFocusedRef.current && termRef.current) {
-          // Try multiple times to ensure focus sticks
-          const focusTerminal = (attempt: number) => {
+          const focusTerminal = () => {
             const term = termRef.current
-            log.taskTerminal.info('focusTerminal attempt (after agent)', {
-              attempt,
-              hasFocused: hasFocusedRef.current,
-              hasTermRef: !!term,
-              hasTextarea: !!term?.textarea,
-              activeElementBefore: document.activeElement?.tagName,
-            })
             if (!hasFocusedRef.current && term) {
               term.focus()
-              const success = term.textarea === document.activeElement
-              log.taskTerminal.info('focusTerminal result (after agent)', {
-                attempt,
-                success,
-                activeElementAfter: document.activeElement?.tagName,
-                textareaElement: term.textarea?.tagName,
-              })
-              if (success) {
+              if (term.textarea === document.activeElement) {
                 hasFocusedRef.current = true
               }
             }
           }
-          setTimeout(() => focusTerminal(1), 50)
-          setTimeout(() => focusTerminal(2), 200)
-          setTimeout(() => focusTerminal(3), 500)
+          setTimeout(focusTerminal, 50)
+          setTimeout(focusTerminal, 200)
+          setTimeout(focusTerminal, 500)
         }
       }, currentStartupScript ? 5000 : 100)
     }
@@ -478,44 +432,21 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
 
   // Auto-focus terminal when ready - try multiple times to be aggressive
   useEffect(() => {
-    log.taskTerminal.info('useEffect focus check', {
-      autoFocus,
-      hasFocused: hasFocusedRef.current,
-      hasTermRef: !!termRef.current,
-      terminalId,
-      isCreating,
-      isStartingAgent,
-    })
     if (!autoFocus || hasFocusedRef.current) return
     if (!termRef.current || !terminalId) return
     // Don't focus while overlay is showing
     if (isCreating || isStartingAgent) return
 
-    log.taskTerminal.info('useEffect focus: starting focus attempts')
-
     // Try focusing multiple times with increasing delays
     const focusAttempts = [0, 50, 150, 300, 500]
     const timeouts: ReturnType<typeof setTimeout>[] = []
 
-    focusAttempts.forEach((delay, index) => {
+    focusAttempts.forEach((delay) => {
       const timeout = setTimeout(() => {
         const term = termRef.current
-        log.taskTerminal.info('useEffect focusTerminal attempt', {
-          attempt: index + 1,
-          delay,
-          hasFocused: hasFocusedRef.current,
-          hasTermRef: !!term,
-          activeElementBefore: document.activeElement?.tagName,
-        })
         if (!hasFocusedRef.current && term) {
           term.focus()
-          const success = term.textarea === document.activeElement
-          log.taskTerminal.info('useEffect focusTerminal result', {
-            attempt: index + 1,
-            success,
-            activeElementAfter: document.activeElement?.tagName,
-          })
-          if (success) {
+          if (term.textarea === document.activeElement) {
             hasFocusedRef.current = true
           }
         }

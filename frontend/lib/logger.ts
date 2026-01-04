@@ -165,6 +165,4 @@ export const log = {
   kanban: createLogger('Kanban'),
   viewer: createLogger('Viewer'),
   deployment: createLogger('Deployment'),
-  taskPage: createLogger('TaskPage'),
-  createTaskModal: createLogger('CreateTaskModal'),
 }

@@ -1,0 +1,59 @@
+{
+  "_schemaVersion": 9,
+  "server": {
+    "port": 7777
+  },
+  "paths": {
+    "defaultGitReposDir": "/home/stephan"
+  },
+  "editor": {
+    "app": "vscode",
+    "host": "",
+    "sshPort": 22
+  },
+  "integrations": {
+    "linearApiKey": null,
+    "githubPat": null,
+    "cloudflareApiToken": null,
+    "cloudflareAccountId": null
+  },
+  "agent": {
+    "defaultAgent": "claude",
+    "opencodeModel": null
+  },
+  "appearance": {
+    "language": null,
+    "theme": null,
+    "syncClaudeCodeTheme": false,
+    "claudeCodeLightTheme": "light-ansi",
+    "claudeCodeDarkTheme": "dark-ansi"
+  },
+  "notifications": {
+    "enabled": true,
+    "toast": {
+      "enabled": true
+    },
+    "desktop": {
+      "enabled": true
+    },
+    "sound": {
+      "enabled": true
+    },
+    "slack": {
+      "enabled": false
+    },
+    "discord": {
+      "enabled": false
+    },
+    "pushover": {
+      "enabled": false
+    }
+  },
+  "zai": {
+    "enabled": false,
+    "apiKey": null,
+    "haikuModel": "glm-4.5-air",
+    "sonnetModel": "glm-4.7",
+    "opusModel": "glm-4.7"
+  }
+}

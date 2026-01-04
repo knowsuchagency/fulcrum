@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate, useLocation } from '@tanstack/react-router'
-import { log } from '@/lib/logger'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { reaction } from 'mobx'
@@ -140,7 +139,6 @@ function TaskView() {
   const initialFocusTerminalRef = useRef<boolean | undefined>(undefined)
   if (initialFocusTerminalRef.current === undefined && navState?.focusTerminal !== undefined) {
     initialFocusTerminalRef.current = navState.focusTerminal
-    log.taskPage.info('captured focusTerminal', { focusTerminal: navState.focusTerminal })
   }
   const shouldAutoFocus = initialFocusTerminalRef.current ?? false
 
