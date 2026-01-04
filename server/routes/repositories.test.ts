@@ -110,6 +110,32 @@ describe('Repositories Routes', () => {
       expect(res.status).toBe(404)
       expect(body.error).toContain('not found')
     })
+
+    test('returns agent options as parsed JSON', async () => {
+      const now = new Date().toISOString()
+      db.insert(repositories)
+        .values({
+          id: 'json-repo',
+          path: '/path/to/json',
+          displayName: 'JSON Repo',
+          claudeOptions: JSON.stringify({ model: 'claude-3-opus' }),
+          opencodeOptions: JSON.stringify({ model: 'gpt-4', temperature: '0.7' }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { get } = createTestApp()
+      const res = await get('/api/repositories/json-repo')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      // Should be parsed objects, not JSON strings
+      expect(body.claudeOptions).toEqual({ model: 'claude-3-opus' })
+      expect(body.opencodeOptions).toEqual({ model: 'gpt-4', temperature: '0.7' })
+      expect(typeof body.claudeOptions).toBe('object')
+      expect(typeof body.opencodeOptions).toBe('object')
+    })
   })
 
   describe('POST /api/repositories', () => {
@@ -152,6 +178,56 @@ describe('Repositories Routes', () => {
       expect(body.startupScript).toBe('bun run dev')
       expect(body.copyFiles).toBe('.env.example\nREADME.md')
       expect(body.isCopierTemplate).toBe(true)
+    })
+
+    test('creates a repository with claudeOptions', async () => {
+      const repoPath = join(testEnv.viboraDir, 'claude-repo')
+      mkdirSync(repoPath, { recursive: true })
+
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        path: repoPath,
+        displayName: 'Claude Repo',
+        claudeOptions: { model: 'claude-3-opus', 'max-tokens': '4000' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.claudeOptions).toEqual({ model: 'claude-3-opus', 'max-tokens': '4000' })
+    })
+
+    test('creates a repository with opencodeOptions', async () => {
+      const repoPath = join(testEnv.viboraDir, 'opencode-repo')
+      mkdirSync(repoPath, { recursive: true })
+
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        path: repoPath,
+        displayName: 'OpenCode Repo',
+        opencodeOptions: { model: 'gpt-4', temperature: '0.7' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.opencodeOptions).toEqual({ model: 'gpt-4', temperature: '0.7' })
+    })
+
+    test('creates a repository with both agent options', async () => {
+      const repoPath = join(testEnv.viboraDir, 'multi-agent-repo')
+      mkdirSync(repoPath, { recursive: true })
+
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        path: repoPath,
+        displayName: 'Multi-Agent Repo',
+        claudeOptions: { model: 'claude-3-sonnet' },
+        opencodeOptions: { model: 'gpt-4-turbo' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.claudeOptions).toEqual({ model: 'claude-3-sonnet' })
+      expect(body.opencodeOptions).toEqual({ model: 'gpt-4-turbo' })
     })
 
     test('derives displayName from path if not provided', async () => {
@@ -329,6 +405,106 @@ describe('Repositories Routes', () => {
       })
 
       expect(res.status).toBe(404)
+    })
+
+    test('updates claudeOptions', async () => {
+      const now = new Date().toISOString()
+      db.insert(repositories)
+        .values({
+          id: 'claude-opts-repo',
+          path: '/path/to/claude-opts',
+          displayName: 'Claude Options Repo',
+          claudeOptions: JSON.stringify({ model: 'claude-3-sonnet' }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { patch } = createTestApp()
+      const res = await patch('/api/repositories/claude-opts-repo', {
+        claudeOptions: { model: 'claude-3-opus', 'max-tokens': '8000' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.claudeOptions).toEqual({ model: 'claude-3-opus', 'max-tokens': '8000' })
+    })
+
+    test('updates opencodeOptions', async () => {
+      const now = new Date().toISOString()
+      db.insert(repositories)
+        .values({
+          id: 'opencode-opts-repo',
+          path: '/path/to/opencode-opts',
+          displayName: 'OpenCode Options Repo',
+          opencodeOptions: JSON.stringify({ model: 'gpt-4' }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { patch } = createTestApp()
+      const res = await patch('/api/repositories/opencode-opts-repo', {
+        opencodeOptions: { model: 'gpt-4-turbo', temperature: '0.5' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.opencodeOptions).toEqual({ model: 'gpt-4-turbo', temperature: '0.5' })
+    })
+
+    test('updates opencodeOptions independently from claudeOptions', async () => {
+      const now = new Date().toISOString()
+      db.insert(repositories)
+        .values({
+          id: 'both-opts-repo',
+          path: '/path/to/both-opts',
+          displayName: 'Both Options Repo',
+          claudeOptions: JSON.stringify({ model: 'claude-3-sonnet' }),
+          opencodeOptions: JSON.stringify({ model: 'gpt-4' }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { patch } = createTestApp()
+      // Update only opencodeOptions
+      const res = await patch('/api/repositories/both-opts-repo', {
+        opencodeOptions: { model: 'gpt-4-turbo' },
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      // opencodeOptions should be updated
+      expect(body.opencodeOptions).toEqual({ model: 'gpt-4-turbo' })
+      // claudeOptions should remain unchanged
+      expect(body.claudeOptions).toEqual({ model: 'claude-3-sonnet' })
+    })
+
+    test('clears agent options when set to null', async () => {
+      const now = new Date().toISOString()
+      db.insert(repositories)
+        .values({
+          id: 'clear-opts-repo',
+          path: '/path/to/clear-opts',
+          displayName: 'Clear Options Repo',
+          claudeOptions: JSON.stringify({ model: 'claude-3-sonnet' }),
+          opencodeOptions: JSON.stringify({ model: 'gpt-4' }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { patch } = createTestApp()
+      const res = await patch('/api/repositories/clear-opts-repo', {
+        claudeOptions: null,
+        opencodeOptions: null,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.claudeOptions).toBeNull()
+      expect(body.opencodeOptions).toBeNull()
     })
 
     test('returns 400 when changing path to duplicate', async () => {
