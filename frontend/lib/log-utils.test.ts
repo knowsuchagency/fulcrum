@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { getLogType, parseLogs, type LogType } from './log-utils'
+import { getLogType, parseLogs } from './log-utils'
 
 describe('getLogType', () => {
   describe('error detection', () => {

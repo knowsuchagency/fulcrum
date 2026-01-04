@@ -3,6 +3,7 @@
 import { mock } from 'bun:test'
 
 mock.module('../lib/settings', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const actual = require('../lib/settings')
   return {
     ...actual,

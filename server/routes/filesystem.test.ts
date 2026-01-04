@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { createTestApp } from '../__tests__/fixtures/app'
 import { setupTestEnv, type TestEnv } from '../__tests__/utils/env'
-import { createTestGitRepo, type TestGitRepo } from '../__tests__/fixtures/git'
+import { createTestGitRepo } from '../__tests__/fixtures/git'
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir, homedir } from 'node:os'
 import { join } from 'node:path'
@@ -386,7 +386,7 @@ describe('Filesystem Routes', () => {
     test('blocks path traversal', async () => {
       const { get } = createTestApp()
       const res = await get(`/api/fs/image?path=../../../etc/passwd&root=${tempDir}`)
-      const body = await res.json()
+      await res.json() // consume body
 
       expect(res.status).toBe(403)
     })

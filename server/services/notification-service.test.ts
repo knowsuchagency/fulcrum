@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { setupTestEnv, type TestEnv } from '../__tests__/utils/env'
 import { sendNotification, testNotificationChannel, type NotificationPayload } from './notification-service'
-import { updateNotificationSettings, getNotificationSettings } from '../lib/settings'
+import { updateNotificationSettings } from '../lib/settings'
 
 // Mock the broadcast function since we don't want to actually send WebSocket messages in tests
 mock.module('../websocket/terminal-ws', () => ({
