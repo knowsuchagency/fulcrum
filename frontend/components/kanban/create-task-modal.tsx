@@ -258,8 +258,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
       {
         onSuccess: (task) => {
           const navState = description.trim()
-            ? { aiMode, description: description.trim() }
-            : { aiMode }
+            ? { aiMode, description: description.trim(), focusTerminal: true }
+            : { aiMode, focusTerminal: true }
           setOpen(false)
           setTitle('')
           setDescription('')

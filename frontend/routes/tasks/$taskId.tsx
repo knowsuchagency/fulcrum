@@ -135,9 +135,16 @@ function TaskView() {
   const resolvedOpencodeModel = task?.opencodeModel ?? repository?.opencodeModel ?? globalOpencodeModel
 
   // Read AI mode state - prefer persisted task data, fall back to navigation state for backward compat
-  const navState = location.state as { aiMode?: 'default' | 'plan'; description?: string } | undefined
+  const navState = location.state as { aiMode?: 'default' | 'plan'; description?: string; focusTerminal?: boolean } | undefined
   const aiMode = (task?.aiMode as 'default' | 'plan' | undefined) ?? navState?.aiMode
   const aiModeDescription = task?.description ?? navState?.description
+
+  // Capture focusTerminal on first render before TanStack Router replaces the state
+  const initialFocusTerminalRef = useRef<boolean | undefined>(undefined)
+  if (initialFocusTerminalRef.current === undefined && navState?.focusTerminal !== undefined) {
+    initialFocusTerminalRef.current = navState.focusTerminal
+  }
+  const shouldAutoFocus = initialFocusTerminalRef.current ?? false
 
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -927,6 +934,7 @@ function TaskView() {
               agentOptions={task.agentOptions}
               opencodeModel={resolvedOpencodeModel}
               serverPort={serverPort}
+              autoFocus={shouldAutoFocus}
             />
           </TabsContent>
 
@@ -983,6 +991,7 @@ function TaskView() {
               agentOptions={task.agentOptions}
               opencodeModel={resolvedOpencodeModel}
               serverPort={serverPort}
+              autoFocus={shouldAutoFocus}
             />
           </ResizablePanel>
 
