@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -22,8 +25,15 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run lint
-        run: mise run lint
+      - name: Run lint with auto-fix
+        run: bunx eslint . --fix
+
+      - name: Commit lint fixes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-fix linting issues"
+          commit_user_name: github-actions[bot]
+          commit_user_email: github-actions[bot]@users.noreply.github.com
 
       - name: Run typecheck
         run: mise run typecheck
