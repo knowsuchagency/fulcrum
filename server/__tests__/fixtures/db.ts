@@ -44,6 +44,7 @@ export async function insertTestTask(data: {
   baseBranch?: string
   status?: string
   position?: number
+  worktreePath?: string
 }): Promise<typeof tasks.$inferSelect> {
   const now = new Date().toISOString()
   const id = data.id ?? crypto.randomUUID()
@@ -58,6 +59,7 @@ export async function insertTestTask(data: {
       repoPath: data.repoPath,
       repoName: data.repoName ?? 'test-repo',
       baseBranch: data.baseBranch ?? 'main',
+      worktreePath: data.worktreePath,
       createdAt: now,
       updatedAt: now,
     })

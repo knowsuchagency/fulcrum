@@ -47,6 +47,7 @@ app.post('/sound', async (c) => {
     'audio/mp3': 'mp3',
     'audio/wav': 'wav',
     'audio/wave': 'wav',
+    'audio/x-wav': 'wav', // Some parsers canonicalize to x-wav
     'audio/ogg': 'ogg',
   }
 
