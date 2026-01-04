@@ -8,6 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -52,6 +59,7 @@ import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { Terminal as XTerm } from '@xterm/xterm'
+import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 
 /**
  * Convert a git URL (SSH or HTTPS) to a web-browsable HTTPS URL
@@ -112,6 +120,7 @@ function RepositoryDetailView() {
   const [copyFiles, setCopyFiles] = useState('')
   const [claudeOptions, setClaudeOptions] = useState<Record<string, string>>({})
   const [opencodeOptions, setOpencodeOptions] = useState<Record<string, string>>({})
+  const [defaultAgent, setDefaultAgent] = useState<AgentType | null>(null)
   const [isCopierTemplate, setIsCopierTemplate] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
@@ -212,6 +221,7 @@ function RepositoryDetailView() {
       setCopyFiles(repository.copyFiles || '')
       setClaudeOptions(repository.claudeOptions || {})
       setOpencodeOptions(repository.opencodeOptions || {})
+      setDefaultAgent(repository.defaultAgent ?? null)
       setIsCopierTemplate(repository.isCopierTemplate ?? false)
       setHasChanges(false)
     }
@@ -226,10 +236,11 @@ function RepositoryDetailView() {
         copyFiles !== (repository.copyFiles || '') ||
         JSON.stringify(claudeOptions) !== JSON.stringify(repository.claudeOptions || {}) ||
         JSON.stringify(opencodeOptions) !== JSON.stringify(repository.opencodeOptions || {}) ||
+        defaultAgent !== (repository.defaultAgent ?? null) ||
         isCopierTemplate !== (repository.isCopierTemplate ?? false)
       setHasChanges(changed)
     }
-  }, [displayName, startupScript, copyFiles, claudeOptions, opencodeOptions, isCopierTemplate, repository])
+  }, [displayName, startupScript, copyFiles, claudeOptions, opencodeOptions, defaultAgent, isCopierTemplate, repository])
 
   const handleSave = () => {
     if (!repository) return
@@ -243,6 +254,7 @@ function RepositoryDetailView() {
           copyFiles: copyFiles.trim() || null,
           claudeOptions: Object.keys(claudeOptions).length > 0 ? claudeOptions : null,
           opencodeOptions: Object.keys(opencodeOptions).length > 0 ? opencodeOptions : null,
+          defaultAgent,
           isCopierTemplate,
         },
       },
@@ -549,6 +561,31 @@ function RepositoryDetailView() {
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder={repository.path.split('/').pop() || 'My Project'}
                     />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>{t('detailView.settings.defaultAgent')}</FieldLabel>
+                    <Select
+                      value={defaultAgent ?? 'inherit'}
+                      onValueChange={(value) => setDefaultAgent(value === 'inherit' ? null : value as AgentType)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent alignItemWithTrigger={false}>
+                        <SelectItem value="inherit">
+                          {t('detailView.settings.defaultAgentInherit')}
+                        </SelectItem>
+                        {(Object.keys(AGENT_DISPLAY_NAMES) as AgentType[]).map((agentType) => (
+                          <SelectItem key={agentType} value={agentType}>
+                            {AGENT_DISPLAY_NAMES[agentType]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FieldDescription>
+                      {t('detailView.settings.defaultAgentDescription')}
+                    </FieldDescription>
                   </Field>
 
                   <Field>

@@ -133,6 +133,9 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       const hasAgentColumn = sqlite
         .query("SELECT name FROM pragma_table_info('tasks') WHERE name='agent'")
         .get()
+      const hasDefaultAgentColumn = sqlite
+        .query("SELECT name FROM pragma_table_info('repositories') WHERE name='default_agent'")
+        .get()
 
       // Determine which migrations should be marked as applied based on schema state
       const migrationsToMark: Array<{ tag: string; when: number }> = []
@@ -167,6 +170,10 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         }
         // 0018 adds agent column to tasks and opencode_options to repositories
         else if (entry.tag.startsWith('0018') && hasAgentColumn) {
+          shouldMark = true
+        }
+        // 0019 adds default_agent column to repositories
+        else if (entry.tag.startsWith('0019') && hasDefaultAgentColumn) {
           shouldMark = true
         }
 

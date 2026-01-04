@@ -134,10 +134,16 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   // Initialize with default repository when modal opens, or auto-select most recently used
   useEffect(() => {
     if (open) {
-      // Set agent to global default when modal opens
-      if (defaultAgent) {
+      // Determine which repository will be selected
+      const selectedRepo = defaultRepository ?? (repositories && repositories.length > 0 ? repositories[0] : null)
+
+      // Set agent priority: repository default > global default > 'claude'
+      if (selectedRepo?.defaultAgent) {
+        setAgent(selectedRepo.defaultAgent)
+      } else if (defaultAgent) {
         setAgent(defaultAgent)
       }
+
       if (defaultRepository) {
         // Use provided default repository
         setSelectedRepoId(defaultRepository.id)
@@ -393,6 +399,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                           setRepoPath(repo.path)
                           setRepoSearchQuery(repo.displayName)
                           setRepoError(null)
+                          // Update agent if repository has a default configured
+                          if (repo.defaultAgent) {
+                            setAgent(repo.defaultAgent)
+                          }
                         }
                       }}
                       inputValue={repoSearchQuery}

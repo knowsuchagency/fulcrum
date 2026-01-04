@@ -146,6 +146,9 @@
     },
     "settings": {
       "displayName": "Display Name",
+      "defaultAgent": "Default Agent",
+      "defaultAgentInherit": "Use global default",
+      "defaultAgentDescription": "Override the global default agent for tasks created from this repository.",
       "startupScript": "Startup Script",
       "startupScriptPlaceholder": "npm install && npm run dev",
       "startupScriptDescription": "Command to run in the terminal when creating a worktree.",

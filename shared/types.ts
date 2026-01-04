@@ -154,6 +154,7 @@ export interface Repository {
   copyFiles: string | null
   claudeOptions: Record<string, string> | null
   opencodeOptions: Record<string, string> | null
+  defaultAgent: AgentType | null
   remoteUrl: string | null
   isCopierTemplate: boolean
   createdAt: string

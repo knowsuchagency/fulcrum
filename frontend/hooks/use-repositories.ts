@@ -71,7 +71,7 @@ export function useUpdateRepository() {
       updates,
     }: {
       id: string
-      updates: Partial<Pick<Repository, 'path' | 'displayName' | 'startupScript' | 'copyFiles' | 'claudeOptions' | 'opencodeOptions' | 'isCopierTemplate'>>
+      updates: Partial<Pick<Repository, 'path' | 'displayName' | 'startupScript' | 'copyFiles' | 'claudeOptions' | 'opencodeOptions' | 'defaultAgent' | 'isCopierTemplate'>>
     }) =>
       fetchJSON<Repository>(`${API_BASE}/api/repositories/${id}`, {
         method: 'PATCH',

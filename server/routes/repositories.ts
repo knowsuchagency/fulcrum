@@ -245,6 +245,7 @@ app.patch('/:id', async (c) => {
       copyFiles?: string | null
       claudeOptions?: Record<string, string> | null
       opencodeOptions?: Record<string, string> | null
+      defaultAgent?: 'claude' | 'opencode' | null
       isCopierTemplate?: boolean
     }>()
 

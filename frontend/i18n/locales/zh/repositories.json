@@ -144,6 +144,9 @@
     },
     "settings": {
       "displayName": "显示名称",
+      "defaultAgent": "默认代理",
+      "defaultAgentInherit": "使用全局默认",
+      "defaultAgentDescription": "覆盖从此仓库创建任务时使用的全局默认代理。",
       "startupScript": "启动脚本",
       "startupScriptPlaceholder": "npm install && npm run dev",
       "startupScriptDescription": "创建工作树时在终端中运行的命令。",
