@@ -608,6 +608,32 @@ function RepositoryDetailView() {
                   </Field>
 
                   <Field>
+                    <FieldLabel htmlFor="copyFiles">{t('detailView.settings.copyFiles')}</FieldLabel>
+                    <Input
+                      id="copyFiles"
+                      value={copyFiles}
+                      onChange={(e) => setCopyFiles(e.target.value)}
+                      placeholder={t('detailView.settings.copyFilesPlaceholder')}
+                    />
+                    <FieldDescription>
+                      {t('detailView.settings.copyFilesDescription')}
+                    </FieldDescription>
+                  </Field>
+
+                  <Field>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={isCopierTemplate}
+                        onCheckedChange={(checked) => setIsCopierTemplate(checked === true)}
+                      />
+                      <FieldLabel className="cursor-pointer">{t('detailView.settings.isCopierTemplate')}</FieldLabel>
+                    </div>
+                    <FieldDescription>
+                      {t('detailView.settings.isCopierTemplateDescription')}
+                    </FieldDescription>
+                  </Field>
+
+                  <Field>
                     <FieldLabel>{t('detailView.settings.claudeOptions')}</FieldLabel>
                     <FieldDescription className="mb-2">
                       {t('detailView.settings.claudeOptionsDescription')}
@@ -638,32 +664,6 @@ function RepositoryDetailView() {
                     />
                     <FieldDescription>
                       {t('detailView.settings.opencodeModelDescription')}
-                    </FieldDescription>
-                  </Field>
-
-                  <Field>
-                    <FieldLabel htmlFor="copyFiles">{t('detailView.settings.copyFiles')}</FieldLabel>
-                    <Input
-                      id="copyFiles"
-                      value={copyFiles}
-                      onChange={(e) => setCopyFiles(e.target.value)}
-                      placeholder={t('detailView.settings.copyFilesPlaceholder')}
-                    />
-                    <FieldDescription>
-                      {t('detailView.settings.copyFilesDescription')}
-                    </FieldDescription>
-                  </Field>
-
-                  <Field>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={isCopierTemplate}
-                        onCheckedChange={(checked) => setIsCopierTemplate(checked === true)}
-                      />
-                      <FieldLabel className="cursor-pointer">{t('detailView.settings.isCopierTemplate')}</FieldLabel>
-                    </div>
-                    <FieldDescription>
-                      {t('detailView.settings.isCopierTemplateDescription')}
                     </FieldDescription>
                   </Field>
                 </FieldGroup>
