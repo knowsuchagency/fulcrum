@@ -594,8 +594,7 @@ export const RootStore = types
             new RegExp(`^${ESC}P`).test(data) || // DCS sequences
             /\$y/.test(data) || // DECRQSS content (anywhere in data)
             new RegExp(`^${ESC}\\[\\d+;\\d+R$`).test(data) || // CPR (Cursor Position Report) response
-            new RegExp(`^${ESC}\\[[?>\\d;]*c$`).test(data) || // DA (Device Attributes) response
-            /^R+$/.test(data) // Bare R characters (stripped CPR responses)
+            new RegExp(`^${ESC}\\[[?>\\d;]*c$`).test(data) // DA (Device Attributes) response
           ) {
             return
           }
