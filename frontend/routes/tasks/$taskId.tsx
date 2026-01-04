@@ -18,7 +18,7 @@ import { useGitPush } from '@/hooks/use-git-push'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useGitCreatePR } from '@/hooks/use-git-create-pr'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
-import { useEditorApp, useEditorHost, useEditorSshPort, usePort } from '@/hooks/use-config'
+import { useEditorApp, useEditorHost, useEditorSshPort, usePort, useOpencodeModel } from '@/hooks/use-config'
 import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useStore } from '@/stores'
@@ -124,11 +124,15 @@ function TaskView() {
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
   const { data: serverPort } = usePort()
+  const { data: globalOpencodeModel } = useOpencodeModel()
   const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
   const { data: repositories = [] } = useRepositories()
 
   // Find the repository matching this task's repo path
   const repository = repositories.find((r) => r.path === task?.repoPath)
+
+  // Resolve OpenCode model: task > repo > global (cascade precedence)
+  const resolvedOpencodeModel = task?.opencodeModel ?? repository?.opencodeModel ?? globalOpencodeModel
 
   // Read AI mode state - prefer persisted task data, fall back to navigation state for backward compat
   const navState = location.state as { aiMode?: 'default' | 'plan'; description?: string } | undefined
@@ -921,6 +925,7 @@ function TaskView() {
               description={aiModeDescription}
               startupScript={task.startupScript}
               agentOptions={task.agentOptions}
+              opencodeModel={resolvedOpencodeModel}
               serverPort={serverPort}
             />
           </TabsContent>
@@ -976,6 +981,7 @@ function TaskView() {
               description={aiModeDescription}
               startupScript={task.startupScript}
               agentOptions={task.agentOptions}
+              opencodeModel={resolvedOpencodeModel}
               serverPort={serverPort}
             />
           </ResizablePanel>
