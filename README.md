@@ -352,7 +352,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, architecture, and co
 
 ## License
 
-[PolyForm Shield 1.0.0](LICENSE)
+[PolyForm Perimeter 1.0.0](LICENSE)
 
 **In plain English:**
 
