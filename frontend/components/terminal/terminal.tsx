@@ -173,6 +173,8 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
   useEffect(() => {
     if (!termRef.current) return
     termRef.current.options.theme = terminalTheme
+    // Refresh to re-render existing content with new theme colors
+    termRef.current.refresh(0, termRef.current.rows - 1)
   }, [terminalTheme])
 
   const handleScrollToBottom = useCallback(() => {

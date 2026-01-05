@@ -432,6 +432,8 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
   useEffect(() => {
     if (!termRef.current) return
     termRef.current.options.theme = terminalTheme
+    // Refresh to re-render existing content with new theme colors
+    termRef.current.refresh(0, termRef.current.rows - 1)
   }, [terminalTheme])
 
   // Auto-focus terminal when ready - try multiple times to be aggressive
