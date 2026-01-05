@@ -65,9 +65,11 @@
   "openInEditor": {
     "title": "Open in Editor",
     "description": "Open a folder in {{editor}}",
-    "pathLabel": "Path",
+    "pathLabel": "Directory Path",
     "pathPlaceholder": "~/projects/my-project",
-    "pathHint": "Supports ~ for home directory",
+    "pathHint": "Enter a directory path. Supports ~ for home directory.",
+    "pathNotFound": "Path does not exist",
+    "pathNotDirectory": "Path must be a directory, not a file",
     "browse": "Browse",
     "cancel": "Cancel",
     "open": "Open"

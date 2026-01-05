@@ -62,9 +62,11 @@
   "openInEditor": {
     "title": "在编辑器中打开",
     "description": "在 {{editor}} 中打开文件夹",
-    "pathLabel": "路径",
+    "pathLabel": "目录路径",
     "pathPlaceholder": "~/projects/my-project",
-    "pathHint": "支持 ~ 表示主目录",
+    "pathHint": "请输入目录路径。支持 ~ 表示主目录。",
+    "pathNotFound": "路径不存在",
+    "pathNotDirectory": "路径必须是目录，不能是文件",
     "browse": "浏览",
     "cancel": "取消",
     "open": "打开"

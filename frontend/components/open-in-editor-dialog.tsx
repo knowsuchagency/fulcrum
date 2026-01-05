@@ -15,6 +15,7 @@ import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Folder01Icon } from '@hugeicons/core-free-icons'
 import { useEditorApp, useEditorHost, useEditorSshPort, useHomeDir } from '@/hooks/use-config'
+import { usePathStat } from '@/hooks/use-filesystem'
 import { expandTildePath } from '@/lib/path-utils'
 import { buildEditorUrl, openExternalUrl, getEditorDisplayName } from '@/lib/editor-url'
 
@@ -33,6 +34,9 @@ export function OpenInEditorDialog({ open, onOpenChange }: OpenInEditorDialogPro
   const { data: editorSshPort } = useEditorSshPort()
   const { data: homeDir } = useHomeDir()
 
+  // Validate the path - only allow directories
+  const { data: pathStat, isLoading: isValidating } = usePathStat(path.trim() || null)
+
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
@@ -40,8 +44,18 @@ export function OpenInEditorDialog({ open, onOpenChange }: OpenInEditorDialogPro
     }
   }, [open])
 
+  // Determine if the path is valid (exists and is a directory)
+  const isValidDirectory = pathStat?.exists && pathStat?.isDirectory
+  const pathError = path.trim() && pathStat && !isValidating
+    ? !pathStat.exists
+      ? t('openInEditor.pathNotFound')
+      : !pathStat.isDirectory
+        ? t('openInEditor.pathNotDirectory')
+        : null
+    : null
+
   const handleOpen = () => {
-    if (!path.trim()) return
+    if (!path.trim() || !isValidDirectory) return
 
     // Expand ~ to home directory before building URL
     const expandedPath = expandTildePath(path.trim(), homeDir)
@@ -82,7 +96,7 @@ export function OpenInEditorDialog({ open, onOpenChange }: OpenInEditorDialogPro
                   onChange={(e) => setPath(e.target.value)}
                   placeholder={t('openInEditor.pathPlaceholder')}
                   onKeyDown={(e) => e.key === 'Enter' && handleOpen()}
-                  className="flex-1 font-mono text-sm"
+                  className={`flex-1 font-mono text-sm ${pathError ? 'border-destructive' : ''}`}
                 />
                 <Button
                   variant="outline"
@@ -93,9 +107,13 @@ export function OpenInEditorDialog({ open, onOpenChange }: OpenInEditorDialogPro
                   <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t('openInEditor.pathHint')}
-              </p>
+              {pathError ? (
+                <p className="text-xs text-destructive">{pathError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {t('openInEditor.pathHint')}
+                </p>
+              )}
             </div>
           </div>
 
@@ -103,7 +121,7 @@ export function OpenInEditorDialog({ open, onOpenChange }: OpenInEditorDialogPro
             <DialogClose render={<Button variant="outline" />}>
               {t('openInEditor.cancel')}
             </DialogClose>
-            <Button onClick={handleOpen} disabled={!path.trim()}>
+            <Button onClick={handleOpen} disabled={!path.trim() || !isValidDirectory || isValidating}>
               {t('openInEditor.open')}
             </Button>
           </DialogFooter>

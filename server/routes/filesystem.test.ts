@@ -476,6 +476,72 @@ describe('Filesystem Routes', () => {
     })
   })
 
+  describe('GET /api/fs/stat', () => {
+    test('returns exists: true and isDirectory: true for directory', async () => {
+      const subdir = join(tempDir, 'subdir')
+      mkdirSync(subdir)
+
+      const { get } = createTestApp()
+      const res = await get(`/api/fs/stat?path=${subdir}`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.path).toBe(subdir)
+      expect(body.exists).toBe(true)
+      expect(body.type).toBe('directory')
+      expect(body.isDirectory).toBe(true)
+      expect(body.isFile).toBe(false)
+    })
+
+    test('returns exists: true and isFile: true for file', async () => {
+      const filePath = join(tempDir, 'file.txt')
+      writeFileSync(filePath, 'content')
+
+      const { get } = createTestApp()
+      const res = await get(`/api/fs/stat?path=${filePath}`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.path).toBe(filePath)
+      expect(body.exists).toBe(true)
+      expect(body.type).toBe('file')
+      expect(body.isDirectory).toBe(false)
+      expect(body.isFile).toBe(true)
+    })
+
+    test('returns exists: false for non-existent path', async () => {
+      const { get } = createTestApp()
+      const res = await get(`/api/fs/stat?path=${tempDir}/nonexistent`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.exists).toBe(false)
+      expect(body.type).toBe(null)
+      expect(body.isDirectory).toBe(false)
+      expect(body.isFile).toBe(false)
+    })
+
+    test('expands tilde to home directory', async () => {
+      const { get } = createTestApp()
+      const res = await get('/api/fs/stat?path=~')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.path).toBe(homedir())
+      expect(body.exists).toBe(true)
+      expect(body.isDirectory).toBe(true)
+    })
+
+    test('returns 400 when path is missing', async () => {
+      const { get } = createTestApp()
+      const res = await get('/api/fs/stat')
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('path parameter is required')
+    })
+  })
+
   describe('GET /api/fs/is-git-repo', () => {
     test('returns true for git repository', async () => {
       const repo = createTestGitRepo()

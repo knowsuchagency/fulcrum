@@ -149,3 +149,23 @@ export async function checkIsGitRepo(path: string): Promise<IsGitRepoResponse> {
     `${API_BASE}/api/fs/is-git-repo?path=${encodeURIComponent(path)}`
   )
 }
+
+interface PathStatResponse {
+  path: string
+  exists: boolean
+  type: 'file' | 'directory' | 'other' | null
+  isDirectory: boolean
+  isFile: boolean
+}
+
+export function usePathStat(path: string | null) {
+  return useQuery({
+    queryKey: ['fs', 'stat', path],
+    queryFn: () => {
+      return fetchJSON<PathStatResponse>(
+        `${API_BASE}/api/fs/stat?path=${encodeURIComponent(path!)}`
+      )
+    },
+    enabled: !!path && path.trim().length > 0,
+  })
+}

@@ -436,6 +436,50 @@ app.post('/write', async (c) => {
   }
 })
 
+// GET /api/fs/stat?path=/path/to/check
+// Returns type and existence info for a path
+app.get('/stat', (c) => {
+  let targetPath = c.req.query('path')
+
+  if (!targetPath) {
+    return c.json({ error: 'path parameter is required' }, 400)
+  }
+
+  // Expand ~ to home directory
+  if (targetPath.startsWith('~')) {
+    targetPath = path.join(os.homedir(), targetPath.slice(1))
+  }
+
+  // Resolve to absolute path
+  targetPath = path.resolve(targetPath)
+
+  try {
+    if (!fs.existsSync(targetPath)) {
+      return c.json({
+        path: targetPath,
+        exists: false,
+        type: null,
+        isDirectory: false,
+        isFile: false,
+      })
+    }
+
+    const stat = fs.statSync(targetPath)
+    const isDir = stat.isDirectory()
+    const isFile = stat.isFile()
+
+    return c.json({
+      path: targetPath,
+      exists: true,
+      type: isDir ? 'directory' : isFile ? 'file' : 'other',
+      isDirectory: isDir,
+      isFile: isFile,
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to stat path' }, 500)
+  }
+})
+
 // GET /api/fs/is-git-repo?path=/path/to/check
 app.get('/is-git-repo', (c) => {
   let dirPath = c.req.query('path')
