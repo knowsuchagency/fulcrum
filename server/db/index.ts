@@ -148,6 +148,9 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       const hasAutoPortAllocationColumn = sqlite
         .query("SELECT name FROM pragma_table_info('apps') WHERE name='auto_port_allocation'")
         .get()
+      const hasSelectedProjectIdsColumn = sqlite
+        .query("SELECT name FROM pragma_table_info('terminal_view_state') WHERE name='selected_project_ids'")
+        .get()
 
       // Determine which migrations should be marked as applied based on schema state
       const migrationsToMark: Array<{ tag: string; when: number }> = []
@@ -202,6 +205,10 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         }
         // 0023 adds auto_port_allocation column to apps
         else if (entry.tag.startsWith('0023') && hasAutoPortAllocationColumn) {
+          shouldMark = true
+        }
+        // 0024 adds selected_project_ids column to terminal_view_state
+        else if (entry.tag.startsWith('0024') && hasSelectedProjectIdsColumn) {
           shouldMark = true
         }
 

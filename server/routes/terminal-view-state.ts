@@ -11,6 +11,7 @@ interface FocusedTerminalsMap {
 interface TerminalViewStateResponse {
   activeTabId: string | null
   focusedTerminals: FocusedTerminalsMap
+  selectedProjectIds: string[]
   // View tracking for notification suppression
   currentView: string | null
   currentTaskId: string | null
@@ -21,18 +22,20 @@ interface TerminalViewStateResponse {
 interface UpdateTerminalViewStateRequest {
   activeTabId?: string | null
   focusedTerminals?: FocusedTerminalsMap
+  selectedProjectIds?: string[]
   currentView?: string | null
   currentTaskId?: string | null
   isTabVisible?: boolean | null
   viewUpdatedAt?: string | null
 }
 
-// Parse focusedTerminals JSON
+// Parse JSON fields from stored row
 function parseViewState(row: typeof terminalViewState.$inferSelect | undefined): TerminalViewStateResponse {
   if (!row) {
     return {
       activeTabId: null,
       focusedTerminals: {},
+      selectedProjectIds: [],
       currentView: null,
       currentTaskId: null,
       isTabVisible: null,
@@ -42,6 +45,7 @@ function parseViewState(row: typeof terminalViewState.$inferSelect | undefined):
   return {
     activeTabId: row.activeTabId,
     focusedTerminals: row.focusedTerminals ? JSON.parse(row.focusedTerminals) : {},
+    selectedProjectIds: row.selectedProjectIds ? JSON.parse(row.selectedProjectIds) : [],
     currentView: row.currentView,
     currentTaskId: row.currentTaskId,
     isTabVisible: row.isTabVisible,
@@ -96,6 +100,10 @@ app.patch('/', async (c) => {
     updates.focusedTerminals = JSON.stringify(merged)
   }
 
+  if (body.selectedProjectIds !== undefined) {
+    updates.selectedProjectIds = JSON.stringify(body.selectedProjectIds)
+  }
+
   // View tracking fields (no validation needed)
   if (body.currentView !== undefined) {
     updates.currentView = body.currentView
@@ -121,6 +129,7 @@ app.patch('/', async (c) => {
         id: SINGLETON_ID,
         activeTabId: updates.activeTabId as string | null,
         focusedTerminals: updates.focusedTerminals as string | undefined,
+        selectedProjectIds: updates.selectedProjectIds as string | undefined,
         currentView: updates.currentView as string | null,
         currentTaskId: updates.currentTaskId as string | null,
         isTabVisible: updates.isTabVisible as boolean | null,

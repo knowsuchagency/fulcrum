@@ -1,0 +1,1 @@
+ALTER TABLE `terminal_view_state` ADD `selected_project_ids` text;

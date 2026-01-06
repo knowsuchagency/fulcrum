@@ -169,6 +169,13 @@
       "when": 1767682302178,
       "tag": "0023_flowery_lily_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1767698032542,
+      "tag": "0024_milky_magik",
+      "breakpoints": true
     }
   ]
 }
