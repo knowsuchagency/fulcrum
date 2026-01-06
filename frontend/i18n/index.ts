@@ -12,6 +12,7 @@ import enMonitoring from './locales/en/monitoring.json'
 import enTerminals from './locales/en/terminals.json'
 import enRepositories from './locales/en/repositories.json'
 import enJobs from './locales/en/jobs.json'
+import enProjects from './locales/en/projects.json'
 
 // Import Chinese translations
 import zhCommon from './locales/zh/common.json'
@@ -40,6 +41,7 @@ export const resources = {
     terminals: enTerminals,
     repositories: enRepositories,
     jobs: enJobs,
+    projects: enProjects,
   },
   zh: {
     common: zhCommon,
@@ -52,6 +54,7 @@ export const resources = {
     terminals: zhTerminals,
     repositories: zhRepositories,
     jobs: enJobs, // TODO: Add Chinese translations
+    projects: enProjects, // TODO: Add Chinese translations
   },
 } as const
 
@@ -76,7 +79,7 @@ i18n.use(initReactI18next).init({
   lng: getInitialLanguage(),
   fallbackLng: 'en',
   defaultNS,
-  ns: ['common', 'navigation', 'tasks', 'settings', 'review', 'worktrees', 'monitoring', 'terminals', 'repositories', 'jobs'],
+  ns: ['common', 'navigation', 'tasks', 'settings', 'review', 'worktrees', 'monitoring', 'terminals', 'repositories', 'jobs', 'projects'],
   interpolation: {
     escapeValue: false, // React already escapes
   },

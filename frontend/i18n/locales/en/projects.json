@@ -1,0 +1,98 @@
+{
+  "title": "Projects",
+  "total": "{{count}} total",
+  "searchPlaceholder": "Search projects...",
+  "newTask": "New Task",
+  "terminal": "Terminal",
+  "editor": "Editor",
+  "deploy": "Deploy",
+  "stop": "Stop",
+  "newProject": "New Project",
+  "empty": {
+    "noProjects": "No projects yet. Create a project to get started.",
+    "noMatches": "No projects match your search."
+  },
+  "error": {
+    "failedToLoad": "Failed to load projects: {{message}}"
+  },
+  "card": {
+    "noApp": "No app",
+    "running": "Running",
+    "building": "Building",
+    "stopped": "Stopped",
+    "failed": "Failed"
+  },
+  "delete": {
+    "title": "Delete Project",
+    "description": "This will remove the project \"{{name}}\".",
+    "button": "Delete",
+    "deleting": "Deleting...",
+    "alsoDeleteRepository": "Also delete the repository",
+    "alsoDeleteApp": "Also delete the app and stop containers"
+  },
+  "detailView": {
+    "breadcrumb": "Projects",
+    "notFound": "Project not found",
+    "save": "Save",
+    "saving": "Saving...",
+    "tabs": {
+      "general": "General",
+      "app": "App",
+      "deployments": "Deployments",
+      "logs": "Logs",
+      "monitoring": "Monitoring",
+      "workspace": "Workspace"
+    },
+    "general": {
+      "repositoryTitle": "Repository",
+      "agentTitle": "Agent Options",
+      "path": "Path",
+      "displayName": "Display Name",
+      "startupScript": "Startup Script",
+      "copyFiles": "Copy Files",
+      "defaultAgent": "Default Agent",
+      "claudeOptions": "Claude Code Options",
+      "opencodeOptions": "OpenCode Options",
+      "opencodeModel": "OpenCode Model",
+      "noRepository": "No repository linked to this project."
+    },
+    "app": {
+      "title": "App Configuration",
+      "noApp": "No app configured for this project.",
+      "addApp": "Add Docker App",
+      "addAppDescription": "Deploy with Docker Compose",
+      "deployOptions": "Deploy Options",
+      "autoDeployEnabled": "Auto-deploy on push",
+      "noCacheBuild": "No-cache builds",
+      "notificationsEnabled": "Deployment notifications",
+      "services": "Services",
+      "environment": "Environment Variables",
+      "composeFile": "Compose File"
+    }
+  },
+  "newProjectFlow": {
+    "title": "Create New Project",
+    "selectRepository": "Select or add a repository:",
+    "searchRepositories": "Search repositories...",
+    "orAddNew": "Or add a new repository:",
+    "cloneFromUrl": "Clone from URL",
+    "addLocalPath": "Add Local Path",
+    "fromTemplate": "From Template",
+    "projectName": "Project Name",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional project description",
+    "composeDetected": "Docker Compose detected",
+    "setupAppNow": "Set up app deployment now",
+    "back": "Back",
+    "next": "Next",
+    "createProject": "Create Project",
+    "creating": "Creating..."
+  },
+  "filter": {
+    "all": "All",
+    "hasApp": "With App",
+    "noApp": "Without App",
+    "running": "Running",
+    "archived": "Archived"
+  }
+}

@@ -5,7 +5,7 @@ import { join } from 'path'
 import { nanoid } from 'nanoid'
 import { eq, desc } from 'drizzle-orm'
 import { db } from '../db'
-import { apps, appServices, deployments, repositories, tunnels } from '../db/schema'
+import { apps, appServices, deployments, repositories, tunnels, projects } from '../db/schema'
 import { findComposeFile, parseComposeFile } from '../services/compose-parser'
 import {
   deployApp,
@@ -220,6 +220,16 @@ app.post('/', async (c) => {
     const services = await db.query.appServices.findMany({
       where: eq(appServices.appId, appId),
     })
+
+    // Auto-link to project if one exists for this repository
+    const project = await db.query.projects.findFirst({
+      where: eq(projects.repositoryId, body.repositoryId),
+    })
+    if (project && !project.appId) {
+      await db.update(projects)
+        .set({ appId, updatedAt: now })
+        .where(eq(projects.id, project.id))
+    }
 
     // Refresh git watchers for auto-deploy
     refreshGitWatchers().catch(() => {})
@@ -481,6 +491,16 @@ app.delete('/:id', async (c) => {
 
   // Delete tunnel records
   await db.delete(tunnels).where(eq(tunnels.appId, id))
+
+  // Unlink from project if linked
+  const project = await db.query.projects.findFirst({
+    where: eq(projects.appId, id),
+  })
+  if (project) {
+    await db.update(projects)
+      .set({ appId: null, updatedAt: new Date().toISOString() })
+      .where(eq(projects.id, project.id))
+  }
 
   // Delete app
   await db.delete(apps).where(eq(apps.id, id))

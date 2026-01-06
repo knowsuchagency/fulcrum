@@ -466,3 +466,55 @@ export interface JobLogEntry {
 export interface JobLogsResponse {
   entries: JobLogEntry[]
 }
+
+// Project types - unified entity wrapping repository + app + terminal
+export type ProjectStatus = 'active' | 'archived'
+
+export interface Project {
+  id: string
+  name: string
+  description: string | null
+  repositoryId: string | null
+  appId: string | null
+  terminalTabId: string | null
+  status: ProjectStatus
+  lastAccessedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// Project with nested entities for API responses
+export interface ProjectWithDetails extends Project {
+  repository: {
+    id: string
+    path: string
+    displayName: string
+    startupScript: string | null
+    copyFiles: string | null
+    defaultAgent: AgentType | null
+    claudeOptions: Record<string, string> | null
+    opencodeOptions: Record<string, string> | null
+    opencodeModel: string | null
+    remoteUrl: string | null
+    isCopierTemplate: boolean
+  } | null
+  app: {
+    id: string
+    name: string
+    branch: string
+    composeFile: string
+    status: AppStatus
+    autoDeployEnabled: boolean
+    noCacheBuild: boolean
+    notificationsEnabled: boolean
+    environmentVariables: Record<string, string> | null
+    lastDeployedAt: string | null
+    lastDeployCommit: string | null
+    services: AppService[]
+  } | null
+  terminalTab: {
+    id: string
+    name: string
+    directory: string | null
+  } | null
+}

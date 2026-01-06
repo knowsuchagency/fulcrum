@@ -213,6 +213,63 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
   }
 
   migrate(drizzleDb, { migrationsFolder: migrationsPath })
+
+  // Run data migrations after schema migrations
+  migrateRepositoriesToProjects(sqlite, drizzleDb)
+}
+
+// Data migration: Create projects for existing repositories
+function migrateRepositoriesToProjects(
+  sqlite: Database,
+  drizzleDb: BunSQLiteDatabase<typeof schema>
+): void {
+  // Check if projects table exists
+  const hasProjectsTable = sqlite
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'")
+    .get()
+
+  if (!hasProjectsTable) return
+
+  // Check if any repositories exist without projects
+  const orphanedRepos = sqlite
+    .query(`
+      SELECT r.id, r.display_name, r.path, r.last_used_at
+      FROM repositories r
+      WHERE NOT EXISTS (
+        SELECT 1 FROM projects p WHERE p.repository_id = r.id
+      )
+    `)
+    .all() as Array<{ id: string; display_name: string; path: string; last_used_at: string | null }>
+
+  if (orphanedRepos.length === 0) return
+
+  log.db.info('Migrating repositories to projects', { count: orphanedRepos.length })
+
+  const now = new Date().toISOString()
+  const { nanoid } = require('nanoid')
+
+  for (const repo of orphanedRepos) {
+    // Find app linked to this repository (if any)
+    const linkedApp = sqlite
+      .query('SELECT id FROM apps WHERE repository_id = ?')
+      .get(repo.id) as { id: string } | null
+
+    // Create terminal tab for this project
+    const tabId = nanoid()
+    sqlite.exec(`
+      INSERT INTO terminal_tabs (id, name, position, directory, created_at, updated_at)
+      VALUES ('${tabId}', '${repo.display_name.replace(/'/g, "''")}', 0, '${repo.path.replace(/'/g, "''")}', '${now}', '${now}')
+    `)
+
+    // Create project
+    const projectId = nanoid()
+    sqlite.exec(`
+      INSERT INTO projects (id, name, repository_id, app_id, terminal_tab_id, status, last_accessed_at, created_at, updated_at)
+      VALUES ('${projectId}', '${repo.display_name.replace(/'/g, "''")}', '${repo.id}', ${linkedApp ? `'${linkedApp.id}'` : 'NULL'}, '${tabId}', 'active', ${repo.last_used_at ? `'${repo.last_used_at}'` : 'NULL'}, '${now}', '${now}')
+    `)
+  }
+
+  log.db.info('Migrated repositories to projects successfully', { count: orphanedRepos.length })
 }
 
 // Re-export schema for convenience

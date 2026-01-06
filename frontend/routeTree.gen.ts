@@ -15,11 +15,14 @@ import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ReviewIndexRouteImport } from './routes/review/index'
 import { Route as RepositoriesIndexRouteImport } from './routes/repositories/index'
+import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as MonitoringIndexRouteImport } from './routes/monitoring/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs/index'
 import { Route as AppsIndexRouteImport } from './routes/apps/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 import { Route as RepositoriesRepoIdRouteImport } from './routes/repositories/$repoId'
+import { Route as ProjectsNewRouteImport } from './routes/projects/new'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as JobsNewRouteImport } from './routes/jobs/new'
 import { Route as JobsJobIdRouteImport } from './routes/jobs/$jobId'
 import { Route as AppsNewRouteImport } from './routes/apps/new'
@@ -55,6 +58,11 @@ const RepositoriesIndexRoute = RepositoriesIndexRouteImport.update({
   path: '/repositories/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MonitoringIndexRoute = MonitoringIndexRouteImport.update({
   id: '/monitoring/',
   path: '/monitoring/',
@@ -78,6 +86,16 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
 const RepositoriesRepoIdRoute = RepositoriesRepoIdRouteImport.update({
   id: '/repositories/$repoId',
   path: '/repositories/$repoId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsNewRoute = ProjectsNewRouteImport.update({
+  id: '/projects/new',
+  path: '/projects/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsNewRoute = JobsNewRouteImport.update({
@@ -107,11 +125,14 @@ export interface FileRoutesByFullPath {
   '/apps/new': typeof AppsNewRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/new': typeof ProjectsNewRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/apps': typeof AppsIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/monitoring': typeof MonitoringIndexRoute
+  '/projects': typeof ProjectsIndexRoute
   '/repositories': typeof RepositoriesIndexRoute
   '/review': typeof ReviewIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -124,11 +145,14 @@ export interface FileRoutesByTo {
   '/apps/new': typeof AppsNewRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/new': typeof ProjectsNewRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/apps': typeof AppsIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/monitoring': typeof MonitoringIndexRoute
+  '/projects': typeof ProjectsIndexRoute
   '/repositories': typeof RepositoriesIndexRoute
   '/review': typeof ReviewIndexRoute
   '/settings': typeof SettingsIndexRoute
@@ -142,11 +166,14 @@ export interface FileRoutesById {
   '/apps/new': typeof AppsNewRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
   '/jobs/new': typeof JobsNewRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/new': typeof ProjectsNewRoute
   '/repositories/$repoId': typeof RepositoriesRepoIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/apps/': typeof AppsIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/monitoring/': typeof MonitoringIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
   '/repositories/': typeof RepositoriesIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/settings/': typeof SettingsIndexRoute
@@ -161,11 +188,14 @@ export interface FileRouteTypes {
     | '/apps/new'
     | '/jobs/$jobId'
     | '/jobs/new'
+    | '/projects/$projectId'
+    | '/projects/new'
     | '/repositories/$repoId'
     | '/tasks/$taskId'
     | '/apps'
     | '/jobs'
     | '/monitoring'
+    | '/projects'
     | '/repositories'
     | '/review'
     | '/settings'
@@ -178,11 +208,14 @@ export interface FileRouteTypes {
     | '/apps/new'
     | '/jobs/$jobId'
     | '/jobs/new'
+    | '/projects/$projectId'
+    | '/projects/new'
     | '/repositories/$repoId'
     | '/tasks/$taskId'
     | '/apps'
     | '/jobs'
     | '/monitoring'
+    | '/projects'
     | '/repositories'
     | '/review'
     | '/settings'
@@ -195,11 +228,14 @@ export interface FileRouteTypes {
     | '/apps/new'
     | '/jobs/$jobId'
     | '/jobs/new'
+    | '/projects/$projectId'
+    | '/projects/new'
     | '/repositories/$repoId'
     | '/tasks/$taskId'
     | '/apps/'
     | '/jobs/'
     | '/monitoring/'
+    | '/projects/'
     | '/repositories/'
     | '/review/'
     | '/settings/'
@@ -213,11 +249,14 @@ export interface RootRouteChildren {
   AppsNewRoute: typeof AppsNewRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
   JobsNewRoute: typeof JobsNewRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+  ProjectsNewRoute: typeof ProjectsNewRoute
   RepositoriesRepoIdRoute: typeof RepositoriesRepoIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   AppsIndexRoute: typeof AppsIndexRoute
   JobsIndexRoute: typeof JobsIndexRoute
   MonitoringIndexRoute: typeof MonitoringIndexRoute
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
   RepositoriesIndexRoute: typeof RepositoriesIndexRoute
   ReviewIndexRoute: typeof ReviewIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
@@ -269,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RepositoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/': {
+      id: '/projects/'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/monitoring/': {
       id: '/monitoring/'
       path: '/monitoring'
@@ -302,6 +348,20 @@ declare module '@tanstack/react-router' {
       path: '/repositories/$repoId'
       fullPath: '/repositories/$repoId'
       preLoaderRoute: typeof RepositoriesRepoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/new': {
+      id: '/projects/new'
+      path: '/projects/new'
+      fullPath: '/projects/new'
+      preLoaderRoute: typeof ProjectsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs/new': {
@@ -341,11 +401,14 @@ const rootRouteChildren: RootRouteChildren = {
   AppsNewRoute: AppsNewRoute,
   JobsJobIdRoute: JobsJobIdRoute,
   JobsNewRoute: JobsNewRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+  ProjectsNewRoute: ProjectsNewRoute,
   RepositoriesRepoIdRoute: RepositoriesRepoIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   AppsIndexRoute: AppsIndexRoute,
   JobsIndexRoute: JobsIndexRoute,
   MonitoringIndexRoute: MonitoringIndexRoute,
+  ProjectsIndexRoute: ProjectsIndexRoute,
   RepositoriesIndexRoute: RepositoriesIndexRoute,
   ReviewIndexRoute: ReviewIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,

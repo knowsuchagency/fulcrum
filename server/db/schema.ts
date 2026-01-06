@@ -142,6 +142,20 @@ export const tunnels = sqliteTable('tunnels', {
   updatedAt: text('updated_at').notNull(),
 })
 
+// Projects - unified entity wrapping optional repository + optional app + dedicated terminal
+export const projects = sqliteTable('projects', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  repositoryId: text('repository_id'), // FK to repositories (nullable)
+  appId: text('app_id').unique(), // FK to apps (nullable, 1:1)
+  terminalTabId: text('terminal_tab_id').unique(), // FK to terminalTabs (dedicated)
+  status: text('status').notNull().default('active'), // 'active' | 'archived'
+  lastAccessedAt: text('last_accessed_at'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 // System metrics for monitoring - stores historical CPU, memory, disk usage
 export const systemMetrics = sqliteTable('system_metrics', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -175,3 +189,5 @@ export type Deployment = typeof deployments.$inferSelect
 export type NewDeployment = typeof deployments.$inferInsert
 export type Tunnel = typeof tunnels.$inferSelect
 export type NewTunnel = typeof tunnels.$inferInsert
+export type Project = typeof projects.$inferSelect
+export type NewProject = typeof projects.$inferInsert
