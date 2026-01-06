@@ -30,6 +30,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { labelKey: 'goToTasks', shortcut: 'meta+1' },
       { labelKey: 'goToTerminals', shortcut: 'meta+2' },
       { labelKey: 'goToTaskTerminals', shortcut: 'meta+i' },
+      { labelKey: 'goToProjectTerminals', shortcut: 'meta+u' },
       { labelKey: 'goToProjects', shortcut: 'meta+3' },
       { labelKey: 'goToReview', shortcut: 'meta+4' },
       { labelKey: 'goToMonitoring', shortcut: 'meta+5' },

@@ -95,6 +95,18 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         },
       },
       {
+        id: 'goto-project-terminals',
+        label: t('commandPalette.commands.goToProjectTerminals'),
+        shortcut: 'meta+u',
+        keywords: ['projects', 'shell', 'console', 'cli', 'workspace'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} />,
+        action: () => {
+          navigate({ to: '/terminals', search: { tab: 'all-projects' } })
+          setOpen(false)
+        },
+      },
+      {
         id: 'goto-review',
         label: t('commandPalette.commands.goToReview'),
         shortcut: 'meta+4',
@@ -217,6 +229,9 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   useHotkeys('meta+3', () => navigate({ to: '/projects' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+i', () => {
     navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
+  }, { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+u', () => {
+    navigate({ to: '/terminals', search: { tab: 'all-projects' } })
   }, { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+4', () => navigate({ to: '/review' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+5', () => navigate({ to: '/monitoring' }), { allowInInput: true, allowInTerminal: true })
