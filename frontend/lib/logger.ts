@@ -159,6 +159,7 @@ export function createLogger(component: string): Logger {
 export const log = {
   terminal: createLogger('Terminal'),
   terminalsView: createLogger('TerminalsView'),
+  projectTerminals: createLogger('ProjectTerminals'),
   ws: createLogger('WebSocket'),
   taskTerminal: createLogger('TaskTerminal'),
   repoTerminal: createLogger('RepoTerminal'),

@@ -329,30 +329,24 @@ const TerminalsView = observer(function TerminalsView() {
     return projectsFilter?.split(',').filter(Boolean) ?? []
   }, [projectsFilter])
 
-  // Track project IDs for which terminals are being created (for UI loading state)
-  const [creatingProjectIds, setCreatingProjectIds] = useState<Set<string>>(new Set())
-
-  // Check if a project needs a terminal created (no existing terminal for its repo path)
-  const projectNeedsTerminal = useCallback(
-    (projectId: string): boolean => {
-      const project = allProjects.find((p) => p.id === projectId)
-      if (!project?.repository?.path) return false
-      const existingTerminal = terminals.find((t) => t.cwd === project.repository!.path)
-      return !existingTerminal
-    },
-    [allProjects, terminals]
-  )
+  // Track which project is currently loading (single project at a time)
+  const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null)
+  const loadingStartTimeRef = useRef<number>(0)
+  const MIN_LOADING_DURATION = 400 // ms - minimum time to show spinner
 
   // Toggle a project in the multi-select filter (max 6 projects)
   const toggleProjectFilter = useCallback(
     (projectId: string, checked: boolean) => {
+      log.projectTerminals.info('toggleProjectFilter called', { projectId, checked })
       const currentIds = projectsFilter?.split(',').filter(Boolean) ?? []
       // Limit to 6 projects max
       if (checked && currentIds.length >= 6) return
 
-      // If adding a project that needs a terminal, set loading state immediately
-      if (checked && projectNeedsTerminal(projectId)) {
-        setCreatingProjectIds((prev) => new Set([...prev, projectId]))
+      // Set loading state when adding a project
+      if (checked) {
+        log.projectTerminals.info('Setting loadingProjectId', { projectId })
+        loadingStartTimeRef.current = Date.now()
+        setLoadingProjectId(projectId)
       }
 
       const newIds = checked
@@ -364,7 +358,7 @@ const TerminalsView = observer(function TerminalsView() {
         replace: true,
       })
     },
-    [navigate, projectsFilter, projectNeedsTerminal]
+    [navigate, projectsFilter]
   )
 
   // Auto-create terminals for selected projects that don't have one
@@ -372,20 +366,26 @@ const TerminalsView = observer(function TerminalsView() {
     if (activeTabId !== ALL_PROJECTS_TAB_ID) return
     if (!connected) return
 
-    for (const projectId of selectedProjectIds) {
-      // Skip if already creating a terminal for this project
-      if (creatingProjectIds.has(projectId)) continue
+    log.projectTerminals.debug('Auto-create effect running', {
+      selectedProjectIds,
+      terminalCount: terminals.length,
+      terminalCwds: terminals.map(t => t.cwd),
+    })
 
+    for (const projectId of selectedProjectIds) {
       const project = allProjects.find((p) => p.id === projectId)
       if (!project?.repository?.path) continue
 
       const repoPath = project.repository.path
       // Check if terminal already exists for this project
       const existingTerminal = terminals.find((t) => t.cwd === repoPath)
-      if (existingTerminal) continue
+      if (existingTerminal) {
+        log.projectTerminals.debug('Terminal already exists for project', { projectId, repoPath })
+        continue
+      }
 
-      // Mark as creating and create terminal
-      setCreatingProjectIds((prev) => new Set([...prev, projectId]))
+      // Create terminal for this project
+      log.projectTerminals.info('Creating terminal for project', { projectId, repoPath })
       createTerminal({
         name: project.name,
         cwd: repoPath,
@@ -393,27 +393,7 @@ const TerminalsView = observer(function TerminalsView() {
         rows: 24,
       })
     }
-  }, [activeTabId, selectedProjectIds, allProjects, terminals, connected, createTerminal, creatingProjectIds])
-
-  // Clear loading state when terminal appears for a project
-  useEffect(() => {
-    if (creatingProjectIds.size === 0) return
-
-    const stillLoading = new Set<string>()
-    for (const projectId of creatingProjectIds) {
-      const project = allProjects.find((p) => p.id === projectId)
-      if (!project?.repository?.path) continue
-
-      const existingTerminal = terminals.find((t) => t.cwd === project.repository!.path)
-      if (!existingTerminal) {
-        stillLoading.add(projectId)
-      }
-    }
-
-    if (stillLoading.size !== creatingProjectIds.size) {
-      setCreatingProjectIds(stillLoading)
-    }
-  }, [terminals, allProjects, creatingProjectIds])
+  }, [activeTabId, selectedProjectIds, allProjects, terminals, connected, createTerminal])
 
   const cleanupFnsRef = useRef<Map<string, () => void>>(new Map())
   const terminalCountRef = useRef(0)
@@ -457,6 +437,35 @@ const TerminalsView = observer(function TerminalsView() {
       .sort((a, b) => a.positionInTab - b.positionInTab)
       .map(toTerminalInfo)
   }, [activeTabId, terminals, activeTaskWorktrees, repoFilter, tasks, projectRepoPaths, selectedProjectIds])
+
+  // Clear loading state when terminal appears (with minimum duration)
+  useEffect(() => {
+    if (!loadingProjectId) return
+    const project = allProjects.find(p => p.id === loadingProjectId)
+    if (!project?.repository?.path) return
+    const repoPath = project.repository.path
+    const hasTerminal = visibleTerminals.some(t => t.cwd === repoPath)
+    log.projectTerminals.debug('Clear loading effect', {
+      loadingProjectId,
+      repoPath,
+      hasTerminal,
+      visibleTerminalCwds: visibleTerminals.map(t => t.cwd),
+    })
+    if (hasTerminal) {
+      // Ensure minimum loading duration for visual feedback
+      const elapsed = Date.now() - loadingStartTimeRef.current
+      const remaining = MIN_LOADING_DURATION - elapsed
+      if (remaining > 0) {
+        const timer = setTimeout(() => {
+          log.projectTerminals.info('Clearing loadingProjectId after delay', { loadingProjectId })
+          setLoadingProjectId(null)
+        }, remaining)
+        return () => clearTimeout(timer)
+      }
+      log.projectTerminals.info('Clearing loadingProjectId', { loadingProjectId })
+      setLoadingProjectId(null)
+    }
+  }, [loadingProjectId, allProjects, visibleTerminals])
 
   const handleTerminalAdd = useCallback(() => {
     log.terminal.info('handleTerminalAdd called', {
@@ -747,7 +756,7 @@ const TerminalsView = observer(function TerminalsView() {
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="sm" className="max-sm:w-auto" />}
               >
-                {creatingProjectIds.size > 0 ? (
+                {loadingProjectId ? (
                   <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin text-muted-foreground" />
                 ) : (
                   <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
@@ -763,8 +772,8 @@ const TerminalsView = observer(function TerminalsView() {
                   <div className="text-sm font-medium mb-2">{t('filterByProject')}</div>
                   {allProjects.map((project) => {
                     const isSelected = selectedProjectIds.includes(project.id)
-                    const isLoading = creatingProjectIds.has(project.id)
-                    const isDisabled = creatingProjectIds.size > 0 || (!isSelected && selectedProjectIds.length >= 6)
+                    const isLoading = loadingProjectId === project.id
+                    const isDisabled = loadingProjectId !== null || (!isSelected && selectedProjectIds.length >= 6)
                     return (
                       <div key={project.id} className="flex items-center gap-2">
                         {isLoading ? (
@@ -791,7 +800,7 @@ const TerminalsView = observer(function TerminalsView() {
                       </div>
                     )
                   })}
-                  {selectedProjectIds.length > 0 && creatingProjectIds.size === 0 && (
+                  {selectedProjectIds.length > 0 && !loadingProjectId && (
                     <Button
                       variant="ghost"
                       size="sm"
