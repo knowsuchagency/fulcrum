@@ -33,7 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useJobs, useEnableJob, useDisableJob, useRunJobNow, useDeleteJob } from '@/hooks/use-jobs'
+import { useJobs, useJobsAvailable, useEnableJob, useDisableJob, useRunJobNow, useDeleteJob } from '@/hooks/use-jobs'
 import type { SystemdTimer } from '@/types'
 
 // Jobs tab helpers
@@ -100,17 +100,20 @@ function formatJobLastRun(lastRun: string | null): string {
 
 function JobCard({
   job,
+  canModify,
   onToggleEnabled,
   onRunNow,
   onDelete,
 }: {
   job: SystemdTimer
+  canModify: boolean
   onToggleEnabled: () => void
   onRunNow: () => void
   onDelete: () => void
 }) {
   const { t } = useTranslation('jobs')
   const isSystemJob = job.scope === 'system'
+  const showActions = canModify && !isSystemJob
   const displayName = job.name.replace('.timer', '')
 
   return (
@@ -184,49 +187,48 @@ function JobCard({
         </CardContent>
       </Link>
 
-      <CardContent className="pt-0 pb-4 px-6">
-        <div className="mt-auto flex flex-wrap gap-1">
-          {!isSystemJob && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRunNow}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} data-slot="icon" />
-                <span className="max-sm:hidden">{t('actions.runNow')}</span>
-              </Button>
+      {showActions && (
+        <CardContent className="pt-0 pb-4 px-6">
+          <div className="mt-auto flex flex-wrap gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRunNow}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{t('actions.runNow')}</span>
+            </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onToggleEnabled}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={job.enabled ? StopIcon : PlayIcon} size={14} strokeWidth={2} data-slot="icon" />
-                <span className="max-sm:hidden">{job.enabled ? t('actions.disable') : t('actions.enable')}</span>
-              </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToggleEnabled}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={job.enabled ? StopIcon : PlayIcon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{job.enabled ? t('actions.disable') : t('actions.enable')}</span>
+            </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onDelete}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-                <span className="max-sm:hidden">{t('actions.delete')}</span>
-              </Button>
-            </>
-          )}
-        </div>
-      </CardContent>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDelete}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{t('actions.delete')}</span>
+            </Button>
+          </div>
+        </CardContent>
+      )}
     </Card>
   )
 }
 
 export default function JobsTab({ scopeFilter, onScopeChange }: { scopeFilter: 'all' | 'user' | 'system'; onScopeChange: (scope: 'all' | 'user' | 'system') => void }) {
   const { t } = useTranslation('jobs')
+  const { data: jobsInfo } = useJobsAvailable()
   const { data: jobs, isLoading, error } = useJobs(scopeFilter)
   const enableJob = useEnableJob()
   const disableJob = useDisableJob()
@@ -234,6 +236,8 @@ export default function JobsTab({ scopeFilter, onScopeChange }: { scopeFilter: '
   const deleteJob = useDeleteJob()
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<SystemdTimer | null>(null)
+
+  const canCreate = jobsInfo?.canCreate ?? false
 
   const filteredJobs = useMemo(() => {
     if (!jobs) return []
@@ -315,12 +319,14 @@ export default function JobsTab({ scopeFilter, onScopeChange }: { scopeFilter: '
           </SelectContent>
         </Select>
         <div className="hidden sm:block flex-1" />
-        <Link to="/jobs/new">
-          <Button size="sm">
-            <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{t('createJob')}</span>
-          </Button>
-        </Link>
+        {canCreate && (
+          <Link to="/jobs/new">
+            <Button size="sm">
+              <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{t('createJob')}</span>
+            </Button>
+          </Link>
+        )}
       </div>
 
       {isLoading && (
@@ -345,12 +351,14 @@ export default function JobsTab({ scopeFilter, onScopeChange }: { scopeFilter: '
         <div className="py-12 text-center text-muted-foreground">
           <HugeiconsIcon icon={Calendar02Icon} size={48} strokeWidth={1.5} className="mx-auto mb-4 opacity-50" />
           <p className="text-sm">{t('noJobs')}</p>
-          <Link to="/jobs/new" className="mt-4 inline-block">
-            <Button>
-              <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
-              {t('createJob')}
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link to="/jobs/new" className="mt-4 inline-block">
+              <Button>
+                <HugeiconsIcon icon={PlusSignIcon} size={16} strokeWidth={2} data-slot="icon" />
+                {t('createJob')}
+              </Button>
+            </Link>
+          )}
         </div>
       )}
 
@@ -373,6 +381,7 @@ export default function JobsTab({ scopeFilter, onScopeChange }: { scopeFilter: '
               <JobCard
                 key={`${job.scope}-${job.name}`}
                 job={job}
+                canModify={canCreate}
                 onToggleEnabled={() => handleToggleEnabled(job)}
                 onRunNow={() => handleRunNow(job)}
                 onDelete={() => setDeleteTarget(job)}
@@ -395,6 +404,7 @@ export default function JobsTab({ scopeFilter, onScopeChange }: { scopeFilter: '
               <JobCard
                 key={`${job.scope}-${job.name}`}
                 job={job}
+                canModify={canCreate}
                 onToggleEnabled={() => handleToggleEnabled(job)}
                 onRunNow={() => handleRunNow(job)}
                 onDelete={() => setDeleteTarget(job)}

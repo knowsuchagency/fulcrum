@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   useJob,
   useJobLogs,
+  useJobsAvailable,
   useEnableJob,
   useDisableJob,
   useRunJobNow,
@@ -41,6 +42,7 @@ import {
   CpuIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { CodeBlock } from '@/components/ui/code-block'
 
 type JobTab = 'general' | 'logs'
 
@@ -243,6 +245,7 @@ function JobDetailView() {
   const navigate = useNavigate()
   const activeTab = tab || 'general'
 
+  const { data: jobsInfo } = useJobsAvailable()
   const { data: job, isLoading, error, refetch } = useJob(jobId, scope)
   const { data: logsData, refetch: refetchLogs } = useJobLogs(jobId, scope, 200)
   const enableJob = useEnableJob()
@@ -254,6 +257,7 @@ function JobDetailView() {
 
   const displayName = jobId.replace('.timer', '')
   const isSystemJob = scope === 'system'
+  const canModify = (jobsInfo?.canCreate ?? false) && !isSystemJob
 
   const setTab = (newTab: JobTab) => {
     navigate({
@@ -359,7 +363,7 @@ function JobDetailView() {
         </div>
 
         {/* Action buttons - stack on mobile */}
-        {!isSystemJob && (
+        {canModify && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
@@ -423,47 +427,50 @@ function JobDetailView() {
                     )}
                   </div>
                 </div>
-                <div className={`grid gap-4 text-sm ${job.nextRun ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-                  {job.nextRun && (
-                    <div>
-                      <div className="text-muted-foreground">{t('detail.nextRun')}</div>
-                      <div className="flex items-center gap-1.5">
-                        <HugeiconsIcon icon={Clock01Icon} size={14} strokeWidth={2} className="shrink-0 text-muted-foreground" />
-                        <span>{formatRelativeTime(job.nextRun)}</span>
+                {/* Don't show next/last run for continuous jobs (KeepAlive/RunAtLoad) */}
+                {job.schedule !== 'KeepAlive' && job.schedule !== 'RunAtLoad' && (
+                  <div className={`grid gap-4 text-sm ${job.nextRun ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                    {job.nextRun && (
+                      <div>
+                        <div className="text-muted-foreground">{t('detail.nextRun')}</div>
+                        <div className="flex items-center gap-1.5">
+                          <HugeiconsIcon icon={Clock01Icon} size={14} strokeWidth={2} className="shrink-0 text-muted-foreground" />
+                          <span>{formatRelativeTime(job.nextRun)}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">{formatDateTime(job.nextRun)}</div>
                       </div>
-                      <div className="text-xs text-muted-foreground">{formatDateTime(job.nextRun)}</div>
+                    )}
+                    <div>
+                      <div className="text-muted-foreground">{t('detail.lastRun')}</div>
+                      <div className="flex items-center gap-1.5">
+                        {job.lastResult === 'success' && (
+                          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="shrink-0 text-green-500" />
+                        )}
+                        {job.lastResult === 'failed' && (
+                          <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} className="shrink-0 text-red-500" />
+                        )}
+                        <span>{formatRelativeTime(job.lastRun)}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{formatDateTime(job.lastRun)}</div>
                     </div>
-                  )}
-                  <div>
-                    <div className="text-muted-foreground">{t('detail.lastRun')}</div>
-                    <div className="flex items-center gap-1.5">
-                      {job.lastResult === 'success' && (
-                        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="shrink-0 text-green-500" />
-                      )}
-                      {job.lastResult === 'failed' && (
-                        <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} className="shrink-0 text-red-500" />
-                      )}
-                      <span>{formatRelativeTime(job.lastRun)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">{formatDateTime(job.lastRun)}</div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
             {/* Command Info */}
             <div className="space-y-4 min-w-0">
               <h2 className="text-sm font-medium text-muted-foreground">{t('detail.command')}</h2>
-              <div className="rounded-lg border p-4 space-y-3 overflow-hidden">
+              <div className="space-y-3 overflow-hidden">
                 {job.command ? (
-                  <code className="block whitespace-pre-wrap break-all rounded bg-muted px-2 py-1 text-sm font-mono">
-                    {job.command}
-                  </code>
+                  <CodeBlock code={job.command} language="bash" className="max-h-48" />
                 ) : (
-                  <span className="text-muted-foreground text-sm">-</span>
+                  <div className="rounded-lg border p-4">
+                    <span className="text-muted-foreground text-sm">-</span>
+                  </div>
                 )}
                 {job.workingDirectory && (
-                  <div className="text-sm break-all">
+                  <div className="text-sm break-all px-1">
                     <span className="text-muted-foreground">{t('detail.workingDir')}: </span>
                     <code className="font-mono break-all">{job.workingDirectory}</code>
                   </div>
@@ -496,23 +503,23 @@ function JobDetailView() {
               </div>
             )}
 
-            {/* Timer File (user timers only) */}
+            {/* Timer/Plist File (user jobs only) */}
             {!isSystemJob && job.timerContent && (
               <div className="space-y-4 md:col-span-2 min-w-0">
                 <h2 className="text-sm font-medium text-muted-foreground">{t('detail.timerFile')}</h2>
-                <pre className="rounded-lg border bg-muted p-4 text-xs font-mono overflow-y-auto max-h-48 whitespace-pre-wrap break-all">
-                  {job.timerContent}
-                </pre>
+                <CodeBlock
+                  code={job.timerContent}
+                  language={jobsInfo?.platform === 'launchd' ? 'xml' : 'ini'}
+                  className="max-h-64"
+                />
               </div>
             )}
 
-            {/* Service File (user timers only) */}
+            {/* Service File (systemd only, user timers only) */}
             {!isSystemJob && job.serviceContent && (
               <div className="space-y-4 md:col-span-2 min-w-0">
                 <h2 className="text-sm font-medium text-muted-foreground">{t('detail.serviceFile')}</h2>
-                <pre className="rounded-lg border bg-muted p-4 text-xs font-mono overflow-y-auto max-h-48 whitespace-pre-wrap break-all">
-                  {job.serviceContent}
-                </pre>
+                <CodeBlock code={job.serviceContent} language="ini" className="max-h-64" />
               </div>
             )}
           </div>

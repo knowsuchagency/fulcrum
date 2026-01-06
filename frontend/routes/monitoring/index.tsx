@@ -22,7 +22,6 @@ import {
   JobsTab,
 } from '@/components/monitoring/tabs'
 import { useJobsAvailable } from '@/hooks/use-jobs'
-import { useDeveloperMode } from '@/hooks/use-config'
 
 type MonitoringTab = 'system' | 'processes' | 'claude' | 'vibora' | 'worktrees' | 'usage' | 'jobs'
 
@@ -42,7 +41,6 @@ function MonitoringPage() {
   const { t } = useTranslation('monitoring')
   const { tab: urlTab, scope: urlScope } = Route.useSearch()
   const navigate = Route.useNavigate()
-  const { data: developerMode } = useDeveloperMode()
   const { data: jobsAvailable } = useJobsAvailable()
 
   const activeTab = urlTab || 'system'
@@ -64,8 +62,8 @@ function MonitoringPage() {
     })
   }
 
-  // Show Jobs tab only if enabled and systemd is available
-  const showJobsTab = developerMode?.enabled && jobsAvailable
+  // Show Jobs tab if jobs are available on this platform (systemd or launchd)
+  const showJobsTab = jobsAvailable?.available
 
   return (
     <div className="flex h-full flex-col">

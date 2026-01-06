@@ -22,6 +22,8 @@ const COMMON_LANGS = [
   'sql',
   'diff',
   'plaintext',
+  'ini',
+  'xml',
 ]
 
 async function initHighlighter(): Promise<Highlighter> {

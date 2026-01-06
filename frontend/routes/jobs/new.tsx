@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useCreateJob } from '@/hooks/use-jobs'
+import { useCreateJob, useJobsAvailable } from '@/hooks/use-jobs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -22,7 +22,15 @@ export const Route = createFileRoute('/jobs/new')({
 function NewJobView() {
   const { t } = useTranslation('jobs')
   const navigate = useNavigate()
+  const { data: jobsInfo, isLoading: isLoadingAvailable } = useJobsAvailable()
   const createJob = useCreateJob()
+
+  // Redirect if job creation not supported on this platform
+  useEffect(() => {
+    if (!isLoadingAvailable && !jobsInfo?.canCreate) {
+      navigate({ to: '/monitoring', search: { tab: 'jobs' } })
+    }
+  }, [isLoadingAvailable, jobsInfo, navigate])
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -78,6 +86,15 @@ function NewJobView() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create job')
     }
+  }
+
+  // Show loading or nothing while checking platform support
+  if (isLoadingAvailable || !jobsInfo?.canCreate) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <HugeiconsIcon icon={Loading03Icon} size={24} strokeWidth={2} className="animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
