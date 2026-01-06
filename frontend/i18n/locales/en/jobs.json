@@ -1,6 +1,6 @@
 {
   "title": "Jobs",
-  "description": "Manage scheduled tasks with systemd timers",
+  "description": "View scheduled tasks (systemd timers on Linux, launchd jobs on macOS)",
   "searchPlaceholder": "Search jobs...",
   "noJobs": "No scheduled jobs found",
   "noJobsMatch": "No jobs match your search",
@@ -20,6 +20,7 @@
   "nextRun": "Next",
   "lastRun": "Last",
   "systemTimerReadonly": "System timers are read-only",
+  "macosReadonly": "Jobs on macOS are read-only",
   "actions": {
     "enable": "Enable",
     "disable": "Disable",

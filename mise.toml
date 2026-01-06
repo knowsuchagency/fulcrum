@@ -82,6 +82,9 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Default dev port to 6666 (prod uses 7777), respect PORT env var if set
+PORT="${PORT:-6666}"
+
 # Determine host binding
 if [ "$usage_host" = "true" ]; then
   VITE_HOST="--host"

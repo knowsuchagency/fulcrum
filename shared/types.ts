@@ -469,6 +469,14 @@ export interface JobLogsResponse {
   entries: JobLogEntry[]
 }
 
+export type JobPlatform = 'systemd' | 'launchd' | null
+
+export interface JobsAvailableResponse {
+  available: boolean
+  canCreate: boolean
+  platform: JobPlatform
+}
+
 // Project types - unified entity wrapping repository + app + terminal
 export type ProjectStatus = 'active' | 'archived'
 

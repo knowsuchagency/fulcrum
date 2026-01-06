@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   useJob,
   useJobLogs,
+  useJobsAvailable,
   useEnableJob,
   useDisableJob,
   useRunJobNow,
@@ -243,6 +244,7 @@ function JobDetailView() {
   const navigate = useNavigate()
   const activeTab = tab || 'general'
 
+  const { data: jobsInfo } = useJobsAvailable()
   const { data: job, isLoading, error, refetch } = useJob(jobId, scope)
   const { data: logsData, refetch: refetchLogs } = useJobLogs(jobId, scope, 200)
   const enableJob = useEnableJob()
@@ -254,6 +256,7 @@ function JobDetailView() {
 
   const displayName = jobId.replace('.timer', '')
   const isSystemJob = scope === 'system'
+  const canModify = (jobsInfo?.canCreate ?? false) && !isSystemJob
 
   const setTab = (newTab: JobTab) => {
     navigate({
@@ -359,7 +362,7 @@ function JobDetailView() {
         </div>
 
         {/* Action buttons - stack on mobile */}
-        {!isSystemJob && (
+        {canModify && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button
               variant="outline"

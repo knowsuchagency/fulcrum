@@ -7,6 +7,7 @@ import type {
   UpdateTimerRequest,
   JobLogsResponse,
   JobScope,
+  JobsAvailableResponse,
 } from '@/types'
 
 const API_BASE = ''
@@ -15,7 +16,7 @@ const API_BASE = ''
 export function useJobsAvailable() {
   return useQuery({
     queryKey: ['jobs', 'available'],
-    queryFn: () => fetchJSON<{ available: boolean }>(`${API_BASE}/api/jobs/available`),
+    queryFn: () => fetchJSON<JobsAvailableResponse>(`${API_BASE}/api/jobs/available`),
     staleTime: Infinity, // Platform doesn't change, cache forever
   })
 }
