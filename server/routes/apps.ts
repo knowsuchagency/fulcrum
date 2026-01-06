@@ -937,22 +937,18 @@ app.get('/:id/swarm-compose', async (c) => {
 
   const appRecord = await db.query.apps.findFirst({
     where: eq(apps.id, id),
-    with: {
-      project: {
-        with: {
-          repository: true,
-        },
-      },
-    },
   })
 
   if (!appRecord) {
     return c.json({ error: 'App not found' }, 404)
   }
 
-  const repo = appRecord.project?.repository
+  // Get the repository directly from the app's repositoryId
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, appRecord.repositoryId),
+  })
   if (!repo) {
-    return c.json({ error: 'App must be linked to a project with a repository' }, 400)
+    return c.json({ error: 'Repository not found for this app' }, 400)
   }
 
   // Parse current environment variables

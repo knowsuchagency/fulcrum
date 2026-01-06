@@ -592,6 +592,13 @@ app.post('/:id/create-app', async (c) => {
       }>
     }>()
 
+    // Parse compose file to detect services if not provided
+    const { findComposeFile, parseComposeFile } = await import('../services/compose-parser')
+    const composeFile = body.composeFile ?? (await findComposeFile(repo.path))
+    if (!composeFile) {
+      return c.json({ error: 'No compose file found in repository' }, 400)
+    }
+
     const now = new Date().toISOString()
     const appId = nanoid()
     const appName = body.name || repo.displayName || 'app'
@@ -603,7 +610,7 @@ app.post('/:id/create-app', async (c) => {
         name: appName,
         repositoryId: project.repositoryId,
         branch: body.branch || 'main',
-        composeFile: body.composeFile || 'docker-compose.yml',
+        composeFile,
         autoDeployEnabled: body.autoDeployEnabled ?? false,
         status: 'stopped',
         createdAt: now,
@@ -611,23 +618,32 @@ app.post('/:id/create-app', async (c) => {
       })
       .run()
 
-    // Create services if provided
-    if (body.services && body.services.length > 0) {
-      for (const svc of body.services) {
-        db.insert(appServices)
-          .values({
-            id: nanoid(),
-            appId,
-            serviceName: svc.serviceName,
-            containerPort: svc.containerPort ?? null,
-            exposed: svc.exposed,
-            domain: svc.domain ?? null,
-            exposureMethod: svc.exposureMethod ?? 'dns',
-            createdAt: now,
-            updatedAt: now,
-          })
-          .run()
-      }
+    // Create services - use provided services or parse from compose file
+    let servicesToCreate = body.services
+    if (!servicesToCreate || servicesToCreate.length === 0) {
+      // Parse compose file to detect services
+      const parsed = await parseComposeFile(repo.path, composeFile)
+      servicesToCreate = parsed.services.map((svc) => ({
+        serviceName: svc.name,
+        containerPort: svc.ports?.[0]?.container ?? null,
+        exposed: false,
+      }))
+    }
+
+    for (const svc of servicesToCreate) {
+      db.insert(appServices)
+        .values({
+          id: nanoid(),
+          appId,
+          serviceName: svc.serviceName,
+          containerPort: svc.containerPort ?? null,
+          exposed: svc.exposed ?? false,
+          domain: svc.domain ?? null,
+          exposureMethod: svc.exposureMethod ?? 'dns',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
     }
 
     // Link app to project
