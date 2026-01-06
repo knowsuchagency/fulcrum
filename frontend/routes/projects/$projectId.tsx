@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { observer } from 'mobx-react-lite'
 import { reaction } from 'mobx'
-import { useProject, useDeleteProject, useAccessProject } from '@/hooks/use-projects'
+import { useProject, useDeleteProject, useAccessProject, useUpdateProject } from '@/hooks/use-projects'
 import { useUpdateRepository } from '@/hooks/use-repositories'
 import {
   useStopApp,
@@ -202,6 +202,10 @@ const ProjectDetailView = observer(function ProjectDetailView() {
   const [deleteRepository, setDeleteRepository] = useState(false)
   const [deleteApp, setDeleteApp] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editedName, setEditedName] = useState('')
+  const updateProject = useUpdateProject()
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   const deployStore = useDeploymentStore()
   const [showStreamingLogs, setShowStreamingLogs] = useState(false)
@@ -237,6 +241,36 @@ const ProjectDetailView = observer(function ProjectDetailView() {
       setTimeout(() => deployStore.reset(), 300)
     }
   }, [deployStore])
+
+  const handleStartEditName = useCallback(() => {
+    if (project) {
+      setEditedName(project.name)
+      setIsEditingName(true)
+      setTimeout(() => nameInputRef.current?.select(), 0)
+    }
+  }, [project])
+
+  const handleSaveName = useCallback(() => {
+    const trimmedName = editedName.trim()
+    if (trimmedName && trimmedName !== project?.name) {
+      updateProject.mutate({ id: projectId, updates: { name: trimmedName } })
+    }
+    setIsEditingName(false)
+  }, [editedName, project?.name, projectId, updateProject])
+
+  const handleCancelEditName = useCallback(() => {
+    setIsEditingName(false)
+    setEditedName('')
+  }, [])
+
+  const handleNameKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSaveName()
+    } else if (e.key === 'Escape') {
+      handleCancelEditName()
+    }
+  }, [handleSaveName, handleCancelEditName])
 
   const actionConsumedRef = useRef(false)
 
@@ -495,7 +529,27 @@ const ProjectDetailView = observer(function ProjectDetailView() {
 
             {/* Project info */}
             {project.repository && <GitStatusBadge worktreePath={project.repository.path} />}
-            <span className="font-medium text-sm">{project.name}</span>
+            {isEditingName ? (
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={handleNameKeyDown}
+                className="font-medium text-sm bg-transparent border-b border-primary outline-none px-0.5 min-w-[100px]"
+                autoFocus
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartEditName}
+                className="font-medium text-sm hover:text-primary transition-colors cursor-pointer"
+                title="Click to edit"
+              >
+                {project.name}
+              </button>
+            )}
             {hasApp && (
               <div
                 className={`h-2 w-2 rounded-full ${
