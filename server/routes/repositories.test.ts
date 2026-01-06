@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { createTestApp } from '../__tests__/fixtures/app'
 import { setupTestEnv, type TestEnv } from '../__tests__/utils/env'
-import { db, repositories } from '../db'
+import { db, repositories, projects } from '../db'
 import { eq } from 'drizzle-orm'
 
 describe('Repositories Routes', () => {
@@ -138,162 +138,46 @@ describe('Repositories Routes', () => {
     })
   })
 
-  describe('POST /api/repositories', () => {
-    test('creates a repository with required fields', async () => {
-      // Create a real directory
-      const repoPath = join(testEnv.viboraDir, 'new-repo')
-      mkdirSync(repoPath, { recursive: true })
-
+  describe('POST /api/repositories (deprecated)', () => {
+    test('returns 400 with deprecation message', async () => {
       const { post } = createTestApp()
       const res = await post('/api/repositories', {
-        path: repoPath,
+        path: '/some/path',
         displayName: 'New Repository',
       })
       const body = await res.json()
 
-      expect(res.status).toBe(201)
-      expect(body.path).toBe(repoPath)
-      expect(body.displayName).toBe('New Repository')
-      expect(body.id).toBeDefined()
-      expect(body.startupScript).toBeNull()
-      expect(body.copyFiles).toBeNull()
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('not supported')
+      expect(body.error).toContain('POST /api/projects')
     })
+  })
 
-    test('creates a repository with optional fields', async () => {
-      // Create a real directory
-      const repoPath = join(testEnv.viboraDir, 'full-repo')
-      mkdirSync(repoPath, { recursive: true })
-
+  describe('POST /api/repositories/clone (deprecated)', () => {
+    test('returns 400 with deprecation message', async () => {
       const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        path: repoPath,
-        displayName: 'Full Repository',
-        startupScript: 'bun run dev',
-        copyFiles: '.env.example\nREADME.md',
-        isCopierTemplate: true,
-      })
-      const body = await res.json()
-
-      expect(res.status).toBe(201)
-      expect(body.startupScript).toBe('bun run dev')
-      expect(body.copyFiles).toBe('.env.example\nREADME.md')
-      expect(body.isCopierTemplate).toBe(true)
-    })
-
-    test('creates a repository with claudeOptions', async () => {
-      const repoPath = join(testEnv.viboraDir, 'claude-repo')
-      mkdirSync(repoPath, { recursive: true })
-
-      const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        path: repoPath,
-        displayName: 'Claude Repo',
-        claudeOptions: { model: 'claude-3-opus', 'max-tokens': '4000' },
-      })
-      const body = await res.json()
-
-      expect(res.status).toBe(201)
-      expect(body.claudeOptions).toEqual({ model: 'claude-3-opus', 'max-tokens': '4000' })
-    })
-
-    test('creates a repository with opencodeOptions', async () => {
-      const repoPath = join(testEnv.viboraDir, 'opencode-repo')
-      mkdirSync(repoPath, { recursive: true })
-
-      const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        path: repoPath,
-        displayName: 'OpenCode Repo',
-        opencodeOptions: { model: 'gpt-4', temperature: '0.7' },
-      })
-      const body = await res.json()
-
-      expect(res.status).toBe(201)
-      expect(body.opencodeOptions).toEqual({ model: 'gpt-4', temperature: '0.7' })
-    })
-
-    test('creates a repository with both agent options', async () => {
-      const repoPath = join(testEnv.viboraDir, 'multi-agent-repo')
-      mkdirSync(repoPath, { recursive: true })
-
-      const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        path: repoPath,
-        displayName: 'Multi-Agent Repo',
-        claudeOptions: { model: 'claude-3-sonnet' },
-        opencodeOptions: { model: 'gpt-4-turbo' },
-      })
-      const body = await res.json()
-
-      expect(res.status).toBe(201)
-      expect(body.claudeOptions).toEqual({ model: 'claude-3-sonnet' })
-      expect(body.opencodeOptions).toEqual({ model: 'gpt-4-turbo' })
-    })
-
-    test('derives displayName from path if not provided', async () => {
-      // Create a real directory
-      const repoPath = join(testEnv.viboraDir, 'my-project')
-      mkdirSync(repoPath, { recursive: true })
-
-      const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        path: repoPath,
-        displayName: '',
-      })
-      const body = await res.json()
-
-      expect(res.status).toBe(201)
-      expect(body.displayName).toBe('my-project')
-    })
-
-    test('returns 400 when path is missing', async () => {
-      const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        displayName: 'No Path Repo',
+      const res = await post('/api/repositories/clone', {
+        url: 'https://github.com/user/repo',
       })
       const body = await res.json()
 
       expect(res.status).toBe(400)
-      expect(body.error).toContain('path is required')
+      expect(body.error).toContain('not supported')
+      expect(body.error).toContain('POST /api/projects')
     })
+  })
 
-    test('returns 400 for non-existent directory', async () => {
+  describe('POST /api/repositories/bulk (deprecated)', () => {
+    test('returns 400 with deprecation message', async () => {
       const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        path: '/nonexistent/path/to/repo',
-        displayName: 'Ghost Repo',
+      const res = await post('/api/repositories/bulk', {
+        repositories: [{ path: '/some/path' }],
       })
       const body = await res.json()
 
       expect(res.status).toBe(400)
-      expect(body.error).toContain('does not exist')
-    })
-
-    test('returns 400 for duplicate path', async () => {
-      // Create a real directory
-      const repoPath = join(testEnv.viboraDir, 'existing-repo')
-      mkdirSync(repoPath, { recursive: true })
-
-      const now = new Date().toISOString()
-      db.insert(repositories)
-        .values({
-          id: 'existing-repo',
-          path: repoPath,
-          displayName: 'Existing',
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run()
-
-      const { post } = createTestApp()
-      const res = await post('/api/repositories', {
-        path: repoPath,
-        displayName: 'Duplicate',
-      })
-      const body = await res.json()
-
-      expect(res.status).toBe(400)
-      expect(body.error).toContain('already exists')
+      expect(body.error).toContain('not supported')
+      expect(body.error).toContain('POST /api/projects/bulk')
     })
   })
 
@@ -546,7 +430,7 @@ describe('Repositories Routes', () => {
   })
 
   describe('DELETE /api/repositories/:id', () => {
-    test('deletes repository', async () => {
+    test('deletes orphaned repository (no project reference)', async () => {
       const now = new Date().toISOString()
       db.insert(repositories)
         .values({
@@ -570,6 +454,44 @@ describe('Repositories Routes', () => {
       // Verify repository is deleted
       const deleted = db.select().from(repositories).where(eq(repositories.id, 'delete-repo-1')).get()
       expect(deleted).toBeUndefined()
+    })
+
+    test('returns 400 when repository is linked to a project', async () => {
+      const now = new Date().toISOString()
+      db.insert(repositories)
+        .values({
+          id: 'linked-repo',
+          path: '/path/to/linked',
+          displayName: 'Linked Repo',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      db.insert(projects)
+        .values({
+          id: 'linked-project',
+          name: 'Linked Project',
+          repositoryId: 'linked-repo',
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { request } = createTestApp()
+      const res = await request('/api/repositories/linked-repo', {
+        method: 'DELETE',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('linked to a project')
+      expect(body.projectId).toBe('linked-project')
+
+      // Verify repository is NOT deleted
+      const repo = db.select().from(repositories).where(eq(repositories.id, 'linked-repo')).get()
+      expect(repo).toBeDefined()
     })
 
     test('returns 404 for non-existent repository', async () => {

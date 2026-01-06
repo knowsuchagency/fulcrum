@@ -142,6 +142,12 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       const hasPinnedColumn = sqlite
         .query("SELECT name FROM pragma_table_info('tasks') WHERE name='pinned'")
         .get()
+      const hasProjectsTable = sqlite
+        .query("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'")
+        .get()
+      const hasAutoPortAllocationColumn = sqlite
+        .query("SELECT name FROM pragma_table_info('apps') WHERE name='auto_port_allocation'")
+        .get()
 
       // Determine which migrations should be marked as applied based on schema state
       const migrationsToMark: Array<{ tag: string; when: number }> = []
@@ -188,6 +194,14 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         }
         // 0021 adds pinned column to tasks
         else if (entry.tag.startsWith('0021') && hasPinnedColumn) {
+          shouldMark = true
+        }
+        // 0022 creates projects table
+        else if (entry.tag.startsWith('0022') && hasProjectsTable) {
+          shouldMark = true
+        }
+        // 0023 adds auto_port_allocation column to apps
+        else if (entry.tag.startsWith('0023') && hasAutoPortAllocationColumn) {
           shouldMark = true
         }
 
