@@ -160,8 +160,10 @@ app.get('/list', (c) => {
   let dirPath = c.req.query('path') || os.homedir()
 
   // Expand ~ to home directory
-  if (dirPath.startsWith('~')) {
-    dirPath = path.join(os.homedir(), dirPath.slice(1))
+  if (dirPath === '~') {
+    dirPath = os.homedir()
+  } else if (dirPath.startsWith('~/')) {
+    dirPath = path.join(os.homedir(), dirPath.slice(2))
   }
 
   // Resolve to absolute path
@@ -446,8 +448,10 @@ app.get('/stat', (c) => {
   }
 
   // Expand ~ to home directory
-  if (targetPath.startsWith('~')) {
-    targetPath = path.join(os.homedir(), targetPath.slice(1))
+  if (targetPath === '~') {
+    targetPath = os.homedir()
+  } else if (targetPath.startsWith('~/')) {
+    targetPath = path.join(os.homedir(), targetPath.slice(2))
   }
 
   // Resolve to absolute path
@@ -489,8 +493,10 @@ app.get('/is-git-repo', (c) => {
   }
 
   // Expand ~ to home directory
-  if (dirPath.startsWith('~')) {
-    dirPath = path.join(os.homedir(), dirPath.slice(1))
+  if (dirPath === '~') {
+    dirPath = os.homedir()
+  } else if (dirPath.startsWith('~/')) {
+    dirPath = path.join(os.homedir(), dirPath.slice(2))
   }
 
   // Resolve to absolute path
