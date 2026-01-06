@@ -143,24 +143,6 @@ const TerminalsView = observer(function TerminalsView() {
     [navigate]
   )
 
-  // Toggle a project in the multi-select filter (max 6 projects)
-  const toggleProjectFilter = useCallback(
-    (projectId: string, checked: boolean) => {
-      const currentIds = projectsFilter?.split(',').filter(Boolean) ?? []
-      // Limit to 6 projects max
-      if (checked && currentIds.length >= 6) return
-      const newIds = checked
-        ? [...currentIds, projectId]
-        : currentIds.filter((id) => id !== projectId)
-      navigate({
-        to: '/terminals',
-        search: (prev) => ({ ...prev, projects: newIds.length > 0 ? newIds.join(',') : undefined }),
-        replace: true,
-      })
-    },
-    [navigate, projectsFilter]
-  )
-
   // Get raw store for MobX reaction (observer() doesn't help with useEffect dependencies)
   const store = useStore()
 
@@ -349,6 +331,41 @@ const TerminalsView = observer(function TerminalsView() {
 
   // Track project IDs for which terminals are being created (for UI loading state)
   const [creatingProjectIds, setCreatingProjectIds] = useState<Set<string>>(new Set())
+
+  // Check if a project needs a terminal created (no existing terminal for its repo path)
+  const projectNeedsTerminal = useCallback(
+    (projectId: string): boolean => {
+      const project = allProjects.find((p) => p.id === projectId)
+      if (!project?.repository?.path) return false
+      const existingTerminal = terminals.find((t) => t.cwd === project.repository!.path)
+      return !existingTerminal
+    },
+    [allProjects, terminals]
+  )
+
+  // Toggle a project in the multi-select filter (max 6 projects)
+  const toggleProjectFilter = useCallback(
+    (projectId: string, checked: boolean) => {
+      const currentIds = projectsFilter?.split(',').filter(Boolean) ?? []
+      // Limit to 6 projects max
+      if (checked && currentIds.length >= 6) return
+
+      // If adding a project that needs a terminal, set loading state immediately
+      if (checked && projectNeedsTerminal(projectId)) {
+        setCreatingProjectIds((prev) => new Set([...prev, projectId]))
+      }
+
+      const newIds = checked
+        ? [...currentIds, projectId]
+        : currentIds.filter((id) => id !== projectId)
+      navigate({
+        to: '/terminals',
+        search: (prev) => ({ ...prev, projects: newIds.length > 0 ? newIds.join(',') : undefined }),
+        replace: true,
+      })
+    },
+    [navigate, projectsFilter, projectNeedsTerminal]
+  )
 
   // Auto-create terminals for selected projects that don't have one
   useEffect(() => {
