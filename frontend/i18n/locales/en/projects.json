@@ -103,7 +103,8 @@
     "composeDetected": "Docker Compose detected: {{file}}",
     "setupAppNow": "Set up app deployment after creation",
     "createProject": "Create Project",
-    "creating": "Creating..."
+    "creating": "Creating...",
+    "create": "Create"
   },
   "filter": {
     "all": "All",

@@ -1,11 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import {
-  useRepositories,
-  useCreateRepository,
-  useCloneRepository,
-} from '@/hooks/use-repositories'
+import { useCreateRepository, useCloneRepository } from '@/hooks/use-repositories'
 import {
   useCopierTemplates,
   useCopierQuestions,
@@ -17,7 +13,6 @@ import {
   useScanProjects,
   type ScannedProject,
 } from '@/hooks/use-projects'
-import { useFindCompose } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -37,21 +32,17 @@ import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon,
-  ArrowRight01Icon,
   Loading03Icon,
   Alert02Icon,
   CheckmarkCircle02Icon,
-  Cancel01Icon,
   Search01Icon,
   Folder01Icon,
   Link01Icon,
 } from '@hugeicons/core-free-icons'
-import { fuzzyScore } from '@/lib/fuzzy-search'
 import { useDefaultGitReposDir } from '@/hooks/use-config'
 import type { Repository, CopierQuestion } from '@/types'
 
 interface NewProjectSearch {
-  repoId?: string
   tab?: 'add' | 'scan' | 'template'
   templateSource?: string
 }
@@ -59,15 +50,12 @@ interface NewProjectSearch {
 export const Route = createFileRoute('/projects/new')({
   component: NewProjectWizard,
   validateSearch: (search: Record<string, unknown>): NewProjectSearch => ({
-    repoId: typeof search.repoId === 'string' ? search.repoId : undefined,
     tab: ['add', 'scan', 'template'].includes(search.tab as string)
       ? (search.tab as 'add' | 'scan' | 'template')
       : undefined,
     templateSource: typeof search.templateSource === 'string' ? search.templateSource : undefined,
   }),
 })
-
-type Step = 'select-repo' | 'configure-project'
 
 /**
  * Check if a string looks like a git URL
@@ -111,8 +99,7 @@ function NewProjectWizard() {
   const { t } = useTranslation('projects')
   const { t: tRepos } = useTranslation('repositories')
   const navigate = useNavigate()
-  const { repoId, tab: initialTab, templateSource: initialTemplateSource } = Route.useSearch()
-  const { data: repositories, isLoading: reposLoading } = useRepositories()
+  const { tab: initialTab, templateSource: initialTemplateSource } = Route.useSearch()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const createProject = useCreateProject()
   const createRepository = useCreateRepository()
@@ -124,9 +111,6 @@ function NewProjectWizard() {
   const [activeTab, setActiveTab] = useState<string>(
     initialTemplateSource ? 'template' : initialTab || 'add'
   )
-  const [step, setStep] = useState<Step>('select-repo')
-  const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
 
   // Add tab state
   const [newRepoInput, setNewRepoInput] = useState('')
@@ -153,10 +137,8 @@ function NewProjectWizard() {
   const [trust, setTrust] = useState(true)
   const [outputBrowserOpen, setOutputBrowserOpen] = useState(false)
 
-  // Step 2 state
+  // Add tab project name (also used elsewhere)
   const [projectName, setProjectName] = useState('')
-  const [projectDescription, setProjectDescription] = useState('')
-  const [setupApp, setSetupApp] = useState(true)
 
   // Template tab queries
   const { data: templates } = useCopierTemplates()
@@ -167,22 +149,6 @@ function NewProjectWizard() {
     error: questionsError,
   } = useCopierQuestions(activeTab === 'template' && effectiveTemplateSource ? effectiveTemplateSource : null)
   const createProjectFromTemplate = useCreateProjectFromTemplate()
-
-  // Auto-select repository if repoId is provided in URL
-  useEffect(() => {
-    if (repoId && repositories && !selectedRepo) {
-      const repo = repositories.find((r) => r.id === repoId)
-      if (repo) {
-        setSelectedRepo(repo)
-        setProjectName(repo.displayName)
-      }
-    }
-  }, [repoId, repositories, selectedRepo])
-
-  // Fetch compose info for selected repo
-  const { data: composeInfo, isLoading: composeLoading } = useFindCompose(
-    selectedRepo?.id ?? null
-  )
 
   // Computed values for add repo
   const isUrl = useMemo(() => isGitUrl(newRepoInput.trim()), [newRepoInput])
@@ -198,6 +164,24 @@ function NewProjectWizard() {
     }
   }, [extractedRepoName, folderName])
 
+  // Compute the effective project name for Add tab
+  const effectiveAddProjectName = useMemo(() => {
+    if (isUrl) {
+      return folderName.trim() || extractedRepoName || ''
+    }
+    // For local paths, extract the folder name
+    const path = newRepoInput.trim()
+    if (!path) return ''
+    return path.split('/').pop() || ''
+  }, [isUrl, folderName, extractedRepoName, newRepoInput])
+
+  // Auto-populate project name when input changes
+  useEffect(() => {
+    if (effectiveAddProjectName && !projectName) {
+      setProjectName(effectiveAddProjectName)
+    }
+  }, [effectiveAddProjectName, projectName])
+
   const effectiveTargetDir = targetDir.trim() || defaultGitReposDir || ''
   const effectiveScanDirectory = scanDirectory.trim() || defaultGitReposDir || ''
 
@@ -208,27 +192,13 @@ function NewProjectWizard() {
     return `${effectiveTargetDir}/${name}`
   }, [isUrl, effectiveTargetDir, folderName, extractedRepoName])
 
-  // Filter repositories
-  const filteredRepos = useMemo(() => {
-    if (!repositories) return []
-    if (!searchQuery?.trim()) return repositories
-    return repositories
-      .map((repo) => ({
-        repo,
-        score: Math.max(fuzzyScore(repo.displayName, searchQuery), fuzzyScore(repo.path, searchQuery)),
-      }))
-      .filter(({ score }) => score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(({ repo }) => repo)
-  }, [repositories, searchQuery])
-
   // Scan tab computed values - repos that don't have projects yet can be added
   const addableRepos = useMemo(
     () => scannedRepos?.filter((r) => !r.hasProject) ?? [],
     [scannedRepos]
   )
 
-  const isAddPending = createRepository.isPending || cloneRepository.isPending
+  const isAddPending = createRepository.isPending || cloneRepository.isPending || createProject.isPending
   const isScanPending = scanMutation.isPending || bulkCreateMutation.isPending
   const isTemplatePending = createProjectFromTemplate.isPending
 
@@ -267,17 +237,12 @@ function NewProjectWizard() {
   const canCreateFromTemplate = effectiveTemplateSource && templateProjectName.trim() && outputPath.trim() &&
     !questionsLoading && missingRequiredQuestions.length === 0
 
-  // Handle repo selection
-  const handleSelectRepo = (repo: Repository) => {
-    setSelectedRepo(repo)
-    setProjectName(repo.displayName)
-  }
-
-  // Handle adding a new repo
-  const handleAddRepo = async () => {
+  // Handle adding a new repo and creating project directly
+  const handleAddCreate = async () => {
     setAddError(null)
     const value = newRepoInput.trim()
-    if (!value) return
+    const name = projectName.trim()
+    if (!value || !name) return
 
     try {
       let repo: Repository
@@ -291,11 +256,15 @@ function NewProjectWizard() {
         const displayName = value.split('/').pop() || 'repo'
         repo = await createRepository.mutateAsync({ path: value, displayName })
       }
-      setSelectedRepo(repo)
-      setProjectName(repo.displayName)
-      setNewRepoInput('')
-      setTargetDir('')
-      setFolderName('')
+
+      // Create project from the repository
+      const project = await createProject.mutateAsync({
+        name,
+        repositoryId: repo.id,
+      })
+
+      // Navigate to the newly created project
+      navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
     } catch (err) {
       setAddError(err instanceof Error ? err.message : t('newProject.addRepoFailed'))
     }
@@ -467,33 +436,6 @@ function NewProjectWizard() {
     }
   }
 
-  // Proceed to step 2
-  const handleNextStep = () => {
-    setStep('configure-project')
-  }
-
-  // Create project
-  const handleCreateProject = async () => {
-    if (!selectedRepo) return
-
-    try {
-      const result = await createProject.mutateAsync({
-        name: projectName,
-        description: projectDescription || undefined,
-        repositoryId: selectedRepo.id,
-      })
-
-      // If setupApp is checked and compose exists, navigate to project with action to add app
-      if (setupApp && composeInfo?.found) {
-        navigate({ to: '/projects/$projectId', params: { projectId: result.id }, search: { tab: 'app', action: 'deploy' } })
-      } else {
-        navigate({ to: '/projects/$projectId', params: { projectId: result.id } })
-      }
-    } catch {
-      // Error handled by mutation
-    }
-  }
-
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -502,12 +444,6 @@ function NewProjectWizard() {
           <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
           <span className="text-sm">{t('title')}</span>
         </Link>
-        <div className="flex-1" />
-        {activeTab !== 'template' && (
-          <div className="text-sm text-muted-foreground">
-            {t('newProject.step', { current: step === 'select-repo' ? 1 : 2, total: 2 })}
-          </div>
-        )}
       </div>
 
       <div className="flex-1 overflow-auto p-4">
@@ -761,7 +697,7 @@ function NewProjectWizard() {
               </CardContent>
             </Card>
           </div>
-        ) : step === 'select-repo' ? (
+        ) : (
           <div className="mx-auto max-w-2xl">
             <Card>
               <CardHeader>
@@ -783,60 +719,7 @@ function NewProjectWizard() {
 
                   {/* Add Tab */}
                   <TabsContent value="add" className="space-y-4 pt-4">
-                    {/* Search existing repos */}
-                    <div className="relative">
-                      <HugeiconsIcon
-                        icon={Search01Icon}
-                        size={14}
-                        strokeWidth={2}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                      />
-                      <Input
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={t('newProject.searchRepos')}
-                        className="pl-9"
-                      />
-                    </div>
-
-                    {/* Repository list */}
-                    {reposLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <HugeiconsIcon
-                          icon={Loading03Icon}
-                          size={24}
-                          strokeWidth={2}
-                          className="animate-spin text-muted-foreground"
-                        />
-                      </div>
-                    ) : filteredRepos.length > 0 ? (
-                      <div className="space-y-2 max-h-48 overflow-auto">
-                        {filteredRepos.map((repo) => (
-                          <RepoOption
-                            key={repo.id}
-                            repo={repo}
-                            selected={selectedRepo?.id === repo.id}
-                            onSelect={() => handleSelectRepo(repo)}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="py-4 text-center text-sm text-muted-foreground">
-                        {t('newProject.noReposFound')}
-                      </p>
-                    )}
-
-                    {/* Divider */}
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">or add new</span>
-                      </div>
-                    </div>
-
-                    {/* Add new repo input */}
+                    {/* Repository path or URL input */}
                     <div className="space-y-2">
                       <Label>{t('newProject.repoPathOrUrl')}</Label>
                       <div className="flex gap-2">
@@ -949,15 +832,46 @@ function NewProjectWizard() {
                       </div>
                     )}
 
+                    {/* Project name input */}
                     {newRepoInput.trim() && (
-                      <Button
-                        onClick={handleAddRepo}
-                        disabled={!newRepoInput.trim() || isAddPending}
-                        className="w-full"
-                      >
-                        {isUrl ? t('newProject.cloneAndSelect') : t('newProject.addAndSelect')}
-                      </Button>
+                      <div className="space-y-2">
+                        <Label htmlFor="addProjectName">{t('newProject.projectName')}</Label>
+                        <Input
+                          id="addProjectName"
+                          value={projectName}
+                          onChange={(e) => setProjectName(e.target.value)}
+                          placeholder={t('newProject.projectNamePlaceholder')}
+                          disabled={isAddPending}
+                        />
+                      </div>
                     )}
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-2">
+                      <Link to="/projects">
+                        <Button variant="outline" disabled={isAddPending}>
+                          {t('newProject.cancel')}
+                        </Button>
+                      </Link>
+                      <Button
+                        onClick={handleAddCreate}
+                        disabled={!newRepoInput.trim() || !projectName.trim() || isAddPending}
+                      >
+                        {isAddPending ? (
+                          <>
+                            <HugeiconsIcon
+                              icon={Loading03Icon}
+                              size={16}
+                              strokeWidth={2}
+                              className="animate-spin"
+                            />
+                            {t('newProject.creating')}
+                          </>
+                        ) : (
+                          t('newProject.create')
+                        )}
+                      </Button>
+                    </div>
                   </TabsContent>
 
                   {/* Scan Tab */}
@@ -1116,137 +1030,6 @@ function NewProjectWizard() {
                     )}
                   </TabsContent>
                 </Tabs>
-
-                {/* Selected repo compose status */}
-                {selectedRepo && (
-                  <div className="rounded-lg border bg-muted/50 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium">{selectedRepo.displayName}</span>
-                    </div>
-                    {composeLoading ? (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <HugeiconsIcon icon={Loading03Icon} size={16} strokeWidth={2} className="animate-spin" />
-                        <span className="text-sm">{t('newProject.checkingCompose')}</span>
-                      </div>
-                    ) : composeInfo?.found ? (
-                      <div className="flex items-center gap-2 text-green-600">
-                        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} />
-                        <span className="text-sm">
-                          {t('newProject.composeFound', { file: composeInfo.file })}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
-                        <span className="text-sm">{t('newProject.noCompose')}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex justify-end gap-2">
-                  <Link to="/projects">
-                    <Button variant="outline">{t('newProject.cancel')}</Button>
-                  </Link>
-                  <Button
-                    onClick={handleNextStep}
-                    disabled={!selectedRepo}
-                  >
-                    {t('newProject.next')}
-                    <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="mx-auto max-w-2xl">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('newProject.configureProject')}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {selectedRepo?.displayName}
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Project name */}
-                <div className="space-y-2">
-                  <Label htmlFor="projectName">{t('newProject.projectName')}</Label>
-                  <Input
-                    id="projectName"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder={t('newProject.projectNamePlaceholder')}
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="projectDescription">{t('newProject.description')}</Label>
-                  <Textarea
-                    id="projectDescription"
-                    value={projectDescription}
-                    onChange={(e) => setProjectDescription(e.target.value)}
-                    placeholder={t('newProject.descriptionPlaceholder')}
-                    rows={3}
-                  />
-                </div>
-
-                {/* App setup option */}
-                {composeInfo?.found && (
-                  <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-green-600">
-                      <HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} strokeWidth={2} />
-                      <span className="text-sm font-medium">
-                        {t('newProject.composeDetected', { file: composeInfo.file })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="setupApp"
-                        checked={setupApp}
-                        onCheckedChange={(checked) => setSetupApp(checked === true)}
-                      />
-                      <Label htmlFor="setupApp" className="cursor-pointer">
-                        {t('newProject.setupAppNow')}
-                      </Label>
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex justify-between gap-2">
-                  <Button variant="outline" onClick={() => setStep('select-repo')}>
-                    <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} />
-                    {t('newProject.back')}
-                  </Button>
-                  <Button
-                    onClick={handleCreateProject}
-                    disabled={!projectName || createProject.isPending}
-                  >
-                    {createProject.isPending ? (
-                      <>
-                        <HugeiconsIcon
-                          icon={Loading03Icon}
-                          size={16}
-                          strokeWidth={2}
-                          className="animate-spin"
-                        />
-                        {t('newProject.creating')}
-                      </>
-                    ) : (
-                      t('newProject.createProject')
-                    )}
-                  </Button>
-                </div>
-
-                {createProject.error && (
-                  <div className="flex items-center gap-2 text-destructive">
-                    <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />
-                    <span className="text-sm">{createProject.error.message}</span>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -1293,30 +1076,5 @@ function NewProjectWizard() {
         initialPath={outputPath || defaultGitReposDir || undefined}
       />
     </div>
-  )
-}
-
-function RepoOption({
-  repo,
-  selected,
-  onSelect,
-}: {
-  repo: Repository
-  selected: boolean
-  onSelect: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`w-full rounded-lg border p-3 text-left transition-colors ${
-        selected
-          ? 'border-primary bg-primary/5'
-          : 'border-border hover:border-foreground/20 hover:bg-muted/50'
-      }`}
-    >
-      <div className="font-medium">{repo.displayName}</div>
-      <div className="text-xs text-muted-foreground font-mono truncate">{repo.path}</div>
-    </button>
   )
 }
