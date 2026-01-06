@@ -77,7 +77,6 @@ import {
   Menu01Icon,
   ViewOffIcon,
   EyeIcon,
-  GridViewIcon,
   Rocket01Icon,
   TextIcon,
   Chart02Icon,
@@ -109,10 +108,12 @@ import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { ModelPicker } from '@/components/opencode/model-picker'
 import { useQuery } from '@tanstack/react-query'
 
-type ProjectTab = 'general' | 'app' | 'deployments' | 'logs' | 'monitoring' | 'workspace'
+type ProjectTab = 'settings' | 'workspace' | 'deploy'
+type DeploySubTab = 'general' | 'deployments' | 'logs' | 'monitoring'
 
 interface ProjectDetailSearch {
   tab?: ProjectTab
+  subtab?: DeploySubTab
   action?: 'deploy'
   file?: string
 }
@@ -129,8 +130,11 @@ function ProjectDetailViewWithProvider() {
 export const Route = createFileRoute('/projects/$projectId')({
   component: ProjectDetailViewWithProvider,
   validateSearch: (search: Record<string, unknown>): ProjectDetailSearch => ({
-    tab: ['general', 'app', 'deployments', 'logs', 'monitoring', 'workspace'].includes(search.tab as string)
+    tab: ['settings', 'workspace', 'deploy'].includes(search.tab as string)
       ? (search.tab as ProjectTab)
+      : undefined,
+    subtab: ['general', 'deployments', 'logs', 'monitoring'].includes(search.subtab as string)
+      ? (search.subtab as DeploySubTab)
       : undefined,
     action: search.action === 'deploy' ? 'deploy' : undefined,
     file: typeof search.file === 'string' ? search.file : undefined,
@@ -189,7 +193,7 @@ const ProjectDetailView = observer(function ProjectDetailView() {
   const { t } = useTranslation('projects')
   const tCommon = useTranslation('common').t
   const { projectId } = Route.useParams()
-  const { tab, action, file } = Route.useSearch()
+  const { tab, subtab, action, file } = Route.useSearch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: project, isLoading, error } = useProject(projectId)
@@ -198,7 +202,8 @@ const ProjectDetailView = observer(function ProjectDetailView() {
   const accessProject = useAccessProject()
   const stopApp = useStopApp()
   const cancelDeployment = useCancelDeployment()
-  const activeTab = tab || 'general'
+  const activeTab = tab || 'settings'
+  const activeSubtab: DeploySubTab | null = activeTab === 'deploy' ? (subtab || 'general') : null
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteDirectory, setDeleteDirectory] = useState(false)
   const [deleteApp, setDeleteApp] = useState(false)
@@ -278,16 +283,19 @@ const ProjectDetailView = observer(function ProjectDetailView() {
   useEffect(() => {
     if (action === 'deploy' && project?.app && !actionConsumedRef.current && !deployStore.isDeploying) {
       actionConsumedRef.current = true
+      const search: ProjectDetailSearch = {}
+      if (tab) search.tab = tab
+      if (subtab) search.subtab = subtab
       navigate({
         to: '/projects/$projectId',
         params: { projectId },
-        search: tab ? { tab } : {},
+        search,
         replace: true,
       })
       deployStore.deploy(project.app.id)
       setShowStreamingLogs(true)
     }
-  }, [action, project?.app, projectId, deployStore, navigate, tab])
+  }, [action, project?.app, projectId, deployStore, navigate, tab, subtab])
 
   useEffect(() => {
     actionConsumedRef.current = false
@@ -296,15 +304,32 @@ const ProjectDetailView = observer(function ProjectDetailView() {
   const showDnsWarning = prereqs && !prereqs.settings.cloudflareConfigured
 
   const setActiveTab = useCallback(
-    (newTab: ProjectTab) => {
+    (newTab: ProjectTab, newSubtab?: DeploySubTab) => {
+      const search: ProjectDetailSearch = {}
+      if (newTab !== 'settings') {
+        search.tab = newTab
+      }
+      if (newTab === 'workspace' && file) {
+        search.file = file
+      }
+      if (newTab === 'deploy' && newSubtab && newSubtab !== 'general') {
+        search.subtab = newSubtab
+      }
       navigate({
         to: '/projects/$projectId',
         params: { projectId },
-        search: newTab === 'general' ? {} : newTab === 'workspace' ? { tab: newTab, file } : { tab: newTab },
+        search,
         replace: true,
       })
     },
     [navigate, projectId, file]
+  )
+
+  const setActiveSubtab = useCallback(
+    (newSubtab: DeploySubTab) => {
+      setActiveTab('deploy', newSubtab)
+    },
+    [setActiveTab]
   )
 
   const handleFileChange = useCallback(
@@ -388,122 +413,62 @@ const ProjectDetailView = observer(function ProjectDetailView() {
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 sm:hidden">
               <HugeiconsIcon icon={Menu01Icon} size={18} strokeWidth={2} />
-              <span className="text-sm font-medium">{t(`detailView.tabs.${activeTab}`)}</span>
+              <span className="text-sm font-medium">
+                {activeTab === 'deploy' && activeSubtab
+                  ? `${t('detailView.tabs.deploy')} > ${t(`detailView.tabs.${activeSubtab === 'general' ? 'deployGeneral' : activeSubtab}`)}`
+                  : t(`detailView.tabs.${activeTab}`)}
+              </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setActiveTab('general')} className="gap-2">
-                <HugeiconsIcon icon={GridViewIcon} size={14} strokeWidth={2} />
-                {t('detailView.tabs.general')}
+              <DropdownMenuItem onClick={() => setActiveTab('settings')} className="gap-2">
+                <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
+                {t('detailView.tabs.settings')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActiveTab('app')} className="gap-2">
-                <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} />
-                {t('detailView.tabs.app')}
-              </DropdownMenuItem>
-              {hasApp && (
-                <>
-                  <DropdownMenuItem onClick={() => setActiveTab('deployments')} className="gap-2">
-                    <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} />
-                    {t('detailView.tabs.deployments')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setActiveTab('logs')} className="gap-2">
-                    <HugeiconsIcon icon={TextIcon} size={14} strokeWidth={2} />
-                    {t('detailView.tabs.logs')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setActiveTab('monitoring')} className="gap-2">
-                    <HugeiconsIcon icon={Chart02Icon} size={14} strokeWidth={2} />
-                    {t('detailView.tabs.monitoring')}
-                  </DropdownMenuItem>
-                </>
-              )}
               <DropdownMenuItem onClick={() => setActiveTab('workspace')} className="gap-2">
                 <HugeiconsIcon icon={WindowsOldIcon} size={14} strokeWidth={2} />
                 {t('detailView.tabs.workspace')}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActiveTab('deploy', 'general')} className="gap-2">
+                <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} />
+                {t('detailView.tabs.deploy')} &gt; {t('detailView.tabs.deployGeneral')}
+              </DropdownMenuItem>
+              {hasApp && (
+                <>
+                  <DropdownMenuItem onClick={() => setActiveTab('deploy', 'deployments')} className="gap-2">
+                    <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} />
+                    {t('detailView.tabs.deploy')} &gt; {t('detailView.tabs.deployments')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('deploy', 'logs')} className="gap-2">
+                    <HugeiconsIcon icon={TextIcon} size={14} strokeWidth={2} />
+                    {t('detailView.tabs.deploy')} &gt; {t('detailView.tabs.logs')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('deploy', 'monitoring')} className="gap-2">
+                    <HugeiconsIcon icon={Chart02Icon} size={14} strokeWidth={2} />
+                    {t('detailView.tabs.deploy')} &gt; {t('detailView.tabs.monitoring')}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Desktop: tabs */}
+          {/* Desktop: top-level tabs */}
           <TabsList variant="line" className="hidden sm:inline-flex">
-            <TabsTrigger value="general" className="gap-1.5 px-3 py-1.5">
+            <TabsTrigger value="settings" className="gap-1.5 px-3 py-1.5">
               <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
-              {t('detailView.tabs.general')}
+              {t('detailView.tabs.settings')}
             </TabsTrigger>
-            <TabsTrigger value="app" className="gap-1.5 px-3 py-1.5">
-              <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} />
-              {t('detailView.tabs.app')}
-            </TabsTrigger>
-            {hasApp && (
-              <>
-                <TabsTrigger value="deployments" className="gap-1.5 px-3 py-1.5">
-                  <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} />
-                  {t('detailView.tabs.deployments')}
-                </TabsTrigger>
-                <TabsTrigger value="logs" className="gap-1.5 px-3 py-1.5">
-                  <HugeiconsIcon icon={TextIcon} size={14} strokeWidth={2} />
-                  {t('detailView.tabs.logs')}
-                </TabsTrigger>
-                <TabsTrigger value="monitoring" className="gap-1.5 px-3 py-1.5">
-                  <HugeiconsIcon icon={Chart02Icon} size={14} strokeWidth={2} />
-                  {t('detailView.tabs.monitoring')}
-                </TabsTrigger>
-              </>
-            )}
             <TabsTrigger value="workspace" className="gap-1.5 px-3 py-1.5">
               <HugeiconsIcon icon={WindowsOldIcon} size={14} strokeWidth={2} />
               {t('detailView.tabs.workspace')}
+            </TabsTrigger>
+            <TabsTrigger value="deploy" className="gap-1.5 px-3 py-1.5">
+              <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} />
+              {t('detailView.tabs.deploy')}
             </TabsTrigger>
           </TabsList>
 
           {/* Right side: actions + project info */}
           <div className="flex items-center gap-2">
-            {/* Deploy/Stop buttons (only if app exists) */}
-            {hasApp && (
-              <>
-                <Button size="sm" onClick={handleDeploy} disabled={isBuilding}>
-                  {isBuilding ? (
-                    <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                  ) : (
-                    <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
-                  )}
-                  <span className="hidden sm:inline">
-                    {deployStore.isDeploying ? tCommon('apps.deploying') : appStatus === 'building' ? tCommon('apps.building') : t('deploy')}
-                  </span>
-                </Button>
-                {isBuilding ? (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleCancelDeploy}
-                    disabled={cancelDeployment.isPending}
-                  >
-                    {cancelDeployment.isPending ? (
-                      <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                    ) : (
-                      <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
-                    )}
-                    <span className="hidden sm:inline">
-                      {cancelDeployment.isPending ? tCommon('apps.cancelling') : tCommon('apps.cancelDeploy')}
-                    </span>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleStop}
-                    disabled={stopApp.isPending || !isRunning}
-                  >
-                    {stopApp.isPending ? (
-                      <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                    ) : (
-                      <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
-                    )}
-                    <span className="hidden sm:inline">{t('stop')}</span>
-                  </Button>
-                )}
-                <div className="h-4 w-px bg-border mx-1" />
-              </>
-            )}
-
             {/* Quick actions */}
             {project.repository && (
               <>
@@ -583,35 +548,96 @@ const ProjectDetailView = observer(function ProjectDetailView() {
           </div>
         </div>
 
+        {/* Deploy sub-tabs (shown when Deploy is active) */}
+        {activeTab === 'deploy' && (
+          <div className="shrink-0 border-b border-border bg-muted/30 px-4 hidden sm:flex items-center">
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveSubtab('general')}
+                className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  activeSubtab === 'general'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('detailView.tabs.deployGeneral')}
+              </button>
+              {hasApp && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubtab('deployments')}
+                    className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                      activeSubtab === 'deployments'
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {t('detailView.tabs.deployments')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubtab('logs')}
+                    className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                      activeSubtab === 'logs'
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {t('detailView.tabs.logs')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubtab('monitoring')}
+                    className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                      activeSubtab === 'monitoring'
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {t('detailView.tabs.monitoring')}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         <div className={`flex-1 overflow-auto ${activeTab === 'workspace' ? '' : 'p-4'}`}>
-          <TabsContent value="general" className="mt-0 h-full">
+          <TabsContent value="settings" className="mt-0 h-full">
             <GeneralTab project={project} />
           </TabsContent>
 
-          <TabsContent value="app" className="mt-0">
-            <AppTab project={project} onDeploy={handleDeploy} />
+          <TabsContent value="deploy" className="mt-0 h-full">
+            {activeSubtab === 'general' && (
+              <AppTab
+                project={project}
+                onDeploy={handleDeploy}
+                onStop={handleStop}
+                onCancelDeploy={handleCancelDeploy}
+                isBuilding={isBuilding}
+                isRunning={isRunning}
+                isStopPending={stopApp.isPending}
+                isCancelPending={cancelDeployment.isPending}
+                deployStore={deployStore}
+              />
+            )}
+            {hasApp && activeSubtab === 'deployments' && (
+              <DeploymentsTab
+                appId={project.app!.id}
+                deployStore={deployStore}
+                onViewStreamingLogs={() => setShowStreamingLogs(true)}
+              />
+            )}
+            {hasApp && activeSubtab === 'logs' && (
+              <LogsTab appId={project.app!.id} services={project.app!.services} />
+            )}
+            {hasApp && activeSubtab === 'monitoring' && (
+              <MonitoringTab appId={project.app!.id} repoDisplayName={project.repository?.displayName} />
+            )}
           </TabsContent>
-
-          {hasApp && (
-            <>
-              <TabsContent value="deployments" className="mt-0">
-                <DeploymentsTab
-                  appId={project.app!.id}
-                  deployStore={deployStore}
-                  onViewStreamingLogs={() => setShowStreamingLogs(true)}
-                />
-              </TabsContent>
-
-              <TabsContent value="logs" className="mt-0">
-                <LogsTab appId={project.app!.id} services={project.app!.services} />
-              </TabsContent>
-
-              <TabsContent value="monitoring" className="mt-0">
-                <MonitoringTab appId={project.app!.id} repoDisplayName={project.repository?.displayName} />
-              </TabsContent>
-            </>
-          )}
 
           <TabsContent value="workspace" className="mt-0 h-full">
             {project.repository?.path ? (
@@ -972,7 +998,27 @@ function GeneralTab({ project }: { project: ProjectWithDetails }) {
 }
 
 // App tab - App configuration or "Add app" prompt
-function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: () => void }) {
+function AppTab({
+  project,
+  onDeploy,
+  onStop,
+  onCancelDeploy,
+  isBuilding,
+  isRunning,
+  isStopPending,
+  isCancelPending,
+  deployStore,
+}: {
+  project: ProjectWithDetails
+  onDeploy: () => void
+  onStop: () => void
+  onCancelDeploy: () => void
+  isBuilding: boolean
+  isRunning: boolean
+  isStopPending: boolean
+  isCancelPending: boolean
+  deployStore: ReturnType<typeof useDeploymentStore>
+}) {
   const { t } = useTranslation('projects')
   const tRepo = useTranslation('repositories').t
   const { data: composeInfo, isLoading: composeLoading } = useFindCompose(project.repository?.id ?? null)
@@ -1036,9 +1082,19 @@ function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: 
   // Has app - show app config
   return (
     <div className="space-y-4 max-w-4xl">
-      {/* Top row: Deploy options + Services side by side */}
+      {/* Top row: Deploy + Services side by side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DeployOptionsSection app={project.app} />
+        <DeploySection
+          app={project.app}
+          onDeploy={onDeploy}
+          onStop={onStop}
+          onCancelDeploy={onCancelDeploy}
+          isBuilding={isBuilding}
+          isRunning={isRunning}
+          isStopPending={isStopPending}
+          isCancelPending={isCancelPending}
+          deployStore={deployStore}
+        />
         <ServicesSection app={project.app} onDeploy={onDeploy} />
       </div>
 
@@ -1053,9 +1109,30 @@ function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: 
   )
 }
 
-// Deploy options section
-function DeployOptionsSection({ app }: { app: NonNullable<ProjectWithDetails['app']> }) {
+// Deploy section with buttons and options
+function DeploySection({
+  app,
+  onDeploy,
+  onStop,
+  onCancelDeploy,
+  isBuilding,
+  isRunning,
+  isStopPending,
+  isCancelPending,
+  deployStore,
+}: {
+  app: NonNullable<ProjectWithDetails['app']>
+  onDeploy: () => void
+  onStop: () => void
+  onCancelDeploy: () => void
+  isBuilding: boolean
+  isRunning: boolean
+  isStopPending: boolean
+  isCancelPending: boolean
+  deployStore: ReturnType<typeof useDeploymentStore>
+}) {
   const { t } = useTranslation('projects')
+  const tCommon = useTranslation('common').t
   const updateApp = useUpdateApp()
 
   const handleAutoDeployToggle = async (enabled: boolean) => {
@@ -1088,7 +1165,48 @@ function DeployOptionsSection({ app }: { app: NonNullable<ProjectWithDetails['ap
 
   return (
     <div className="rounded-lg border p-4 space-y-3">
-      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('detailView.app.deployOptions')}</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('detailView.tabs.deploy')}</h4>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={onDeploy} disabled={isBuilding}>
+            {isBuilding ? (
+              <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+            ) : (
+              <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} />
+            )}
+            {deployStore.isDeploying ? tCommon('apps.deploying') : app.status === 'building' ? tCommon('apps.building') : t('deploy')}
+          </Button>
+          {isBuilding ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onCancelDeploy}
+              disabled={isCancelPending}
+            >
+              {isCancelPending ? (
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+              )}
+              {isCancelPending ? tCommon('apps.cancelling') : tCommon('apps.cancelDeploy')}
+            </Button>
+          ) : (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onStop}
+              disabled={isStopPending || !isRunning}
+            >
+              {isStopPending ? (
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+              ) : (
+                <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} />
+              )}
+              {t('stop')}
+            </Button>
+          )}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3 text-sm">
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox

@@ -114,7 +114,7 @@ function ProjectCard({
     if (!project.app) return
     try {
       await deployApp.mutateAsync(project.app.id)
-      navigate({ to: '/projects/$projectId', params: { projectId: project.id }, search: { tab: 'deployments' } })
+      navigate({ to: '/projects/$projectId', params: { projectId: project.id }, search: { tab: 'deploy', subtab: 'deployments' } })
     } catch (err) {
       toast.error('Deploy failed', { description: err instanceof Error ? err.message : 'Unknown error' })
     }

@@ -36,12 +36,13 @@
     "save": "Save",
     "saving": "Saving...",
     "tabs": {
-      "general": "General",
-      "app": "App",
+      "settings": "Task Settings",
+      "workspace": "Workspace",
+      "deploy": "Deploy",
+      "deployGeneral": "General",
       "deployments": "Deployments",
       "logs": "Logs",
-      "monitoring": "Monitoring",
-      "workspace": "Workspace"
+      "monitoring": "Monitoring"
     },
     "general": {
       "repositoryTitle": "Repository",

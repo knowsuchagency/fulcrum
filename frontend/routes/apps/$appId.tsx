@@ -16,7 +16,7 @@ export const Route = createFileRoute('/apps/$appId')({
       throw redirect({
         to: '/projects/$projectId',
         params: { projectId: project.id },
-        search: { tab: 'app' },
+        search: { tab: 'deploy' },
       })
     }
 
