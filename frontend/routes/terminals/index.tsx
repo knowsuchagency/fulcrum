@@ -8,7 +8,7 @@ import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
 import { TabEditDialog } from '@/components/terminal/tab-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { TaskDaily01Icon, FilterIcon, ComputerTerminal01Icon, Folder01Icon } from '@hugeicons/core-free-icons'
+import { TaskDaily01Icon, FilterIcon, ComputerTerminal01Icon, Folder01Icon, Loading03Icon } from '@hugeicons/core-free-icons'
 import {
   Select,
   SelectContent,
@@ -347,8 +347,8 @@ const TerminalsView = observer(function TerminalsView() {
     return projectsFilter?.split(',').filter(Boolean) ?? []
   }, [projectsFilter])
 
-  // Track project IDs for which we're creating terminals to prevent duplicates
-  const creatingProjectTerminalsRef = useRef<Set<string>>(new Set())
+  // Track project IDs for which terminals are being created (for UI loading state)
+  const [creatingProjectIds, setCreatingProjectIds] = useState<Set<string>>(new Set())
 
   // Auto-create terminals for selected projects that don't have one
   useEffect(() => {
@@ -357,7 +357,7 @@ const TerminalsView = observer(function TerminalsView() {
 
     for (const projectId of selectedProjectIds) {
       // Skip if already creating a terminal for this project
-      if (creatingProjectTerminalsRef.current.has(projectId)) continue
+      if (creatingProjectIds.has(projectId)) continue
 
       const project = allProjects.find((p) => p.id === projectId)
       if (!project?.repository?.path) continue
@@ -368,20 +368,35 @@ const TerminalsView = observer(function TerminalsView() {
       if (existingTerminal) continue
 
       // Mark as creating and create terminal
-      creatingProjectTerminalsRef.current.add(projectId)
+      setCreatingProjectIds((prev) => new Set([...prev, projectId]))
       createTerminal({
         name: project.name,
         cwd: repoPath,
         cols: 80,
         rows: 24,
       })
-
-      // Clear the creating flag after a short delay
-      setTimeout(() => {
-        creatingProjectTerminalsRef.current.delete(projectId)
-      }, 1000)
     }
-  }, [activeTabId, selectedProjectIds, allProjects, terminals, connected, createTerminal])
+  }, [activeTabId, selectedProjectIds, allProjects, terminals, connected, createTerminal, creatingProjectIds])
+
+  // Clear loading state when terminal appears for a project
+  useEffect(() => {
+    if (creatingProjectIds.size === 0) return
+
+    const stillLoading = new Set<string>()
+    for (const projectId of creatingProjectIds) {
+      const project = allProjects.find((p) => p.id === projectId)
+      if (!project?.repository?.path) continue
+
+      const existingTerminal = terminals.find((t) => t.cwd === project.repository!.path)
+      if (!existingTerminal) {
+        stillLoading.add(projectId)
+      }
+    }
+
+    if (stillLoading.size !== creatingProjectIds.size) {
+      setCreatingProjectIds(stillLoading)
+    }
+  }, [terminals, allProjects, creatingProjectIds])
 
   const cleanupFnsRef = useRef<Map<string, () => void>>(new Map())
   const terminalCountRef = useRef(0)
@@ -715,7 +730,11 @@ const TerminalsView = observer(function TerminalsView() {
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="sm" className="max-sm:w-auto" />}
               >
-                <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
+                {creatingProjectIds.size > 0 ? (
+                  <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin text-muted-foreground" />
+                ) : (
+                  <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
+                )}
                 <span>
                   {selectedProjectIds.length === 0
                     ? t('selectProjects')
@@ -727,15 +746,25 @@ const TerminalsView = observer(function TerminalsView() {
                   <div className="text-sm font-medium mb-2">{t('filterByProject')}</div>
                   {allProjects.map((project) => {
                     const isSelected = selectedProjectIds.includes(project.id)
-                    const isDisabled = !isSelected && selectedProjectIds.length >= 6
+                    const isLoading = creatingProjectIds.has(project.id)
+                    const isDisabled = creatingProjectIds.size > 0 || (!isSelected && selectedProjectIds.length >= 6)
                     return (
                       <div key={project.id} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`project-filter-${project.id}`}
-                          checked={isSelected}
-                          disabled={isDisabled}
-                          onCheckedChange={(checked) => toggleProjectFilter(project.id, checked === true)}
-                        />
+                        {isLoading ? (
+                          <HugeiconsIcon
+                            icon={Loading03Icon}
+                            size={16}
+                            strokeWidth={2}
+                            className="animate-spin text-muted-foreground"
+                          />
+                        ) : (
+                          <Checkbox
+                            id={`project-filter-${project.id}`}
+                            checked={isSelected}
+                            disabled={isDisabled}
+                            onCheckedChange={(checked) => toggleProjectFilter(project.id, checked === true)}
+                          />
+                        )}
                         <Label
                           htmlFor={`project-filter-${project.id}`}
                           className={`text-sm ${isDisabled ? 'text-muted-foreground cursor-not-allowed' : 'cursor-pointer'}`}
@@ -745,7 +774,7 @@ const TerminalsView = observer(function TerminalsView() {
                       </div>
                     )
                   })}
-                  {selectedProjectIds.length > 0 && (
+                  {selectedProjectIds.length > 0 && creatingProjectIds.size === 0 && (
                     <Button
                       variant="ghost"
                       size="sm"
