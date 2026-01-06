@@ -427,31 +427,34 @@ function JobDetailView() {
                     )}
                   </div>
                 </div>
-                <div className={`grid gap-4 text-sm ${job.nextRun ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
-                  {job.nextRun && (
-                    <div>
-                      <div className="text-muted-foreground">{t('detail.nextRun')}</div>
-                      <div className="flex items-center gap-1.5">
-                        <HugeiconsIcon icon={Clock01Icon} size={14} strokeWidth={2} className="shrink-0 text-muted-foreground" />
-                        <span>{formatRelativeTime(job.nextRun)}</span>
+                {/* Don't show next/last run for continuous jobs (KeepAlive/RunAtLoad) */}
+                {job.schedule !== 'KeepAlive' && job.schedule !== 'RunAtLoad' && (
+                  <div className={`grid gap-4 text-sm ${job.nextRun ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+                    {job.nextRun && (
+                      <div>
+                        <div className="text-muted-foreground">{t('detail.nextRun')}</div>
+                        <div className="flex items-center gap-1.5">
+                          <HugeiconsIcon icon={Clock01Icon} size={14} strokeWidth={2} className="shrink-0 text-muted-foreground" />
+                          <span>{formatRelativeTime(job.nextRun)}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">{formatDateTime(job.nextRun)}</div>
                       </div>
-                      <div className="text-xs text-muted-foreground">{formatDateTime(job.nextRun)}</div>
+                    )}
+                    <div>
+                      <div className="text-muted-foreground">{t('detail.lastRun')}</div>
+                      <div className="flex items-center gap-1.5">
+                        {job.lastResult === 'success' && (
+                          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="shrink-0 text-green-500" />
+                        )}
+                        {job.lastResult === 'failed' && (
+                          <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} className="shrink-0 text-red-500" />
+                        )}
+                        <span>{formatRelativeTime(job.lastRun)}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{formatDateTime(job.lastRun)}</div>
                     </div>
-                  )}
-                  <div>
-                    <div className="text-muted-foreground">{t('detail.lastRun')}</div>
-                    <div className="flex items-center gap-1.5">
-                      {job.lastResult === 'success' && (
-                        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={14} strokeWidth={2} className="shrink-0 text-green-500" />
-                      )}
-                      {job.lastResult === 'failed' && (
-                        <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} className="shrink-0 text-red-500" />
-                      )}
-                      <span>{formatRelativeTime(job.lastRun)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">{formatDateTime(job.lastRun)}</div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
