@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdtempSync, rmSyn
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
-import { db, repositories, projects, terminalTabs, apps, type NewRepository } from '../db'
+import { db, repositories, projects, apps, type NewRepository } from '../db'
 import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { log } from '../lib/logger'
@@ -319,20 +319,7 @@ app.post('/create', async (c) => {
     // Check if there's an app linked to this repository (unlikely for new template)
     const linkedApp = db.select().from(apps).where(eq(apps.repositoryId, newRepoId)).get()
 
-    // Create terminal tab for this project
-    const tabId = nanoid()
-    db.insert(terminalTabs)
-      .values({
-        id: tabId,
-        name: projectName,
-        position: 0,
-        directory: fullOutputPath,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run()
-
-    // Create project
+    // Create project (without a dedicated terminal tab - use "All Projects" virtual tab instead)
     const projectId = nanoid()
     db.insert(projects)
       .values({
@@ -341,7 +328,7 @@ app.post('/create', async (c) => {
         description: null,
         repositoryId: newRepoId,
         appId: linkedApp?.id ?? null,
-        terminalTabId: tabId,
+        terminalTabId: null,
         status: 'active',
         lastAccessedAt: now,
         createdAt: now,
