@@ -72,18 +72,18 @@ export function useDeleteProject() {
   return useMutation({
     mutationFn: ({
       id,
-      deleteRepository = false,
+      deleteDirectory = false,
       deleteApp = false,
     }: {
       id: string
-      deleteRepository?: boolean
+      deleteDirectory?: boolean
       deleteApp?: boolean
     }) => {
       const params = new URLSearchParams()
-      if (deleteRepository) params.set('deleteRepository', 'true')
+      if (deleteDirectory) params.set('deleteDirectory', 'true')
       if (deleteApp) params.set('deleteApp', 'true')
       const url = `${API_BASE}/api/projects/${id}${params.toString() ? `?${params}` : ''}`
-      return fetchJSON<{ success: boolean; deletedRepository: boolean; deletedApp: boolean }>(url, {
+      return fetchJSON<{ success: boolean; deletedDirectory: boolean; deletedApp: boolean }>(url, {
         method: 'DELETE',
       })
     },

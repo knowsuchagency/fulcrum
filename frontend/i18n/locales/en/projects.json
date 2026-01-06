@@ -27,7 +27,7 @@
     "description": "This will remove the project \"{{name}}\".",
     "button": "Delete",
     "deleting": "Deleting...",
-    "alsoDeleteRepository": "Also delete the repository",
+    "alsoDeleteDirectory": "Also delete the directory",
     "alsoDeleteApp": "Also delete the app and stop containers"
   },
   "detailView": {

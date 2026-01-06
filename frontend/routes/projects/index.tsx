@@ -272,17 +272,17 @@ function DeleteProjectDialog({
   project: ProjectWithDetails | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onDelete: (deleteRepository: boolean, deleteApp: boolean) => Promise<void>
+  onDelete: (deleteDirectory: boolean, deleteApp: boolean) => Promise<void>
 }) {
   const { t } = useTranslation('projects')
-  const [deleteRepository, setDeleteRepository] = useState(false)
+  const [deleteDirectory, setDeleteDirectory] = useState(false)
   const [deleteApp, setDeleteApp] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      await onDelete(deleteRepository, deleteApp)
+      await onDelete(deleteDirectory, deleteApp)
       onOpenChange(false)
     } finally {
       setIsDeleting(false)
@@ -303,12 +303,12 @@ function DeleteProjectDialog({
           {project?.repository && (
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="deleteRepository"
-                checked={deleteRepository}
-                onCheckedChange={(checked) => setDeleteRepository(checked === true)}
+                id="deleteDirectory"
+                checked={deleteDirectory}
+                onCheckedChange={(checked) => setDeleteDirectory(checked === true)}
               />
-              <Label htmlFor="deleteRepository" className="text-sm">
-                {t('delete.alsoDeleteRepository')}
+              <Label htmlFor="deleteDirectory" className="text-sm">
+                {t('delete.alsoDeleteDirectory')}
               </Label>
             </div>
           )}
@@ -364,11 +364,11 @@ function ProjectsView() {
       .map(({ project }) => project)
   }, [projects, searchQuery])
 
-  const handleDelete = async (deleteRepository: boolean, deleteApp: boolean) => {
+  const handleDelete = async (deleteDirectory: boolean, deleteApp: boolean) => {
     if (!deleteProjectState) return
     await deleteProject.mutateAsync({
       id: deleteProjectState.id,
-      deleteRepository,
+      deleteDirectory,
       deleteApp,
     })
   }

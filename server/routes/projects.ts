@@ -1,5 +1,8 @@
 import { Hono } from 'hono'
 import { nanoid } from 'nanoid'
+import { existsSync, rmSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { resolve, join } from 'node:path'
 import { db, projects, repositories, apps, appServices, terminalTabs } from '../db'
 import { eq, desc, sql } from 'drizzle-orm'
 import type { ProjectWithDetails } from '../../shared/types'
@@ -298,7 +301,7 @@ app.delete('/:id', async (c) => {
   const id = c.req.param('id')
 
   // Query params for cascade options
-  const deleteRepository = c.req.query('deleteRepository') === 'true'
+  const deleteDirectory = c.req.query('deleteDirectory') === 'true'
   const deleteApp = c.req.query('deleteApp') === 'true'
 
   const existing = db.select().from(projects).where(eq(projects.id, id)).get()
@@ -319,9 +322,49 @@ app.delete('/:id', async (c) => {
     db.delete(apps).where(eq(apps.id, existing.appId)).run()
   }
 
-  // Optionally delete repository
-  if (deleteRepository && existing.repositoryId) {
+  // Get repository path before deleting
+  let repoPath: string | null = null
+  if (existing.repositoryId) {
+    const repo = db.select().from(repositories).where(eq(repositories.id, existing.repositoryId)).get()
+    repoPath = repo?.path ?? null
+  }
+
+  // Always delete the repository record (projects and repos are synonymous)
+  if (existing.repositoryId) {
     db.delete(repositories).where(eq(repositories.id, existing.repositoryId)).run()
+  }
+
+  // Optionally delete the directory from disk
+  let directoryDeleted = false
+  if (deleteDirectory && repoPath) {
+    // SAFETY: Reject if path is home directory
+    const home = homedir()
+    if (resolve(repoPath) === home) {
+      return c.json({ error: 'Cannot delete home directory' }, 400)
+    }
+
+    // SAFETY: Reject common dangerous paths
+    const dangerousPaths = ['/', '/home', '/usr', '/etc', '/var', '/tmp', '/root']
+    if (dangerousPaths.includes(resolve(repoPath))) {
+      return c.json({ error: 'Cannot delete system directory' }, 400)
+    }
+
+    // SAFETY: Only delete if directory exists and contains .git
+    if (existsSync(repoPath)) {
+      const gitPath = join(repoPath, '.git')
+      if (!existsSync(gitPath)) {
+        return c.json({ error: 'Directory does not appear to be a git repository' }, 400)
+      }
+
+      try {
+        rmSync(repoPath, { recursive: true, force: true })
+        directoryDeleted = true
+      } catch (err) {
+        return c.json({
+          error: `Failed to delete directory: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        }, 500)
+      }
+    }
   }
 
   // Delete project
@@ -329,7 +372,7 @@ app.delete('/:id', async (c) => {
 
   return c.json({
     success: true,
-    deletedRepository: deleteRepository && !!existing.repositoryId,
+    deletedDirectory: directoryDeleted,
     deletedApp: deleteApp && !!existing.appId,
   })
 })

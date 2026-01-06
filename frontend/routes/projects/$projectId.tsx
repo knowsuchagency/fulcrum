@@ -199,7 +199,7 @@ const ProjectDetailView = observer(function ProjectDetailView() {
   const cancelDeployment = useCancelDeployment()
   const activeTab = tab || 'general'
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deleteRepository, setDeleteRepository] = useState(false)
+  const [deleteDirectory, setDeleteDirectory] = useState(false)
   const [deleteApp, setDeleteApp] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
@@ -335,7 +335,7 @@ const ProjectDetailView = observer(function ProjectDetailView() {
   const handleDelete = async () => {
     await deleteProject.mutateAsync({
       id: projectId,
-      deleteRepository,
+      deleteDirectory,
       deleteApp,
     })
     navigate({ to: '/projects' })
@@ -678,12 +678,12 @@ const ProjectDetailView = observer(function ProjectDetailView() {
             {project.repository && (
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="deleteRepository"
-                  checked={deleteRepository}
-                  onCheckedChange={(checked) => setDeleteRepository(checked === true)}
+                  id="deleteDirectory"
+                  checked={deleteDirectory}
+                  onCheckedChange={(checked) => setDeleteDirectory(checked === true)}
                 />
-                <label htmlFor="deleteRepository" className="text-sm">
-                  {t('delete.alsoDeleteRepository')}
+                <label htmlFor="deleteDirectory" className="text-sm">
+                  {t('delete.alsoDeleteDirectory')}
                 </label>
               </div>
             )}
