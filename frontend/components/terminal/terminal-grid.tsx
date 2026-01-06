@@ -57,6 +57,8 @@ interface TerminalGridProps {
   taskInfoByCwd?: Map<string, TaskInfo>
   /** Map terminal cwd to project info for navigation and display */
   projectInfoByCwd?: Map<string, ProjectInfo>
+  /** Custom message to show when there are no terminals */
+  emptyMessage?: string
 }
 
 interface TerminalPaneProps {
@@ -182,7 +184,7 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, projec
   )
 })
 
-function EmptyPane({ onAdd }: { onAdd?: () => void }) {
+function EmptyPane({ onAdd, message }: { onAdd?: () => void; message?: string }) {
   return (
     <div className="flex h-full items-center justify-center bg-terminal-background">
       {onAdd ? (
@@ -191,7 +193,7 @@ function EmptyPane({ onAdd }: { onAdd?: () => void }) {
           New Terminal
         </Button>
       ) : (
-        <p className="text-xs text-muted-foreground">No terminals</p>
+        <p className="text-xs text-muted-foreground">{message || 'No terminals'}</p>
       )}
     </div>
   )
@@ -219,6 +221,7 @@ export function TerminalGrid({
   sendInputToTerminal,
   taskInfoByCwd,
   projectInfoByCwd,
+  emptyMessage,
 }: TerminalGridProps) {
   const isMobile = useIsMobile()
   const [focusedTerminalId, setFocusedTerminalId] = useState<string | null>(
@@ -244,7 +247,7 @@ export function TerminalGrid({
   }, [terminals, maximizedTerminalId])
 
   if (terminals.length === 0) {
-    return <EmptyPane onAdd={onTerminalAdd} />
+    return <EmptyPane onAdd={onTerminalAdd} message={emptyMessage} />
   }
 
   const { rows, cols } = getGridLayout(terminals.length)

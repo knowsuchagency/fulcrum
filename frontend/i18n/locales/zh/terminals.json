@@ -1,5 +1,26 @@
 {
   "taskTerminals": "任务",
+  "projectTerminals": "项目",
   "newTerminal": "新建终端",
-  "allRepos": "全部仓库"
+  "allRepos": "全部仓库",
+  "selectProjects": "选择项目",
+  "projectsSelected": "已选择 {{count}} 个",
+  "filterByProject": "最多选择6个项目",
+  "clearFilter": "清除选择",
+  "emptyProjects": "选择项目以打开其工作区终端",
+  "emptyTasks": "没有进行中的任务",
+  "editTab": {
+    "title": "编辑标签页",
+    "name": "名称",
+    "namePlaceholder": "标签页名称",
+    "directory": "目录",
+    "directoryPlaceholder": "选择目录...",
+    "clearDirectory": "清除目录",
+    "cancel": "取消",
+    "save": "保存"
+  },
+  "newTab": {
+    "title": "新建标签页",
+    "create": "创建"
+  }
 }

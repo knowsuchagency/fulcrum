@@ -112,7 +112,7 @@ const TerminalsView = observer(function TerminalsView() {
   const [editingTab, setEditingTab] = useState<TerminalTab | null>(null)
 
   // View state for tracking focused terminals and selected projects
-  const { getFocusedTerminal, selectedProjectIds: persistedProjectIds, setSelectedProjects } = useTerminalViewState()
+  const { getFocusedTerminal, selectedProjectIds: persistedProjectIds, setSelectedProjects, isLoading: isViewStateLoading } = useTerminalViewState()
 
   // URL is the source of truth for active tab
   // Fall back to first tab if URL doesn't specify a valid tab
@@ -368,6 +368,8 @@ const TerminalsView = observer(function TerminalsView() {
       hasRestoredRef.current = false
       return
     }
+    // Wait for view state to load before attempting restoration
+    if (isViewStateLoading) return
     // Only restore once per tab visit and only if URL has no projects param
     if (hasRestoredRef.current || projectsFilter) return
     if (persistedProjectIds.length === 0) return
@@ -378,18 +380,23 @@ const TerminalsView = observer(function TerminalsView() {
       search: (prev) => ({ ...prev, projects: persistedProjectIds.join(',') }),
       replace: true,
     })
-  }, [activeTabId, projectsFilter, persistedProjectIds, navigate])
+  }, [activeTabId, projectsFilter, persistedProjectIds, navigate, isViewStateLoading])
 
   // Persist project selection to database when it changes
   useEffect(() => {
     if (activeTabId !== ALL_PROJECTS_TAB_ID) return
+    // Don't persist while still loading or before restoration has had a chance to run
+    if (isViewStateLoading) return
+    // Don't persist if URL has no projects param and we haven't restored yet
+    // (this prevents overwriting saved data before restoration completes)
+    if (!projectsFilter && !hasRestoredRef.current && persistedProjectIds.length > 0) return
     // Only persist if different from what we have stored
     const current = selectedProjectIds.join(',')
     const persisted = persistedProjectIds.join(',')
     if (current === persisted) return
 
     setSelectedProjects(selectedProjectIds)
-  }, [activeTabId, selectedProjectIds, persistedProjectIds, setSelectedProjects])
+  }, [activeTabId, selectedProjectIds, persistedProjectIds, setSelectedProjects, isViewStateLoading, projectsFilter])
 
   // Auto-create terminals for selected projects that don't have one
   useEffect(() => {
@@ -880,6 +887,7 @@ const TerminalsView = observer(function TerminalsView() {
           sendInputToTerminal={sendInputToTerminal}
           taskInfoByCwd={activeTabId === ALL_TASKS_TAB_ID ? taskInfoByCwd : undefined}
           projectInfoByCwd={activeTabId === ALL_PROJECTS_TAB_ID ? projectInfoByCwd : undefined}
+          emptyMessage={activeTabId === ALL_PROJECTS_TAB_ID ? t('emptyProjects') : activeTabId === ALL_TASKS_TAB_ID ? t('emptyTasks') : undefined}
         />
       </div>
 

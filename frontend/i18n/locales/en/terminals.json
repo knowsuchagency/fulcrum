@@ -7,6 +7,8 @@
   "projectsSelected": "{{count}} selected",
   "filterByProject": "Select up to 6 projects",
   "clearFilter": "Clear selection",
+  "emptyProjects": "Select a project to open its workspace terminal",
+  "emptyTasks": "No active tasks",
   "editTab": {
     "title": "Edit Tab",
     "name": "Name",
