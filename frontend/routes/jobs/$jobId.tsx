@@ -42,6 +42,7 @@ import {
   CpuIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { CodeBlock } from '@/components/ui/code-block'
 
 type JobTab = 'general' | 'logs'
 
@@ -457,16 +458,16 @@ function JobDetailView() {
             {/* Command Info */}
             <div className="space-y-4 min-w-0">
               <h2 className="text-sm font-medium text-muted-foreground">{t('detail.command')}</h2>
-              <div className="rounded-lg border p-4 space-y-3 overflow-hidden">
+              <div className="space-y-3 overflow-hidden">
                 {job.command ? (
-                  <code className="block whitespace-pre-wrap break-all rounded bg-muted px-2 py-1 text-sm font-mono">
-                    {job.command}
-                  </code>
+                  <CodeBlock code={job.command} language="bash" className="max-h-48" />
                 ) : (
-                  <span className="text-muted-foreground text-sm">-</span>
+                  <div className="rounded-lg border p-4">
+                    <span className="text-muted-foreground text-sm">-</span>
+                  </div>
                 )}
                 {job.workingDirectory && (
-                  <div className="text-sm break-all">
+                  <div className="text-sm break-all px-1">
                     <span className="text-muted-foreground">{t('detail.workingDir')}: </span>
                     <code className="font-mono break-all">{job.workingDirectory}</code>
                   </div>
@@ -499,23 +500,23 @@ function JobDetailView() {
               </div>
             )}
 
-            {/* Timer File (user timers only) */}
+            {/* Timer/Plist File (user jobs only) */}
             {!isSystemJob && job.timerContent && (
               <div className="space-y-4 md:col-span-2 min-w-0">
                 <h2 className="text-sm font-medium text-muted-foreground">{t('detail.timerFile')}</h2>
-                <pre className="rounded-lg border bg-muted p-4 text-xs font-mono overflow-y-auto max-h-48 whitespace-pre-wrap break-all">
-                  {job.timerContent}
-                </pre>
+                <CodeBlock
+                  code={job.timerContent}
+                  language={jobsInfo?.platform === 'launchd' ? 'xml' : 'ini'}
+                  className="max-h-64"
+                />
               </div>
             )}
 
-            {/* Service File (user timers only) */}
+            {/* Service File (systemd only, user timers only) */}
             {!isSystemJob && job.serviceContent && (
               <div className="space-y-4 md:col-span-2 min-w-0">
                 <h2 className="text-sm font-medium text-muted-foreground">{t('detail.serviceFile')}</h2>
-                <pre className="rounded-lg border bg-muted p-4 text-xs font-mono overflow-y-auto max-h-48 whitespace-pre-wrap break-all">
-                  {job.serviceContent}
-                </pre>
+                <CodeBlock code={job.serviceContent} language="ini" className="max-h-64" />
               </div>
             )}
           </div>
