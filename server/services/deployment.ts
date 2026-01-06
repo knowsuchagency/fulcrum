@@ -15,6 +15,7 @@ import {
   stackServices,
   waitForServicesHealthy,
   addCloudflaredToStack,
+  validateAndAllocatePorts,
 } from './docker-swarm'
 import { createDnsRecord, createOriginCACertificate, deleteDnsRecord } from './cloudflare'
 import {
@@ -348,7 +349,43 @@ export async function deployApp(
   }
 
   try {
-    // Stage 0: Ensure Swarm mode is active
+    // Stage 0: Validate ports are available (host mode requires unique ports)
+    onProgress?.({ stage: 'building', message: 'Checking port availability...' })
+    const portValidation = await validateAndAllocatePorts(
+      repo.path,
+      app.composeFile,
+      env ?? {},
+      true // Auto-allocate ports if conflicts detected
+    )
+
+    if (!portValidation.valid) {
+      const conflictMsg = portValidation.conflicts
+        .map((c) => `Port ${c.requestedPort} (service: ${c.serviceName}${c.envVar ? `, env: ${c.envVar}` : ''})`)
+        .join(', ')
+      throw new Error(`Port conflict: ${conflictMsg} already in use. Configure a different PORT in environment variables.`)
+    }
+
+    // If ports were auto-allocated, update the env vars
+    if (portValidation.allocations && portValidation.allocations.size > 0) {
+      env = env ?? {}
+      for (const [envVar, port] of portValidation.allocations) {
+        env[envVar] = String(port)
+        onProgress?.({ stage: 'building', message: `Auto-allocated ${envVar}=${port} (original port was in use)` })
+      }
+
+      // Update the app's stored environment variables
+      await db.update(apps).set({
+        environmentVariables: JSON.stringify(env),
+        updatedAt: new Date().toISOString(),
+      }).where(eq(apps.id, appId))
+
+      log.deploy.info('Updated app environment variables with auto-allocated ports', {
+        appId,
+        allocations: Object.fromEntries(portValidation.allocations),
+      })
+    }
+
+    // Stage 1: Ensure Swarm mode is active
     const swarmResult = await ensureSwarmMode()
     if (!swarmResult.initialized) {
       throw new Error(`Docker Swarm initialization failed: ${swarmResult.error}`)
