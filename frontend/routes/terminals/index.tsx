@@ -143,10 +143,12 @@ const TerminalsView = observer(function TerminalsView() {
     [navigate]
   )
 
-  // Toggle a project in the multi-select filter
+  // Toggle a project in the multi-select filter (max 6 projects)
   const toggleProjectFilter = useCallback(
     (projectId: string, checked: boolean) => {
       const currentIds = projectsFilter?.split(',').filter(Boolean) ?? []
+      // Limit to 6 projects max
+      if (checked && currentIds.length >= 6) return
       const newIds = checked
         ? [...currentIds, projectId]
         : currentIds.filter((id) => id !== projectId)
@@ -345,6 +347,42 @@ const TerminalsView = observer(function TerminalsView() {
     return projectsFilter?.split(',').filter(Boolean) ?? []
   }, [projectsFilter])
 
+  // Track project IDs for which we're creating terminals to prevent duplicates
+  const creatingProjectTerminalsRef = useRef<Set<string>>(new Set())
+
+  // Auto-create terminals for selected projects that don't have one
+  useEffect(() => {
+    if (activeTabId !== ALL_PROJECTS_TAB_ID) return
+    if (!connected) return
+
+    for (const projectId of selectedProjectIds) {
+      // Skip if already creating a terminal for this project
+      if (creatingProjectTerminalsRef.current.has(projectId)) continue
+
+      const project = allProjects.find((p) => p.id === projectId)
+      if (!project?.repository?.path) continue
+
+      const repoPath = project.repository.path
+      // Check if terminal already exists for this project
+      const existingTerminal = terminals.find((t) => t.cwd === repoPath)
+      if (existingTerminal) continue
+
+      // Mark as creating and create terminal
+      creatingProjectTerminalsRef.current.add(projectId)
+      createTerminal({
+        name: project.name,
+        cwd: repoPath,
+        cols: 80,
+        rows: 24,
+      })
+
+      // Clear the creating flag after a short delay
+      setTimeout(() => {
+        creatingProjectTerminalsRef.current.delete(projectId)
+      }, 1000)
+    }
+  }, [activeTabId, selectedProjectIds, allProjects, terminals, connected, createTerminal])
+
   const cleanupFnsRef = useRef<Map<string, () => void>>(new Map())
   const terminalCountRef = useRef(0)
   // Guard against duplicate creations from React Strict Mode or double-click
@@ -371,11 +409,11 @@ const TerminalsView = observer(function TerminalsView() {
         .map(toTerminalInfo)
     }
     if (activeTabId === ALL_PROJECTS_TAB_ID) {
-      // Show terminals for projects, with optional multi-select filter
+      // Show terminals for projects - only show selected projects (default: none)
+      if (selectedProjectIds.length === 0) return []
       return terminals
         .filter((t) => t.cwd && projectRepoPaths.has(t.cwd))
         .filter((t) => {
-          if (selectedProjectIds.length === 0) return true
           const projectId = projectRepoPaths.get(t.cwd!)
           return projectId && selectedProjectIds.includes(projectId)
         })
@@ -680,25 +718,33 @@ const TerminalsView = observer(function TerminalsView() {
                 <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
                 <span>
                   {selectedProjectIds.length === 0
-                    ? t('allProjects')
+                    ? t('selectProjects')
                     : t('projectsSelected', { count: selectedProjectIds.length })}
                 </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64" align="end">
                 <div className="p-2 space-y-2">
                   <div className="text-sm font-medium mb-2">{t('filterByProject')}</div>
-                  {allProjects.map((project) => (
-                    <div key={project.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`project-filter-${project.id}`}
-                        checked={selectedProjectIds.includes(project.id)}
-                        onCheckedChange={(checked) => toggleProjectFilter(project.id, checked === true)}
-                      />
-                      <Label htmlFor={`project-filter-${project.id}`} className="text-sm cursor-pointer">
-                        {project.name}
-                      </Label>
-                    </div>
-                  ))}
+                  {allProjects.map((project) => {
+                    const isSelected = selectedProjectIds.includes(project.id)
+                    const isDisabled = !isSelected && selectedProjectIds.length >= 6
+                    return (
+                      <div key={project.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`project-filter-${project.id}`}
+                          checked={isSelected}
+                          disabled={isDisabled}
+                          onCheckedChange={(checked) => toggleProjectFilter(project.id, checked === true)}
+                        />
+                        <Label
+                          htmlFor={`project-filter-${project.id}`}
+                          className={`text-sm ${isDisabled ? 'text-muted-foreground cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          {project.name}
+                        </Label>
+                      </div>
+                    )
+                  })}
                   {selectedProjectIds.length > 0 && (
                     <Button
                       variant="ghost"

@@ -3,10 +3,10 @@
   "projectTerminals": "Projects",
   "newTerminal": "New Terminal",
   "allRepos": "All Repos",
-  "allProjects": "All Projects",
+  "selectProjects": "Select projects",
   "projectsSelected": "{{count}} selected",
-  "filterByProject": "Filter by project",
-  "clearFilter": "Clear filter",
+  "filterByProject": "Select up to 6 projects",
+  "clearFilter": "Clear selection",
   "editTab": {
     "title": "Edit Tab",
     "name": "Name",
