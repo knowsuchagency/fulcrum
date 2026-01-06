@@ -558,21 +558,10 @@ function TaskView() {
             >
               <HugeiconsIcon icon={ReloadIcon} size={14} strokeWidth={2} />
             </button>
-            {repository ? (
-              <Link
-                to="/repositories/$repoId"
-                params={{ repoId: repository.id }}
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
-              >
-                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
-                <span>{task.repoName}</span>
-              </Link>
-            ) : (
-              <span className="flex items-center gap-1">
-                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
-                <span>{task.repoName}</span>
-              </span>
-            )}
+            <span className="flex items-center gap-1">
+              <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+              <span>{task.repoName}</span>
+            </span>
             <div className="ml-auto">
               <GitStatusBadge worktreePath={task.worktreePath} />
             </div>
@@ -604,21 +593,10 @@ function TaskView() {
               </button>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {repository ? (
-                <Link
-                  to="/repositories/$repoId"
-                  params={{ repoId: repository.id }}
-                  className="flex items-center gap-1 hover:text-foreground transition-colors"
-                >
-                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
-                  <span>{task.repoName}</span>
-                </Link>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
-                  <span>{task.repoName}</span>
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+                <span>{task.repoName}</span>
+              </span>
               <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} />
               <span className="font-mono">{task.branch}</span>
               {task.prUrl && (

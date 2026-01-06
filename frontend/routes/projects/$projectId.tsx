@@ -983,7 +983,7 @@ function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: 
     if (!composeInfo?.found) {
       setComposeWarningOpen(true)
     } else {
-      navigate({ to: '/apps/new', search: { repoId: project.repository?.id } })
+      navigate({ to: '/projects/new' })
     }
   }
 

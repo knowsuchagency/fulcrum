@@ -47,7 +47,6 @@ interface TaskActionsDropdownProps {
   taskId: string
   title: string
   prUrl?: string | null
-  repoId?: string
   repoName: string
   terminalId?: string
   sendInputToTerminal?: (terminalId: string, text: string) => void
@@ -61,7 +60,6 @@ export function TaskActionsDropdown({
   taskId,
   title,
   prUrl,
-  repoId,
   repoName,
   terminalId,
   sendInputToTerminal,
@@ -184,11 +182,7 @@ export function TaskActionsDropdown({
   }
 
   const handleNavigateToRepo = () => {
-    if (repoId) {
-      navigate({ to: '/repositories/$repoId', params: { repoId } })
-    } else {
-      navigate({ to: '/repositories' })
-    }
+    navigate({ to: '/projects' })
   }
 
   const handleDeleteTask = () => {

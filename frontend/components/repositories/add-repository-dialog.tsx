@@ -398,10 +398,10 @@ export function AddRepositoryDialog({
         trust: shouldTrust,
       },
       {
-        onSuccess: (data) => {
+        onSuccess: () => {
           resetTemplateState()
           onOpenChange(false)
-          navigate({ to: '/repositories/$repoId', params: { repoId: data.repositoryId } })
+          navigate({ to: '/projects' })
         },
         onError: (error) => {
           setTemplateError(error.message)

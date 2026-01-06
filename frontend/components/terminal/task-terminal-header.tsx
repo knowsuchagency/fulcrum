@@ -112,7 +112,6 @@ export function TaskTerminalHeader({
                 taskId={taskInfo.taskId}
                 title={taskInfo.title}
                 prUrl={taskInfo.prUrl}
-                repoId={taskInfo.repoId}
                 repoName={taskInfo.repoName}
                 terminalId={terminalId}
                 sendInputToTerminal={sendInputToTerminal}
@@ -123,14 +122,10 @@ export function TaskTerminalHeader({
         ) : (
           // Full mode: all elements visible
           <>
-            <Link
-              to={taskInfo.repoId ? '/repositories/$repoId' : '/repositories'}
-              params={taskInfo.repoId ? { repoId: taskInfo.repoId } : undefined}
-              className="flex min-w-0 items-center gap-1 text-xs font-medium text-foreground cursor-pointer hover:underline"
-            >
+            <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-foreground">
               <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} className="shrink-0" />
               <span className="truncate">{taskInfo.repoName}</span>
-            </Link>
+            </span>
             {terminalCwd && (
               <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                 <HugeiconsIcon icon={GitBranchIcon} size={12} strokeWidth={2} className="shrink-0" />
