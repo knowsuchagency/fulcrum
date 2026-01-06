@@ -1,7 +1,7 @@
 {
   "name": "vibora",
   "description": "Vibora task orchestration for Claude Code",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "author": {
     "name": "Vibora"
   },
