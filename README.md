@@ -18,6 +18,7 @@ Vibora supports **Claude Code** and **OpenCode** with per-repository and per-tas
 
 ## Key Features
 
+- **Projects** — Unified view combining repositories and app deployments with workspace terminals
 - **App Deployment** — Deploy with Docker Compose, automatic Traefik routing, optional Cloudflare DNS integration
 - **Parallel Agent Orchestration** — Run multiple AI coding agent sessions across different tasks and worktrees
 - **Multi-Agent Support** — Use Claude Code or OpenCode, configurable globally, per-repo, or per-task
@@ -112,11 +113,11 @@ Deploy applications directly from Vibora with Docker Compose. Edit compose files
 
 ![App Deployment](./screenshots/app-deployment-config.png)
 
-### Repositories
+### Projects
 
-Manage your projects with quick actions. Create new tasks, open terminals, and configure repository settings from one place.
+Projects unify your code repositories and app deployments into a single entity. Manage workspace terminals, task settings, and deployment configuration from one place.
 
-![Repositories](./screenshots/repositories-view.png)
+![Projects](./screenshots/projects-view.png)
 
 ### Browser Preview
 

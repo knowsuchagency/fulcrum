@@ -13,8 +13,8 @@ Vibora includes a complete deployment platform for running your applications on 
 
 ## How It Works
 
-1. **Add a repository** with a `docker-compose.yml` file
-2. **Create an app** from the repository
+1. **Create a project** linked to a repository with a `docker-compose.yml` file
+2. **Add an app** to the project
 3. **Configure domains** for services you want to expose
 4. **Deploy** — Vibora builds and runs your containers
 
@@ -39,13 +39,13 @@ vibora doctor
 
 ### From the UI
 
-1. Navigate to **Apps** in the sidebar
-2. Click **New App**
-3. Select a repository
-4. Enter an app name
-5. Click **Create App**
+1. Navigate to **Projects** in the sidebar
+2. Select or create a project linked to a repository with a `docker-compose.yml`
+3. Go to the **Deploy** tab
+4. Click **Configure Deployment** (or **Add App** if no app exists yet)
+5. Configure app settings and services
 
-The app is created but not yet deployed. You'll see the app's detail page where you can configure domains and environment variables.
+The app is created but not yet deployed. Use the Deploy tab to configure domains and environment variables, then deploy.
 
 ### What Gets Created
 

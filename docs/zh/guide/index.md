@@ -28,11 +28,11 @@
 
 ![应用部署](/screenshots/app-deployment-config.png)
 
-### 仓库管理
+### 项目
 
-通过快捷操作管理您的项目。在一处创建新任务、打开终端、配置仓库设置。
+项目将代码仓库和应用部署统一为一个实体。在一处管理工作区终端、任务设置和部署配置。
 
-![仓库管理](/screenshots/repositories-view.png)
+![项目](/screenshots/projects-view.png)
 
 ### 浏览器预览
 

@@ -28,11 +28,11 @@ Deploy applications directly from Vibora with Docker Compose. Edit compose files
 
 ![App Deployment](/screenshots/app-deployment-config.png)
 
-### Repositories
+### Projects
 
-Manage your projects with quick actions. Create new tasks, open terminals, and configure repository settings from one place.
+Projects unify your code repositories and app deployments into a single entity. Manage workspace terminals, task settings, and deployment configuration from one place.
 
-![Repositories](/screenshots/repositories-view.png)
+![Projects](/screenshots/projects-view.png)
 
 ### Browser Preview
 
