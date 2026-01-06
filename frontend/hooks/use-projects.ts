@@ -145,3 +145,46 @@ export function useAccessProject() {
     },
   })
 }
+
+export interface ScannedProject {
+  path: string
+  name: string
+  hasRepository: boolean
+  hasProject: boolean
+}
+
+export interface ProjectScanResult {
+  directory: string
+  repositories: ScannedProject[]
+}
+
+export function useScanProjects() {
+  return useMutation({
+    mutationFn: (directory?: string) =>
+      fetchJSON<ProjectScanResult>(`${API_BASE}/api/projects/scan`, {
+        method: 'POST',
+        body: JSON.stringify(directory ? { directory } : {}),
+      }),
+  })
+}
+
+export interface BulkCreateProjectsResult {
+  created: ProjectWithDetails[]
+  skipped: number
+}
+
+export function useBulkCreateProjects() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (repositories: Array<{ path: string; displayName?: string }>) =>
+      fetchJSON<BulkCreateProjectsResult>(`${API_BASE}/api/projects/bulk`, {
+        method: 'POST',
+        body: JSON.stringify({ repositories }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['repositories'] })
+    },
+  })
+}

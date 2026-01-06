@@ -52,6 +52,7 @@ export function useCreateProjectFromTemplate() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }

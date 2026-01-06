@@ -200,6 +200,7 @@ export interface CreateProjectResponse {
   success: boolean
   projectPath: string
   repositoryId: string
+  projectId: string
 }
 
 // Git API response types

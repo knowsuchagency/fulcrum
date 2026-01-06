@@ -83,7 +83,6 @@ import {
   WindowsOldIcon,
   Folder01Icon,
   TaskAdd01Icon,
-  ComputerTerminal01Icon,
   VisualStudioCodeIcon,
   Tick02Icon,
   Link01Icon,
@@ -102,7 +101,6 @@ import { Card } from '@/components/ui/card'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { WorkspacePanel } from '@/components/workspace/workspace-panel'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
-import { useOpenInTerminal } from '@/hooks/use-open-in-terminal'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { buildEditorUrl, openExternalUrl } from '@/lib/editor-url'
 import { AgentOptionsEditor } from '@/components/repositories/agent-options-editor'
@@ -216,7 +214,6 @@ const ProjectDetailView = observer(function ProjectDetailView() {
     }
   }, [projectId])
 
-  const { openInTerminal } = useOpenInTerminal()
   const { data: editorApp } = useEditorApp()
   const { data: editorHost } = useEditorHost()
   const { data: editorSshPort } = useEditorSshPort()
@@ -483,14 +480,6 @@ const ProjectDetailView = observer(function ProjectDetailView() {
                 >
                   <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
                   <span className="hidden sm:inline">{t('newTask', { ns: 'projects' })}</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openInTerminal(project.repository!.path, project.name)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <HugeiconsIcon icon={ComputerTerminal01Icon} size={14} strokeWidth={2} data-slot="icon" />
                 </Button>
                 <Button
                   variant="ghost"

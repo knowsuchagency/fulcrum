@@ -7,7 +7,7 @@
   "editor": "Editor",
   "deploy": "Deploy",
   "stop": "Stop",
-  "newProject": "New Project",
+  "newProjectButton": "New Project",
   "empty": {
     "noProjects": "No projects yet. Create a project to get started.",
     "noMatches": "No projects match your search."

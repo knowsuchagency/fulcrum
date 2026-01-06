@@ -434,6 +434,191 @@ app.delete('/:id/app', async (c) => {
   }
 })
 
+// POST /api/projects/scan - Scan directory for git repositories and check if projects exist
+// Returns which repos have projects vs just repositories vs neither
+app.post('/scan', async (c) => {
+  try {
+    const body = await c.req.json<{ directory?: string }>().catch(() => ({}))
+    const { existsSync, readdirSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const { getSettings, expandPath } = await import('../lib/settings')
+
+    // Default to configured git repos directory, expand tilde if present
+    const settings = getSettings()
+    const directory = expandPath(body.directory || settings.paths.defaultGitReposDir)
+
+    if (!existsSync(directory)) {
+      return c.json({ error: `Directory does not exist: ${directory}` }, 400)
+    }
+
+    // Get all repositories with their project status
+    const allRepos = db.select().from(repositories).all()
+    const repoPathMap = new Map(allRepos.map((r) => [r.path, r]))
+
+    // Get all projects to check which repos have projects
+    const allProjects = db.select().from(projects).all()
+    const repoIdWithProject = new Set(
+      allProjects.filter((p) => p.repositoryId).map((p) => p.repositoryId)
+    )
+
+    // Scan immediate subdirectories for .git folders
+    const discovered: Array<{
+      path: string
+      name: string
+      hasRepository: boolean
+      hasProject: boolean
+    }> = []
+
+    const entries = readdirSync(directory, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      // Skip hidden directories
+      if (entry.name.startsWith('.')) continue
+
+      const subPath = join(directory, entry.name)
+      const gitPath = join(subPath, '.git')
+
+      if (existsSync(gitPath)) {
+        const existingRepo = repoPathMap.get(subPath)
+        discovered.push({
+          path: subPath,
+          name: entry.name,
+          hasRepository: !!existingRepo,
+          hasProject: existingRepo ? repoIdWithProject.has(existingRepo.id) : false,
+        })
+      }
+    }
+
+    // Sort by name
+    discovered.sort((a, b) => a.name.localeCompare(b.name))
+
+    return c.json({ directory, repositories: discovered })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to scan directory' }, 500)
+  }
+})
+
+// POST /api/projects/bulk - Bulk create projects from repository paths
+// Creates repositories if they don't exist, then creates projects for each
+app.post('/bulk', async (c) => {
+  try {
+    const body = await c.req.json<{
+      repositories: Array<{ path: string; displayName?: string }>
+    }>()
+
+    if (!body.repositories || !Array.isArray(body.repositories) || body.repositories.length === 0) {
+      return c.json({ error: 'repositories array is required' }, 400)
+    }
+
+    const { existsSync } = await import('node:fs')
+    const { expandPath } = await import('../lib/settings')
+    const { inArray } = await import('drizzle-orm')
+
+    const now = new Date().toISOString()
+    const createdProjects: ProjectWithDetails[] = []
+    let skipped = 0
+
+    for (const repoInput of body.repositories) {
+      const repoPath = expandPath(repoInput.path)
+
+      // Check if repo path exists on disk
+      if (!existsSync(repoPath)) {
+        skipped++
+        continue
+      }
+
+      // Check if repository already exists
+      let repo = db.select().from(repositories).where(eq(repositories.path, repoPath)).get()
+
+      // Create repository if it doesn't exist
+      if (!repo) {
+        const displayName = repoInput.displayName || repoPath.split('/').pop() || 'repo'
+        const repoId = nanoid()
+
+        db.insert(repositories)
+          .values({
+            id: repoId,
+            path: repoPath,
+            displayName,
+            startupScript: null,
+            copyFiles: null,
+            isCopierTemplate: false,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        repo = db.select().from(repositories).where(eq(repositories.id, repoId)).get()
+      }
+
+      if (!repo) {
+        skipped++
+        continue
+      }
+
+      // Check if project already exists for this repository
+      const existingProject = db.select().from(projects).where(eq(projects.repositoryId, repo.id)).get()
+      if (existingProject) {
+        skipped++
+        continue
+      }
+
+      // Check if there's an app linked to this repository
+      const linkedApp = db.select().from(apps).where(eq(apps.repositoryId, repo.id)).get()
+
+      // Create terminal tab for this project
+      const tabId = nanoid()
+      db.insert(terminalTabs)
+        .values({
+          id: tabId,
+          name: repo.displayName,
+          position: 0,
+          directory: repo.path,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      // Create project
+      const projectId = nanoid()
+      db.insert(projects)
+        .values({
+          id: projectId,
+          name: repo.displayName,
+          description: null,
+          repositoryId: repo.id,
+          appId: linkedApp?.id ?? null,
+          terminalTabId: tabId,
+          status: 'active',
+          lastAccessedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      // Fetch the created project
+      const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+      if (project) {
+        const services = linkedApp
+          ? db.select().from(appServices).where(eq(appServices.appId, linkedApp.id)).all()
+          : []
+        const tab = db.select().from(terminalTabs).where(eq(terminalTabs.id, tabId)).get()
+
+        createdProjects.push(
+          buildProjectWithDetails(project, repo, linkedApp ?? null, services, tab ?? null)
+        )
+      }
+    }
+
+    return c.json({
+      created: createdProjects,
+      skipped,
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to bulk create projects' }, 500)
+  }
+})
+
 // POST /api/projects/:id/access - Update lastAccessedAt timestamp
 app.post('/:id/access', (c) => {
   const id = c.req.param('id')

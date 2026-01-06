@@ -388,7 +388,7 @@ function ProjectsView() {
         <div className="hidden sm:block flex-1" />
         <Button size="sm" onClick={() => navigate({ to: '/projects/new' })}>
           <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
-          <span className="max-sm:hidden">{t('newProject')}</span>
+          <span className="max-sm:hidden">{t('newProjectButton')}</span>
         </Button>
       </div>
 
