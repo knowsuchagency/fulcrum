@@ -15,14 +15,13 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   GridViewIcon,
   CommandLineIcon,
-  Database01Icon,
+  Folder01Icon,
   Settings01Icon,
   PlusSignIcon,
   HelpCircleIcon,
   GitPullRequestIcon,
   ChartLineData01Icon,
   CodeIcon,
-  Rocket01Icon,
 } from '@hugeicons/core-free-icons'
 
 interface CommandPaletteProps {
@@ -60,9 +59,21 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         },
       },
       {
+        id: 'goto-projects',
+        label: t('commandPalette.commands.goToProjects'),
+        shortcut: 'meta+2',
+        keywords: ['repos', 'repositories', 'apps', 'deploy', 'docker'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} />,
+        action: () => {
+          navigate({ to: '/projects' })
+          setOpen(false)
+        },
+      },
+      {
         id: 'goto-terminals',
         label: t('commandPalette.commands.goToTerminals'),
-        shortcut: 'meta+2',
+        shortcut: 'meta+3',
         keywords: ['shell', 'console', 'cli'],
         category: 'navigation',
         icon: <HugeiconsIcon icon={CommandLineIcon} size={16} strokeWidth={2} />,
@@ -84,33 +95,9 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         },
       },
       {
-        id: 'goto-repositories',
-        label: t('commandPalette.commands.goToRepositories'),
-        shortcut: 'meta+3',
-        keywords: ['repos', 'git', 'projects'],
-        category: 'navigation',
-        icon: <HugeiconsIcon icon={Database01Icon} size={16} strokeWidth={2} />,
-        action: () => {
-          navigate({ to: '/repositories' })
-          setOpen(false)
-        },
-      },
-      {
-        id: 'goto-apps',
-        label: t('commandPalette.commands.goToApps'),
-        shortcut: 'meta+4',
-        keywords: ['deploy', 'deployment', 'docker', 'containers'],
-        category: 'navigation',
-        icon: <HugeiconsIcon icon={Rocket01Icon} size={16} strokeWidth={2} />,
-        action: () => {
-          navigate({ to: '/apps' })
-          setOpen(false)
-        },
-      },
-      {
         id: 'goto-review',
         label: t('commandPalette.commands.goToReview'),
-        shortcut: 'meta+5',
+        shortcut: 'meta+4',
         keywords: ['pr', 'pull request', 'issues', 'github'],
         category: 'navigation',
         icon: <HugeiconsIcon icon={GitPullRequestIcon} size={16} strokeWidth={2} />,
@@ -122,7 +109,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       {
         id: 'goto-monitoring',
         label: t('commandPalette.commands.goToMonitoring'),
-        shortcut: 'meta+6',
+        shortcut: 'meta+5',
         keywords: ['system', 'cpu', 'memory', 'processes', 'usage'],
         category: 'navigation',
         icon: <HugeiconsIcon icon={ChartLineData01Icon} size={16} strokeWidth={2} />,
@@ -226,14 +213,13 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
 
   // Navigation shortcuts
   useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+2', () => navigate({ to: '/projects' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+3', () => navigate({ to: '/terminals' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+i', () => {
     navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
   }, { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+3', () => navigate({ to: '/repositories' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+4', () => navigate({ to: '/apps' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+5', () => navigate({ to: '/review' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+6', () => navigate({ to: '/monitoring' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+4', () => navigate({ to: '/review' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+5', () => navigate({ to: '/monitoring' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+,', () => navigate({ to: '/settings' }), { allowInInput: true, allowInTerminal: true })
 
   // New task shortcut
@@ -293,25 +279,20 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
           break
         case '2':
           e.preventDefault()
-          navigate({ to: '/terminals' })
+          navigate({ to: '/projects' })
           setOpen(false)
           break
         case '3':
           e.preventDefault()
-          navigate({ to: '/repositories' })
+          navigate({ to: '/terminals' })
           setOpen(false)
           break
         case '4':
           e.preventDefault()
-          navigate({ to: '/apps' })
-          setOpen(false)
-          break
-        case '5':
-          e.preventDefault()
           navigate({ to: '/review' })
           setOpen(false)
           break
-        case '6':
+        case '5':
           e.preventDefault()
           navigate({ to: '/monitoring' })
           setOpen(false)

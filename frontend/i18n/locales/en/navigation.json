@@ -1,6 +1,7 @@
 {
   "header": {
     "tasks": "Tasks",
+    "projects": "Projects",
     "terminals": "Terminals",
     "worktrees": "Worktrees",
     "repositories": "Repositories",
@@ -21,6 +22,7 @@
     },
     "commands": {
       "goToTasks": "Go to Tasks",
+      "goToProjects": "Go to Projects",
       "goToTerminals": "Go to Terminals",
       "goToTaskTerminals": "Go to Task Terminals",
       "goToRepositories": "Go to Repositories",
@@ -30,6 +32,7 @@
       "goToMonitoring": "Go to Monitoring",
       "goToSettings": "Go to Settings",
       "newTask": "New Task",
+      "newProject": "New Project",
       "openInEditor": "Open in Editor",
       "keyboardShortcuts": "Keyboard Shortcuts"
     }
@@ -44,6 +47,7 @@
     },
     "labels": {
       "goToTasks": "Go to Tasks",
+      "goToProjects": "Go to Projects",
       "goToTerminals": "Go to Terminals",
       "goToTaskTerminals": "Go to Task Terminals",
       "goToRepositories": "Go to Repositories",
@@ -54,6 +58,7 @@
       "goToSettings": "Go to Settings",
       "commandPalette": "Command Palette",
       "newTask": "New Task",
+      "newProject": "New Project",
       "openInEditor": "Open in Editor",
       "keyboardShortcuts": "Keyboard Shortcuts",
       "closeModal": "Close Modal",

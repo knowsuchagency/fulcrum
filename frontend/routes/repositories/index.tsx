@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, redirect } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import {
@@ -35,6 +35,10 @@ import { Input } from '@/components/ui/input'
 
 export const Route = createFileRoute('/repositories/')({
   component: RepositoriesView,
+  beforeLoad: () => {
+    // Redirect to projects - repositories are now managed within projects
+    throw redirect({ to: '/projects' })
+  },
 })
 
 function RepositoryCard({

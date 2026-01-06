@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, redirect } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import { useApps, useStopApp, useDeleteApp, useDeploymentPrerequisites } from '@/hooks/use-apps'
@@ -46,6 +46,10 @@ interface AppsSearch {
 
 export const Route = createFileRoute('/apps/')({
   component: AppsView,
+  beforeLoad: () => {
+    // Redirect to projects - apps are now managed within projects
+    throw redirect({ to: '/projects' })
+  },
   validateSearch: (search: Record<string, unknown>): AppsSearch => ({
     repo: typeof search.repo === 'string' ? search.repo : undefined,
   }),

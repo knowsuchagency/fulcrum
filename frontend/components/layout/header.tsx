@@ -15,12 +15,11 @@ import {
   TaskDaily01Icon,
   ComputerTerminal01Icon,
   Settings01Icon,
-  PackageIcon,
+  Folder01Icon,
   GitPullRequestIcon,
   BrowserIcon,
   Chart02Icon,
   More03Icon,
-  Rocket01Icon,
   HelpCircleIcon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
@@ -33,9 +32,8 @@ interface HeaderProps {
 
 const NAV_ITEMS = [
   { to: '/tasks', icon: TaskDaily01Icon, labelKey: 'header.tasks', matchPrefix: true },
+  { to: '/projects', icon: Folder01Icon, labelKey: 'header.projects', matchPrefix: true },
   { to: '/terminals', icon: ComputerTerminal01Icon, labelKey: 'header.terminals', matchPrefix: false },
-  { to: '/repositories', icon: PackageIcon, labelKey: 'header.repositories', matchPrefix: true },
-  { to: '/apps', icon: Rocket01Icon, labelKey: 'header.apps', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
   { to: '/monitoring', icon: Chart02Icon, labelKey: 'header.monitoring', matchPrefix: true },
 ] as const
