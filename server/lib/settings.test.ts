@@ -158,7 +158,7 @@ describe('Settings', () => {
 
       // File should be updated with nested structure
       const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(migrated._schemaVersion).toBe(8) // Current schema version
+      expect(migrated._schemaVersion).toBe(9) // Current schema version
       expect(migrated.server?.port).toBe(8888)
       expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
       expect(migrated.integrations?.linearApiKey).toBe('migrated-key')
@@ -188,7 +188,7 @@ describe('Settings', () => {
     test('skips migration if already at current schema version', async () => {
       const settingsPath = join(tempDir, 'settings.json')
       const originalContent = {
-        _schemaVersion: 8, // Current schema version
+        _schemaVersion: 9, // Current schema version
         server: { port: 8888 },
       }
       writeFileSync(settingsPath, JSON.stringify(originalContent))
@@ -475,7 +475,7 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // Schema version should be set to current
-      expect(file._schemaVersion).toBe(8)
+      expect(file._schemaVersion).toBe(9)
     })
 
     test('creates settings file with all defaults if none exists', async () => {
@@ -490,7 +490,7 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // All default sections should exist
-      expect(file._schemaVersion).toBe(8)
+      expect(file._schemaVersion).toBe(9)
       expect(file.server.port).toBe(7777)
       expect(file.editor.app).toBe('vscode')
       expect(file.notifications.enabled).toBe(true)

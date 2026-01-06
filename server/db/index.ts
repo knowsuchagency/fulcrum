@@ -229,14 +229,11 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
   migrate(drizzleDb, { migrationsFolder: migrationsPath })
 
   // Run data migrations after schema migrations
-  migrateRepositoriesToProjects(sqlite, drizzleDb)
+  migrateRepositoriesToProjects(sqlite)
 }
 
 // Data migration: Create projects for existing repositories
-function migrateRepositoriesToProjects(
-  sqlite: Database,
-  drizzleDb: BunSQLiteDatabase<typeof schema>
-): void {
+function migrateRepositoriesToProjects(sqlite: Database): void {
   // Check if projects table exists
   const hasProjectsTable = sqlite
     .query("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'")
@@ -260,6 +257,8 @@ function migrateRepositoriesToProjects(
   log.db.info('Migrating repositories to projects', { count: orphanedRepos.length })
 
   const now = new Date().toISOString()
+  // Using dynamic import at top of module scope would cause issues during migration
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { nanoid } = require('nanoid')
 
   for (const repo of orphanedRepos) {

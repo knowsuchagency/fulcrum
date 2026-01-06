@@ -781,7 +781,6 @@ app.post('/bulk', async (c) => {
 
     const { existsSync } = await import('node:fs')
     const { expandPath } = await import('../lib/settings')
-    const { inArray } = await import('drizzle-orm')
 
     const now = new Date().toISOString()
     const createdProjects: ProjectWithDetails[] = []
