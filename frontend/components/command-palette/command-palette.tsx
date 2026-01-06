@@ -59,26 +59,26 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         },
       },
       {
-        id: 'goto-projects',
-        label: t('commandPalette.commands.goToProjects'),
-        shortcut: 'meta+2',
-        keywords: ['repos', 'repositories', 'apps', 'deploy', 'docker'],
-        category: 'navigation',
-        icon: <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} />,
-        action: () => {
-          navigate({ to: '/projects' })
-          setOpen(false)
-        },
-      },
-      {
         id: 'goto-terminals',
         label: t('commandPalette.commands.goToTerminals'),
-        shortcut: 'meta+3',
+        shortcut: 'meta+2',
         keywords: ['shell', 'console', 'cli'],
         category: 'navigation',
         icon: <HugeiconsIcon icon={CommandLineIcon} size={16} strokeWidth={2} />,
         action: () => {
           navigate({ to: '/terminals' })
+          setOpen(false)
+        },
+      },
+      {
+        id: 'goto-projects',
+        label: t('commandPalette.commands.goToProjects'),
+        shortcut: 'meta+3',
+        keywords: ['repos', 'repositories', 'apps', 'deploy', 'docker'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} />,
+        action: () => {
+          navigate({ to: '/projects' })
           setOpen(false)
         },
       },
@@ -213,8 +213,8 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
 
   // Navigation shortcuts
   useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+2', () => navigate({ to: '/projects' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+3', () => navigate({ to: '/terminals' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+3', () => navigate({ to: '/projects' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+i', () => {
     navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
   }, { allowInInput: true, allowInTerminal: true })
@@ -279,12 +279,12 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
           break
         case '2':
           e.preventDefault()
-          navigate({ to: '/projects' })
+          navigate({ to: '/terminals' })
           setOpen(false)
           break
         case '3':
           e.preventDefault()
-          navigate({ to: '/terminals' })
+          navigate({ to: '/projects' })
           setOpen(false)
           break
         case '4':

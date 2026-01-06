@@ -91,6 +91,7 @@ export const apps = sqliteTable('apps', {
   composeFile: text('compose_file').notNull(), // e.g., "compose.yml"
   status: text('status').notNull().default('stopped'), // stopped|building|running|failed
   autoDeployEnabled: integer('auto_deploy_enabled', { mode: 'boolean' }).default(false),
+  autoPortAllocation: integer('auto_port_allocation', { mode: 'boolean' }).default(true),
   environmentVariables: text('environment_variables'), // JSON string: {"KEY": "value", ...}
   noCacheBuild: integer('no_cache_build', { mode: 'boolean' }).default(false),
   notificationsEnabled: integer('notifications_enabled', { mode: 'boolean' }).default(true),

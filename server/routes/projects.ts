@@ -51,6 +51,7 @@ function buildProjectWithDetails(
           composeFile: appRow.composeFile,
           status: appRow.status as 'stopped' | 'building' | 'running' | 'failed',
           autoDeployEnabled: appRow.autoDeployEnabled ?? false,
+          autoPortAllocation: appRow.autoPortAllocation ?? true,
           noCacheBuild: appRow.noCacheBuild ?? false,
           notificationsEnabled: appRow.notificationsEnabled ?? true,
           environmentVariables: appRow.environmentVariables

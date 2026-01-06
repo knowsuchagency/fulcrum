@@ -1,0 +1,1 @@
+ALTER TABLE `apps` ADD `auto_port_allocation` integer DEFAULT true;

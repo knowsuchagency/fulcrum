@@ -257,6 +257,7 @@ app.patch('/:id', async (c) => {
       name?: string
       branch?: string
       autoDeployEnabled?: boolean
+      autoPortAllocation?: boolean
       environmentVariables?: Record<string, string>
       noCacheBuild?: boolean
       notificationsEnabled?: boolean
@@ -277,6 +278,7 @@ app.patch('/:id', async (c) => {
     if (body.name !== undefined) updateData.name = body.name
     if (body.branch !== undefined) updateData.branch = body.branch
     if (body.autoDeployEnabled !== undefined) updateData.autoDeployEnabled = body.autoDeployEnabled
+    if (body.autoPortAllocation !== undefined) updateData.autoPortAllocation = body.autoPortAllocation
     if (body.environmentVariables !== undefined) {
       updateData.environmentVariables = JSON.stringify(body.environmentVariables)
     }

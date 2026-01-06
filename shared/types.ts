@@ -344,6 +344,7 @@ export interface App {
   composeFile: string
   status: AppStatus
   autoDeployEnabled: boolean
+  autoPortAllocation?: boolean
   environmentVariables?: Record<string, string>
   noCacheBuild?: boolean
   notificationsEnabled?: boolean
@@ -506,6 +507,7 @@ export interface ProjectWithDetails extends Project {
     composeFile: string
     status: AppStatus
     autoDeployEnabled: boolean
+    autoPortAllocation: boolean
     noCacheBuild: boolean
     notificationsEnabled: boolean
     environmentVariables: Record<string, string> | null

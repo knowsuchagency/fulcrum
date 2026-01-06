@@ -1060,6 +1060,13 @@ function DeployOptionsSection({ app }: { app: NonNullable<ProjectWithDetails['ap
     })
   }
 
+  const handleAutoPortAllocationToggle = async (enabled: boolean) => {
+    await updateApp.mutateAsync({
+      id: app.id,
+      updates: { autoPortAllocation: enabled },
+    })
+  }
+
   const handleNoCacheToggle = async (enabled: boolean) => {
     await updateApp.mutateAsync({
       id: app.id,
@@ -1077,13 +1084,20 @@ function DeployOptionsSection({ app }: { app: NonNullable<ProjectWithDetails['ap
   return (
     <div className="rounded-lg border p-4 space-y-3">
       <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('detailView.app.deployOptions')}</h4>
-      <div className="flex flex-wrap items-center gap-4 text-sm">
+      <div className="grid grid-cols-2 gap-3 text-sm">
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox
             checked={app.autoDeployEnabled ?? false}
             onCheckedChange={(checked) => handleAutoDeployToggle(checked === true)}
           />
           <span>{t('detailView.app.autoDeployEnabled')}</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <Checkbox
+            checked={app.autoPortAllocation ?? true}
+            onCheckedChange={(checked) => handleAutoPortAllocationToggle(checked === true)}
+          />
+          <span>{t('detailView.app.autoPortAllocation')}</span>
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox

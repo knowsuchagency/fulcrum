@@ -351,11 +351,12 @@ export async function deployApp(
   try {
     // Stage 0: Validate ports are available (host mode requires unique ports)
     onProgress?.({ stage: 'building', message: 'Checking port availability...' })
+    const autoAllocatePorts = app.autoPortAllocation ?? true
     const portValidation = await validateAndAllocatePorts(
       repo.path,
       app.composeFile,
       env ?? {},
-      true // Auto-allocate ports if conflicts detected
+      autoAllocatePorts
     )
 
     if (!portValidation.valid) {

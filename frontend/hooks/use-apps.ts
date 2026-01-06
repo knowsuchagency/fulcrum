@@ -83,6 +83,7 @@ export function useUpdateApp() {
         name?: string
         branch?: string
         autoDeployEnabled?: boolean
+        autoPortAllocation?: boolean
         environmentVariables?: Record<string, string>
         noCacheBuild?: boolean
         notificationsEnabled?: boolean
