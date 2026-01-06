@@ -119,6 +119,43 @@ export function useAddAppToProject() {
   })
 }
 
+export function useCreateAppForProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      name,
+      branch,
+      composeFile,
+      autoDeployEnabled,
+      services,
+    }: {
+      projectId: string
+      name?: string
+      branch?: string
+      composeFile?: string
+      autoDeployEnabled?: boolean
+      services?: Array<{
+        serviceName: string
+        containerPort?: number
+        exposed: boolean
+        domain?: string
+        exposureMethod?: 'dns' | 'tunnel'
+      }>
+    }) =>
+      fetchJSON<ProjectWithDetails>(`${API_BASE}/api/projects/${projectId}/create-app`, {
+        method: 'POST',
+        body: JSON.stringify({ name, branch, composeFile, autoDeployEnabled, services }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['apps'] })
+    },
+  })
+}
+
 export function useRemoveAppFromProject() {
   const queryClient = useQueryClient()
 

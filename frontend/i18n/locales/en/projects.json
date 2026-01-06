@@ -59,8 +59,9 @@
     "app": {
       "title": "App Configuration",
       "noApp": "No app configured for this project.",
-      "addApp": "Add Docker App",
-      "addAppDescription": "Deploy with Docker Compose",
+      "configureDeployment": "Configure Deployment",
+      "configureDeploymentDescription": "Set up Docker Compose deployment for this project",
+      "configuring": "Configuring...",
       "deployOptions": "Deploy Options",
       "autoDeployEnabled": "Auto-deploy on commit",
       "autoPortAllocation": "Auto-allocate ports",

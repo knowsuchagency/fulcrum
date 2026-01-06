@@ -555,6 +555,102 @@ app.post('/:id/add-app', async (c) => {
   }
 })
 
+// POST /api/projects/:id/create-app - Create and link app to project
+app.post('/:id/create-app', async (c) => {
+  const projectId = c.req.param('id')
+
+  try {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+    if (!project) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    if (project.appId) {
+      return c.json({ error: 'Project already has an app' }, 400)
+    }
+
+    if (!project.repositoryId) {
+      return c.json({ error: 'Project must have a repository to create an app' }, 400)
+    }
+
+    const repo = db.select().from(repositories).where(eq(repositories.id, project.repositoryId)).get()
+    if (!repo) {
+      return c.json({ error: 'Repository not found' }, 404)
+    }
+
+    const body = await c.req.json<{
+      name?: string
+      branch?: string
+      composeFile?: string
+      autoDeployEnabled?: boolean
+      services?: Array<{
+        serviceName: string
+        containerPort?: number
+        exposed: boolean
+        domain?: string
+        exposureMethod?: 'dns' | 'tunnel'
+      }>
+    }>()
+
+    const now = new Date().toISOString()
+    const appId = nanoid()
+    const appName = body.name || repo.displayName || 'app'
+
+    // Create the app
+    db.insert(apps)
+      .values({
+        id: appId,
+        name: appName,
+        repositoryId: project.repositoryId,
+        branch: body.branch || 'main',
+        composeFile: body.composeFile || 'docker-compose.yml',
+        autoDeployEnabled: body.autoDeployEnabled ?? false,
+        status: 'stopped',
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run()
+
+    // Create services if provided
+    if (body.services && body.services.length > 0) {
+      for (const svc of body.services) {
+        db.insert(appServices)
+          .values({
+            id: nanoid(),
+            appId,
+            serviceName: svc.serviceName,
+            containerPort: svc.containerPort ?? null,
+            exposed: svc.exposed,
+            domain: svc.domain ?? null,
+            exposureMethod: svc.exposureMethod ?? 'dns',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+      }
+    }
+
+    // Link app to project
+    db.update(projects)
+      .set({ appId, updatedAt: now })
+      .where(eq(projects.id, projectId))
+      .run()
+
+    // Return updated project
+    const updated = db.select().from(projects).where(eq(projects.id, projectId)).get()!
+    const appRow = db.select().from(apps).where(eq(apps.id, appId)).get()!
+    const services = db.select().from(appServices).where(eq(appServices.appId, appId)).all()
+
+    const tab = project.terminalTabId
+      ? db.select().from(terminalTabs).where(eq(terminalTabs.id, project.terminalTabId)).get()
+      : null
+
+    return c.json(buildProjectWithDetails(updated, repo, appRow, services, tab ?? null), 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to create app' }, 400)
+  }
+})
+
 // DELETE /api/projects/:id/app - Remove app from project
 app.delete('/:id/app', async (c) => {
   const projectId = c.req.param('id')

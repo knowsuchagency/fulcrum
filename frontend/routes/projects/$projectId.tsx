@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { observer } from 'mobx-react-lite'
 import { reaction } from 'mobx'
-import { useProject, useDeleteProject, useAccessProject, useUpdateProject } from '@/hooks/use-projects'
+import { useProject, useDeleteProject, useAccessProject, useUpdateProject, useCreateAppForProject } from '@/hooks/use-projects'
 import { useUpdateRepository } from '@/hooks/use-repositories'
 import {
   useStopApp,
@@ -975,16 +975,20 @@ function GeneralTab({ project }: { project: ProjectWithDetails }) {
 function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: () => void }) {
   const { t } = useTranslation('projects')
   const tRepo = useTranslation('repositories').t
-  const navigate = useNavigate()
   const { data: composeInfo, isLoading: composeLoading } = useFindCompose(project.repository?.id ?? null)
+  const createAppForProject = useCreateAppForProject()
   const [composeWarningOpen, setComposeWarningOpen] = useState(false)
 
   const handleCreateApp = () => {
-    if (composeLoading) return
+    if (composeLoading || createAppForProject.isPending) return
     if (!composeInfo?.found) {
       setComposeWarningOpen(true)
     } else {
-      navigate({ to: '/projects/new' })
+      // Create app with detected compose file
+      createAppForProject.mutate({
+        projectId: project.id,
+        composeFile: composeInfo.file ?? undefined,
+      })
     }
   }
 
@@ -999,10 +1003,10 @@ function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: 
         {project.repository && (
           <div className="border rounded-lg p-6 text-center">
             <HugeiconsIcon icon={Rocket01Icon} size={32} strokeWidth={1.5} className="mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground mb-4">{t('detailView.app.addAppDescription')}</p>
-            <Button onClick={handleCreateApp} disabled={composeLoading}>
+            <p className="text-sm text-muted-foreground mb-4">{t('detailView.app.configureDeploymentDescription')}</p>
+            <Button onClick={handleCreateApp} disabled={composeLoading || createAppForProject.isPending}>
               <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
-              {t('detailView.app.addApp')}
+              {createAppForProject.isPending ? t('detailView.app.configuring') : t('detailView.app.configureDeployment')}
             </Button>
           </div>
         )}
