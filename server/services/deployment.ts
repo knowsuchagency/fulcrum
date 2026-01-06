@@ -435,7 +435,8 @@ export async function deployApp(
       app.composeFile,
       projectName,
       traefikConfig.network, // Attach to Traefik network
-      appDir // Output directory for swarm compose file
+      appDir, // Output directory for swarm compose file
+      env // Environment variables for port expansion
     )
     if (!swarmFileResult.success) {
       throw new Error(`Failed to generate Swarm compose file: ${swarmFileResult.error}`)

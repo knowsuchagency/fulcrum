@@ -140,6 +140,8 @@ export function useDeployApp() {
       queryClient.invalidateQueries({ queryKey: ['apps'] })
       queryClient.invalidateQueries({ queryKey: ['apps', id] })
       queryClient.invalidateQueries({ queryKey: ['apps', id, 'deployments'] })
+      queryClient.invalidateQueries({ queryKey: ['apps', id, 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }
@@ -191,6 +193,8 @@ export function useDeployAppStream() {
         queryClient.invalidateQueries({ queryKey: ['apps'] })
         queryClient.invalidateQueries({ queryKey: ['apps', id] })
         queryClient.invalidateQueries({ queryKey: ['apps', id, 'deployments'] })
+        queryClient.invalidateQueries({ queryKey: ['apps', id, 'status'] })
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
       })
 
       eventSource.addEventListener('error', (e) => {
@@ -208,6 +212,8 @@ export function useDeployAppStream() {
         queryClient.invalidateQueries({ queryKey: ['apps'] })
         queryClient.invalidateQueries({ queryKey: ['apps', id] })
         queryClient.invalidateQueries({ queryKey: ['apps', id, 'deployments'] })
+        queryClient.invalidateQueries({ queryKey: ['apps', id, 'status'] })
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
       })
 
       eventSource.onerror = () => {
@@ -260,6 +266,9 @@ export function useStopApp() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['apps'] })
       queryClient.invalidateQueries({ queryKey: ['apps', id] })
+      queryClient.invalidateQueries({ queryKey: ['apps', id, 'status'] })
+      // Also invalidate projects since they include app status
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }
@@ -276,6 +285,8 @@ export function useCancelDeployment() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['apps'] })
       queryClient.invalidateQueries({ queryKey: ['apps', id] })
+      queryClient.invalidateQueries({ queryKey: ['apps', id, 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }
@@ -501,5 +512,14 @@ export function useUpdateDeploymentSettings() {
       queryClient.invalidateQueries({ queryKey: ['deployment', 'settings'] })
       queryClient.invalidateQueries({ queryKey: ['deployment', 'prerequisites'] })
     },
+  })
+}
+
+// Fetch the generated swarm compose file for an app
+export function useSwarmComposeFile(appId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['apps', appId, 'swarm-compose'],
+    queryFn: () => fetchJSON<{ content: string; path: string }>(`${API_BASE}/api/apps/${appId}/swarm-compose`),
+    enabled: !!appId,
   })
 }

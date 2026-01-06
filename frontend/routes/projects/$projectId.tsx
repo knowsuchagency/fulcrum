@@ -19,6 +19,7 @@ import {
   useDeploymentPrerequisites,
   useDeploymentSettings,
   useFindCompose,
+  useSwarmComposeFile,
 } from '@/hooks/use-apps'
 import { useDeploymentStore, DeploymentStoreProvider, type DeploymentStage } from '@/stores'
 import { Button } from '@/components/ui/button'
@@ -1477,10 +1478,12 @@ function ComposeFileEditor({ app, repoPath }: { app: NonNullable<ProjectWithDeta
   const { data, isLoading, error } = useComposeFile(repoPath, app.composeFile)
   const writeCompose = useWriteComposeFile()
   const syncServices = useSyncServices()
+  const swarmCompose = useSwarmComposeFile(app.id)
 
   const [content, setContent] = useState<string>('')
   const [savedContent, setSavedContent] = useState<string>('')
   const [saved, setSaved] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     if (data?.content !== undefined) {
@@ -1584,6 +1587,58 @@ function ComposeFileEditor({ app, repoPath }: { app: NonNullable<ProjectWithDeta
           onChange={handleChange}
         />
       </div>
+
+      {/* Preview Generated Compose File */}
+      <div className="flex items-center justify-between pt-2 border-t">
+        <span className="text-xs text-muted-foreground">
+          {t('apps.compose.previewDescription')}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowPreview(true)}
+          disabled={swarmCompose.isLoading}
+        >
+          {swarmCompose.isLoading ? (
+            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+          ) : (
+            <HugeiconsIcon icon={EyeIcon} size={14} strokeWidth={2} />
+          )}
+          {t('apps.compose.previewGenerated')}
+        </Button>
+      </div>
+
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{t('apps.compose.generatedTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('apps.compose.generatedDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-[500px] rounded-md border overflow-hidden">
+            {swarmCompose.error ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="text-center space-y-2">
+                  <HugeiconsIcon icon={Alert02Icon} size={24} strokeWidth={2} className="mx-auto text-destructive" />
+                  <p className="text-sm">{swarmCompose.error.message}</p>
+                </div>
+              </div>
+            ) : swarmCompose.data?.content ? (
+              <MonacoEditor
+                filePath="swarm-compose.yml"
+                content={swarmCompose.data.content}
+                onChange={() => {}}
+                readOnly
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <HugeiconsIcon icon={Loading03Icon} size={24} strokeWidth={2} className="animate-spin" />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

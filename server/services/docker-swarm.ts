@@ -351,7 +351,8 @@ export async function generateSwarmComposeFile(
   composeFile: string,
   projectName: string,
   externalNetwork: string | undefined, // Optional external network for ingress (e.g., dokploy-network)
-  outputDir: string // Directory to write the swarm compose file (e.g., VIBORA_DIR/apps/{appId})
+  outputDir: string, // Directory to write the swarm compose file (e.g., VIBORA_DIR/apps/{appId})
+  env?: Record<string, string> // Environment variables for variable expansion (e.g., PORT=3005)
 ): Promise<{ success: boolean; swarmFile: string; error?: string }> {
   const swarmFileName = 'swarm-compose.yml'
   const originalPath = join(cwd, composeFile)
@@ -419,7 +420,7 @@ export async function generateSwarmComposeFile(
       // like ".:/app" would resolve to that directory instead of the repo
       if (Array.isArray(serviceConfig.volumes)) {
         serviceConfig.volumes = serviceConfig.volumes.map((vol: unknown) =>
-          resolveVolumeEntry(vol, cwd)
+          resolveVolumeEntry(vol, cwd, env)
         )
       }
 
@@ -428,7 +429,7 @@ export async function generateSwarmComposeFile(
       // causing connections to hang. Host mode binds directly to the node.
       if (Array.isArray(serviceConfig.ports)) {
         serviceConfig.ports = serviceConfig.ports.map((port: unknown) =>
-          convertPortToHostMode(port)
+          convertPortToHostMode(port, env)
         )
         log.deploy.debug('Converted ports to host mode', {
           service: serviceName,
@@ -843,7 +844,7 @@ interface SwarmPortConfig {
  *
  * We convert all to long syntax with mode: host to bypass the ingress routing mesh
  */
-function convertPortToHostMode(port: unknown): SwarmPortConfig {
+function convertPortToHostMode(port: unknown, env?: Record<string, string>): SwarmPortConfig {
   if (typeof port === 'string') {
     // Parse short syntax: "published:target", "published:target/protocol", or just "port"
     // Handle env var syntax like "${PORT:-3001}:${PORT:-3001}"
@@ -852,7 +853,7 @@ function convertPortToHostMode(port: unknown): SwarmPortConfig {
     // Expand env vars in port parts (use splitRespectingEnvVars for ${VAR:-default} syntax)
     const rawParts = splitRespectingEnvVars(portPart)
     const parts = rawParts.map((p) => {
-      const expanded = expandEnvVar(p)
+      const expanded = expandEnvVar(p, env)
       return expanded ? Number(expanded) : NaN
     })
 
@@ -910,9 +911,9 @@ function convertPortToHostMode(port: unknown): SwarmPortConfig {
  * Named volumes (no slashes) and absolute paths are returned as-is
  * Handles env var syntax like ${DATA_DIR:-./data}
  */
-function resolveVolumePath(volumePath: string, basePath: string): string {
+function resolveVolumePath(volumePath: string, basePath: string, env?: Record<string, string>): string {
   // Try to expand env var syntax first
-  const expanded = expandEnvVar(volumePath)
+  const expanded = expandEnvVar(volumePath, env)
   const pathToCheck = expanded ?? volumePath // Use original if can't expand
 
   // Named volumes don't have slashes in the host part
@@ -941,7 +942,7 @@ function resolveVolumePath(volumePath: string, basePath: string): string {
  * Handles both short syntax ("./host:/container") and long syntax ({ type: bind, source: ./host, target: /container })
  * Also handles env var syntax like "${DATA_DIR:-./data}:/app/data"
  */
-function resolveVolumeEntry(volume: unknown, basePath: string): unknown {
+function resolveVolumeEntry(volume: unknown, basePath: string, env?: Record<string, string>): unknown {
   // Short syntax: string like "./host:/container:ro" or "volume_name:/container"
   if (typeof volume === 'string') {
     // Use splitRespectingEnvVars to handle ${VAR:-default} syntax
@@ -952,7 +953,7 @@ function resolveVolumeEntry(volume: unknown, basePath: string): unknown {
       const containerPath = parts[1]
       const options = parts.slice(2).join(':')
 
-      const resolvedHost = resolveVolumePath(hostPath, basePath)
+      const resolvedHost = resolveVolumePath(hostPath, basePath, env)
 
       // Only log if we actually resolved a relative path
       if (resolvedHost !== hostPath) {
@@ -972,7 +973,7 @@ function resolveVolumeEntry(volume: unknown, basePath: string): unknown {
   if (typeof volume === 'object' && volume !== null) {
     const vol = volume as Record<string, unknown>
     if (vol.type === 'bind' && typeof vol.source === 'string') {
-      const resolvedSource = resolveVolumePath(vol.source, basePath)
+      const resolvedSource = resolveVolumePath(vol.source, basePath, env)
       if (resolvedSource !== vol.source) {
         log.deploy.debug('Resolved relative volume path (long syntax)', {
           original: vol.source,

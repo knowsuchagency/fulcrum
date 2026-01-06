@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
-import { rm } from 'fs/promises'
+import { rm, readFile } from 'fs/promises'
 import { join } from 'path'
 import { nanoid } from 'nanoid'
 import { eq, desc } from 'drizzle-orm'
@@ -929,6 +929,74 @@ app.post('/:id/rollback/:deploymentId', async (c) => {
   }
 
   return c.json({ success: true, deployment: result.deployment })
+})
+
+// GET /api/apps/:id/swarm-compose - Preview the swarm compose file with current config
+app.get('/:id/swarm-compose', async (c) => {
+  const id = c.req.param('id')
+
+  const appRecord = await db.query.apps.findFirst({
+    where: eq(apps.id, id),
+    with: {
+      project: {
+        with: {
+          repository: true,
+        },
+      },
+    },
+  })
+
+  if (!appRecord) {
+    return c.json({ error: 'App not found' }, 404)
+  }
+
+  const repo = appRecord.project?.repository
+  if (!repo) {
+    return c.json({ error: 'No repository linked to this app' }, 404)
+  }
+
+  // Parse current environment variables
+  let env: Record<string, string> = {}
+  if (appRecord.environmentVariables) {
+    try {
+      env = JSON.parse(appRecord.environmentVariables)
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // Generate swarm compose file to temp location with current env vars
+  const { generateSwarmComposeFile } = await import('../services/docker-swarm')
+  const { getProjectName } = await import('../services/deployment')
+  const { tmpdir } = await import('os')
+  const tempDir = join(tmpdir(), `swarm-preview-${id}-${Date.now()}`)
+
+  try {
+    const projectName = getProjectName(id, repo.displayName)
+    const result = await generateSwarmComposeFile(
+      repo.path,
+      appRecord.composeFile,
+      projectName,
+      undefined, // No external network for preview
+      tempDir,
+      env
+    )
+
+    if (!result.success) {
+      return c.json({ error: result.error || 'Failed to generate preview' }, 500)
+    }
+
+    const content = await readFile(result.swarmFile, 'utf-8')
+
+    // Clean up temp file
+    await rm(tempDir, { recursive: true, force: true }).catch(() => {})
+
+    return c.json({ content, preview: true })
+  } catch (err) {
+    // Clean up on error
+    await rm(tempDir, { recursive: true, force: true }).catch(() => {})
+    throw err
+  }
 })
 
 export default app
