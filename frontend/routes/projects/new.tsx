@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useCreateRepository, useCloneRepository } from '@/hooks/use-repositories'
 import {
   useCopierTemplates,
   useCopierQuestions,
@@ -40,7 +39,7 @@ import {
   Link01Icon,
 } from '@hugeicons/core-free-icons'
 import { useDefaultGitReposDir } from '@/hooks/use-config'
-import type { Repository, CopierQuestion } from '@/types'
+import type { CopierQuestion } from '@/types'
 
 interface NewProjectSearch {
   tab?: 'add' | 'scan' | 'template'
@@ -102,8 +101,6 @@ function NewProjectWizard() {
   const { tab: initialTab, templateSource: initialTemplateSource } = Route.useSearch()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const createProject = useCreateProject()
-  const createRepository = useCreateRepository()
-  const cloneRepository = useCloneRepository()
   const scanMutation = useScanProjects()
   const bulkCreateMutation = useBulkCreateProjects()
 
@@ -198,7 +195,7 @@ function NewProjectWizard() {
     [scannedRepos]
   )
 
-  const isAddPending = createRepository.isPending || cloneRepository.isPending || createProject.isPending
+  const isAddPending = createProject.isPending
   const isScanPending = scanMutation.isPending || bulkCreateMutation.isPending
   const isTemplatePending = createProjectFromTemplate.isPending
 
@@ -245,23 +242,20 @@ function NewProjectWizard() {
     if (!value || !name) return
 
     try {
-      let repo: Repository
-      if (isUrl) {
-        repo = await cloneRepository.mutateAsync({
-          url: value,
-          targetDir: targetDir.trim() || undefined,
-          folderName: folderName.trim() || undefined,
-        })
-      } else {
-        const displayName = value.split('/').pop() || 'repo'
-        repo = await createRepository.mutateAsync({ path: value, displayName })
-      }
-
-      // Create project from the repository
-      const project = await createProject.mutateAsync({
-        name,
-        repositoryId: repo.id,
-      })
+      // Create project with repository in a single API call
+      const project = await createProject.mutateAsync(
+        isUrl
+          ? {
+              name,
+              url: value,
+              targetDir: targetDir.trim() || undefined,
+              folderName: folderName.trim() || undefined,
+            }
+          : {
+              name,
+              path: value,
+            }
+      )
 
       // Navigate to the newly created project
       navigate({ to: '/projects/$projectId', params: { projectId: project.id } })

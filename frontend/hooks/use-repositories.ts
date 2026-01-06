@@ -19,49 +19,6 @@ export function useRepository(id: string | null) {
   })
 }
 
-export function useCreateRepository() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (data: {
-      path: string
-      displayName: string
-      startupScript?: string | null
-      copyFiles?: string | null
-      claudeOptions?: Record<string, string> | null
-      opencodeOptions?: Record<string, string> | null
-      isCopierTemplate?: boolean
-    }) =>
-      fetchJSON<Repository>(`${API_BASE}/api/repositories`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['repositories'] })
-    },
-  })
-}
-
-export function useCloneRepository() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (data: {
-      url: string
-      displayName?: string
-      targetDir?: string // Parent directory for clone (defaults to defaultGitReposDir)
-      folderName?: string // Custom folder name (defaults to extracted from URL)
-    }) =>
-      fetchJSON<Repository>(`${API_BASE}/api/repositories/clone`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['repositories'] })
-    },
-  })
-}
-
 export function useUpdateRepository() {
   const queryClient = useQueryClient()
 
@@ -80,22 +37,22 @@ export function useUpdateRepository() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
       queryClient.invalidateQueries({ queryKey: ['repositories', id] })
+      // Also invalidate projects since they may display repository info
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }
 
+// Note: Repository deletion is only allowed for orphaned repositories (not linked to any project).
+// Use DELETE /api/projects/:id to delete a project and its repository together.
 export function useDeleteRepository() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, deleteDirectory = false }: { id: string; deleteDirectory?: boolean }) => {
-      const url = deleteDirectory
-        ? `${API_BASE}/api/repositories/${id}?deleteDirectory=true`
-        : `${API_BASE}/api/repositories/${id}`
-      return fetchJSON<{ success: boolean; directoryDeleted?: boolean }>(url, {
+    mutationFn: (id: string) =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/repositories/${id}`, {
         method: 'DELETE',
-      })
-    },
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
     },
@@ -120,25 +77,5 @@ export function useScanRepositories() {
         method: 'POST',
         body: JSON.stringify(directory ? { directory } : {}),
       }),
-  })
-}
-
-export interface BulkCreateResult {
-  created: Repository[]
-  skipped: number
-}
-
-export function useBulkCreateRepositories() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (repositories: Array<{ path: string; displayName?: string }>) =>
-      fetchJSON<BulkCreateResult>(`${API_BASE}/api/repositories/bulk`, {
-        method: 'POST',
-        body: JSON.stringify({ repositories }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['repositories'] })
-    },
   })
 }

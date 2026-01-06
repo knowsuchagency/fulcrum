@@ -40,7 +40,7 @@ import { useCreateTask } from '@/hooks/use-tasks'
 import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
 import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
-import { useRepositories, useCreateRepository } from '@/hooks/use-repositories'
+import { useRepositories } from '@/hooks/use-repositories'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import type { Repository } from '@/types'
 import { ModelPicker } from '@/components/opencode/model-picker'
@@ -95,7 +95,6 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
   const navigate = useNavigate()
   const createTask = useCreateTask()
-  const createRepository = useCreateRepository()
   const formRef = useRef<HTMLFormElement>(null)
   const { data: worktreeBasePath } = useWorktreeBasePath()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
@@ -210,13 +209,9 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         // Use the existing repo's settings (copyFiles, startupScript, etc.)
         setSelectedRepoId(existingRepo.id)
       } else {
+        // No saved repo found - task will work but without saved settings
+        // User can create a project to save repository settings
         setSelectedRepoId(null)
-        // Auto-add to repositories if not already saved
-        const displayName = path.split('/').pop() || 'Unknown'
-        createRepository.mutate({
-          path,
-          displayName,
-        })
       }
     } catch (err) {
       setRepoError(err instanceof Error ? err.message : t('createModal.errors.validationFailed'))

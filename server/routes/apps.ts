@@ -952,7 +952,7 @@ app.get('/:id/swarm-compose', async (c) => {
 
   const repo = appRecord.project?.repository
   if (!repo) {
-    return c.json({ error: 'No repository linked to this app' }, 404)
+    return c.json({ error: 'App must be linked to a project with a repository' }, 400)
   }
 
   // Parse current environment variables

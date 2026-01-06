@@ -1,12 +1,9 @@
 import { Hono } from 'hono'
-import { existsSync, rmSync, readdirSync, mkdirSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { execSync } from 'node:child_process'
-import { homedir } from 'node:os'
-import { db, repositories, type NewRepository } from '../db'
-import { eq, desc, sql, inArray } from 'drizzle-orm'
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { db, repositories, projects } from '../db'
+import { eq, desc, sql } from 'drizzle-orm'
 import { getSettings, expandPath } from '../lib/settings'
-import { isGitUrl, extractRepoNameFromUrl } from '../lib/git-utils'
 import type { Repository } from '../../../shared/types'
 
 const app = new Hono()
@@ -44,188 +41,20 @@ app.get('/:id', (c) => {
   return c.json(toApiResponse(repo))
 })
 
-// POST /api/repositories - Create repository
-app.post('/', async (c) => {
-  try {
-    const body = await c.req.json<{
-      path: string
-      displayName: string
-      startupScript?: string | null
-      copyFiles?: string | null
-      claudeOptions?: Record<string, string> | null
-      opencodeOptions?: Record<string, string> | null
-      isCopierTemplate?: boolean
-    }>()
-
-    if (!body.path) {
-      return c.json({ error: 'path is required' }, 400)
-    }
-
-    // Expand tilde in path
-    const repoPath = expandPath(body.path)
-
-    // Check if directory exists
-    if (!existsSync(repoPath)) {
-      return c.json({ error: `Directory does not exist: ${repoPath}` }, 400)
-    }
-
-    // Check for duplicate path
-    const existing = db
-      .select()
-      .from(repositories)
-      .where(eq(repositories.path, repoPath))
-      .get()
-    if (existing) {
-      return c.json({ error: 'Repository with this path already exists' }, 400)
-    }
-
-    const now = new Date().toISOString()
-    const displayName = body.displayName || repoPath.split('/').pop() || 'repo'
-
-    const newRepo: NewRepository = {
-      id: crypto.randomUUID(),
-      path: repoPath,
-      displayName,
-      startupScript: body.startupScript || null,
-      copyFiles: body.copyFiles || null,
-      claudeOptions: body.claudeOptions ? JSON.stringify(body.claudeOptions) : null,
-      opencodeOptions: body.opencodeOptions ? JSON.stringify(body.opencodeOptions) : null,
-      isCopierTemplate: body.isCopierTemplate ?? false,
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    db.insert(repositories).values(newRepo).run()
-    const created = db.select().from(repositories).where(eq(repositories.id, newRepo.id)).get()
-    return c.json(created ? toApiResponse(created) : null, 201)
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to create repository' }, 400)
-  }
+// POST /api/repositories - DEPRECATED: Use POST /api/projects instead
+// Repositories must be created through projects to maintain data integrity
+app.post('/', (c) => {
+  return c.json({
+    error: 'Standalone repository creation is not supported. Use POST /api/projects to create a project with a repository.',
+  }, 400)
 })
 
-// POST /api/repositories/clone - Clone repository from URL
-app.post('/clone', async (c) => {
-  try {
-    const body = await c.req.json<{
-      url: string
-      displayName?: string
-      targetDir?: string // Parent directory for clone (defaults to defaultGitReposDir)
-      folderName?: string // Custom folder name (defaults to extracted from URL)
-    }>()
-
-    if (!body.url) {
-      return c.json({ error: 'url is required' }, 400)
-    }
-
-    if (!isGitUrl(body.url)) {
-      return c.json({ error: 'Invalid git URL format' }, 400)
-    }
-
-    // Get settings for default directory
-    const settings = getSettings()
-
-    // Determine parent directory (expand tilde if present)
-    let parentDir = body.targetDir?.trim() || settings.paths.defaultGitReposDir
-    parentDir = expandPath(parentDir)
-
-    // SAFETY: Reject if parent directory is exactly the home directory
-    const home = homedir()
-    if (resolve(parentDir) === home) {
-      return c.json({ error: 'Cannot clone directly into home directory. Please specify a subdirectory.' }, 400)
-    }
-
-    // Derive folder name (use provided or extract from URL)
-    const repoName = body.folderName?.trim() || extractRepoNameFromUrl(body.url)
-
-    // SAFETY: Validate folder name
-    if (!repoName) {
-      return c.json({ error: 'Could not determine folder name from URL' }, 400)
-    }
-    if (repoName === '.' || repoName === '..') {
-      return c.json({ error: 'Invalid folder name' }, 400)
-    }
-    if (repoName.includes('/') || repoName.includes('\\')) {
-      return c.json({ error: 'Folder name cannot contain path separators' }, 400)
-    }
-
-    const targetPath = join(parentDir, repoName)
-
-    // SAFETY: Path traversal protection - ensure target is within parent
-    const resolvedParent = resolve(parentDir)
-    const resolvedTarget = resolve(targetPath)
-    if (!resolvedTarget.startsWith(resolvedParent + '/') && resolvedTarget !== resolvedParent) {
-      return c.json({ error: 'Invalid target path' }, 400)
-    }
-
-    // Check if directory already exists
-    if (existsSync(targetPath)) {
-      return c.json({ error: `Directory already exists: ${targetPath}` }, 400)
-    }
-
-    // Create parent directory if needed (but NEVER create home directory)
-    if (!existsSync(parentDir)) {
-      if (resolve(parentDir) === home) {
-        return c.json({ error: 'Cannot create home directory' }, 400)
-      }
-      mkdirSync(parentDir, { recursive: true })
-    }
-
-    // Clone the repository
-    try {
-      execSync(`git clone "${body.url}" "${targetPath}"`, {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-        timeout: 120000, // 2 minute timeout
-      })
-    } catch (cloneErr) {
-      // Clean up partial clone if it exists
-      // SAFETY: Only remove if path is within the intended parent directory
-      if (existsSync(targetPath) && resolvedTarget.startsWith(resolvedParent + '/')) {
-        rmSync(targetPath, { recursive: true, force: true })
-      }
-
-      const errorMessage = cloneErr instanceof Error ? cloneErr.message : 'Clone failed'
-      // Try to provide a more helpful error message
-      if (errorMessage.includes('Permission denied') || errorMessage.includes('publickey')) {
-        return c.json({ error: 'Authentication failed. Check your SSH keys or use HTTPS with credentials.' }, 500)
-      }
-      if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
-        return c.json({ error: 'Repository not found or access denied' }, 500)
-      }
-      return c.json({ error: `Failed to clone repository: ${errorMessage}` }, 500)
-    }
-
-    // Check for duplicate path in database
-    const existing = db
-      .select()
-      .from(repositories)
-      .where(eq(repositories.path, targetPath))
-      .get()
-    if (existing) {
-      return c.json({ error: 'Repository with this path already exists in database' }, 400)
-    }
-
-    const now = new Date().toISOString()
-    const displayName = body.displayName || repoName
-
-    const newRepo: NewRepository = {
-      id: crypto.randomUUID(),
-      path: targetPath,
-      displayName,
-      remoteUrl: body.url,
-      startupScript: null,
-      copyFiles: null,
-      isCopierTemplate: false,
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    db.insert(repositories).values(newRepo).run()
-    const created = db.select().from(repositories).where(eq(repositories.id, newRepo.id)).get()
-    return c.json(created ? toApiResponse(created) : null, 201)
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to clone repository' }, 500)
-  }
+// POST /api/repositories/clone - DEPRECATED: Use POST /api/projects instead
+// Repositories must be created through projects to maintain data integrity
+app.post('/clone', (c) => {
+  return c.json({
+    error: 'Standalone repository cloning is not supported. Use POST /api/projects to create a project with a cloned repository.',
+  }, 400)
 })
 
 // PATCH /api/repositories/:id - Update repository
@@ -296,50 +125,27 @@ app.patch('/:id', async (c) => {
 })
 
 // DELETE /api/repositories/:id - Delete repository
+// Rejects if a project references this repository (use DELETE /api/projects/:id instead)
 app.delete('/:id', (c) => {
   const id = c.req.param('id')
-  const deleteDirectory = c.req.query('deleteDirectory') === 'true'
 
   const existing = db.select().from(repositories).where(eq(repositories.id, id)).get()
   if (!existing) {
     return c.json({ error: 'Repository not found' }, 404)
   }
 
-  // Optionally delete the directory from disk
-  if (deleteDirectory && existing.path) {
-    const repoPath = existing.path
-
-    // SAFETY: Reject if path is home directory
-    const home = homedir()
-    if (resolve(repoPath) === home) {
-      return c.json({ error: 'Cannot delete home directory' }, 400)
-    }
-
-    // SAFETY: Reject common dangerous paths
-    const dangerousPaths = ['/', '/home', '/usr', '/etc', '/var', '/tmp', '/root']
-    if (dangerousPaths.includes(resolve(repoPath))) {
-      return c.json({ error: 'Cannot delete system directory' }, 400)
-    }
-
-    // SAFETY: Only delete if directory exists and contains .git
-    if (existsSync(repoPath)) {
-      const gitPath = join(repoPath, '.git')
-      if (!existsSync(gitPath)) {
-        return c.json({ error: 'Directory does not appear to be a git repository' }, 400)
-      }
-
-      try {
-        rmSync(repoPath, { recursive: true, force: true })
-      } catch (err) {
-        return c.json({
-          error: `Failed to delete directory: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        }, 500)
-      }
-    }
+  // Check if any project references this repository
+  const linkedProject = db.select().from(projects).where(eq(projects.repositoryId, id)).get()
+  if (linkedProject) {
+    return c.json({
+      error: 'Cannot delete repository that is linked to a project. Use DELETE /api/projects/:id instead.',
+      projectId: linkedProject.id,
+    }, 400)
   }
 
+  // If no project references this repository, allow deletion (cleanup orphaned repos)
   db.delete(repositories).where(eq(repositories.id, id)).run()
-  return c.json({ success: true, directoryDeleted: deleteDirectory })
+  return c.json({ success: true })
 })
 
 // POST /api/repositories/scan - Scan directory for git repositories
@@ -389,67 +195,12 @@ app.post('/scan', async (c) => {
   }
 })
 
-// POST /api/repositories/bulk - Bulk create repositories
-app.post('/bulk', async (c) => {
-  try {
-    const body = await c.req.json<{
-      repositories: Array<{ path: string; displayName?: string }>
-    }>()
-
-    if (!body.repositories || !Array.isArray(body.repositories) || body.repositories.length === 0) {
-      return c.json({ error: 'repositories array is required' }, 400)
-    }
-
-    // Get paths that already exist
-    const paths = body.repositories.map((r) => r.path)
-    const existingRepos = db
-      .select({ path: repositories.path })
-      .from(repositories)
-      .where(inArray(repositories.path, paths))
-      .all()
-    const existingPaths = new Set(existingRepos.map((r) => r.path))
-
-    const now = new Date().toISOString()
-    const toCreate: NewRepository[] = []
-
-    for (const repo of body.repositories) {
-      // Skip if path already exists
-      if (existingPaths.has(repo.path)) continue
-
-      // Verify the path exists on disk
-      if (!existsSync(repo.path)) continue
-
-      const displayName = repo.displayName || repo.path.split('/').pop() || 'repo'
-      toCreate.push({
-        id: crypto.randomUUID(),
-        path: repo.path,
-        displayName,
-        startupScript: null,
-        copyFiles: null,
-        isCopierTemplate: false,
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
-
-    if (toCreate.length > 0) {
-      db.insert(repositories).values(toCreate).run()
-    }
-
-    // Fetch created repositories
-    const createdIds = toCreate.map((r) => r.id)
-    const created =
-      createdIds.length > 0
-        ? db.select().from(repositories).where(inArray(repositories.id, createdIds)).all()
-        : []
-
-    return c.json({
-      created: created.map(toApiResponse),
-      skipped: body.repositories.length - toCreate.length,
-    })
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to bulk create repositories' }, 500)
-  }
+// POST /api/repositories/bulk - DEPRECATED: Use POST /api/projects/bulk instead
+// Repositories must be created through projects to maintain data integrity
+app.post('/bulk', (c) => {
+  return c.json({
+    error: 'Standalone bulk repository creation is not supported. Use POST /api/projects/bulk to create projects with repositories.',
+  }, 400)
 })
 
 export default app

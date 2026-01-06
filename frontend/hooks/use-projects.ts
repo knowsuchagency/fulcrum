@@ -26,7 +26,14 @@ export function useCreateProject() {
     mutationFn: (data: {
       name: string
       description?: string
-      repositoryId: string
+      // Option 1: Link to existing repository
+      repositoryId?: string
+      // Option 2: Create from local path
+      path?: string
+      // Option 3: Clone from URL
+      url?: string
+      targetDir?: string // For cloning
+      folderName?: string // For cloning
     }) =>
       fetchJSON<ProjectWithDetails>(`${API_BASE}/api/projects`, {
         method: 'POST',

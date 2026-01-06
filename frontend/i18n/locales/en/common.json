@@ -126,7 +126,7 @@
       "save": "Save",
       "edit": "Edit",
       "done": "Done",
-      "previewGenerated": "Preview Generated",
+      "preview": "Preview",
       "previewDescription": "Preview the compose file that will be deployed",
       "generatedTitle": "Generated Compose File Preview",
       "generatedDescription": "This shows what will be deployed with the current configuration, including environment variable expansion and Docker Swarm transformations."

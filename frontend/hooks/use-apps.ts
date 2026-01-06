@@ -515,11 +515,11 @@ export function useUpdateDeploymentSettings() {
   })
 }
 
-// Fetch the generated swarm compose file for an app
+// Fetch the generated swarm compose file for an app (lazy - only fetches when refetch is called)
 export function useSwarmComposeFile(appId: string | null | undefined) {
   return useQuery({
     queryKey: ['apps', appId, 'swarm-compose'],
-    queryFn: () => fetchJSON<{ content: string; path: string }>(`${API_BASE}/api/apps/${appId}/swarm-compose`),
-    enabled: !!appId,
+    queryFn: () => fetchJSON<{ content: string; preview: boolean }>(`${API_BASE}/api/apps/${appId}/swarm-compose`),
+    enabled: false, // Only fetch when explicitly requested via refetch()
   })
 }

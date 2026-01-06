@@ -1596,15 +1596,13 @@ function ComposeFileEditor({ app, repoPath }: { app: NonNullable<ProjectWithDeta
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setShowPreview(true)}
-          disabled={swarmCompose.isLoading}
+          onClick={() => {
+            swarmCompose.refetch()
+            setShowPreview(true)
+          }}
         >
-          {swarmCompose.isLoading ? (
-            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-          ) : (
-            <HugeiconsIcon icon={EyeIcon} size={14} strokeWidth={2} />
-          )}
-          {t('apps.compose.previewGenerated')}
+          <HugeiconsIcon icon={EyeIcon} size={14} strokeWidth={2} />
+          {t('apps.compose.preview')}
         </Button>
       </div>
 
