@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, PlusSignIcon, Loading03Icon, Maximize02Icon, ArrowShrink02Icon } from '@hugeicons/core-free-icons'
 import { TaskTerminalHeader } from './task-terminal-header'
+import { ProjectTerminalHeader } from './project-terminal-header'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { useIsMobile } from '@/hooks/use-is-mobile'
@@ -34,6 +35,13 @@ interface TaskInfo {
   pinned?: boolean
 }
 
+interface ProjectInfo {
+  projectId: string
+  projectName: string
+  repoPath: string
+  appStatus: string | null
+}
+
 interface TerminalGridProps {
   terminals: TerminalInfo[]
   onTerminalClose?: (terminalId: string) => void
@@ -47,11 +55,14 @@ interface TerminalGridProps {
   sendInputToTerminal?: (terminalId: string, text: string) => void
   /** Map terminal cwd to task info for navigation and display */
   taskInfoByCwd?: Map<string, TaskInfo>
+  /** Map terminal cwd to project info for navigation and display */
+  projectInfoByCwd?: Map<string, ProjectInfo>
 }
 
 interface TerminalPaneProps {
   terminal: TerminalInfo
   taskInfo?: TaskInfo
+  projectInfo?: ProjectInfo
   isMobile?: boolean
   onClose?: () => void
   onReady?: (xterm: XTerm) => void
@@ -66,7 +77,7 @@ interface TerminalPaneProps {
   canMaximize?: boolean
 }
 
-const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal, isMaximized, onMaximize, onMinimize, canMaximize }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
+const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, projectInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal, isMaximized, onMaximize, onMinimize, canMaximize }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
   const store = useStore()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
@@ -89,9 +100,10 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
     }
   }, [terminal.id, taskInfo, terminalModel, isStartingClaude, terminalModel?.isStartingUp])
 
-  return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden">
-      {taskInfo ? (
+  // Render appropriate header based on context
+  const renderHeader = () => {
+    if (taskInfo) {
+      return (
         <TaskTerminalHeader
           taskInfo={taskInfo}
           terminalId={terminal.id}
@@ -99,44 +111,54 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, isMobi
           isMobile={isMobile}
           sendInputToTerminal={sendInputToTerminal}
         />
-      ) : (
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
-          <TerminalStatusBar
-            name={terminal.name}
-            status={terminal.status}
-            exitCode={terminal.exitCode}
-            className="flex-1 border-b-0"
-            onRename={onRename}
-          />
-          <div className="flex items-center gap-1 mr-1">
-            {canMaximize && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={isMaximized ? onMinimize : onMaximize}
-                className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                title={isMaximized ? "Restore" : "Maximize"}
-              >
-                <HugeiconsIcon
-                  icon={isMaximized ? ArrowShrink02Icon : Maximize02Icon}
-                  size={12}
-                  strokeWidth={2}
-                />
-              </Button>
-            )}
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onClose}
-                className="h-5 w-5 text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
-              </Button>
-            )}
-          </div>
+      )
+    }
+    if (projectInfo) {
+      return <ProjectTerminalHeader projectInfo={projectInfo} />
+    }
+    return (
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-card">
+        <TerminalStatusBar
+          name={terminal.name}
+          status={terminal.status}
+          exitCode={terminal.exitCode}
+          className="flex-1 border-b-0"
+          onRename={onRename}
+        />
+        <div className="flex items-center gap-1 mr-1">
+          {canMaximize && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={isMaximized ? onMinimize : onMaximize}
+              className="h-5 w-5 text-muted-foreground hover:text-foreground"
+              title={isMaximized ? "Restore" : "Maximize"}
+            >
+              <HugeiconsIcon
+                icon={isMaximized ? ArrowShrink02Icon : Maximize02Icon}
+                size={12}
+                strokeWidth={2}
+              />
+            </Button>
+          )}
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onClose}
+              className="h-5 w-5 text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
+            </Button>
+          )}
         </div>
-      )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full min-w-0 flex-col overflow-hidden">
+      {renderHeader()}
       <div className="relative min-h-0 min-w-0 flex-1">
         <Terminal onReady={onReady} onResize={onResize} onContainerReady={onContainerReady} terminalId={terminal.id} setupImagePaste={setupImagePaste} onFocus={onFocus} />
         {/* Loading overlay - shown while Claude is starting */}
@@ -196,6 +218,7 @@ export function TerminalGrid({
   writeToTerminal,
   sendInputToTerminal,
   taskInfoByCwd,
+  projectInfoByCwd,
 }: TerminalGridProps) {
   const isMobile = useIsMobile()
   const [focusedTerminalId, setFocusedTerminalId] = useState<string | null>(
@@ -248,12 +271,14 @@ export function TerminalGrid({
 
   const renderTerminalPane = (terminal: TerminalInfo) => {
     const taskInfo = terminal.cwd ? taskInfoByCwd?.get(terminal.cwd) : undefined
-    // Only regular terminals (not task terminals) can be maximized when there are multiple terminals
-    const canMaximize = !taskInfo && terminals.length > 1
+    const projectInfo = terminal.cwd ? projectInfoByCwd?.get(terminal.cwd) : undefined
+    // Only regular terminals (not task/project terminals) can be maximized when there are multiple terminals
+    const canMaximize = !taskInfo && !projectInfo && terminals.length > 1
     return (
       <TerminalPane
         terminal={terminal}
         taskInfo={taskInfo}
+        projectInfo={projectInfo}
         isMobile={isMobile}
         onClose={onTerminalClose ? () => onTerminalClose(terminal.id) : undefined}
         onReady={onTerminalReady ? (xterm) => onTerminalReady(terminal.id, xterm) : undefined}

@@ -1,7 +1,12 @@
 {
   "taskTerminals": "Tasks",
+  "projectTerminals": "Projects",
   "newTerminal": "New Terminal",
   "allRepos": "All Repos",
+  "allProjects": "All Projects",
+  "projectsSelected": "{{count}} selected",
+  "filterByProject": "Filter by project",
+  "clearFilter": "Clear filter",
   "editTab": {
     "title": "Edit Tab",
     "name": "Name",

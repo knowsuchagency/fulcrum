@@ -187,19 +187,6 @@ app.post('/', async (c) => {
 
     const now = new Date().toISOString()
 
-    // Create terminal tab for this project
-    const tabId = nanoid()
-    db.insert(terminalTabs)
-      .values({
-        id: tabId,
-        name: body.name,
-        position: 0,
-        directory: repo.path,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run()
-
     // Create project
     const projectId = nanoid()
     db.insert(projects)
@@ -209,7 +196,7 @@ app.post('/', async (c) => {
         description: body.description ?? null,
         repositoryId: body.repositoryId,
         appId: linkedApp?.id ?? null,
-        terminalTabId: tabId,
+        terminalTabId: null,
         status: 'active',
         lastAccessedAt: now,
         createdAt: now,
@@ -227,10 +214,8 @@ app.post('/', async (c) => {
       ? db.select().from(appServices).where(eq(appServices.appId, linkedApp.id)).all()
       : []
 
-    const tab = db.select().from(terminalTabs).where(eq(terminalTabs.id, tabId)).get()
-
     return c.json(
-      buildProjectWithDetails(project, repo, linkedApp ?? null, services, tab ?? null),
+      buildProjectWithDetails(project, repo, linkedApp ?? null, services, null),
       201
     )
   } catch (err) {
@@ -262,14 +247,6 @@ app.patch('/:id', async (c) => {
     if (body.status !== undefined) updateData.status = body.status
 
     db.update(projects).set(updateData).where(eq(projects.id, id)).run()
-
-    // Also update terminal tab name if project name changed
-    if (body.name && existing.terminalTabId) {
-      db.update(terminalTabs)
-        .set({ name: body.name, updatedAt: now })
-        .where(eq(terminalTabs.id, existing.terminalTabId))
-        .run()
-    }
 
     // Fetch and return updated project
     const project = db.select().from(projects).where(eq(projects.id, id)).get()!
@@ -307,11 +284,6 @@ app.delete('/:id', async (c) => {
   const existing = db.select().from(projects).where(eq(projects.id, id)).get()
   if (!existing) {
     return c.json({ error: 'Project not found' }, 404)
-  }
-
-  // Delete terminal tab (always)
-  if (existing.terminalTabId) {
-    db.delete(terminalTabs).where(eq(terminalTabs.id, existing.terminalTabId)).run()
   }
 
   // Optionally delete app (this will cascade to services/deployments via the apps route logic)
@@ -609,19 +581,6 @@ app.post('/bulk', async (c) => {
       // Check if there's an app linked to this repository
       const linkedApp = db.select().from(apps).where(eq(apps.repositoryId, repo.id)).get()
 
-      // Create terminal tab for this project
-      const tabId = nanoid()
-      db.insert(terminalTabs)
-        .values({
-          id: tabId,
-          name: repo.displayName,
-          position: 0,
-          directory: repo.path,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run()
-
       // Create project
       const projectId = nanoid()
       db.insert(projects)
@@ -631,7 +590,7 @@ app.post('/bulk', async (c) => {
           description: null,
           repositoryId: repo.id,
           appId: linkedApp?.id ?? null,
-          terminalTabId: tabId,
+          terminalTabId: null,
           status: 'active',
           lastAccessedAt: now,
           createdAt: now,
@@ -645,10 +604,9 @@ app.post('/bulk', async (c) => {
         const services = linkedApp
           ? db.select().from(appServices).where(eq(appServices.appId, linkedApp.id)).all()
           : []
-        const tab = db.select().from(terminalTabs).where(eq(terminalTabs.id, tabId)).get()
 
         createdProjects.push(
-          buildProjectWithDetails(project, repo, linkedApp ?? null, services, tab ?? null)
+          buildProjectWithDetails(project, repo, linkedApp ?? null, services, null)
         )
       }
     }
