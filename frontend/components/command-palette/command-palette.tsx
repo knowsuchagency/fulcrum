@@ -102,7 +102,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         category: 'navigation',
         icon: <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} />,
         action: () => {
-          navigate({ to: '/terminals', search: { tab: 'all-projects' } })
+          navigate({ to: '/terminals', search: (prev) => ({ ...prev, tab: 'all-projects' }) })
           setOpen(false)
         },
       },
@@ -231,7 +231,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
     navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
   }, { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+u', () => {
-    navigate({ to: '/terminals', search: { tab: 'all-projects' } })
+    navigate({ to: '/terminals', search: (prev) => ({ ...prev, tab: 'all-projects' }) })
   }, { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+4', () => navigate({ to: '/review' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+5', () => navigate({ to: '/monitoring' }), { allowInInput: true, allowInTerminal: true })
