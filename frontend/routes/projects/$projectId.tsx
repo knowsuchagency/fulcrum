@@ -919,7 +919,7 @@ function GeneralTab({ project }: { project: ProjectWithDetails }) {
 // App tab - App configuration or "Add app" prompt
 function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: () => void }) {
   const { t } = useTranslation('projects')
-  const tCommon = useTranslation('common').t
+  const tRepo = useTranslation('repositories').t
   const navigate = useNavigate()
   const { data: composeInfo, isLoading: composeLoading } = useFindCompose(project.repository?.id ?? null)
   const [composeWarningOpen, setComposeWarningOpen] = useState(false)
@@ -955,17 +955,17 @@ function AppTab({ project, onDeploy }: { project: ProjectWithDetails; onDeploy: 
         <Dialog open={composeWarningOpen} onOpenChange={setComposeWarningOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{tCommon('repositories.createAppDialog.title')}</DialogTitle>
+              <DialogTitle>{tRepo('createAppDialog.title')}</DialogTitle>
               <DialogDescription>
-                {tCommon('repositories.createAppDialog.description')}
+                {tRepo('createAppDialog.description')}
               </DialogDescription>
             </DialogHeader>
             <p className="text-sm">
-              {tCommon('repositories.createAppDialog.instructions')}
+              {tRepo('createAppDialog.instructions')}
             </p>
             <div className="flex justify-end">
               <Button onClick={() => setComposeWarningOpen(false)}>
-                {tCommon('repositories.createAppDialog.close')}
+                {tRepo('createAppDialog.close')}
               </Button>
             </div>
           </DialogContent>
