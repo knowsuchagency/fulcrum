@@ -8,22 +8,12 @@ import {
   GitBranchIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { GitActionsButtons } from './git-actions-buttons'
 import { TaskActionsDropdown } from './task-actions-dropdown'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
-import { useDeleteTask } from '@/hooks/use-tasks'
+import { DeleteTaskDialog } from '@/components/delete-task-dialog'
 import { useProjects } from '@/hooks/use-projects'
+import type { Task } from '@/types'
 
 interface TaskInfo {
   taskId: string
@@ -58,7 +48,7 @@ export function TaskTerminalHeader({
 }: TaskTerminalHeaderProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState<number>(Infinity)
-  const deleteTask = useDeleteTask()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const { data: projects = [] } = useProjects()
 
   // Find the project matching this task's repo path
@@ -82,9 +72,31 @@ export function TaskTerminalHeader({
   const isCompact = isMobile || containerWidth < COMPACT_THRESHOLD
   const showBadge = containerWidth >= HIDE_BADGE_THRESHOLD
 
-  const handleDeleteTask = () => {
-    // Never delete worktree for pinned tasks
-    deleteTask.mutate({ taskId: taskInfo.taskId, deleteLinkedWorktree: !taskInfo.pinned })
+  // Build a partial Task object for DeleteTaskDialog
+  const taskForDialog: Task = {
+    id: taskInfo.taskId,
+    title: taskInfo.title,
+    worktreePath: taskInfo.worktreePath,
+    pinned: taskInfo.pinned ?? false,
+    // Required fields that aren't used by DeleteTaskDialog
+    description: null,
+    status: 'IN_PROGRESS',
+    position: 0,
+    repoPath: taskInfo.repoPath,
+    repoName: taskInfo.repoName,
+    baseBranch: taskInfo.baseBranch,
+    branch: taskInfo.branch,
+    viewState: null,
+    prUrl: taskInfo.prUrl ?? null,
+    linearTicketId: null,
+    linearTicketUrl: null,
+    startupScript: null,
+    agent: 'claude',
+    aiMode: null,
+    agentOptions: null,
+    opencodeModel: null,
+    createdAt: '',
+    updatedAt: '',
   }
 
   return (
@@ -160,41 +172,20 @@ export function TaskTerminalHeader({
                 terminalId={terminalId}
                 sendInputToTerminal={sendInputToTerminal}
               />
-              <AlertDialog>
-                <AlertDialogTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="h-5 w-5 text-muted-foreground hover:text-destructive"
-                      title="Delete task"
-                      disabled={deleteTask.isPending}
-                    />
-                  }
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={12} strokeWidth={2} />
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Task</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {taskInfo.pinned
-                        ? 'This will permanently delete this task. The pinned worktree will be preserved.'
-                        : 'This will permanently delete this task and its worktree.'}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteTask}
-                      variant="destructive"
-                      disabled={deleteTask.isPending}
-                    >
-                      {deleteTask.isPending ? 'Deleting...' : 'Delete'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                title="Delete task"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={12} strokeWidth={2} />
+              </Button>
+              <DeleteTaskDialog
+                task={taskForDialog}
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+              />
             </div>
           </>
         )}

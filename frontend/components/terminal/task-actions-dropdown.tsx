@@ -20,25 +20,17 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
 import { useGitPush } from '@/hooks/use-git-push'
 import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useGitCreatePR } from '@/hooks/use-git-create-pr'
-import { useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
+import { useUpdateTask } from '@/hooks/use-tasks'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
 import { openExternalUrl } from '@/lib/editor-url'
 import { toast } from 'sonner'
+import { DeleteTaskDialog } from '@/components/delete-task-dialog'
+import type { Task } from '@/types'
 
 interface TaskActionsDropdownProps {
   repoPath: string
@@ -73,9 +65,35 @@ export function TaskActionsDropdown({
   const gitSyncParent = useGitSyncParent()
   const gitCreatePR = useGitCreatePR()
   const updateTask = useUpdateTask()
-  const deleteTask = useDeleteTask()
   const killClaude = useKillClaudeInTask()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // Build a partial Task object for DeleteTaskDialog
+  const taskForDialog: Task = {
+    id: taskId,
+    title,
+    worktreePath,
+    pinned: pinned ?? false,
+    // Required fields that aren't used by DeleteTaskDialog
+    description: null,
+    status: 'IN_PROGRESS',
+    position: 0,
+    repoPath,
+    repoName,
+    baseBranch,
+    branch: null,
+    viewState: null,
+    prUrl: prUrl ?? null,
+    linearTicketId: null,
+    linearTicketUrl: null,
+    startupScript: null,
+    agent: 'claude',
+    aiMode: null,
+    agentOptions: null,
+    opencodeModel: null,
+    createdAt: '',
+    updatedAt: '',
+  }
 
   const resolveWithClaude = (prompt: string) => {
     if (terminalId && sendInputToTerminal) {
@@ -183,12 +201,6 @@ export function TaskActionsDropdown({
 
   const handleNavigateToRepo = () => {
     navigate({ to: '/projects' })
-  }
-
-  const handleDeleteTask = () => {
-    // Never delete worktree for pinned tasks
-    deleteTask.mutate({ taskId, deleteLinkedWorktree: !pinned })
-    setShowDeleteDialog(false)
   }
 
   const handleCreatePR = async () => {
@@ -327,7 +339,6 @@ export function TaskActionsDropdown({
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
-            disabled={deleteTask.isPending}
             className="text-destructive focus:text-destructive"
           >
             <HugeiconsIcon
@@ -340,26 +351,11 @@ export function TaskActionsDropdown({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this task and its worktree.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteTask}
-              variant="destructive"
-              disabled={deleteTask.isPending}
-            >
-              {deleteTask.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteTaskDialog
+        task={taskForDialog}
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+      />
     </>
   )
 }
