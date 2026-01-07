@@ -36,8 +36,9 @@ interface TaskTerminalHeaderProps {
   sendInputToTerminal?: (terminalId: string, text: string) => void
 }
 
-const COMPACT_THRESHOLD = 350
-const HIDE_BADGE_THRESHOLD = 250
+const FULL_THRESHOLD = 600        // All elements visible
+const MEDIUM_THRESHOLD = 450      // Hide project/CWD, keep git buttons inline
+const HIDE_BADGE_THRESHOLD = 250  // Hide git status badge
 
 export function TaskTerminalHeader({
   taskInfo,
@@ -69,7 +70,8 @@ export function TaskTerminalHeader({
     return () => resizeObserver.disconnect()
   }, [])
 
-  const isCompact = isMobile || containerWidth < COMPACT_THRESHOLD
+  const showProjectAndCwd = containerWidth >= FULL_THRESHOLD
+  const showGitButtonsInline = containerWidth >= MEDIUM_THRESHOLD && !isMobile
   const showBadge = containerWidth >= HIDE_BADGE_THRESHOLD
 
   // Build a partial Task object for DeleteTaskDialog
@@ -115,29 +117,8 @@ export function TaskTerminalHeader({
           <span className="truncate">{taskInfo.title}</span>
         </Link>
 
-        {isCompact ? (
-          // Compact mode: status badge (if space) + unified dropdown
-          <>
-            {showBadge && (
-              <GitStatusBadge worktreePath={taskInfo.worktreePath} />
-            )}
-            <div className="ml-auto flex items-center">
-              <TaskActionsDropdown
-                repoPath={taskInfo.repoPath}
-                worktreePath={taskInfo.worktreePath}
-                baseBranch={taskInfo.baseBranch}
-                taskId={taskInfo.taskId}
-                title={taskInfo.title}
-                prUrl={taskInfo.prUrl}
-                repoName={taskInfo.repoName}
-                terminalId={terminalId}
-                sendInputToTerminal={sendInputToTerminal}
-                pinned={taskInfo.pinned}
-              />
-            </div>
-          </>
-        ) : (
-          // Full mode: all elements visible
+        {/* Project name & CWD - only at widest sizes */}
+        {showProjectAndCwd && (
           <>
             <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-foreground">
               <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} className="shrink-0" />
@@ -159,8 +140,17 @@ export function TaskTerminalHeader({
                 <span className="truncate">{terminalCwd.split('/').pop()}</span>
               </span>
             )}
-            <div className="ml-auto flex items-center gap-1">
-              <GitStatusBadge worktreePath={taskInfo.worktreePath} />
+          </>
+        )}
+
+        {/* Right-side actions */}
+        <div className="ml-auto flex items-center gap-1">
+          {/* Git status badge - visible until very narrow */}
+          {showBadge && <GitStatusBadge worktreePath={taskInfo.worktreePath} />}
+
+          {/* Git actions: inline buttons at medium+ width, dropdown when narrower */}
+          {showGitButtonsInline ? (
+            <>
               <GitActionsButtons
                 repoPath={taskInfo.repoPath}
                 worktreePath={taskInfo.worktreePath}
@@ -186,9 +176,22 @@ export function TaskTerminalHeader({
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
               />
-            </div>
-          </>
-        )}
+            </>
+          ) : (
+            <TaskActionsDropdown
+              repoPath={taskInfo.repoPath}
+              worktreePath={taskInfo.worktreePath}
+              baseBranch={taskInfo.baseBranch}
+              taskId={taskInfo.taskId}
+              title={taskInfo.title}
+              prUrl={taskInfo.prUrl}
+              repoName={taskInfo.repoName}
+              terminalId={terminalId}
+              sendInputToTerminal={sendInputToTerminal}
+              pinned={taskInfo.pinned}
+            />
+          )}
+        </div>
       </div>
     </div>
   )
