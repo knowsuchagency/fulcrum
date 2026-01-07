@@ -157,7 +157,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       {
         id: 'goto-task-terminals',
         label: t('commandPalette.commands.goToTaskTerminals'),
-        shortcut: 'meta+i',
+        shortcut: 'meta+u',
         keywords: ['tasks', 'shell', 'console', 'cli'],
         category: 'actions',
         icon: <HugeiconsIcon icon={GridViewIcon} size={16} strokeWidth={2} />,
@@ -169,7 +169,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
       {
         id: 'goto-project-terminals',
         label: t('commandPalette.commands.goToProjectTerminals'),
-        shortcut: 'meta+u',
+        shortcut: 'meta+i',
         keywords: ['projects', 'shell', 'console', 'cli', 'workspace'],
         category: 'actions',
         icon: <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} />,
@@ -227,10 +227,10 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   useHotkeys('meta+1', () => navigate({ to: '/tasks' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+2', () => navigate({ to: '/terminals' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+3', () => navigate({ to: '/projects' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+i', () => {
+  useHotkeys('meta+u', () => {
     navigate({ to: '/terminals', search: { tab: 'all-tasks' } })
   }, { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+u', () => {
+  useHotkeys('meta+i', () => {
     navigate({ to: '/terminals', search: (prev) => ({ ...prev, tab: 'all-projects' }) })
   }, { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+4', () => navigate({ to: '/review' }), { allowInInput: true, allowInTerminal: true })
