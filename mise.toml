@@ -82,8 +82,10 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# Default dev port to 6666 (prod uses 7777), respect PORT env var if set
-PORT="${PORT:-6666}"
+# Default dev port to 8888 (prod uses 7777), respect PORT env var if set
+# Note: 6666 might conflict with 'cbt' (SSH tunnel) service on some systems.
+# If you encounter "Address already in use", set PORT=8888 or similar in .env
+PORT="${PORT:-8888}"
 
 # Determine host binding
 if [ "$usage_host" = "true" ]; then
@@ -104,6 +106,13 @@ bunx concurrently --kill-others -n server,client -c blue,green \
 description = "Start backend dev server with auto-reload"
 run = """
 mkdir -p "${VIBORA_DIR:-$HOME/.vibora}"
+
+# Install OpenCode plugin from source (dev mode - always fresh)
+OPENCODE_PLUGIN_DIR="$HOME/.config/opencode/plugin"
+mkdir -p "$OPENCODE_PLUGIN_DIR"
+cp plugins/vibora-opencode/index.ts "$OPENCODE_PLUGIN_DIR/vibora.ts"
+echo "Installed OpenCode plugin from source" >&2
+
 bun --watch server/index.ts
 """
 
@@ -709,6 +718,16 @@ EOF
 
 echo "Generated manifest.json for version $VERSION"
 cat desktop/dist/manifest.json
+"""
+
+[tasks."opencode:install"]
+description = "Install OpenCode plugin from source"
+run = """
+OPENCODE_PLUGIN_DIR="$HOME/.config/opencode/plugin"
+mkdir -p "$OPENCODE_PLUGIN_DIR"
+cp plugins/vibora-opencode/index.ts "$OPENCODE_PLUGIN_DIR/vibora.ts"
+echo "Installed OpenCode plugin at $OPENCODE_PLUGIN_DIR/vibora.ts"
+echo "Restart OpenCode to load the updated plugin."
 """
 
 [tasks."desktop:release"]

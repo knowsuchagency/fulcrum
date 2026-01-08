@@ -115,7 +115,7 @@ export const terminalWebSocketHandlers: WSEvents = {
       switch (message.type) {
         // Terminal messages
         case 'terminal:create': {
-          const { name, cols, rows, cwd, tabId, positionInTab, requestId, tempId } = message.payload
+          const { name, cols, rows, cwd, tabId, positionInTab, requestId, tempId, taskId } = message.payload
 
           // If tabId provided but no cwd, use the tab's directory as default
           let effectiveCwd = cwd
@@ -144,7 +144,7 @@ export const terminalWebSocketHandlers: WSEvents = {
             }
           }
 
-          const terminal = ptyManager.create({ name, cols, rows, cwd: effectiveCwd, tabId, positionInTab })
+          const terminal = ptyManager.create({ name, cols, rows, cwd: effectiveCwd, tabId, positionInTab, taskId })
           log.ws.info('terminal:create created new', {
             terminalId: terminal.id,
             name,

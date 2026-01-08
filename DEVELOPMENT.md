@@ -21,6 +21,8 @@ mise run client    # Frontend (port 5173, proxies to backend)
 
 Development mode defaults to `~/.vibora/dev` (port 6666) to keep development data separate from production.
 
+> **Note**: Port 6666 might conflict with the 'cbt' (SSH tunnel) service on some macOS systems. If you encounter "Address already in use", you can override the port in `.env` or `mise.toml` (e.g., set `PORT=8888`).
+
 ## Available Tasks
 
 ```bash

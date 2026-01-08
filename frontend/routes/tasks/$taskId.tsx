@@ -837,6 +837,7 @@ function TaskView() {
               key={terminalKey}
               taskName={task.title}
               cwd={task.worktreePath}
+              taskId={task.id}
               agent={task.agent}
               aiMode={aiMode}
               description={aiModeDescription}
@@ -894,6 +895,7 @@ function TaskView() {
               key={terminalKey}
               taskName={task.title}
               cwd={task.worktreePath}
+              taskId={task.id}
               agent={task.agent}
               aiMode={aiMode}
               description={aiModeDescription}

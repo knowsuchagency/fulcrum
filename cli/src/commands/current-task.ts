@@ -25,6 +25,16 @@ function formatTask(task: Task): void {
  * Matches the current working directory (or --path) against task worktreePaths.
  */
 async function findCurrentTask(client: ViboraClient, pathOverride?: string) {
+  // Check VIBORA_TASK_ID env var first (injected by terminal session)
+  if (process.env.VIBORA_TASK_ID) {
+    try {
+      const task = await client.getTask(process.env.VIBORA_TASK_ID)
+      if (task) return task
+    } catch {
+      // Ignore error if task lookup fails (e.g. deleted task), fall back to path
+    }
+  }
+
   const currentPath = pathOverride || process.cwd()
 
   const tasks = await client.listTasks()

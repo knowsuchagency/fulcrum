@@ -159,6 +159,20 @@ claude plugin marketplace add knowsuchagency/vibora
 claude plugin install vibora@vibora --scope user
 ```
 
+## OpenCode Plugin
+
+The Vibora plugin for OpenCode enables seamless integration:
+
+- **Automatic Status Sync** — Task moves to "In Review" when OpenCode stops, "In Progress" when you respond
+- **Session Continuity** — OpenCode sessions are tied to task IDs
+- **Smart Context** — Automatically detects if you are in a Vibora task
+
+To install manually:
+
+```bash
+vibora opencode install
+```
+
 ### MCP Tools
 
 The plugin includes an MCP server that exposes task management and remote execution tools:

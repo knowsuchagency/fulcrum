@@ -541,6 +541,24 @@ install_vibora_plugin() {
     fi
 }
 
+# Install vibora plugin for OpenCode
+install_opencode_plugin() {
+    print_step "Installing vibora plugin for OpenCode..."
+
+    if ! command -v opencode &> /dev/null; then
+        print_warning "Skipping plugin installation (OpenCode not available)"
+        return 0
+    fi
+
+    # Install the plugin globally using vibora CLI
+    if vibora opencode install; then
+        print_success "Installed vibora plugin for OpenCode"
+    else
+        print_warning "Could not install vibora plugin for OpenCode"
+        echo "  Try manually: vibora opencode install"
+    fi
+}
+
 # Start vibora server
 start_vibora() {
     print_step "Starting vibora server..."
@@ -609,6 +627,7 @@ main() {
     install_cloudflared
     install_vibora
     install_vibora_plugin
+    install_opencode_plugin
 
     # Start the server
     start_vibora

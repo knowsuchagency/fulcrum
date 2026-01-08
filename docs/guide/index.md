@@ -52,3 +52,5 @@ Keep an eye on system resources while your agents work. CPU, memory, and disk us
 - [Tasks & Worktrees](/guide/tasks) - Learn about task management
 - [App Deployment](/guide/apps) - Deploy Docker Compose applications
 - [Terminal Management](/guide/terminals) - Work with terminals
+- [Claude Plugin](/guide/claude-plugin) - Integration with Claude Code
+- [OpenCode Plugin](/guide/opencode-plugin) - Integration with OpenCode

@@ -11,6 +11,7 @@ import { handleStatusCommand } from './commands/status'
 import { handleGitCommand } from './commands/git'
 import { handleWorktreesCommand } from './commands/worktrees'
 import { handleConfigCommand } from './commands/config'
+import { handleOpenCodeCommand } from './commands/opencode'
 import { handleNotificationsCommand } from './commands/notifications'
 import { handleNotifyCommand } from './commands/notify'
 import { handleDevCommand } from './commands/dev'
@@ -513,6 +514,32 @@ const configCommand = defineCommand({
 })
 
 // ============================================================================
+// OpenCode Commands
+// ============================================================================
+
+const opencodeInstallCommand = defineCommand({
+  meta: {
+    name: 'install',
+    description: 'Install the OpenCode plugin',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleOpenCodeCommand('install', [], toFlags(args))
+  },
+})
+
+const opencodeCommand = defineCommand({
+  meta: {
+    name: 'opencode',
+    description: 'Manage OpenCode integration',
+  },
+  subCommands: {
+    install: opencodeInstallCommand,
+  },
+})
+
+// ============================================================================
 // Notifications Commands
 // ============================================================================
 
@@ -787,6 +814,7 @@ const main = defineCommand({
     git: gitCommand,
     worktrees: worktreesCommand,
     config: configCommand,
+    opencode: opencodeCommand,
     notifications: notificationsCommand,
     notify: notifyCommand,
     dev: devCommand,

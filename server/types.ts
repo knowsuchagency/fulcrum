@@ -48,6 +48,7 @@ export interface TerminalCreateMessage {
     cwd?: string
     tabId?: string // Assign to tab on creation
     positionInTab?: number
+    taskId?: string
   } & RequestCorrelation
 }
 

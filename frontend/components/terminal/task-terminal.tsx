@@ -18,6 +18,7 @@ import { AGENT_DISPLAY_NAMES, AGENT_INSTALL_COMMANDS, AGENT_DOC_URLS, type Agent
 interface TaskTerminalProps {
   taskName: string
   cwd: string | null
+  taskId?: string
   className?: string
   agent?: AgentType
   aiMode?: 'default' | 'plan'
@@ -29,7 +30,7 @@ interface TaskTerminalProps {
   autoFocus?: boolean
 }
 
-export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMode, description, startupScript, agentOptions, opencodeModel, serverPort = 7777, autoFocus = false }: TaskTerminalProps) {
+export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude', aiMode, description, startupScript, agentOptions, opencodeModel, serverPort = 7777, autoFocus = false }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const hasFocusedRef = useRef(false)
@@ -237,6 +238,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
         cols,
         rows,
         cwd,
+        taskId,
         // Include startup info - this is stored in the MST store to survive
         // component unmount/remount (fixes race condition with React strict mode)
         startup: {

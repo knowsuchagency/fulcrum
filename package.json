@@ -1,7 +1,7 @@
 {
   "name": "vibora",
   "private": true,
-  "version": "9.2.1",
+  "version": "9.2.2",
   "description": "Harness Attention. Orchestrate Agents. Ship.",
   "license": "PolyForm-Shield-1.0.0",
   "type": "module",
@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@opencode-ai/plugin": "^1.1.8",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/router-plugin": "^1.141.8",
     "@types/bun": "^1.2.14",

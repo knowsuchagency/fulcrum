@@ -1,4 +1,4 @@
-import { spawn, type Pty } from 'bun-pty'
+import { spawn, type IPty } from 'bun-pty'
 import { unlinkSync } from 'fs'
 import { getDtachService } from './dtach-service'
 import { BufferManager } from './buffer-manager'
@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm'
 import { getShellEnv } from '../lib/env'
 import type { TerminalInfo, TerminalStatus } from '../types'
 import { log } from '../lib/logger'
+import { getSettingByKey } from '../lib/settings'
 
 export interface TerminalSessionOptions {
   id: string
@@ -17,6 +18,7 @@ export interface TerminalSessionOptions {
   createdAt: number
   tabId?: string
   positionInTab?: number
+  taskId?: string
   onData: (data: string) => void
   onExit: (exitCode: number) => void
   onShouldDestroy?: () => void
@@ -32,7 +34,7 @@ export class TerminalSession {
   private rows: number
   private status: TerminalStatus = 'running'
   private exitCode?: number
-  private pty: Pty | null = null
+  private pty: IPty | null = null
   private buffer: BufferManager
   private onData: (data: string) => void
   private onExit: (exitCode: number) => void
@@ -45,6 +47,7 @@ export class TerminalSession {
   // Tab association
   private _tabId?: string
   private _positionInTab: number
+  private _taskId?: string
 
   constructor(options: TerminalSessionOptions) {
     this.id = options.id
@@ -55,6 +58,7 @@ export class TerminalSession {
     this.createdAt = options.createdAt
     this._tabId = options.tabId
     this._positionInTab = options.positionInTab ?? 0
+    this._taskId = options.taskId
     this.buffer = new BufferManager()
     this.buffer.setTerminalId(this.id)
     this.onData = options.onData
@@ -111,6 +115,11 @@ export class TerminalSession {
           // Explicitly unset - bun-pty merges with process.env, doesn't replace
           NODE_ENV: '',
           PORT: '',
+          // Inject Vibora URL so CLI tools (like the plugin) can find the server
+          // This is critical when running on non-default ports (e.g. dev mode on 6666)
+          // Use localhost to support both IPv4 and IPv6 (Bun defaults to IPv6 on macOS)
+          VIBORA_URL: `http://localhost:${getSettingByKey('port')}`,
+          ...(this._taskId ? { VIBORA_TASK_ID: this._taskId } : {}),
         },
       })
 
@@ -197,13 +206,13 @@ export class TerminalSession {
 
     log.terminal.info('setupPtyHandlers: registering onData handler', { terminalId: this.id })
 
-    this.pty.onData((data) => {
+    this.pty.onData((data: string) => {
       log.terminal.info('pty.onData fired', { terminalId: this.id, dataLen: data.length })
       this.buffer.append(data)
       this.onData(data)
     })
 
-    this.pty.onExit(({ exitCode }) => {
+    this.pty.onExit(({ exitCode }: { exitCode: number }) => {
       this.pty = null
 
       // If we're intentionally detaching, don't mark as exited

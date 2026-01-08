@@ -97,6 +97,7 @@ export class PTYManager {
     cwd?: string
     tabId?: string
     positionInTab?: number
+    taskId?: string
   }): TerminalInfo {
     // Check if dtach is available
     if (!DtachService.isAvailable()) {
@@ -134,6 +135,7 @@ export class PTYManager {
       createdAt: Date.now(),
       tabId: options.tabId,
       positionInTab: options.positionInTab,
+      taskId: options.taskId,
       onData: (data) => this.callbacks.onData(id, data),
       onExit: (exitCode) => this.callbacks.onExit(id, exitCode),
       onShouldDestroy: () => {

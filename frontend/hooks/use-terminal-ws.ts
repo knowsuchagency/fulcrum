@@ -50,6 +50,7 @@ interface CreateTerminalOptions {
   cwd?: string
   tabId?: string
   positionInTab?: number
+  taskId?: string
   /** Startup info for task terminals - stored in volatile to survive component unmount */
   startup?: {
     startupScript?: string | null

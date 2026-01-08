@@ -44,8 +44,10 @@ cli/LICENSE
 desktop/bundle/
 # neutralino.js and bin/ are committed as vendored fallback for flaky downloads
 
-# Claude
+# Agent Files
 CLAUDE.local.md
+.ada/
+.sisyphus/
 
 # Jujutsu
 .jj/
