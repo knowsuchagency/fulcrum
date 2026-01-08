@@ -46,6 +46,32 @@ function isClaudeCodeInstalled(): { installed: boolean; path?: string } {
 }
 
 /**
+ * Check if OpenCode CLI is installed
+ * Checks PATH first, then common installation locations
+ */
+function isOpenCodeInstalled(): { installed: boolean; path?: string } {
+  const pathCheck = isCommandAvailable('opencode')
+  if (pathCheck.installed) {
+    return pathCheck
+  }
+
+  const commonPaths = [
+    join(homedir(), '.opencode', 'bin', 'opencode'),
+    join(homedir(), '.local', 'bin', 'opencode'),
+    '/usr/local/bin/opencode',
+    '/opt/homebrew/bin/opencode',
+  ]
+
+  for (const path of commonPaths) {
+    if (existsSync(path)) {
+      return { installed: true, path }
+    }
+  }
+
+  return { installed: false }
+}
+
+/**
  * GET /api/system/dependencies
  * Returns the status of required and optional dependencies
  */
@@ -63,11 +89,22 @@ app.get('/dependencies', (c) => {
       ? { installed: false }
       : isClaudeCodeInstalled()
 
+  // Check for OpenCode CLI
+  // Same pattern as Claude Code - trust CLI's alias-aware detection via env vars
+  const openCodeInstalledFromEnv = process.env.VIBORA_OPENCODE_INSTALLED === '1'
+  const openCodeMissingFromEnv = process.env.VIBORA_OPENCODE_MISSING === '1'
+  const openCodeCheck = openCodeInstalledFromEnv
+    ? { installed: true }
+    : openCodeMissingFromEnv
+      ? { installed: false }
+      : isOpenCodeInstalled()
+
   // Check for dtach (should always be installed if we got here, but check anyway)
   const dtachCheck = isCommandAvailable('dtach')
 
   return c.json({
     claudeCode: claudeCheck,
+    openCode: openCodeCheck,
     dtach: dtachCheck,
   })
 })

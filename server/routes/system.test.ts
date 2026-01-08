@@ -21,6 +21,7 @@ describe('System Routes', () => {
 
       expect(res.status).toBe(200)
       expect(body).toHaveProperty('claudeCode')
+      expect(body).toHaveProperty('openCode')
       expect(body).toHaveProperty('dtach')
     })
 
@@ -40,6 +41,15 @@ describe('System Routes', () => {
 
       expect(res.status).toBe(200)
       expect(typeof body.dtach.installed).toBe('boolean')
+    })
+
+    test('openCode has installed property', async () => {
+      const { get } = createTestApp()
+      const res = await get('/api/system/dependencies')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(typeof body.openCode.installed).toBe('boolean')
     })
 
     test('respects VIBORA_CLAUDE_INSTALLED env var', async () => {
@@ -71,6 +81,72 @@ describe('System Routes', () => {
         expect(body.claudeCode.installed).toBe(false)
       } finally {
         delete process.env.VIBORA_CLAUDE_MISSING
+      }
+    })
+
+    test('respects VIBORA_OPENCODE_INSTALLED env var', async () => {
+      process.env.VIBORA_OPENCODE_INSTALLED = '1'
+      delete process.env.VIBORA_OPENCODE_MISSING
+
+      try {
+        const { get } = createTestApp()
+        const res = await get('/api/system/dependencies')
+        const body = await res.json()
+
+        expect(res.status).toBe(200)
+        expect(body.openCode.installed).toBe(true)
+      } finally {
+        delete process.env.VIBORA_OPENCODE_INSTALLED
+      }
+    })
+
+    test('respects VIBORA_OPENCODE_MISSING env var', async () => {
+      process.env.VIBORA_OPENCODE_MISSING = '1'
+      delete process.env.VIBORA_OPENCODE_INSTALLED
+
+      try {
+        const { get } = createTestApp()
+        const res = await get('/api/system/dependencies')
+        const body = await res.json()
+
+        expect(res.status).toBe(200)
+        expect(body.openCode.installed).toBe(false)
+      } finally {
+        delete process.env.VIBORA_OPENCODE_MISSING
+      }
+    })
+
+    test('VIBORA_CLAUDE_INSTALLED takes precedence over MISSING', async () => {
+      process.env.VIBORA_CLAUDE_INSTALLED = '1'
+      process.env.VIBORA_CLAUDE_MISSING = '1'
+
+      try {
+        const { get } = createTestApp()
+        const res = await get('/api/system/dependencies')
+        const body = await res.json()
+
+        expect(res.status).toBe(200)
+        expect(body.claudeCode.installed).toBe(true)
+      } finally {
+        delete process.env.VIBORA_CLAUDE_INSTALLED
+        delete process.env.VIBORA_CLAUDE_MISSING
+      }
+    })
+
+    test('VIBORA_OPENCODE_INSTALLED takes precedence over MISSING', async () => {
+      process.env.VIBORA_OPENCODE_INSTALLED = '1'
+      process.env.VIBORA_OPENCODE_MISSING = '1'
+
+      try {
+        const { get } = createTestApp()
+        const res = await get('/api/system/dependencies')
+        const body = await res.json()
+
+        expect(res.status).toBe(200)
+        expect(body.openCode.installed).toBe(true)
+      } finally {
+        delete process.env.VIBORA_OPENCODE_INSTALLED
+        delete process.env.VIBORA_OPENCODE_MISSING
       }
     })
 
