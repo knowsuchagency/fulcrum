@@ -21,6 +21,7 @@ describe('System Routes', () => {
 
       expect(res.status).toBe(200)
       expect(body).toHaveProperty('claudeCode')
+      expect(body).toHaveProperty('openCode')
       expect(body).toHaveProperty('dtach')
     })
 
@@ -40,6 +41,15 @@ describe('System Routes', () => {
 
       expect(res.status).toBe(200)
       expect(typeof body.dtach.installed).toBe('boolean')
+    })
+
+    test('openCode has installed property', async () => {
+      const { get } = createTestApp()
+      const res = await get('/api/system/dependencies')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(typeof body.openCode.installed).toBe('boolean')
     })
 
     test('respects VIBORA_CLAUDE_INSTALLED env var', async () => {

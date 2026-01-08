@@ -1,42 +1,56 @@
 import { useState, useCallback } from 'react'
 import { useSystemDependencies } from '@/hooks/use-system-dependencies'
+import { useDefaultAgent } from '@/hooks/use-config'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Alert02Icon, Cancel01Icon, Copy01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
+import type { AgentType } from '@/types'
 
-const INSTALL_COMMAND = 'npm install -g @anthropic/claude-code'
-const CLAUDE_DOCS_URL = 'https://docs.anthropic.com/en/docs/claude-code/overview'
+const AGENT_CONFIG: Record<AgentType, { name: string; installCommand: string; docsUrl: string }> = {
+  claude: {
+    name: 'Claude Code',
+    installCommand: 'npm install -g @anthropic-ai/claude-code',
+    docsUrl: 'https://docs.anthropic.com/en/docs/claude-code/overview',
+  },
+  opencode: {
+    name: 'OpenCode',
+    installCommand: 'curl -fsSL https://opencode.ai/install | bash',
+    docsUrl: 'https://opencode.ai/docs/',
+  },
+}
 
-/**
- * Banner shown when Claude Code CLI is not installed.
- * Provides installation instructions and a link to the docs.
- */
-export function ClaudeSetupBanner() {
-  const { data, isLoading } = useSystemDependencies()
+export function AgentSetupBanner() {
+  const { data: dependencies, isLoading: depsLoading } = useSystemDependencies()
+  const { data: defaultAgent, isLoading: agentLoading } = useDefaultAgent()
   const [dismissed, setDismissed] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  const agentToCheck = defaultAgent ?? 'claude'
+  const config = AGENT_CONFIG[agentToCheck]
+
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(INSTALL_COMMAND)
+      await navigator.clipboard.writeText(config.installCommand)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
       // Fallback for browsers without clipboard API
     }
-  }, [])
+  }, [config.installCommand])
 
   const handleDismiss = useCallback(() => {
     setDismissed(true)
   }, [])
 
-  // Don't show banner while loading or if dismissed
-  if (isLoading || dismissed) {
+  if (depsLoading || agentLoading || dismissed) {
     return null
   }
 
-  // Don't show banner if Claude Code is installed
-  if (data?.claudeCode?.installed) {
+  const isInstalled = agentToCheck === 'claude'
+    ? dependencies?.claudeCode?.installed
+    : dependencies?.openCode?.installed
+
+  if (isInstalled) {
     return null
   }
 
@@ -57,11 +71,11 @@ export function ClaudeSetupBanner() {
         />
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
           <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-            Claude Code CLI not found
+            {config.name} CLI not found
           </span>
           <div className="flex items-center gap-2">
             <code className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-mono text-amber-700 dark:text-amber-300">
-              {INSTALL_COMMAND}
+              {config.installCommand}
             </code>
             <button
               onClick={handleCopy}
@@ -84,7 +98,7 @@ export function ClaudeSetupBanner() {
 
       <div className="flex items-center gap-2">
         <a
-          href={CLAUDE_DOCS_URL}
+          href={config.docsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(
@@ -110,3 +124,5 @@ export function ClaudeSetupBanner() {
     </div>
   )
 }
+
+export { AgentSetupBanner as ClaudeSetupBanner }
