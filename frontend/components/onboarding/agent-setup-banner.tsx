@@ -4,20 +4,12 @@ import { useDefaultAgent } from '@/hooks/use-config'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Alert02Icon, Cancel01Icon, Copy01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
-import type { AgentType } from '@/types'
-
-const AGENT_CONFIG: Record<AgentType, { name: string; installCommand: string; docsUrl: string }> = {
-  claude: {
-    name: 'Claude Code',
-    installCommand: 'npm install -g @anthropic-ai/claude-code',
-    docsUrl: 'https://docs.anthropic.com/en/docs/claude-code/overview',
-  },
-  opencode: {
-    name: 'OpenCode',
-    installCommand: 'curl -fsSL https://opencode.ai/install | bash',
-    docsUrl: 'https://opencode.ai/docs/',
-  },
-}
+import {
+  AGENT_DISPLAY_NAMES,
+  AGENT_INSTALL_COMMANDS,
+  AGENT_DOC_URLS,
+  type AgentType,
+} from '@shared/types'
 
 export function AgentSetupBanner() {
   const { data: dependencies, isLoading: depsLoading } = useSystemDependencies()
@@ -25,18 +17,20 @@ export function AgentSetupBanner() {
   const [dismissed, setDismissed] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const agentToCheck = defaultAgent ?? 'claude'
-  const config = AGENT_CONFIG[agentToCheck]
+  const agentToCheck: AgentType = defaultAgent ?? 'claude'
+  const displayName = AGENT_DISPLAY_NAMES[agentToCheck]
+  const installCommand = AGENT_INSTALL_COMMANDS[agentToCheck]
+  const docsUrl = AGENT_DOC_URLS[agentToCheck]
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(config.installCommand)
+      await navigator.clipboard.writeText(installCommand)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
       // Fallback for browsers without clipboard API
     }
-  }, [config.installCommand])
+  }, [installCommand])
 
   const handleDismiss = useCallback(() => {
     setDismissed(true)
@@ -71,11 +65,11 @@ export function AgentSetupBanner() {
         />
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
           <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-            {config.name} CLI not found
+            {displayName} CLI not found
           </span>
           <div className="flex items-center gap-2">
             <code className="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-mono text-amber-700 dark:text-amber-300">
-              {config.installCommand}
+              {installCommand}
             </code>
             <button
               onClick={handleCopy}
@@ -98,7 +92,7 @@ export function AgentSetupBanner() {
 
       <div className="flex items-center gap-2">
         <a
-          href={config.docsUrl}
+          href={docsUrl}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(

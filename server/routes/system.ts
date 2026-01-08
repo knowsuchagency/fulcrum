@@ -90,7 +90,14 @@ app.get('/dependencies', (c) => {
       : isClaudeCodeInstalled()
 
   // Check for OpenCode CLI
-  const openCodeCheck = isOpenCodeInstalled()
+  // Same pattern as Claude Code - trust CLI's alias-aware detection via env vars
+  const openCodeInstalledFromEnv = process.env.VIBORA_OPENCODE_INSTALLED === '1'
+  const openCodeMissingFromEnv = process.env.VIBORA_OPENCODE_MISSING === '1'
+  const openCodeCheck = openCodeInstalledFromEnv
+    ? { installed: true }
+    : openCodeMissingFromEnv
+      ? { installed: false }
+      : isOpenCodeInstalled()
 
   // Check for dtach (should always be installed if we got here, but check anyway)
   const dtachCheck = isCommandAvailable('dtach')
