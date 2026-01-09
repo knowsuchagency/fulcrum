@@ -11,3 +11,22 @@ export function escapeForShell(str: string): string {
     .replace(/\t/g, '\\t') // tabs
   return `$'${escaped}'`
 }
+
+/**
+ * Check if a string needs shell escaping.
+ * Safe characters: alphanumeric, hyphen, underscore, period.
+ */
+export function needsShellEscaping(str: string): boolean {
+  return !/^[a-zA-Z0-9_.-]+$/.test(str)
+}
+
+/**
+ * Escape a string for shell only if it contains special characters.
+ * Simple alphanumeric strings (with hyphens/underscores) pass through unchanged.
+ */
+export function escapeForShellIfNeeded(str: string): string {
+  if (needsShellEscaping(str)) {
+    return escapeForShell(str)
+  }
+  return str
+}

@@ -6,7 +6,7 @@
  */
 
 import type { AgentType } from '@/types'
-import { escapeForShell } from './shell-escape'
+import { escapeForShell, escapeForShellIfNeeded } from './shell-escape'
 
 export interface AgentCommandOptions {
   /** The task prompt/description */
@@ -105,7 +105,7 @@ const opencodeBuilder: AgentCommandBuilder = {
     const escapedFullPrompt = escapeForShell(fullPrompt)
 
     // Start interactive TUI with pre-filled prompt
-    return `opencode --agent ${escapeForShell(agentName)} --prompt ${escapedFullPrompt}${extraFlags}`
+    return `opencode --agent ${escapeForShellIfNeeded(agentName)} --prompt ${escapedFullPrompt}${extraFlags}`
   },
   notFoundPatterns: [
     /opencode: command not found/,

@@ -116,7 +116,7 @@ export class TerminalSession {
           NODE_ENV: '',
           PORT: '',
           // Inject Vibora URL so CLI tools (like the plugin) can find the server
-          // This is critical when running on non-default ports (e.g. dev mode on 6666)
+          // This is critical when running on non-default ports (e.g. dev mode on 8888)
           // Use localhost to support both IPv4 and IPv6 (Bun defaults to IPv6 on macOS)
           VIBORA_URL: `http://localhost:${getSettingByKey('port')}`,
           ...(this._taskId ? { VIBORA_TASK_ID: this._taskId } : {}),
