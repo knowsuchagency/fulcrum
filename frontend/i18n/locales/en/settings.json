@@ -78,6 +78,19 @@
         "label": "OpenCode Model",
         "placeholder": "Select model",
         "description": "Default model used when launching OpenCode tasks"
+      },
+      "advancedAgentNames": {
+        "label": "Advanced Agent Names",
+        "description": "Configure specific agent names for OpenCode modes",
+        "warning": "Only change these if you know what you're doing. These settings are for users with custom OpenCode agents (e.g., oh-my-opencode plugin with Sisyphus/Planner-Sisyphus agents)."
+      },
+      "opencodeDefaultAgent": {
+        "label": "Default Mode",
+        "description": "Agent name for full-permission mode. Use 'Sisyphus' for oh-my-opencode, or 'build' for vanilla OpenCode."
+      },
+      "opencodePlanAgent": {
+        "label": "Plan Mode",
+        "description": "Agent name for restricted/planning mode. Use 'Planner-Sisyphus' for oh-my-opencode, or 'plan' for vanilla OpenCode."
       }
     },
     "language": {

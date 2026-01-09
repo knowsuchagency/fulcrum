@@ -78,6 +78,19 @@
         "label": "OpenCode 模型",
         "placeholder": "选择模型",
         "description": "启动 OpenCode 任务时使用的默认模型"
+      },
+      "advancedAgentNames": {
+        "label": "高级代理名称",
+        "description": "配置 OpenCode 模式的特定代理名称",
+        "warning": "仅在您知道自己在做什么的情况下更改这些设置。这些设置适用于拥有自定义 OpenCode 代理（例如，带有 Sisyphus/Planner-Sisyphus 代理的 oh-my-opencode 插件）的用户。"
+      },
+      "opencodeDefaultAgent": {
+        "label": "默认模式",
+        "description": "全权限模式的代理名称。oh-my-opencode 使用 'Sisyphus'，原版 OpenCode 使用 'build'。"
+      },
+      "opencodePlanAgent": {
+        "label": "计划模式",
+        "description": "受限/计划模式的代理名称。oh-my-opencode 使用 'Planner-Sisyphus'，原版 OpenCode 使用 'plan'。"
       }
     },
     "language": {

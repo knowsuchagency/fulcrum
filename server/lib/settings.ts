@@ -39,6 +39,8 @@ export interface Settings {
   agent: {
     defaultAgent: AgentType
     opencodeModel: string | null
+    opencodeDefaultAgent: string
+    opencodePlanAgent: string
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -72,6 +74,8 @@ const DEFAULT_SETTINGS: Settings = {
   agent: {
     defaultAgent: 'claude',
     opencodeModel: null,
+    opencodeDefaultAgent: 'build',
+    opencodePlanAgent: 'plan',
   },
   appearance: {
     language: null,
@@ -329,6 +333,8 @@ export function getSettings(): Settings {
     agent: {
       defaultAgent: ((parsed.agent as Record<string, unknown>)?.defaultAgent as AgentType) ?? DEFAULT_SETTINGS.agent.defaultAgent,
       opencodeModel: ((parsed.agent as Record<string, unknown>)?.opencodeModel as string | null) ?? null,
+      opencodeDefaultAgent: ((parsed.agent as Record<string, unknown>)?.opencodeDefaultAgent as string) ?? DEFAULT_SETTINGS.agent.opencodeDefaultAgent,
+      opencodePlanAgent: ((parsed.agent as Record<string, unknown>)?.opencodePlanAgent as string) ?? DEFAULT_SETTINGS.agent.opencodePlanAgent,
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,

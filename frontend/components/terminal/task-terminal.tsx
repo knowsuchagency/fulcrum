@@ -14,6 +14,7 @@ import { useTheme } from 'next-themes'
 import { lightTheme, darkTheme } from './terminal-theme'
 import { buildAgentCommand, matchesAgentNotFound } from '@/lib/agent-commands'
 import { AGENT_DISPLAY_NAMES, AGENT_INSTALL_COMMANDS, AGENT_DOC_URLS, type AgentType } from '@/types'
+import { useOpencodeDefaultAgent, useOpencodePlanAgent } from '@/hooks/use-config'
 
 interface TaskTerminalProps {
   taskName: string
@@ -46,6 +47,15 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const terminalTheme = isDark ? darkTheme : lightTheme
+
+  // Get global OpenCode agent name settings
+  const { data: opencodeDefaultAgent } = useOpencodeDefaultAgent()
+  const { data: opencodePlanAgent } = useOpencodePlanAgent()
+  // Store in refs for use in callbacks
+  const opencodeDefaultAgentRef = useRef(opencodeDefaultAgent)
+  const opencodePlanAgentRef = useRef(opencodePlanAgent)
+  useEffect(() => { opencodeDefaultAgentRef.current = opencodeDefaultAgent }, [opencodeDefaultAgent])
+  useEffect(() => { opencodePlanAgentRef.current = opencodePlanAgent }, [opencodePlanAgent])
 
   // Reset all terminal tracking refs when cwd changes (navigating to different task)
   // This MUST run before terminal creation logic to ensure refs are clean
@@ -386,6 +396,8 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
         mode: currentAiMode === 'plan' ? 'plan' : 'default',
         additionalOptions: currentAgentOptions ?? {},
         opencodeModel: currentOpencodeModel,
+        opencodeDefaultAgent: opencodeDefaultAgentRef.current,
+        opencodePlanAgent: opencodePlanAgentRef.current,
       })
 
       // Wait longer for startup script to complete before sending agent command

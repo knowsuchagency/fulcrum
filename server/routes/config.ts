@@ -35,6 +35,8 @@ export const CONFIG_KEYS = {
   GITHUB_PAT: 'integrations.githubPat',
   DEFAULT_AGENT: 'agent.defaultAgent',
   OPENCODE_MODEL: 'agent.opencodeModel',
+  OPENCODE_DEFAULT_AGENT: 'agent.opencodeDefaultAgent',
+  OPENCODE_PLAN_AGENT: 'agent.opencodePlanAgent',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
@@ -329,7 +331,7 @@ app.put('/:key', async (c) => {
         return c.json({ error: 'Theme must be "system", "light", "dark", or null' }, 400)
       }
       value = value === '' || value === 'system' ? null : value
-    } else if (path === CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME || path === CONFIG_KEYS.SYNC_STARSHIP_THEME) {
+    } else if (path === CONFIG_KEYS.SYNC_CLAUDE_CODE_THEME) {
       if (typeof value !== 'boolean') {
         return c.json({ error: 'Sync setting must be a boolean' }, 400)
       }
@@ -356,6 +358,12 @@ app.put('/:key', async (c) => {
       if (value === '') {
         value = null
       }
+    } else if (path === CONFIG_KEYS.OPENCODE_DEFAULT_AGENT || path === CONFIG_KEYS.OPENCODE_PLAN_AGENT) {
+      // OpenCode agent names must be non-empty strings
+      if (typeof value !== 'string' || value.trim() === '') {
+        return c.json({ error: 'OpenCode agent name must be a non-empty string' }, 400)
+      }
+      value = value.trim()
     } else if (typeof value === 'string' && value === '') {
       // Convert empty strings to null for nullable fields
       if (path === CONFIG_KEYS.LINEAR_API_KEY || path === CONFIG_KEYS.GITHUB_PAT ||

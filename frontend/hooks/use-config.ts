@@ -23,6 +23,8 @@ export const CONFIG_KEYS = {
   GITHUB_PAT: 'integrations.githubPat',
   DEFAULT_AGENT: 'agent.defaultAgent',
   OPENCODE_MODEL: 'agent.opencodeModel',
+  OPENCODE_DEFAULT_AGENT: 'agent.opencodeDefaultAgent',
+  OPENCODE_PLAN_AGENT: 'agent.opencodePlanAgent',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
@@ -152,6 +154,26 @@ export function useOpencodeModel() {
   return {
     ...query,
     data: (query.data?.value as string | null) ?? null,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useOpencodeDefaultAgent() {
+  const query = useConfig(CONFIG_KEYS.OPENCODE_DEFAULT_AGENT)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? 'build',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useOpencodePlanAgent() {
+  const query = useConfig(CONFIG_KEYS.OPENCODE_PLAN_AGENT)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? 'plan',
     isDefault: query.data?.isDefault ?? true,
   }
 }

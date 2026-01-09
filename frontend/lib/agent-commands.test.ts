@@ -105,6 +105,42 @@ describe('Agent Commands', () => {
         expect(cmdPlan).toContain('--agent plan')
         expect(cmdPlan).not.toContain('--agent Plan')
       })
+
+      test('uses custom agent name for default mode when provided', () => {
+        const cmd = buildAgentCommand('opencode', {
+          ...baseOptions,
+          opencodeDefaultAgent: 'Sisyphus',
+        })
+
+        expect(cmd).toContain('--agent Sisyphus')
+        expect(cmd).not.toContain('--agent build')
+      })
+
+      test('uses custom agent name for plan mode when provided', () => {
+        const cmd = buildAgentCommand('opencode', {
+          ...baseOptions,
+          mode: 'plan',
+          opencodePlanAgent: 'Planner-Sisyphus',
+        })
+
+        expect(cmd).toContain('--agent Planner-Sisyphus')
+        expect(cmd).not.toContain('--agent plan')
+      })
+
+      test('falls back to default agent names when custom names not provided', () => {
+        const cmdDefault = buildAgentCommand('opencode', {
+          ...baseOptions,
+          opencodeDefaultAgent: undefined,
+        })
+        const cmdPlan = buildAgentCommand('opencode', {
+          ...baseOptions,
+          mode: 'plan',
+          opencodePlanAgent: undefined,
+        })
+
+        expect(cmdDefault).toContain('--agent build')
+        expect(cmdPlan).toContain('--agent plan')
+      })
     })
   })
 

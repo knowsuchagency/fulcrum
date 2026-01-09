@@ -12,8 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon, ArrowDown01Icon, Alert02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import {
   usePort,
@@ -25,6 +30,8 @@ import {
   useGitHubPat,
   useDefaultAgent,
   useOpencodeModel,
+  useOpencodeDefaultAgent,
+  useOpencodePlanAgent,
   useUpdateConfig,
   useResetConfig,
   useNotificationSettings,
@@ -78,6 +85,8 @@ function SettingsPage() {
   const { data: githubPat, isLoading: githubPatLoading } = useGitHubPat()
   const { data: defaultAgent, isLoading: defaultAgentLoading } = useDefaultAgent()
   const { data: globalOpencodeModel, isLoading: opcodeModelLoading } = useOpencodeModel()
+  const { data: globalOpencodeDefaultAgent, isLoading: opcodeDefaultAgentLoading } = useOpencodeDefaultAgent()
+  const { data: globalOpencodePlanAgent, isLoading: opencodePlanAgentLoading } = useOpencodePlanAgent()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
   const { data: deploymentSettings, isLoading: deploymentLoading } = useDeploymentSettings()
@@ -103,6 +112,8 @@ function SettingsPage() {
   const [localGitHubPat, setLocalGitHubPat] = useState('')
   const [localDefaultAgent, setLocalDefaultAgent] = useState<AgentType>('claude')
   const [localOpencodeModel, setLocalOpencodeModel] = useState<string | null>(null)
+  const [localOpencodeDefaultAgent, setLocalOpencodeDefaultAgent] = useState<string>('build')
+  const [localOpencodePlanAgent, setLocalOpencodePlanAgent] = useState<string>('plan')
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -154,7 +165,9 @@ function SettingsPage() {
     if (githubPat !== undefined) setLocalGitHubPat(githubPat)
     if (defaultAgent !== undefined) setLocalDefaultAgent(defaultAgent)
     if (globalOpencodeModel !== undefined) setLocalOpencodeModel(globalOpencodeModel)
-  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, defaultAgent, globalOpencodeModel])
+    if (globalOpencodeDefaultAgent !== undefined) setLocalOpencodeDefaultAgent(globalOpencodeDefaultAgent)
+    if (globalOpencodePlanAgent !== undefined) setLocalOpencodePlanAgent(globalOpencodePlanAgent)
+  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, linearApiKey, githubPat, defaultAgent, globalOpencodeModel, globalOpencodeDefaultAgent, globalOpencodePlanAgent])
 
   // Sync notification settings
   useEffect(() => {
@@ -205,7 +218,7 @@ function SettingsPage() {
   }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || notificationsLoading || zAiLoading || deploymentLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || linearApiKeyLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -252,7 +265,10 @@ function SettingsPage() {
     localEditorHost !== editorHost ||
     localEditorSshPort !== String(editorSshPort)
 
-  const hasAgentChanges = localDefaultAgent !== defaultAgent || localOpencodeModel !== (globalOpencodeModel ?? null)
+  const hasAgentChanges = localDefaultAgent !== defaultAgent || 
+    localOpencodeModel !== (globalOpencodeModel ?? null) ||
+    localOpencodeDefaultAgent !== globalOpencodeDefaultAgent ||
+    localOpencodePlanAgent !== globalOpencodePlanAgent
 
   const hasChanges =
     localPort !== String(port) ||
@@ -367,6 +383,28 @@ function SettingsPage() {
         new Promise((resolve) => {
           updateConfig.mutate(
             { key: CONFIG_KEYS.OPENCODE_MODEL, value: localOpencodeModel },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localOpencodeDefaultAgent !== globalOpencodeDefaultAgent) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.OPENCODE_DEFAULT_AGENT, value: localOpencodeDefaultAgent },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localOpencodePlanAgent !== globalOpencodePlanAgent) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.OPENCODE_PLAN_AGENT, value: localOpencodePlanAgent },
             { onSettled: resolve }
           )
         })
@@ -546,6 +584,22 @@ function SettingsPage() {
     resetConfig.mutate(CONFIG_KEYS.OPENCODE_MODEL, {
       onSuccess: (data) => {
         setLocalOpencodeModel(data.value !== null && data.value !== undefined ? String(data.value) : null)
+      },
+    })
+  }
+
+  const handleResetOpencodeDefaultAgent = () => {
+    resetConfig.mutate(CONFIG_KEYS.OPENCODE_DEFAULT_AGENT, {
+      onSuccess: (data) => {
+        setLocalOpencodeDefaultAgent((data.value as string) ?? 'build')
+      },
+    })
+  }
+
+  const handleResetOpencodePlanAgent = () => {
+    resetConfig.mutate(CONFIG_KEYS.OPENCODE_PLAN_AGENT, {
+      onSuccess: (data) => {
+        setLocalOpencodePlanAgent((data.value as string) ?? 'plan')
       },
     })
   }
@@ -1112,6 +1166,98 @@ function SettingsPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* OpenCode Agent Names - Advanced (collapsed by default) */}
+                <Collapsible className="mt-4 space-y-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                    <CollapsibleTrigger className="group flex cursor-pointer items-center gap-1.5 text-left text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-32 sm:shrink-0">
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        size={12}
+                        strokeWidth={2}
+                        className="shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180"
+                      />
+                      <span>{t('fields.agent.advancedAgentNames.label')}</span>
+                    </CollapsibleTrigger>
+                    <p className="text-xs text-muted-foreground sm:pt-0.5">
+                      {t('fields.agent.advancedAgentNames.description')}
+                    </p>
+                  </div>
+
+                  <CollapsibleContent className="space-y-4 pt-2 sm:ml-32 sm:pl-2">
+                    <div className="flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 p-3">
+                      <HugeiconsIcon
+                        icon={Alert02Icon}
+                        size={16}
+                        strokeWidth={2}
+                        className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
+                      />
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        {t('fields.agent.advancedAgentNames.warning')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                          {t('fields.agent.opencodeDefaultAgent.label')}
+                        </label>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            value={localOpencodeDefaultAgent ?? 'build'}
+                            onChange={(e) => setLocalOpencodeDefaultAgent(e.target.value)}
+                            placeholder="build"
+                            disabled={isLoading}
+                            className="font-mono text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleResetOpencodeDefaultAgent}
+                            disabled={isLoading || resetConfig.isPending}
+                            title={tc('buttons.reset')}
+                          >
+                            <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                        {t('fields.agent.opencodeDefaultAgent.description')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                          {t('fields.agent.opencodePlanAgent.label')}
+                        </label>
+                        <div className="flex flex-1 items-center gap-2">
+                          <Input
+                            value={localOpencodePlanAgent ?? 'plan'}
+                            onChange={(e) => setLocalOpencodePlanAgent(e.target.value)}
+                            placeholder="plan"
+                            disabled={isLoading}
+                            className="font-mono text-sm"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={handleResetOpencodePlanAgent}
+                            disabled={isLoading || resetConfig.isPending}
+                            title={tc('buttons.reset')}
+                          >
+                            <HugeiconsIcon icon={RotateLeft01Icon} size={14} strokeWidth={2} />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                        {t('fields.agent.opencodePlanAgent.description')}
+                      </p>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </SettingsSection>
 
               {/* Notifications */}

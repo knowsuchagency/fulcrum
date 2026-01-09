@@ -21,6 +21,10 @@ export interface AgentCommandOptions {
   additionalOptions: Record<string, string>
   /** OpenCode model in format provider/model (e.g., 'anthropic/claude-opus-4-5') */
   opencodeModel?: string | null
+  /** OpenCode agent name for default mode (e.g., 'build', 'Sisyphus') */
+  opencodeDefaultAgent?: string
+  /** OpenCode agent name for plan mode (e.g., 'plan', 'Planner-Sisyphus') */
+  opencodePlanAgent?: string
 }
 
 export interface AgentCommandBuilder {
@@ -74,10 +78,12 @@ const claudeBuilder: AgentCommandBuilder = {
  * - System prompts prepended to user prompt (no --system-prompt flag available)
  */
 const opencodeBuilder: AgentCommandBuilder = {
-  buildCommand({ prompt, systemPrompt, mode, additionalOptions, opencodeModel }) {
-    // OpenCode uses --agent flag to select build (full) or plan (restricted) mode
-    // Note: agent names are lowercase in OpenCode
-    const agentMode = mode === 'plan' ? 'plan' : 'build'
+  buildCommand({ prompt, systemPrompt, mode, additionalOptions, opencodeModel, opencodeDefaultAgent, opencodePlanAgent }) {
+    // OpenCode uses --agent flag to select the agent
+    // Default to 'build'/'plan' if custom agent names are not configured
+    const agentName = mode === 'plan' 
+      ? (opencodePlanAgent || 'plan') 
+      : (opencodeDefaultAgent || 'build')
 
     // Build additional CLI options
     let extraFlags = ''
@@ -99,7 +105,7 @@ const opencodeBuilder: AgentCommandBuilder = {
     const escapedFullPrompt = escapeForShell(fullPrompt)
 
     // Start interactive TUI with pre-filled prompt
-    return `opencode --agent ${agentMode} --prompt ${escapedFullPrompt}${extraFlags}`
+    return `opencode --agent ${escapeForShell(agentName)} --prompt ${escapedFullPrompt}${extraFlags}`
   },
   notFoundPatterns: [
     /opencode: command not found/,
