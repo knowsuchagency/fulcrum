@@ -525,7 +525,7 @@ const opencodeInstallCommand = defineCommand({
   args: globalArgs,
   async run({ args }) {
     if (args.json) setJsonOutput(true)
-    await handleOpenCodeCommand('install', [], toFlags(args))
+    await handleOpenCodeCommand('install')
   },
 })
 

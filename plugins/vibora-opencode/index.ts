@@ -13,7 +13,9 @@ const NOISY_EVENTS = new Set([
 const log = (msg: string) => {
   try {
     appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${msg}\n`)
-  } catch {}
+  } catch {
+    // Silently ignore logging errors - logging is non-critical
+  }
 }
 
 let mainSessionId: string | null = null

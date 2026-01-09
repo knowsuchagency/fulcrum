@@ -5,11 +5,7 @@ import { CliError, ExitCodes } from '../utils/errors'
 // @ts-expect-error - Bun text import
 import PLUGIN_CODE from '../../../plugins/vibora-opencode/index.ts' with { type: 'text' }
 
-export async function handleOpenCodeCommand(
-  action: string | undefined,
-  _rest: string[],
-  _flags: Record<string, string>
-) {
+export async function handleOpenCodeCommand(action: string | undefined) {
   if (action === 'install') {
     try {
       const pluginDir = join(homedir(), '.config', 'opencode', 'plugin')
