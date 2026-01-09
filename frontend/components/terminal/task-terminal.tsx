@@ -151,6 +151,7 @@ export function TaskTerminal({ taskName, cwd, className, agent = 'claude', aiMod
       }
       setTerminalFocused(false)
       clipboardAddonRef.current?.dispose()
+      clipboardAddonRef.current = null
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null

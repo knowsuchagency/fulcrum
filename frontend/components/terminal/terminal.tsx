@@ -162,6 +162,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       }
       setTerminalFocused(false)
       clipboardAddonRef.current?.dispose()
+      clipboardAddonRef.current = null
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
