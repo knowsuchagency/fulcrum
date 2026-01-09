@@ -90,7 +90,7 @@
       },
       "opencodePlanAgent": {
         "label": "计划模式",
-        "description": "受限/计划模式的代理名称。oh-my-opencode 使用 'Planner-Sisyphus'，原版 OpenCode 使用 'plan'。"
+        "description": "受限/计划模式的代理名称。oh-my-opencode 使用 'Planner-Sisyphus'，原版 OpenCode 使用 'plan'。注意：Planner-Sisyphus 从 OpenCode 的 plan 代理配置继承模型，因此上述模型覆盖可能不适用。请在 ~/.config/opencode/oh-my-opencode.json 中配置模型。"
       }
     },
     "language": {

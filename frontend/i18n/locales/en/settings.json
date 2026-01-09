@@ -90,7 +90,7 @@
       },
       "opencodePlanAgent": {
         "label": "Plan Mode",
-        "description": "Agent name for restricted/planning mode. Use 'Planner-Sisyphus' for oh-my-opencode, or 'plan' for vanilla OpenCode."
+        "description": "Agent name for restricted/planning mode. Use 'Planner-Sisyphus' for oh-my-opencode, or 'plan' for vanilla OpenCode. Note: Planner-Sisyphus inherits its model from OpenCode's plan agent config, so the model override above may not apply. Configure the model in ~/.config/opencode/oh-my-opencode.json instead."
       }
     },
     "language": {
