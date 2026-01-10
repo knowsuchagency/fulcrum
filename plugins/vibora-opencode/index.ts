@@ -28,7 +28,8 @@ async function runViboraCommand(args: string): Promise<{ exitCode: number; stdou
   return new Promise((resolve) => {
     exec(`${VIBORA_CMD} ${args}`, (error, stdout, stderr) => {
       if (error) {
-        resolve({ exitCode: (error as any).code || 1, stdout: stdout || '', stderr: stderr || (error as any).message })
+        const execError = error as NodeJS.ErrnoException
+        resolve({ exitCode: execError.code ? 1 : 1, stdout: stdout || '', stderr: stderr || execError.message || '' })
       } else {
         resolve({ exitCode: 0, stdout: stdout || '', stderr: stderr || '' })
       }
@@ -59,7 +60,7 @@ export const ViboraPlugin: Plugin = async ({ $, directory }) => {
       $`${VIBORA_CMD} --version`.quiet().nothrow().text(),
       runViboraCommand(`current-task --path ${directory}`),
     ])
-      .then(([_versionResult, taskResult]) => {
+      .then(([versionResult, taskResult]) => {
         if (!versionResult) {
           log("Vibora CLI not found")
           return false
