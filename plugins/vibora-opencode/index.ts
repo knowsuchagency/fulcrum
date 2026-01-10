@@ -1,10 +1,12 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { appendFileSync } from "node:fs"
 import { execFile } from "node:child_process"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 declare const process: { env: Record<string, string | undefined> }
 
-const LOG_FILE = "/tmp/vibora-opencode.log"
+const LOG_FILE = join(tmpdir(), "vibora-opencode.log")
 const NOISY_EVENTS = new Set([
   "message.part.updated",
   "file.watcher.updated",
