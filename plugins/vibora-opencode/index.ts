@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { appendFileSync } from "node:fs"
+import { execFile } from "node:child_process"
 
 declare const process: { env: Record<string, string | undefined> }
 
@@ -16,6 +17,24 @@ const log = (msg: string) => {
   } catch {
     // Silently ignore logging errors - logging is non-critical
   }
+}
+
+/**
+ * Execute vibora command using execFile with shell option for proper PATH resolution.
+ * Using execFile with explicit args array prevents shell injection while shell:true
+ * ensures PATH is properly resolved (for NVM, fnm, etc. managed node installations).
+ */
+async function runViboraCommand(args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    execFile(VIBORA_CMD, args, { shell: true }, (error, stdout, stderr) => {
+      if (error) {
+        const execError = error as NodeJS.ErrnoException
+        resolve({ exitCode: execError.code ? 1 : 1, stdout: stdout || '', stderr: stderr || execError.message || '' })
+      } else {
+        resolve({ exitCode: 0, stdout: stdout || '', stderr: stderr || '' })
+      }
+    })
+  })
 }
 
 let mainSessionId: string | null = null
@@ -39,7 +58,7 @@ export const ViboraPlugin: Plugin = async ({ $, directory }) => {
   } else {
     deferredContextCheck = Promise.all([
       $`${VIBORA_CMD} --version`.quiet().nothrow().text(),
-      $`${VIBORA_CMD} current-task --path ${directory}`.quiet().nothrow(),
+      runViboraCommand(['current-task', '--path', directory]),
     ])
       .then(([versionResult, taskResult]) => {
         if (!versionResult) {
@@ -84,11 +103,10 @@ export const ViboraPlugin: Plugin = async ({ $, directory }) => {
     ;(async () => {
       try {
         log(`Setting status: ${status}`)
-        const res =
-          await $`${VIBORA_CMD} current-task ${status} --path ${directory}`
-            .quiet()
-            .nothrow()
-        if (res.exitCode !== 0) log(`Status update failed: ${res.stderr}`)
+        const res = await runViboraCommand(['current-task', status, '--path', directory])
+        if (res.exitCode !== 0) {
+          log(`Status update failed: exitCode=${res.exitCode}, stderr=${res.stderr}`)
+        }
       } catch (e) {
         log(`Status update error: ${e}`)
       }
