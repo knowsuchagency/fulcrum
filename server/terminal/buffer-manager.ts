@@ -126,11 +126,11 @@ export class BufferManager {
 
   getContents(): string {
     const raw = this.chunks.map((c) => c.data).join('')
-    const filtered = this.filterProblematicSequences(raw)
-    // Prepend mouse mode sequences to restore the current state.
-    // This ensures mouse tracking works correctly after buffer replay,
-    // even if the original enable sequences were evicted from the buffer.
-    return this.getMouseModeSequences() + filtered
+    // Don't restore mouse mode - it's application-specific state, not display state.
+    // If a TUI that enabled mouse mode is still running, it will re-enable it when it redraws.
+    // If the TUI exited, the shell doesn't need mouse mode and restoring it causes garbage
+    // sequences like [<0;47;33m to appear when clicking in the terminal.
+    return this.filterProblematicSequences(raw)
   }
 
   clear(): void {
