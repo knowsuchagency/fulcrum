@@ -147,10 +147,10 @@ Configure your default agent globally in settings, override per-repository, or s
 The Vibora plugin for Claude Code enables seamless integration:
 
 - **Automatic Status Sync** — Task moves to "In Review" when Claude stops, "In Progress" when you respond
-- **Vibora Skill** — CLI documentation for task management (see `plugins/vibora/skills/`)
-- **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`
 - **Session Continuity** — Claude sessions are tied to task IDs
 - **MCP Server** — Task management tools available directly to Claude
+- **Vibora Skill** — CLI documentation for task management (see `plugins/vibora/skills/`)
+- **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`
 
 The plugin is automatically installed when Vibora starts. To install manually:
 
@@ -159,23 +159,22 @@ claude plugin marketplace add knowsuchagency/vibora
 claude plugin install vibora@vibora --scope user
 ```
 
-## OpenCode Plugin
+## OpenCode Integration
 
 The Vibora plugin for OpenCode enables seamless integration:
 
 - **Automatic Status Sync** — Task moves to "In Review" when OpenCode stops, "In Progress" when you respond
 - **Session Continuity** — OpenCode sessions are tied to task IDs
-- **Smart Context** — Automatically detects if you are in a Vibora task
-
-To install manually:
+- **MCP Server** — Task management tools available directly to OpenCode
 
 ```bash
-vibora opencode install
+vibora opencode install    # Install plugin + MCP server
+vibora opencode uninstall  # Remove both
 ```
 
-### MCP Tools
+## MCP Tools
 
-The plugin includes an MCP server that exposes task management and remote execution tools:
+Both Claude Code and OpenCode plugins include an MCP server that exposes task management and remote execution tools:
 
 **Task Management:**
 - `list_tasks` — List all tasks with optional status/repo filter

@@ -33,8 +33,9 @@ describe('worktrees command', () => {
       try {
         await handleWorktreesCommand('list', {})
       } catch (err) {
+        // Should get API error (connection refused), not validation error
         expect((err as Error).message).not.toContain('is required')
       }
-    })
+    }, { timeout: 30000 })
   })
 })

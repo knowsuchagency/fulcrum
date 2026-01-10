@@ -529,6 +529,18 @@ const opencodeInstallCommand = defineCommand({
   },
 })
 
+const opencodeUninstallCommand = defineCommand({
+  meta: {
+    name: 'uninstall',
+    description: 'Uninstall the OpenCode plugin',
+  },
+  args: globalArgs,
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleOpenCodeCommand('uninstall')
+  },
+})
+
 const opencodeCommand = defineCommand({
   meta: {
     name: 'opencode',
@@ -536,6 +548,7 @@ const opencodeCommand = defineCommand({
   },
   subCommands: {
     install: opencodeInstallCommand,
+    uninstall: opencodeUninstallCommand,
   },
 })
 

@@ -17,6 +17,7 @@ const guideSidebar = (prefix: string) => [
       { text: prefix === '/zh' ? '终端管理' : 'Terminal Management', link: `${prefix}/guide/terminals` },
       { text: prefix === '/zh' ? '远程服务器' : 'Remote Server', link: `${prefix}/guide/remote-server` },
       { text: prefix === '/zh' ? 'Claude 插件' : 'Claude Plugin', link: `${prefix}/guide/claude-plugin` },
+      { text: prefix === '/zh' ? 'OpenCode' : 'OpenCode', link: `${prefix}/guide/opencode` },
       { text: prefix === '/zh' ? '桌面应用' : 'Desktop App', link: `${prefix}/guide/desktop-app` },
     ],
   },

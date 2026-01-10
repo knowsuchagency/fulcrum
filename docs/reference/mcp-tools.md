@@ -1,12 +1,34 @@
 # MCP Tools
 
-The Vibora plugin includes an MCP server that exposes task management and remote execution tools to Claude.
+The Vibora plugin includes an MCP server that exposes task management and remote execution tools to AI coding agents.
 
 ## Setup
 
 ### Claude Code
 
 The MCP server is automatically available when using the Vibora plugin with Claude Code.
+
+### OpenCode
+
+The MCP server is automatically configured when you install the Vibora plugin:
+
+```bash
+vibora opencode install
+```
+
+This adds the Vibora MCP server to `~/.opencode/opencode.json`. You can verify the configuration:
+
+```json
+{
+  "mcp": {
+    "vibora": {
+      "type": "local",
+      "command": ["vibora", "mcp"],
+      "enabled": true
+    }
+  }
+}
+```
 
 ### Claude Desktop
 
@@ -33,12 +55,13 @@ List all tasks with optional filtering.
 | Name | Type | Description |
 |------|------|-------------|
 | `status` | string | Filter by status (IN_PROGRESS, IN_REVIEW, DONE, CANCELED) |
-| `repository` | string | Filter by repository name |
+| `repo` | string | Filter by repository name or path |
 
 **Example:**
 ```json
 {
-  "status": "IN_PROGRESS"
+  "status": "IN_PROGRESS",
+  "repo": "my-project"
 }
 ```
 
@@ -59,9 +82,10 @@ Create a new task with git worktree.
 | Name | Type | Description |
 |------|------|-------------|
 | `title` | string | Task title (required) |
+| `repoPath` | string | Absolute path to the git repository (required) |
+| `baseBranch` | string | Base branch for the worktree (default: main) |
+| `branch` | string | Branch name for the task worktree (auto-generated if omitted) |
 | `description` | string | Task description |
-| `repositoryId` | string | Repository ID (required) |
-| `baseBranch` | string | Branch to create worktree from |
 
 ### `update_task`
 
@@ -76,22 +100,24 @@ Update a task's title or description.
 
 ### `delete_task`
 
-Delete a task and its worktree.
+Delete a task and optionally its linked git worktree.
 
 **Parameters:**
 | Name | Type | Description |
 |------|------|-------------|
 | `id` | string | Task ID (required) |
+| `deleteWorktree` | boolean | Also delete the linked git worktree (default: false) |
 
 ### `move_task`
 
-Change a task's status.
+Move a task to a different status column.
 
 **Parameters:**
 | Name | Type | Description |
 |------|------|-------------|
 | `id` | string | Task ID (required) |
-| `status` | string | New status (IN_PROGRESS, IN_REVIEW, DONE, CANCELED) |
+| `status` | string | Target status (IN_PROGRESS, IN_REVIEW, DONE, CANCELED) |
+| `position` | number | Position in the column (0-indexed, defaults to end) |
 
 ### `list_repositories`
 
@@ -113,15 +139,16 @@ Send a notification to enabled channels.
 
 ### `execute_command`
 
-Execute a shell command on the Vibora server.
+Execute a shell command on the Vibora server. Supports persistent sessions for stateful workflows.
 
 **Parameters:**
 | Name | Type | Description |
 |------|------|-------------|
 | `command` | string | Command to execute (required) |
-| `sessionId` | string | Session ID for persistent environment |
-| `sessionName` | string | Human-readable session name |
-| `cwd` | string | Working directory |
+| `sessionId` | string | Session ID for stateful workflows. Omit to create new session. Reuse to maintain state. |
+| `cwd` | string | Initial working directory (only used when creating new session) |
+| `timeout` | number | Timeout in milliseconds (default: 30000) |
+| `name` | string | Optional session name for identification (only used when creating new session) |
 
 **Features:**
 - Persistent sessions with preserved environment
@@ -131,9 +158,9 @@ Execute a shell command on the Vibora server.
 **Example:**
 ```json
 {
-  "command": "cd /project && npm install",
+  "command": "npm install",
   "sessionId": "my-session",
-  "sessionName": "Project Setup"
+  "name": "Project Setup"
 }
 ```
 
@@ -151,13 +178,13 @@ List active command execution sessions.
 
 ### `update_exec_session`
 
-Rename a session.
+Update an existing command execution session (e.g., rename it).
 
 **Parameters:**
 | Name | Type | Description |
 |------|------|-------------|
 | `sessionId` | string | Session ID (required) |
-| `sessionName` | string | New name (required) |
+| `name` | string | New name for the session |
 
 ### `destroy_exec_session`
 
@@ -175,7 +202,7 @@ Claude can use these tools to manage tasks autonomously:
 ```
 I'll create a new task for implementing the authentication feature.
 
-[Uses create_task with title "Add user authentication" and repositoryId "abc123"]
+[Uses create_task with title "Add user authentication" and repoPath "/path/to/repo"]
 
 Task created. Let me check the current status of all tasks.
 
