@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { appendFileSync } from "node:fs"
+import { exec } from "node:child_process"
 
 declare const process: { env: Record<string, string | undefined> }
 
@@ -16,6 +17,23 @@ const log = (msg: string) => {
   } catch {
     // Silently ignore logging errors - logging is non-critical
   }
+}
+
+/**
+ * Execute vibora command using shell to ensure proper PATH resolution.
+ * This avoids issues with the $ template function that uses /usr/bin/env which
+ * may not have access to node or other binaries in PATH.
+ */
+async function runViboraCommand(args: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    exec(`${VIBORA_CMD} ${args}`, (error, stdout, stderr) => {
+      if (error) {
+        resolve({ exitCode: (error as any).code || 1, stdout: stdout || '', stderr: stderr || (error as any).message })
+      } else {
+        resolve({ exitCode: 0, stdout: stdout || '', stderr: stderr || '' })
+      }
+    })
+  })
 }
 
 let mainSessionId: string | null = null
@@ -39,9 +57,9 @@ export const ViboraPlugin: Plugin = async ({ $, directory }) => {
   } else {
     deferredContextCheck = Promise.all([
       $`${VIBORA_CMD} --version`.quiet().nothrow().text(),
-      $`${VIBORA_CMD} current-task --path ${directory}`.quiet().nothrow(),
+      runViboraCommand(`current-task --path ${directory}`),
     ])
-      .then(([versionResult, taskResult]) => {
+      .then(([_versionResult, taskResult]) => {
         if (!versionResult) {
           log("Vibora CLI not found")
           return false
@@ -84,11 +102,10 @@ export const ViboraPlugin: Plugin = async ({ $, directory }) => {
     ;(async () => {
       try {
         log(`Setting status: ${status}`)
-        const res =
-          await $`${VIBORA_CMD} current-task ${status} --path ${directory}`
-            .quiet()
-            .nothrow()
-        if (res.exitCode !== 0) log(`Status update failed: ${res.stderr}`)
+        const res = await runViboraCommand(`${status} --path ${directory}`)
+        if (res.exitCode !== 0) {
+          log(`Status update failed: exitCode=${res.exitCode}, stderr=${res.stderr}`)
+        }
       } catch (e) {
         log(`Status update error: ${e}`)
       }
