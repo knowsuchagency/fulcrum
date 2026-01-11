@@ -35,6 +35,7 @@ export function ProjectTerminalHeader({ projectInfo }: ProjectTerminalHeaderProp
         <Link
           to="/projects/$projectId"
           params={{ projectId: projectInfo.projectId }}
+          search={{ tab: 'workspace' }}
           className="flex shrink-0 items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 max-w-[50%]"
         >
           <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} className="shrink-0" />
