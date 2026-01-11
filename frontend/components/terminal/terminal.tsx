@@ -2,12 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { ClipboardAddon, type IClipboardProvider, type ClipboardSelectionType } from '@xterm/addon-clipboard'
 
-const writeOnlyClipboardProvider: IClipboardProvider = {
-  readText: () => '',
-  writeText: (_selection: ClipboardSelectionType, text: string) => navigator.clipboard.writeText(text),
-}
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
@@ -32,7 +27,6 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
-  const clipboardAddonRef = useRef<ClipboardAddon | null>(null)
   const onResizeRef = useRef(onResize)
   const onFocusRef = useRef(onFocus)
   const onReadyRef = useRef(onReady)
@@ -81,16 +75,13 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
 
     const fitAddon = new FitAddon()
     const webLinksAddon = new WebLinksAddon()
-    const clipboardAddon = new ClipboardAddon(undefined, writeOnlyClipboardProvider)
 
     term.loadAddon(fitAddon)
     term.loadAddon(webLinksAddon)
-    term.loadAddon(clipboardAddon)
     term.open(containerRef.current)
 
     termRef.current = term
     fitAddonRef.current = fitAddon
-    clipboardAddonRef.current = clipboardAddon
 
     // Initial fit after container is sized, with delayed refit to catch layout stabilization
     requestAnimationFrame(() => {
@@ -166,8 +157,6 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
         term.textarea.removeEventListener('blur', handleTerminalBlur)
       }
       setTerminalFocused(false)
-      clipboardAddonRef.current?.dispose()
-      clipboardAddonRef.current = null
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
