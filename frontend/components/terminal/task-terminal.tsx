@@ -5,6 +5,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
+import { registerOsc52Handler } from './osc52-handler'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -122,6 +123,8 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
     term.loadAddon(webLinksAddon)
     term.open(containerRef.current)
 
+    const osc52Cleanup = registerOsc52Handler(term)
+
     termRef.current = term
     fitAddonRef.current = fitAddon
 
@@ -152,6 +155,7 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
 
     return () => {
       clearTimeout(refitTimeout)
+      osc52Cleanup()
       if (term.textarea) {
         term.textarea.removeEventListener('focus', handleTerminalFocus)
         term.textarea.removeEventListener('blur', handleTerminalBlur)

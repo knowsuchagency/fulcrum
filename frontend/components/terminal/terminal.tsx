@@ -5,6 +5,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
+import { registerOsc52Handler } from './osc52-handler'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
@@ -80,6 +81,8 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
     term.loadAddon(webLinksAddon)
     term.open(containerRef.current)
 
+    const osc52Cleanup = registerOsc52Handler(term)
+
     termRef.current = term
     fitAddonRef.current = fitAddon
 
@@ -152,6 +155,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       resizeObserver.disconnect()
       visibilityObserver.disconnect()
+      osc52Cleanup()
       if (term.textarea) {
         term.textarea.removeEventListener('focus', handleTerminalFocus)
         term.textarea.removeEventListener('blur', handleTerminalBlur)
