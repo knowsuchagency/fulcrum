@@ -578,9 +578,9 @@ export const RootStore = types
           //    Button code 35 = motion flag (32) + no button (3) = mouse moving without clicking
           //    We keep: clicks (0-2), drags (32-34), wheel (64-65)
           //
-          // 2. OSC responses (ESC ]) - color/capability query responses
-          //    EXCEPT OSC 10/11 which are needed for theme detection
+          // 2. ALL OSC responses (ESC ]) - these are xterm.js responses to queries
           //    e.g., background color: ESC]11;rgb:0a0a/0a0a/0a0aST
+          //    These should NEVER be sent to the server - they're for xterm.js internal use
           //
           // 3. DCS responses (ESC P) - DECRQSS and other device control responses
           //    e.g., ESC P 1016;2$y ST
@@ -596,7 +596,7 @@ export const RootStore = types
           const ESC = '\u001b'
           if (
             new RegExp(`^${ESC}\\[<35;\\d+;\\d+[Mm]$`).test(data) || // Mouse motion
-            (new RegExp(`^${ESC}\\]`).test(data) && !new RegExp(`^${ESC}\\](10|11);`).test(data)) || // OSC sequences (except 10/11 for theme detection)
+            new RegExp(`^${ESC}\\]`).test(data) || // ALL OSC sequences (responses to color/capability queries)
             new RegExp(`^${ESC}P`).test(data) || // DCS sequences
             /\$y/.test(data) || // DECRQSS content (anywhere in data)
             new RegExp(`^${ESC}\\[\\d+;\\d+R$`).test(data) || // CPR (Cursor Position Report) response

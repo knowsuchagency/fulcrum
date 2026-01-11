@@ -64,61 +64,80 @@ describe('DtachService', () => {
   })
 
   describe('getCreateCommand', () => {
-    test('returns dtach command array with correct flags', () => {
+    test('returns dtach command with correct flags', () => {
       const service = new DtachService()
       const cmd = service.getCreateCommand('test-id')
 
       expect(cmd[0]).toBe('dtach')
-      expect(cmd).toContain('-n') // Don't attach after creating
-      expect(cmd).toContain('-z') // Disable suspend key
-    })
-
-    test('includes socket path in command', () => {
-      const service = new DtachService()
-      const cmd = service.getCreateCommand('test-id')
-      const socketPath = service.getSocketPath('test-id')
-
-      expect(cmd).toContain(socketPath)
+      expect(cmd).toContain('-n')
+      expect(cmd).toContain('-z')
+      expect(cmd).toContain('-li')
     })
 
     test('uses SHELL env var or defaults to /bin/bash', () => {
       const originalShell = process.env.SHELL
 
-      // Test with custom shell
       process.env.SHELL = '/bin/zsh'
       const service1 = new DtachService()
       const cmd1 = service1.getCreateCommand('test-1')
       expect(cmd1).toContain('/bin/zsh')
 
-      // Test with no shell (default)
       delete process.env.SHELL
       const service2 = new DtachService()
       const cmd2 = service2.getCreateCommand('test-2')
       expect(cmd2).toContain('/bin/bash')
 
-      // Restore
       if (originalShell) {
         process.env.SHELL = originalShell
       }
     })
-  })
-
-  describe('getAttachCommand', () => {
-    test('returns dtach attach command array', () => {
-      const service = new DtachService()
-      const cmd = service.getAttachCommand('test-id')
-
-      expect(cmd[0]).toBe('dtach')
-      expect(cmd).toContain('-a') // Attach mode
-      expect(cmd).toContain('-z') // Disable suspend key
-    })
 
     test('includes socket path in command', () => {
       const service = new DtachService()
-      const cmd = service.getAttachCommand('test-id')
+      const cmd = service.getCreateCommand('test-id')
       const socketPath = service.getSocketPath('test-id')
 
       expect(cmd).toContain(socketPath)
+    })
+  })
+
+  describe('getAttachCommand', () => {
+    test('returns bash wrapper command', () => {
+      const service = new DtachService()
+      const cmd = service.getAttachCommand('test-id')
+
+      expect(cmd[0]).toBe('bash')
+      expect(cmd).toContain('-c')
+    })
+
+    test('includes stty -echoctl to suppress control char echo', () => {
+      const service = new DtachService()
+      const cmd = service.getAttachCommand('test-id')
+      const bashCommand = cmd.find((arg) => arg.includes('stty'))
+
+      expect(bashCommand).toBeDefined()
+      expect(bashCommand).toContain('stty -echoctl')
+    })
+
+    test('includes dtach -a with socket path', () => {
+      const service = new DtachService()
+      const cmd = service.getAttachCommand('test-id')
+      const socketPath = service.getSocketPath('test-id')
+      const bashCommand = cmd.find((arg) => arg.includes('dtach'))
+
+      expect(bashCommand).toBeDefined()
+      expect(bashCommand).toContain('dtach -a')
+      expect(bashCommand).toContain(socketPath)
+      expect(bashCommand).toContain('-z')
+    })
+
+    test('uses exec to replace wrapper shell with dtach', () => {
+      const service = new DtachService()
+      const cmd = service.getAttachCommand('test-id')
+      const bashCommand = cmd.find((arg) => arg.includes('exec'))
+
+      expect(bashCommand).toBeDefined()
+      expect(bashCommand).toContain('exec dtach')
     })
   })
 

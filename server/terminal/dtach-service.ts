@@ -118,18 +118,15 @@ export class DtachService {
   getCreateCommand(terminalId: string): string[] {
     const socketPath = this.getSocketPath(terminalId)
     const shell = process.env.SHELL || '/bin/bash'
-    // -n: don't attach after creating
-    // -z: disable suspend key
-    // -li: login + interactive shell (sources .profile -> .bashrc for starship/etc)
     return ['dtach', '-n', socketPath, '-z', shell, '-li']
   }
 
   // Get command to attach to an existing session
   getAttachCommand(terminalId: string): string[] {
     const socketPath = this.getSocketPath(terminalId)
-    // -a: attach to existing socket
-    // -z: disable suspend key (Ctrl-Z won't detach)
-    return ['dtach', '-a', socketPath, '-z']
+    // -echoctl: don't echo control chars as ^X (prevents ^P showing for Ctrl+P)
+    // Normal echo is preserved so typing is visible. Only control char display is suppressed.
+    return ['bash', '-c', `stty -echoctl && exec dtach -a ${socketPath} -z`]
   }
 
   // Kill the dtach session and all its child processes
