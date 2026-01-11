@@ -43,6 +43,7 @@ import {
   useRestartVibora,
   useClaudeCodeLightTheme,
   useClaudeCodeDarkTheme,
+  useViboraVersion,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
   type EditorApp,
@@ -97,6 +98,7 @@ function SettingsPage() {
   const { theme, syncClaudeCode, changeTheme } = useThemeSync()
   const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
+  const { version } = useViboraVersion()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -666,6 +668,7 @@ function SettingsPage() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <h1 className="text-sm font-medium">{t('title')}</h1>
+        {version && <span className="text-xs text-muted-foreground">v{version}</span>}
       </div>
 
       <div className="flex-1 overflow-auto p-6">

@@ -108,8 +108,8 @@ export function createApp() {
   if (process.env.NODE_ENV === 'production' || process.env.VIBORA_PACKAGE_ROOT) {
     const distPath = getDistPath()
 
-    // Helper to serve static files with proper MIME types
-    const serveFile = async (filePath: string) => {
+    // Helper to serve static files with proper MIME types and caching
+    const serveFile = async (filePath: string, immutableCache = false) => {
       const ext = filePath.split('.').pop()?.toLowerCase()
       const mimeTypes: Record<string, string> = {
         html: 'text/html',
@@ -128,16 +128,24 @@ export function createApp() {
         ogg: 'audio/ogg',
       }
       const content = await readFile(filePath)
+      // Assets with content hashes can be cached forever (immutable)
+      // Other files should revalidate on each request
+      const cacheControl = immutableCache
+        ? 'public, max-age=31536000, immutable'
+        : 'no-cache, must-revalidate'
       return new Response(content, {
-        headers: { 'Content-Type': mimeTypes[ext || ''] || 'application/octet-stream' },
+        headers: {
+          'Content-Type': mimeTypes[ext || ''] || 'application/octet-stream',
+          'Cache-Control': cacheControl,
+        },
       })
     }
 
-    // Serve assets
+    // Serve assets (immutable cache - files have content hashes)
     app.get('/assets/*', async (c) => {
       const assetPath = join(distPath, c.req.path)
       if (existsSync(assetPath)) {
-        return serveFile(assetPath)
+        return serveFile(assetPath, true)
       }
       return c.notFound()
     })
@@ -166,12 +174,13 @@ export function createApp() {
     // SPA fallback - serve index.html for all other routes (except API and WebSocket)
     app.get('*', async (c, next) => {
       const path = c.req.path
-      // Skip API routes, WebSocket routes, and health check
       if (path.startsWith('/api/') || path.startsWith('/ws/') || path === '/health') {
         return next()
       }
       const html = await readFile(join(distPath, 'index.html'), 'utf-8')
-      return c.html(html)
+      return c.html(html, {
+        headers: { 'Cache-Control': 'no-cache, must-revalidate' },
+      })
     })
   }
 

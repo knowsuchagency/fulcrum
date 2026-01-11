@@ -2,7 +2,12 @@ import { useEffect, useRef, useCallback } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { ClipboardAddon } from '@xterm/addon-clipboard'
+import { ClipboardAddon, type IClipboardProvider, type ClipboardSelectionType } from '@xterm/addon-clipboard'
+
+const writeOnlyClipboardProvider: IClipboardProvider = {
+  readText: () => '',
+  writeText: (_selection: ClipboardSelectionType, text: string) => navigator.clipboard.writeText(text),
+}
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
 import { useKeyboardContext } from '@/contexts/keyboard-context'
@@ -76,7 +81,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
 
     const fitAddon = new FitAddon()
     const webLinksAddon = new WebLinksAddon()
-    const clipboardAddon = new ClipboardAddon()
+    const clipboardAddon = new ClipboardAddon(undefined, writeOnlyClipboardProvider)
 
     term.loadAddon(fitAddon)
     term.loadAddon(webLinksAddon)

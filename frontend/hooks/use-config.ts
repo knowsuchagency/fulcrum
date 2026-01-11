@@ -383,6 +383,26 @@ export function useRestartVibora() {
   })
 }
 
+interface HealthResponse {
+  status: string
+  version: string | null
+  uptime: number
+}
+
+export function useViboraVersion() {
+  const query = useQuery({
+    queryKey: ['health'],
+    queryFn: () => fetchJSON<HealthResponse>(`${API_BASE}/health`),
+    staleTime: Infinity,
+  })
+
+  return {
+    ...query,
+    version: query.data?.version ?? null,
+    uptime: query.data?.uptime ?? null,
+  }
+}
+
 // Legacy hook aliases for backward compatibility
 /** @deprecated Use useEditorSshPort instead */
 export const useSshPort = useEditorSshPort
