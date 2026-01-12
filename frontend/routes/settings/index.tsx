@@ -120,7 +120,7 @@ function SettingsPage() {
   const [saved, setSaved] = useState(false)
 
   // Notification settings local state
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [toastEnabled, setToastEnabled] = useState(true)
   const [desktopEnabled, setDesktopEnabled] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(false)

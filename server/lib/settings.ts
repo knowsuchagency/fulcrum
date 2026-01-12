@@ -437,10 +437,20 @@ export function updateSettingByPath(settingPath: string, value: unknown): Settin
     }
   }
 
+  const oldValue = getNestedValue(parsed, settingPath)
   setNestedValue(parsed, settingPath, value)
   parsed._schemaVersion = CURRENT_SCHEMA_VERSION
 
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
+
+  // Log setting change (mask sensitive values)
+  const sensitiveKeys = ['linearApiKey', 'githubPat', 'cloudflareApiToken', 'apiKey']
+  const isSensitive = sensitiveKeys.some(key => settingPath.includes(key))
+  const logValue = isSensitive ? '***' : value
+  const logOldValue = isSensitive ? '***' : oldValue
+  if (oldValue !== value) {
+    log.settings.info('Setting updated', { path: settingPath, from: logOldValue, to: logValue })
+  }
 
   return getSettings()
 }
@@ -556,7 +566,7 @@ export function getNotificationSettings(): NotificationSettings {
     }
 
     return {
-      enabled: notifications.enabled ?? false,
+      enabled: notifications.enabled ?? true,
       toast: { enabled: true, ...notifications.toast },
       desktop: { enabled: true, ...notifications.desktop },
       sound: { enabled: false, ...notifications.sound },
@@ -596,6 +606,33 @@ export function updateNotificationSettings(updates: Partial<NotificationSettings
 
   parsed.notifications = updated
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
+
+  // Log what changed
+  const changes: Record<string, { from: unknown; to: unknown }> = {}
+  if (updates.enabled !== undefined && updates.enabled !== current.enabled) {
+    changes.enabled = { from: current.enabled, to: updates.enabled }
+  }
+  if (updates.toast?.enabled !== undefined && updates.toast.enabled !== current.toast.enabled) {
+    changes['toast.enabled'] = { from: current.toast.enabled, to: updates.toast.enabled }
+  }
+  if (updates.desktop?.enabled !== undefined && updates.desktop.enabled !== current.desktop.enabled) {
+    changes['desktop.enabled'] = { from: current.desktop.enabled, to: updates.desktop.enabled }
+  }
+  if (updates.sound?.enabled !== undefined && updates.sound.enabled !== current.sound.enabled) {
+    changes['sound.enabled'] = { from: current.sound.enabled, to: updates.sound.enabled }
+  }
+  if (updates.slack?.enabled !== undefined && updates.slack.enabled !== current.slack.enabled) {
+    changes['slack.enabled'] = { from: current.slack.enabled, to: updates.slack.enabled }
+  }
+  if (updates.discord?.enabled !== undefined && updates.discord.enabled !== current.discord.enabled) {
+    changes['discord.enabled'] = { from: current.discord.enabled, to: updates.discord.enabled }
+  }
+  if (updates.pushover?.enabled !== undefined && updates.pushover.enabled !== current.pushover.enabled) {
+    changes['pushover.enabled'] = { from: current.pushover.enabled, to: updates.pushover.enabled }
+  }
+  if (Object.keys(changes).length > 0) {
+    log.settings.info('Notification settings updated', { changes })
+  }
 
   return updated
 }
