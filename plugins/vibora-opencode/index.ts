@@ -32,8 +32,18 @@ async function runViboraCommand(args: string[]): Promise<{ exitCode: number; std
     let stdout = ''
     let stderr = ''
     let resolved = false
+    let processExited = false
+    let killTimeoutId: ReturnType<typeof setTimeout> | null = null
 
     const child = spawn(VIBORA_CMD, args, { shell: true })
+
+    const cleanup = () => {
+      processExited = true
+      if (killTimeoutId) {
+        clearTimeout(killTimeoutId)
+        killTimeoutId = null
+      }
+    }
 
     child.stdout?.on('data', (data) => {
       stdout += data.toString()
@@ -44,6 +54,7 @@ async function runViboraCommand(args: string[]): Promise<{ exitCode: number; std
     })
 
     child.on('close', (code) => {
+      cleanup()
       if (!resolved) {
         resolved = true
         resolve({ exitCode: code || 0, stdout, stderr })
@@ -51,6 +62,7 @@ async function runViboraCommand(args: string[]): Promise<{ exitCode: number; std
     })
 
     child.on('error', (err) => {
+      cleanup()
       if (!resolved) {
         resolved = true
         resolve({ exitCode: 1, stdout, stderr: err.message || '' })
@@ -63,8 +75,10 @@ async function runViboraCommand(args: string[]): Promise<{ exitCode: number; std
         resolved = true
         log(`Command timeout: ${VIBORA_CMD} ${args.join(' ')}`)
         child.kill('SIGTERM')
-        setTimeout(() => {
-          if (!resolved) {
+        // Schedule SIGKILL if process doesn't exit after SIGTERM
+        killTimeoutId = setTimeout(() => {
+          if (!processExited) {
+            log(`Process didn't exit after SIGTERM, sending SIGKILL`)
             child.kill('SIGKILL')
           }
         }, 2000)
@@ -142,13 +156,14 @@ export const ViboraPlugin: Plugin = async ({ $, directory }) => {
     if (status === lastStatus) return
 
     cancelPendingIdle()
-    lastStatus = status
 
     if (pendingStatusCommand) {
       log(`Status change already in progress, will retry after ${STATUS_CHANGE_DEBOUNCE_MS}ms`)
       setTimeout(() => setStatus(status), STATUS_CHANGE_DEBOUNCE_MS)
       return
     }
+
+    lastStatus = status
 
     ;(async () => {
       try {
