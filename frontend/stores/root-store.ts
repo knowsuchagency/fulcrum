@@ -556,11 +556,16 @@ export const RootStore = types
             return false // Prevent xterm from processing (would send regular CR)
           }
 
-          // In desktop mode (iframe), stop Escape propagation to prevent native layer handling
-          // Do NOT call preventDefault() - it interferes with xterm.js's key processing
-          // and causes intermittent failures where Escape/Ctrl+C stop working
-          if (event.type === 'keydown' && event.key === 'Escape' && window.parent !== window) {
+          // Handle Escape key explicitly to ensure it always works
+          // Bypass xterm.js key processing which can intermittently fail
+          if (event.type === 'keydown' && event.key === 'Escape') {
+            event.preventDefault()
             event.stopPropagation()
+            getWs().send({
+              type: 'terminal:input',
+              payload: { terminalId, data: '\x1b' },
+            })
+            return false // We handled it
           }
 
           return true // Allow all other keys to be processed normally
