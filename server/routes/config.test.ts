@@ -297,6 +297,75 @@ describe('Config Routes', () => {
       expect(body.slack.enabled).toBe(true)
       expect(body.slack.webhookUrl).toBe('https://hooks.slack.com/services/test')
     })
+
+    test('returns _updatedAt timestamp in response', async () => {
+      const { get } = createTestApp()
+      const res = await get('/api/config/notifications')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body._updatedAt).toBeDefined()
+      expect(typeof body._updatedAt).toBe('number')
+    })
+
+    test('returns 409 when client has stale timestamp', async () => {
+      const { get, put } = createTestApp()
+
+      // Get current settings with timestamp
+      const initialRes = await get('/api/config/notifications')
+      const initial = await initialRes.json()
+      const staleTimestamp = initial._updatedAt
+
+      // Small delay to ensure timestamp changes (millisecond precision)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+
+      // Simulate another client updating (changes the server timestamp)
+      await put('/api/config/notifications', { enabled: true })
+
+      // Try to update with the stale timestamp
+      const conflictRes = await put('/api/config/notifications', {
+        enabled: false,
+        _updatedAt: staleTimestamp,
+      })
+      const conflictBody = await conflictRes.json()
+
+      expect(conflictRes.status).toBe(409)
+      expect(conflictBody.error).toBe('Settings changed by another client')
+      expect(conflictBody.current).toBeDefined()
+      expect(conflictBody.current._updatedAt).toBeDefined()
+    })
+
+    test('succeeds when client has current timestamp', async () => {
+      const { get, put } = createTestApp()
+
+      // Get current settings with timestamp
+      const initialRes = await get('/api/config/notifications')
+      const initial = await initialRes.json()
+      const currentTimestamp = initial._updatedAt
+
+      // Update with the current timestamp
+      const res = await put('/api/config/notifications', {
+        enabled: false,
+        _updatedAt: currentTimestamp,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.enabled).toBe(false)
+    })
+
+    test('succeeds without timestamp for backward compatibility', async () => {
+      const { put } = createTestApp()
+
+      // Update without providing _updatedAt
+      const res = await put('/api/config/notifications', {
+        enabled: true,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.enabled).toBe(true)
+    })
   })
 
   describe('POST /api/config/notifications/test/:channel', () => {

@@ -44,11 +44,13 @@ import {
   useClaudeCodeLightTheme,
   useClaudeCodeDarkTheme,
   useViboraVersion,
+  NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
   type EditorApp,
   type ClaudeCodeTheme,
 } from '@/hooks/use-config'
+import { useQueryClient } from '@tanstack/react-query'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import { ModelPicker } from '@/components/opencode/model-picker'
 import {
@@ -104,6 +106,7 @@ function SettingsPage() {
   const updateNotifications = useUpdateNotificationSettings()
   const updateZAi = useUpdateZAiSettings()
   const testChannel = useTestNotificationChannel()
+  const queryClient = useQueryClient()
 
   const [localPort, setLocalPort] = useState('')
   const [localReposDir, setLocalReposDir] = useState('')
@@ -413,7 +416,7 @@ function SettingsPage() {
       )
     }
 
-    // Save notification settings
+    // Save notification settings with optimistic locking
     if (hasNotificationChanges) {
       promises.push(
         new Promise((resolve) => {
@@ -426,8 +429,18 @@ function SettingsPage() {
               slack: { enabled: slackEnabled, webhookUrl: slackWebhook },
               discord: { enabled: discordEnabled, webhookUrl: discordWebhook },
               pushover: { enabled: pushoverEnabled, appToken: pushoverAppToken, userKey: pushoverUserKey },
+              _updatedAt: notificationSettings?._updatedAt, // Include timestamp for conflict detection
             },
-            { onSettled: resolve }
+            {
+              onSettled: resolve,
+              onError: (error) => {
+                if (error instanceof NotificationSettingsConflictError) {
+                  // Another tab/device changed the settings - refresh to get current state
+                  toast.warning(t('notifications.conflictWarning') || 'Settings changed elsewhere - refreshing')
+                  queryClient.invalidateQueries({ queryKey: ['config', 'notifications'] })
+                }
+              },
+            }
           )
         })
       )

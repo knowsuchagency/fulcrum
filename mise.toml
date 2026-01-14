@@ -151,11 +151,19 @@ NODE_ENV=production HOST="$HOST" bun server/index.ts
 """
 
 [tasks.test]
-description = "Run all tests (quiet mode, errors only)"
+description = "Run linter and all tests (quiet mode, errors only)"
 usage = 'flag "-v" "--verbose" help="Show all test output"'
 run = """
 #!/usr/bin/env bash
+set -e
 set -o pipefail
+
+# Run linter first
+echo "Running linter..." >&2
+bunx eslint . || exit 1
+
+# Run tests
+echo "Running tests..." >&2
 if [ "$usage_verbose" = "true" ]; then
   bun test
 else

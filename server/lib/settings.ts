@@ -535,7 +535,13 @@ export interface NotificationSettings {
   slack: SlackNotificationConfig
   discord: DiscordNotificationConfig
   pushover: PushoverNotificationConfig
+  _updatedAt?: number // Timestamp for optimistic locking - prevents stale tabs from overwriting settings
 }
+
+// Result type for updateNotificationSettings - either success or conflict
+export type NotificationSettingsUpdateResult =
+  | NotificationSettings
+  | { conflict: true; current: NotificationSettings }
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enabled: true,
@@ -553,7 +559,7 @@ export function getNotificationSettings(): NotificationSettings {
   const settingsPath = getSettingsPath()
 
   if (!fs.existsSync(settingsPath)) {
-    return DEFAULT_NOTIFICATION_SETTINGS
+    return { ...DEFAULT_NOTIFICATION_SETTINGS, _updatedAt: Date.now() }
   }
 
   try {
@@ -562,7 +568,7 @@ export function getNotificationSettings(): NotificationSettings {
     const notifications = parsed.notifications as Partial<NotificationSettings> | undefined
 
     if (!notifications) {
-      return DEFAULT_NOTIFICATION_SETTINGS
+      return { ...DEFAULT_NOTIFICATION_SETTINGS, _updatedAt: Date.now() }
     }
 
     return {
@@ -573,14 +579,19 @@ export function getNotificationSettings(): NotificationSettings {
       slack: { enabled: false, ...notifications.slack },
       discord: { enabled: false, ...notifications.discord },
       pushover: { enabled: false, ...notifications.pushover },
+      _updatedAt: notifications._updatedAt ?? Date.now(),
     }
   } catch {
-    return DEFAULT_NOTIFICATION_SETTINGS
+    return { ...DEFAULT_NOTIFICATION_SETTINGS, _updatedAt: Date.now() }
   }
 }
 
-// Update notification settings
-export function updateNotificationSettings(updates: Partial<NotificationSettings>): NotificationSettings {
+// Update notification settings with optional optimistic locking
+// If clientTimestamp is provided and doesn't match current _updatedAt, returns conflict
+export function updateNotificationSettings(
+  updates: Partial<NotificationSettings>,
+  clientTimestamp?: number
+): NotificationSettingsUpdateResult {
   ensureViboraDir()
   const settingsPath = getSettingsPath()
 
@@ -594,6 +605,19 @@ export function updateNotificationSettings(updates: Partial<NotificationSettings
   }
 
   const current = getNotificationSettings()
+
+  // Check for stale update (optimistic locking)
+  if (clientTimestamp !== undefined && current._updatedAt !== undefined) {
+    if (clientTimestamp !== current._updatedAt) {
+      log.settings.warn('Rejected stale notification settings update', {
+        clientTimestamp,
+        serverTimestamp: current._updatedAt,
+        attemptedChanges: updates,
+      })
+      return { conflict: true, current }
+    }
+  }
+
   const updated: NotificationSettings = {
     enabled: updates.enabled ?? current.enabled,
     toast: { ...current.toast, ...updates.toast },
@@ -602,6 +626,7 @@ export function updateNotificationSettings(updates: Partial<NotificationSettings
     slack: { ...current.slack, ...updates.slack },
     discord: { ...current.discord, ...updates.discord },
     pushover: { ...current.pushover, ...updates.pushover },
+    _updatedAt: Date.now(),
   }
 
   parsed.notifications = updated

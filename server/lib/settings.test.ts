@@ -313,14 +313,110 @@ describe('Settings', () => {
         await import('./settings')
       ensureViboraDir()
 
-      updateNotificationSettings({
+      const result = updateNotificationSettings({
         enabled: false,
         sound: { enabled: false },
       })
 
+      // Should return the updated settings, not a conflict
+      expect('conflict' in result).toBe(false)
       const settings = getNotificationSettings()
       expect(settings.enabled).toBe(false)
       expect(settings.sound.enabled).toBe(false)
+    })
+
+    test('includes _updatedAt timestamp in notification settings', async () => {
+      const { getNotificationSettings, ensureViboraDir } = await import('./settings')
+      ensureViboraDir()
+
+      const settings = getNotificationSettings()
+      expect(settings._updatedAt).toBeDefined()
+      expect(typeof settings._updatedAt).toBe('number')
+    })
+
+    test('updates _updatedAt timestamp on each update', async () => {
+      const { updateNotificationSettings, getNotificationSettings, ensureViboraDir } =
+        await import('./settings')
+      ensureViboraDir()
+
+      const before = getNotificationSettings()
+      const originalTimestamp = before._updatedAt
+
+      // Small delay to ensure timestamp changes
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      updateNotificationSettings({ enabled: true })
+      const after = getNotificationSettings()
+
+      expect(after._updatedAt).toBeDefined()
+      expect(after._updatedAt).toBeGreaterThan(originalTimestamp!)
+    })
+
+    test('rejects stale update when client timestamp does not match', async () => {
+      const { updateNotificationSettings, getNotificationSettings, ensureViboraDir } =
+        await import('./settings')
+      ensureViboraDir()
+
+      // Get current settings and timestamp
+      const current = getNotificationSettings()
+      const currentTimestamp = current._updatedAt
+
+      // Small delay to ensure timestamp changes (millisecond precision)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+
+      // Simulate another client updating the settings
+      updateNotificationSettings({ enabled: true })
+      const afterOtherUpdate = getNotificationSettings()
+
+      // Now try to update with the stale timestamp (should conflict)
+      const result = updateNotificationSettings(
+        { enabled: false },
+        currentTimestamp // This is now stale
+      )
+
+      // Should return conflict
+      expect('conflict' in result && result.conflict).toBe(true)
+      if ('conflict' in result) {
+        expect(result.current._updatedAt).toBe(afterOtherUpdate._updatedAt)
+      }
+
+      // Settings should not have changed
+      const settings = getNotificationSettings()
+      expect(settings.enabled).toBe(true) // Still what the "other client" set
+    })
+
+    test('accepts update when client timestamp matches', async () => {
+      const { updateNotificationSettings, getNotificationSettings, ensureViboraDir } =
+        await import('./settings')
+      ensureViboraDir()
+
+      // Get current timestamp
+      const current = getNotificationSettings()
+      const currentTimestamp = current._updatedAt
+
+      // Update with matching timestamp (should succeed)
+      const result = updateNotificationSettings({ enabled: false }, currentTimestamp)
+
+      // Should not be a conflict
+      expect('conflict' in result).toBe(false)
+
+      const settings = getNotificationSettings()
+      expect(settings.enabled).toBe(false)
+    })
+
+    test('allows update without client timestamp (backward compatibility)', async () => {
+      const { updateNotificationSettings, getNotificationSettings, ensureViboraDir } =
+        await import('./settings')
+      ensureViboraDir()
+
+      // Update without passing a timestamp
+      const result = updateNotificationSettings({ enabled: false })
+
+      // Should succeed (no conflict checking when no client timestamp)
+      expect('conflict' in result).toBe(false)
+
+      const settings = getNotificationSettings()
+      expect(settings.enabled).toBe(false)
     })
   })
 

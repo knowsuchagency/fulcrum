@@ -119,11 +119,26 @@ app.get('/notifications', (c) => {
 })
 
 // PUT /api/config/notifications - Update notification settings
+// Supports optimistic locking via _updatedAt field to prevent stale tabs from overwriting
 app.put('/notifications', async (c) => {
   try {
-    const body = await c.req.json<Partial<NotificationSettings>>()
-    const updated = updateNotificationSettings(body)
-    return c.json(updated)
+    const body = await c.req.json<Partial<NotificationSettings> & { _updatedAt?: number }>()
+    const { _updatedAt, ...updates } = body
+
+    const result = updateNotificationSettings(updates, _updatedAt)
+
+    // Check if this is a conflict response
+    if ('conflict' in result && result.conflict) {
+      return c.json(
+        {
+          error: 'Settings changed by another client',
+          current: result.current,
+        },
+        409
+      )
+    }
+
+    return c.json(result)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update notifications' }, 400)
   }

@@ -282,6 +282,18 @@ export interface NotificationSettings {
   slack: { enabled: boolean; webhookUrl: string }
   discord: { enabled: boolean; webhookUrl: string }
   pushover: { enabled: boolean; appToken: string; userKey: string }
+  _updatedAt?: number // Timestamp for optimistic locking
+}
+
+// Error class for 409 conflicts from stale updates
+export class NotificationSettingsConflictError extends Error {
+  public readonly current: NotificationSettings
+
+  constructor(message: string, current: NotificationSettings) {
+    super(message)
+    this.name = 'NotificationSettingsConflictError'
+    this.current = current
+  }
 }
 
 interface NotificationTestResult {
@@ -301,11 +313,29 @@ export function useUpdateNotificationSettings() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (settings: Partial<NotificationSettings>) =>
-      fetchJSON<NotificationSettings>(`${API_BASE}/api/config/notifications`, {
+    mutationFn: async (settings: Partial<NotificationSettings> & { _updatedAt?: number }) => {
+      const res = await fetch(`${API_BASE}/api/config/notifications`, {
         method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
-      }),
+      })
+
+      const body = await res.json()
+
+      if (res.status === 409) {
+        // Server rejected the update because another client changed the settings
+        throw new NotificationSettingsConflictError(
+          body.error || 'Settings changed by another client',
+          body.current as NotificationSettings
+        )
+      }
+
+      if (!res.ok) {
+        throw new Error(body.error || 'Failed to update notification settings')
+      }
+
+      return body as NotificationSettings
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['config', 'notifications'] })
     },
