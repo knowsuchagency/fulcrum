@@ -1733,7 +1733,7 @@ function SettingsPage() {
           <Button
             size="sm"
             onClick={handleSaveAll}
-            disabled={!hasChanges || isLoading || updateConfig.isPending}
+            disabled={!hasChanges || isLoading || updateConfig.isPending || updateNotifications.isPending || updateZAi.isPending || updateDeploymentSettings.isPending}
           >
             {tc('buttons.save')}
           </Button>
