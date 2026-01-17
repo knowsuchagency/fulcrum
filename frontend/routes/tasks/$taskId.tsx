@@ -642,7 +642,7 @@ function TaskView() {
                   >
                     <HugeiconsIcon icon={Link01Icon} size={14} strokeWidth={2} />
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
+                  <DropdownMenuContent align="start" className="w-auto">
                     {task.links.map((link) => (
                       <DropdownMenuItem
                         key={link.id}
