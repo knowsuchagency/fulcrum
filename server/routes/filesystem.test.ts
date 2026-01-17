@@ -579,6 +579,180 @@ describe('Filesystem Routes', () => {
     })
   })
 
+  describe('POST /api/fs/edit', () => {
+    test('edits file successfully with single match', async () => {
+      writeFileSync(join(tempDir, 'test.txt'), 'hello world')
+
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'test.txt',
+        root: tempDir,
+        old_string: 'hello',
+        new_string: 'goodbye',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.success).toBe(true)
+      expect(body.size).toBeGreaterThan(0)
+      expect(body.mtime).toBeDefined()
+
+      // Verify content was changed
+      const { readFileSync } = await import('node:fs')
+      const content = readFileSync(join(tempDir, 'test.txt'), 'utf-8')
+      expect(content).toBe('goodbye world')
+    })
+
+    test('returns 400 when string not found', async () => {
+      writeFileSync(join(tempDir, 'test.txt'), 'hello world')
+
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'test.txt',
+        root: tempDir,
+        old_string: 'nonexistent',
+        new_string: 'replacement',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('String not found in file')
+    })
+
+    test('returns 400 when string found multiple times', async () => {
+      writeFileSync(join(tempDir, 'test.txt'), 'foo bar foo baz foo')
+
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'test.txt',
+        root: tempDir,
+        old_string: 'foo',
+        new_string: 'qux',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('found 3 times')
+      expect(body.error).toContain('provide more context')
+    })
+
+    test('returns 400 when path is missing', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        root: tempDir,
+        old_string: 'foo',
+        new_string: 'bar',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('path is required')
+    })
+
+    test('returns 400 when root is missing', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'test.txt',
+        old_string: 'foo',
+        new_string: 'bar',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('root is required')
+    })
+
+    test('returns 400 when old_string is missing', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'test.txt',
+        root: tempDir,
+        new_string: 'bar',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('old_string is required')
+    })
+
+    test('returns 400 when new_string is missing', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'test.txt',
+        root: tempDir,
+        old_string: 'foo',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('new_string is required')
+    })
+
+    test('returns 403 for path traversal attempt', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: '../../../etc/passwd',
+        root: tempDir,
+        old_string: 'foo',
+        new_string: 'bar',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(403)
+      expect(body.error).toContain('Access denied')
+    })
+
+    test('returns 404 for non-existent file', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'nonexistent.txt',
+        root: tempDir,
+        old_string: 'foo',
+        new_string: 'bar',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(404)
+      expect(body.error).toContain('not found')
+    })
+
+    test('returns 400 for directory instead of file', async () => {
+      mkdirSync(join(tempDir, 'subdir'))
+
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'subdir',
+        root: tempDir,
+        old_string: 'foo',
+        new_string: 'bar',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('not a file')
+    })
+
+    test('handles multiline replacements', async () => {
+      writeFileSync(join(tempDir, 'test.txt'), 'line1\nline2\nline3')
+
+      const { post } = createTestApp()
+      const res = await post('/api/fs/edit', {
+        path: 'test.txt',
+        root: tempDir,
+        old_string: 'line1\nline2',
+        new_string: 'replaced\nmultiline',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.success).toBe(true)
+
+      const { readFileSync } = await import('node:fs')
+      const content = readFileSync(join(tempDir, 'test.txt'), 'utf-8')
+      expect(content).toBe('replaced\nmultiline\nline3')
+    })
+  })
+
   describe('GET /api/fs/stat', () => {
     test('returns exists: true and isDirectory: true for directory', async () => {
       const subdir = join(tempDir, 'subdir')

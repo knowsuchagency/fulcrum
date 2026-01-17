@@ -5,6 +5,12 @@ import type {
   TaskStatus,
   TaskLink,
   Repository,
+  ProjectWithDetails,
+  App,
+  Deployment,
+  FileTreeEntry,
+  FileContent,
+  FileStatResponse,
   GitBranchesResponse,
   GitDiffResponse,
   GitStatusResponse,
@@ -32,6 +38,121 @@ export interface DiffQueryOptions {
   staged?: boolean
   ignoreWhitespace?: boolean
   includeUntracked?: boolean
+}
+
+// Project types
+export interface CreateProjectInput {
+  name: string
+  description?: string
+  // Option 1: Link to existing repository
+  repositoryId?: string
+  // Option 2: Create from local path
+  path?: string
+  // Option 3: Clone from URL
+  url?: string
+  targetDir?: string // For cloning
+  folderName?: string // For cloning
+}
+
+export interface UpdateProjectInput {
+  name?: string
+  description?: string | null
+  status?: 'active' | 'archived'
+}
+
+export interface DeleteProjectOptions {
+  deleteDirectory?: boolean
+  deleteApp?: boolean
+}
+
+// App types
+export interface CreateAppInput {
+  name: string
+  repositoryId: string
+  branch?: string
+  composeFile?: string
+  autoDeployEnabled?: boolean
+  environmentVariables?: Record<string, string>
+  noCacheBuild?: boolean
+  services?: Array<{
+    serviceName: string
+    containerPort?: number
+    exposed: boolean
+    domain?: string
+    exposureMethod?: 'dns' | 'tunnel'
+  }>
+}
+
+export interface UpdateAppInput {
+  name?: string
+  branch?: string
+  autoDeployEnabled?: boolean
+  autoPortAllocation?: boolean
+  environmentVariables?: Record<string, string>
+  noCacheBuild?: boolean
+  notificationsEnabled?: boolean
+  services?: Array<{
+    id?: string
+    serviceName: string
+    containerPort?: number
+    exposed: boolean
+    domain?: string
+    exposureMethod?: 'dns' | 'tunnel'
+  }>
+}
+
+export interface AppLogOptions {
+  service?: string
+  tail?: number
+}
+
+export interface AppStatus {
+  containers: Array<{
+    name: string
+    service: string
+    status: string
+    replicas: string
+    ports: string[]
+  }>
+}
+
+// Filesystem types
+export interface DirectoryEntry {
+  name: string
+  type: 'file' | 'directory'
+  isGitRepo: boolean
+}
+
+export interface ListDirectoryResponse {
+  path: string
+  parent: string
+  entries: DirectoryEntry[]
+}
+
+export interface FileTreeResponse {
+  root: string
+  entries: FileTreeEntry[]
+}
+
+export interface WriteFileInput {
+  path: string
+  root: string
+  content: string
+}
+
+export interface EditFileInput {
+  path: string
+  root: string
+  old_string: string
+  new_string: string
+}
+
+export interface PathStatResponse {
+  path: string
+  exists: boolean
+  type: 'file' | 'directory' | 'other' | null
+  isDirectory: boolean
+  isFile: boolean
 }
 
 export class ViboraClient {
@@ -276,5 +397,179 @@ export class ViboraClient {
 
   async listTaskLinks(taskId: string): Promise<TaskLink[]> {
     return this.fetch(`/api/tasks/${taskId}/links`)
+  }
+
+  // Projects
+  async listProjects(): Promise<ProjectWithDetails[]> {
+    return this.fetch('/api/projects')
+  }
+
+  async getProject(id: string): Promise<ProjectWithDetails> {
+    return this.fetch(`/api/projects/${id}`)
+  }
+
+  async createProject(data: CreateProjectInput): Promise<ProjectWithDetails> {
+    return this.fetch('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateProject(id: string, updates: UpdateProjectInput): Promise<ProjectWithDetails> {
+    return this.fetch(`/api/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deleteProject(
+    id: string,
+    options?: DeleteProjectOptions
+  ): Promise<{ success: true; deletedDirectory: boolean; deletedApp: boolean }> {
+    const params = new URLSearchParams()
+    if (options?.deleteDirectory) params.set('deleteDirectory', 'true')
+    if (options?.deleteApp) params.set('deleteApp', 'true')
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.fetch(`/api/projects/${id}${query}`, { method: 'DELETE' })
+  }
+
+  async scanProjects(
+    directory?: string
+  ): Promise<{
+    directory: string
+    repositories: Array<{
+      path: string
+      name: string
+      hasRepository: boolean
+      hasProject: boolean
+    }>
+  }> {
+    return this.fetch('/api/projects/scan', {
+      method: 'POST',
+      body: JSON.stringify({ directory }),
+    })
+  }
+
+  async bulkCreateProjects(
+    repositories: Array<{ path: string; displayName?: string }>
+  ): Promise<{ created: ProjectWithDetails[]; skipped: number }> {
+    return this.fetch('/api/projects/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ repositories }),
+    })
+  }
+
+  // Apps
+  async listApps(): Promise<App[]> {
+    return this.fetch('/api/apps')
+  }
+
+  async getApp(id: string): Promise<App> {
+    return this.fetch(`/api/apps/${id}`)
+  }
+
+  async createApp(data: CreateAppInput): Promise<App> {
+    return this.fetch('/api/apps', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateApp(id: string, updates: UpdateAppInput): Promise<App> {
+    return this.fetch(`/api/apps/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deleteApp(
+    id: string,
+    stopContainers: boolean = true
+  ): Promise<{ success: true }> {
+    const query = stopContainers ? '' : '?stopContainers=false'
+    return this.fetch(`/api/apps/${id}${query}`, { method: 'DELETE' })
+  }
+
+  async deployApp(id: string): Promise<{ success: boolean; deployment?: Deployment; error?: string }> {
+    return this.fetch(`/api/apps/${id}/deploy`, { method: 'POST' })
+  }
+
+  async stopApp(id: string): Promise<{ success: boolean; error?: string }> {
+    return this.fetch(`/api/apps/${id}/stop`, { method: 'POST' })
+  }
+
+  async getAppLogs(id: string, options?: AppLogOptions): Promise<{ logs: string }> {
+    const params = new URLSearchParams()
+    if (options?.service) params.set('service', options.service)
+    if (options?.tail) params.set('tail', String(options.tail))
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.fetch(`/api/apps/${id}/logs${query}`)
+  }
+
+  async getAppStatus(id: string): Promise<AppStatus> {
+    return this.fetch(`/api/apps/${id}/status`)
+  }
+
+  async listDeployments(appId: string): Promise<Deployment[]> {
+    return this.fetch(`/api/apps/${appId}/deployments`)
+  }
+
+  async syncAppServices(id: string): Promise<{
+    success: boolean
+    services: Array<{
+      serviceName: string
+      containerPort: number | null
+      exposed: boolean
+      domain: string | null
+    }>
+  }> {
+    return this.fetch(`/api/apps/${id}/sync-services`, { method: 'POST' })
+  }
+
+  // Filesystem
+  async listDirectory(path?: string): Promise<ListDirectoryResponse> {
+    const query = path ? `?path=${encodeURIComponent(path)}` : ''
+    return this.fetch(`/api/fs/list${query}`)
+  }
+
+  async getFileTree(root: string): Promise<FileTreeResponse> {
+    return this.fetch(`/api/fs/tree?root=${encodeURIComponent(root)}`)
+  }
+
+  async readFile(
+    path: string,
+    root: string,
+    maxLines?: number
+  ): Promise<FileContent> {
+    const params = new URLSearchParams({ path, root })
+    if (maxLines) params.set('maxLines', String(maxLines))
+    return this.fetch(`/api/fs/read?${params.toString()}`)
+  }
+
+  async writeFile(input: WriteFileInput): Promise<{ success: true; size: number; mtime: string }> {
+    return this.fetch('/api/fs/write', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  }
+
+  async editFile(input: EditFileInput): Promise<{ success: true; size: number; mtime: string }> {
+    return this.fetch('/api/fs/edit', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  }
+
+  async getFileStat(path: string, root: string): Promise<FileStatResponse> {
+    const params = new URLSearchParams({ path, root })
+    return this.fetch(`/api/fs/file-stat?${params.toString()}`)
+  }
+
+  async getPathStat(path: string): Promise<PathStatResponse> {
+    return this.fetch(`/api/fs/stat?path=${encodeURIComponent(path)}`)
+  }
+
+  async isGitRepo(path: string): Promise<{ path: string; isGitRepo: boolean }> {
+    return this.fetch(`/api/fs/is-git-repo?path=${encodeURIComponent(path)}`)
   }
 }

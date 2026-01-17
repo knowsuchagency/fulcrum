@@ -1,0 +1,341 @@
+/**
+ * MCP Tool Registry
+ *
+ * Manages tool metadata for deferred loading and search functionality.
+ * Core tools are always loaded; deferred tools are loaded on-demand after search.
+ */
+
+export type ToolCategory = 'core' | 'tasks' | 'projects' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec'
+
+export interface ToolMetadata {
+  name: string
+  description: string
+  category: ToolCategory
+  keywords: string[]
+  deferred: boolean
+}
+
+// Tool metadata registry
+// Core tools (deferred: false) are always registered
+// Deferred tools are only registered after search_tools is called
+export const toolRegistry: ToolMetadata[] = [
+  // Core tools - always loaded
+  {
+    name: 'list_tasks',
+    description: 'List all Vibora tasks with optional filtering by status or repository',
+    category: 'tasks',
+    keywords: ['task', 'list', 'kanban', 'worktree', 'status'],
+    deferred: false,
+  },
+  {
+    name: 'get_task',
+    description: 'Get details of a specific task by ID',
+    category: 'tasks',
+    keywords: ['task', 'get', 'details', 'worktree'],
+    deferred: false,
+  },
+  {
+    name: 'create_task',
+    description: 'Create a new task with a git worktree',
+    category: 'tasks',
+    keywords: ['task', 'create', 'new', 'worktree', 'branch'],
+    deferred: false,
+  },
+  {
+    name: 'update_task',
+    description: 'Update task metadata (title, description)',
+    category: 'tasks',
+    keywords: ['task', 'update', 'edit', 'modify'],
+    deferred: false,
+  },
+  {
+    name: 'delete_task',
+    description: 'Delete a task and optionally its worktree',
+    category: 'tasks',
+    keywords: ['task', 'delete', 'remove', 'worktree'],
+    deferred: false,
+  },
+  {
+    name: 'move_task',
+    description: 'Move a task to a different status column',
+    category: 'tasks',
+    keywords: ['task', 'move', 'status', 'kanban', 'progress', 'review', 'done'],
+    deferred: false,
+  },
+  {
+    name: 'execute_command',
+    description: 'Execute a CLI command with optional persistent session',
+    category: 'exec',
+    keywords: ['command', 'exec', 'run', 'shell', 'terminal', 'bash'],
+    deferred: false,
+  },
+  {
+    name: 'send_notification',
+    description: 'Send a notification to all enabled channels',
+    category: 'notifications',
+    keywords: ['notify', 'alert', 'message', 'slack', 'discord'],
+    deferred: false,
+  },
+
+  // Project tools - deferred
+  {
+    name: 'list_projects',
+    description: 'List all Vibora projects with optional filtering by status',
+    category: 'projects',
+    keywords: ['project', 'list', 'repository', 'repo'],
+    deferred: true,
+  },
+  {
+    name: 'get_project',
+    description: 'Get details of a specific project by ID',
+    category: 'projects',
+    keywords: ['project', 'get', 'details', 'repository'],
+    deferred: true,
+  },
+  {
+    name: 'create_project',
+    description: 'Create a new project from a local path, git URL, or existing repository',
+    category: 'projects',
+    keywords: ['project', 'create', 'new', 'clone', 'repository'],
+    deferred: true,
+  },
+  {
+    name: 'update_project',
+    description: 'Update project metadata (name, description, or status)',
+    category: 'projects',
+    keywords: ['project', 'update', 'edit', 'archive'],
+    deferred: true,
+  },
+  {
+    name: 'delete_project',
+    description: 'Delete a project and optionally its directory and app',
+    category: 'projects',
+    keywords: ['project', 'delete', 'remove'],
+    deferred: true,
+  },
+  {
+    name: 'scan_projects',
+    description: 'Scan a directory for git repositories',
+    category: 'projects',
+    keywords: ['project', 'scan', 'find', 'discover', 'repository', 'git'],
+    deferred: true,
+  },
+
+  // App tools - deferred
+  {
+    name: 'list_apps',
+    description: 'List all deployed apps with optional filtering by status',
+    category: 'apps',
+    keywords: ['app', 'list', 'deploy', 'docker', 'container'],
+    deferred: true,
+  },
+  {
+    name: 'get_app',
+    description: 'Get details of a specific app including services and repository',
+    category: 'apps',
+    keywords: ['app', 'get', 'details', 'service', 'container'],
+    deferred: true,
+  },
+  {
+    name: 'create_app',
+    description: 'Create a new app for deployment from a repository',
+    category: 'apps',
+    keywords: ['app', 'create', 'new', 'deploy', 'docker', 'compose'],
+    deferred: true,
+  },
+  {
+    name: 'deploy_app',
+    description: 'Trigger a deployment for an app',
+    category: 'apps',
+    keywords: ['app', 'deploy', 'build', 'start', 'run'],
+    deferred: true,
+  },
+  {
+    name: 'stop_app',
+    description: 'Stop a running app',
+    category: 'apps',
+    keywords: ['app', 'stop', 'halt', 'shutdown'],
+    deferred: true,
+  },
+  {
+    name: 'get_app_logs',
+    description: 'Get logs from an app, optionally for a specific service',
+    category: 'apps',
+    keywords: ['app', 'logs', 'output', 'debug', 'service'],
+    deferred: true,
+  },
+  {
+    name: 'get_app_status',
+    description: 'Get the current container status for an app',
+    category: 'apps',
+    keywords: ['app', 'status', 'container', 'running', 'replicas'],
+    deferred: true,
+  },
+  {
+    name: 'list_deployments',
+    description: 'Get deployment history for an app',
+    category: 'apps',
+    keywords: ['app', 'deploy', 'history', 'rollback'],
+    deferred: true,
+  },
+  {
+    name: 'delete_app',
+    description: 'Delete an app and optionally stop its containers',
+    category: 'apps',
+    keywords: ['app', 'delete', 'remove', 'destroy'],
+    deferred: true,
+  },
+
+  // Filesystem tools - deferred
+  {
+    name: 'list_directory',
+    description: 'List contents of a directory',
+    category: 'filesystem',
+    keywords: ['file', 'directory', 'list', 'ls', 'folder'],
+    deferred: true,
+  },
+  {
+    name: 'get_file_tree',
+    description: 'Get recursive file tree for a directory',
+    category: 'filesystem',
+    keywords: ['file', 'tree', 'directory', 'structure', 'recursive'],
+    deferred: true,
+  },
+  {
+    name: 'read_file',
+    description: 'Read file contents (with path traversal protection)',
+    category: 'filesystem',
+    keywords: ['file', 'read', 'content', 'cat', 'view'],
+    deferred: true,
+  },
+  {
+    name: 'write_file',
+    description: 'Write content to an existing file (with path traversal protection)',
+    category: 'filesystem',
+    keywords: ['file', 'write', 'save', 'modify'],
+    deferred: true,
+  },
+  {
+    name: 'edit_file',
+    description: 'Edit a file by replacing an exact string (must be unique in file)',
+    category: 'filesystem',
+    keywords: ['file', 'edit', 'replace', 'modify', 'change', 'update'],
+    deferred: true,
+  },
+  {
+    name: 'file_stat',
+    description: 'Get file or directory metadata',
+    category: 'filesystem',
+    keywords: ['file', 'stat', 'info', 'metadata', 'exists'],
+    deferred: true,
+  },
+  {
+    name: 'is_git_repo',
+    description: 'Check if a directory is a git repository',
+    category: 'filesystem',
+    keywords: ['git', 'repository', 'check', 'verify'],
+    deferred: true,
+  },
+
+  // Additional core tools
+  {
+    name: 'list_repositories',
+    description: 'List all configured repositories',
+    category: 'core',
+    keywords: ['repository', 'repo', 'list', 'git'],
+    deferred: false,
+  },
+  {
+    name: 'list_exec_sessions',
+    description: 'List active command execution sessions',
+    category: 'exec',
+    keywords: ['session', 'exec', 'command', 'list'],
+    deferred: false,
+  },
+  {
+    name: 'update_exec_session',
+    description: 'Update an execution session (e.g., rename)',
+    category: 'exec',
+    keywords: ['session', 'exec', 'update', 'rename'],
+    deferred: false,
+  },
+  {
+    name: 'destroy_exec_session',
+    description: 'Destroy a command execution session',
+    category: 'exec',
+    keywords: ['session', 'exec', 'destroy', 'delete', 'close'],
+    deferred: false,
+  },
+  {
+    name: 'add_task_link',
+    description: 'Add a URL link to a task',
+    category: 'tasks',
+    keywords: ['task', 'link', 'url', 'pr', 'linear'],
+    deferred: false,
+  },
+  {
+    name: 'remove_task_link',
+    description: 'Remove a URL link from a task',
+    category: 'tasks',
+    keywords: ['task', 'link', 'remove', 'delete'],
+    deferred: false,
+  },
+  {
+    name: 'list_task_links',
+    description: 'List all URL links attached to a task',
+    category: 'tasks',
+    keywords: ['task', 'link', 'list', 'url'],
+    deferred: false,
+  },
+]
+
+/**
+ * Search tools by query string.
+ * Matches against name, description, and keywords.
+ */
+export function searchTools(query: string): ToolMetadata[] {
+  const queryLower = query.toLowerCase()
+  const queryTerms = queryLower.split(/\s+/).filter(Boolean)
+
+  return toolRegistry.filter((tool) => {
+    const searchableText = [
+      tool.name,
+      tool.description,
+      tool.category,
+      ...tool.keywords,
+    ]
+      .join(' ')
+      .toLowerCase()
+
+    // Match if all query terms are found somewhere in the searchable text
+    return queryTerms.every((term) => searchableText.includes(term))
+  })
+}
+
+/**
+ * Get tools by category
+ */
+export function getToolsByCategory(category: ToolCategory): ToolMetadata[] {
+  return toolRegistry.filter((tool) => tool.category === category)
+}
+
+/**
+ * Get all core (non-deferred) tools
+ */
+export function getCoreTools(): ToolMetadata[] {
+  return toolRegistry.filter((tool) => !tool.deferred)
+}
+
+/**
+ * Get all deferred tools
+ */
+export function getDeferredTools(): ToolMetadata[] {
+  return toolRegistry.filter((tool) => tool.deferred)
+}
+
+/**
+ * Get tool by name
+ */
+export function getToolByName(name: string): ToolMetadata | undefined {
+  return toolRegistry.find((tool) => tool.name === name)
+}
