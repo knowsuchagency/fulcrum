@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchJSON } from '@/lib/api'
-import type { Task, TaskStatus } from '@/types'
+import type { Task, TaskStatus, TaskLink } from '@/types'
 
 // Use relative URLs - works with both Vite dev proxy and production
 const API_BASE = ''
@@ -164,6 +164,37 @@ export function usePinTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
       queryClient.invalidateQueries({ queryKey: ['worktrees'] })
+    },
+  })
+}
+
+export function useAddTaskLink() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, url, label }: { taskId: string; url: string; label?: string }) =>
+      fetchJSON<TaskLink>(`${API_BASE}/api/tasks/${taskId}/links`, {
+        method: 'POST',
+        body: JSON.stringify({ url, label }),
+      }),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
+    },
+  })
+}
+
+export function useRemoveTaskLink() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, linkId }: { taskId: string; linkId: string }) =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/tasks/${taskId}/links/${linkId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
     },
   })
 }

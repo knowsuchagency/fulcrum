@@ -25,6 +25,16 @@ export const tasks = sqliteTable('tasks', {
   updatedAt: text('updated_at').notNull(),
 })
 
+// Task links - arbitrary URL links associated with tasks
+export const taskLinks = sqliteTable('task_links', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull(),
+  url: text('url').notNull(),
+  label: text('label'), // User-provided or auto-detected label
+  type: text('type'), // 'pr' | 'issue' | 'linear' | 'docs' | 'design' | 'other'
+  createdAt: text('created_at').notNull(),
+})
+
 // Terminal tabs - first-class entities that can exist without terminals
 export const terminalTabs = sqliteTable('terminal_tabs', {
   id: text('id').primaryKey(),
@@ -193,3 +203,5 @@ export type Tunnel = typeof tunnels.$inferSelect
 export type NewTunnel = typeof tunnels.$inferInsert
 export type Project = typeof projects.$inferSelect
 export type NewProject = typeof projects.$inferInsert
+export type TaskLink = typeof taskLinks.$inferSelect
+export type NewTaskLink = typeof taskLinks.$inferInsert

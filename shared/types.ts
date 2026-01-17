@@ -89,6 +89,19 @@ export interface Task {
   pinned: boolean
   createdAt: string
   updatedAt: string
+  links?: TaskLink[]
+}
+
+// Task link types for arbitrary URL associations
+export type TaskLinkType = 'pr' | 'issue' | 'linear' | 'docs' | 'design' | 'other'
+
+export interface TaskLink {
+  id: string
+  taskId: string
+  url: string
+  label: string | null
+  type: TaskLinkType | null
+  createdAt: string
 }
 
 export type TerminalLayout =

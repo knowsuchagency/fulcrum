@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
-import { db, tasks, repositories, type Task, type NewTask } from '../db'
-import { eq, asc } from 'drizzle-orm'
+import { db, tasks, repositories, taskLinks, type Task, type NewTask, type TaskLink } from '../db'
+import { eq, asc, and } from 'drizzle-orm'
+import type { TaskLinkType } from '@shared/types'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -116,19 +117,52 @@ function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: s
 
 const app = new Hono()
 
+// Helper to detect link type and generate label from URL
+function detectLinkType(url: string): { type: TaskLinkType; label: string } {
+  const prMatch = url.match(/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)/)
+  if (prMatch) return { type: 'pr', label: `PR #${prMatch[1]}` }
+
+  const issueMatch = url.match(/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/)
+  if (issueMatch) return { type: 'issue', label: `Issue #${issueMatch[1]}` }
+
+  const linearMatch = url.match(/linear\.app\/[^/]+\/issue\/([A-Z]+-\d+)/i)
+  if (linearMatch) return { type: 'linear', label: linearMatch[1].toUpperCase() }
+
+  if (url.includes('figma.com')) return { type: 'design', label: 'Figma' }
+  if (url.includes('notion.so')) return { type: 'docs', label: 'Notion' }
+
+  try {
+    return { type: 'other', label: new URL(url).hostname }
+  } catch {
+    return { type: 'other', label: 'Link' }
+  }
+}
+
+// Helper to get links for a task
+function getTaskLinks(taskId: string): TaskLink[] {
+  return db.select().from(taskLinks).where(eq(taskLinks.taskId, taskId)).all()
+}
+
 // Helper to parse JSON fields from database
-function toApiResponse(task: Task): Task & { viewState: unknown; agentOptions: Record<string, string> | null } {
-  return {
+function toApiResponse(
+  task: Task,
+  includeLinks = false
+): Task & { viewState: unknown; agentOptions: Record<string, string> | null; links?: TaskLink[] } {
+  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; links?: TaskLink[] } = {
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
     agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
   }
+  if (includeLinks) {
+    response.links = getTaskLinks(task.id)
+  }
+  return response
 }
 
 // GET /api/tasks - List all tasks
 app.get('/', (c) => {
   const allTasks = db.select().from(tasks).orderBy(asc(tasks.position)).all()
-  return c.json(allTasks.map(toApiResponse))
+  return c.json(allTasks.map((t) => toApiResponse(t, true)))
 })
 
 // POST /api/tasks - Create task
@@ -203,7 +237,7 @@ app.post('/', async (c) => {
 
     const created = db.select().from(tasks).where(eq(tasks.id, newTask.id)).get()
     broadcast({ type: 'task:updated', payload: { taskId: newTask.id } })
-    return c.json(created ? toApiResponse(created) : null, 201)
+    return c.json(created ? toApiResponse(created, true) : null, 201)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to create task' }, 400)
   }
@@ -248,6 +282,9 @@ app.delete('/bulk', async (c) => {
         }
       }
 
+      // Delete associated links
+      db.delete(taskLinks).where(eq(taskLinks.taskId, id)).run()
+
       db.delete(tasks).where(eq(tasks.id, id)).run()
       broadcast({ type: 'task:updated', payload: { taskId: id } })
       deletedCount++
@@ -266,7 +303,7 @@ app.get('/:id', (c) => {
   if (!task) {
     return c.json({ error: 'Task not found' }, 404)
   }
-  return c.json(toApiResponse(task))
+  return c.json(toApiResponse(task, true))
 })
 
 // PATCH /api/tasks/:id - Update task
@@ -305,7 +342,7 @@ app.patch('/:id', async (c) => {
     }
 
     const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
-    return c.json(updated ? toApiResponse(updated) : null)
+    return c.json(updated ? toApiResponse(updated, true) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task' }, 400)
   }
@@ -349,6 +386,9 @@ app.delete('/:id', (c) => {
         .run()
     }
   }
+
+  // Delete associated links
+  db.delete(taskLinks).where(eq(taskLinks.taskId, id)).run()
 
   db.delete(tasks).where(eq(tasks.id, id)).run()
   broadcast({ type: 'task:updated', payload: { taskId: id } })
@@ -426,7 +466,7 @@ app.patch('/:id/status', async (c) => {
     // Update the task status (handles all side effects: broadcast, Linear sync, notifications, killClaude)
     const updated = await updateTaskStatus(id, newStatus, newPosition)
 
-    return c.json(updated ? toApiResponse(updated) : null)
+    return c.json(updated ? toApiResponse(updated, true) : null)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update task status' }, 400)
   }
@@ -451,6 +491,74 @@ app.post('/:id/kill-claude', (c) => {
   } catch {
     return c.json({ success: true, terminalsAffected: 0 })
   }
+})
+
+// GET /api/tasks/:id/links - List links for a task
+app.get('/:id/links', (c) => {
+  const taskId = c.req.param('id')
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+  const links = getTaskLinks(taskId)
+  return c.json(links)
+})
+
+// POST /api/tasks/:id/links - Add a link to a task
+app.post('/:id/links', async (c) => {
+  const taskId = c.req.param('id')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    const body = await c.req.json<{ url: string; label?: string }>()
+    if (!body.url) {
+      return c.json({ error: 'URL is required' }, 400)
+    }
+
+    const detected = detectLinkType(body.url)
+    const now = new Date().toISOString()
+
+    const newLink = {
+      id: crypto.randomUUID(),
+      taskId,
+      url: body.url,
+      label: body.label || detected.label,
+      type: detected.type,
+      createdAt: now,
+    }
+
+    db.insert(taskLinks).values(newLink).run()
+    broadcast({ type: 'task:updated', payload: { taskId } })
+
+    return c.json(newLink, 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to add link' }, 400)
+  }
+})
+
+// DELETE /api/tasks/:id/links/:linkId - Remove a link from a task
+app.delete('/:id/links/:linkId', (c) => {
+  const taskId = c.req.param('id')
+  const linkId = c.req.param('linkId')
+
+  const link = db
+    .select()
+    .from(taskLinks)
+    .where(and(eq(taskLinks.id, linkId), eq(taskLinks.taskId, taskId)))
+    .get()
+
+  if (!link) {
+    return c.json({ error: 'Link not found' }, 404)
+  }
+
+  db.delete(taskLinks).where(eq(taskLinks.id, linkId)).run()
+  broadcast({ type: 'task:updated', payload: { taskId } })
+
+  return c.json({ success: true })
 })
 
 export default app

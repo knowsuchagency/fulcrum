@@ -154,6 +154,9 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       const hasSelectedProjectIdsColumn = sqlite
         .query("SELECT name FROM pragma_table_info('terminal_view_state') WHERE name='selected_project_ids'")
         .get()
+      const hasTaskLinksTable = sqlite
+        .query("SELECT name FROM sqlite_master WHERE type='table' AND name='task_links'")
+        .get()
 
       // Determine which migrations should be marked as applied based on schema state
       const migrationsToMark: Array<{ tag: string; when: number }> = []
@@ -223,6 +226,10 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         }
         // 0024 adds selected_project_ids column to terminal_view_state
         else if (entry.tag.startsWith('0024') && hasSelectedProjectIdsColumn) {
+          shouldMark = true
+        }
+        // 0025 creates task_links table
+        else if (entry.tag.startsWith('0025') && hasTaskLinksTable) {
           shouldMark = true
         }
 

@@ -83,13 +83,17 @@ const currentTaskCommand = defineCommand({
     ...globalArgs,
     action: {
       type: 'positional' as const,
-      description: 'Action: pr, linear, in-progress, review, done, cancel',
+      description: 'Action: pr, linear, link, in-progress, review, done, cancel',
       required: false,
     },
     value: {
       type: 'positional' as const,
-      description: 'Value for the action (URL for pr/linear)',
+      description: 'Value for the action (URL for pr/linear/link)',
       required: false,
+    },
+    label: {
+      type: 'string' as const,
+      description: 'Label for the link (used with link action)',
     },
   },
   async run({ args }) {

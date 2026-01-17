@@ -1,6 +1,7 @@
 import { db, resetDatabase } from '../../db'
 import {
   tasks,
+  taskLinks,
   terminals,
   terminalTabs,
   terminalViewState,
@@ -18,6 +19,7 @@ export async function clearDatabase(): Promise<void> {
   await db.delete(terminals)
   await db.delete(terminalTabs)
   await db.delete(terminalViewState)
+  await db.delete(taskLinks)
   await db.delete(tasks)
   await db.delete(repositories)
 }

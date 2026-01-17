@@ -48,7 +48,12 @@ import {
   ReloadIcon,
   GitCommitIcon,
   More03Icon,
+  Link01Icon,
+  PaintBrush01Icon,
+  File01Icon,
+  SourceCodeCircleIcon,
 } from '@hugeicons/core-free-icons'
+import type { TaskLinkType } from '@/types'
 import { TaskConfigModal } from '@/components/task-config-modal'
 import { DeleteTaskDialog } from '@/components/delete-task-dialog'
 import { toast } from 'sonner'
@@ -92,6 +97,23 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
   IN_REVIEW: 'bg-status-in-review/20 text-status-in-review',
   DONE: 'bg-status-done/20 text-status-done',
   CANCELED: 'bg-status-canceled/20 text-status-canceled',
+}
+
+function getLinkIcon(type: TaskLinkType | null) {
+  switch (type) {
+    case 'pr':
+      return GitPullRequestIcon
+    case 'issue':
+      return SourceCodeCircleIcon
+    case 'linear':
+      return Task01Icon
+    case 'docs':
+      return File01Icon
+    case 'design':
+      return PaintBrush01Icon
+    default:
+      return Link01Icon
+  }
 }
 
 function TaskView() {
@@ -607,6 +629,32 @@ function TaskView() {
               >
                 <HugeiconsIcon icon={ReloadIcon} size={14} strokeWidth={2} />
               </button>
+              {task.links && task.links.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        title="Task links"
+                      />
+                    }
+                  >
+                    <HugeiconsIcon icon={Link01Icon} size={14} strokeWidth={2} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {task.links.map((link) => (
+                      <DropdownMenuItem
+                        key={link.id}
+                        onClick={() => openExternalUrl(link.url)}
+                      >
+                        <HugeiconsIcon icon={getLinkIcon(link.type)} size={14} strokeWidth={2} />
+                        <span>{link.label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {project ? (

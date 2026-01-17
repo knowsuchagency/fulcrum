@@ -3,6 +3,7 @@ import { ApiError } from './utils/errors'
 import type {
   Task,
   TaskStatus,
+  TaskLink,
   Repository,
   GitBranchesResponse,
   GitDiffResponse,
@@ -257,5 +258,23 @@ export class ViboraClient {
     return this.fetch(`/api/exec/sessions/${sessionId}`, {
       method: 'DELETE',
     })
+  }
+
+  // Task links
+  async addTaskLink(taskId: string, url: string, label?: string): Promise<TaskLink> {
+    return this.fetch(`/api/tasks/${taskId}/links`, {
+      method: 'POST',
+      body: JSON.stringify({ url, label }),
+    })
+  }
+
+  async removeTaskLink(taskId: string, linkId: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/tasks/${taskId}/links/${linkId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async listTaskLinks(taskId: string): Promise<TaskLink[]> {
+    return this.fetch(`/api/tasks/${taskId}/links`)
   }
 }

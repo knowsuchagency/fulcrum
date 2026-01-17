@@ -257,4 +257,58 @@ export function registerTools(server: McpServer, client: ViboraClient) {
       }
     }
   )
+
+  // add_task_link
+  server.tool(
+    'add_task_link',
+    'Add a URL link to a task (for documentation, related PRs, design files, etc.)',
+    {
+      taskId: z.string().describe('Task ID'),
+      url: z.string().url().describe('URL to add'),
+      label: z.optional(z.string()).describe('Display label (auto-detected if not provided)'),
+    },
+    async ({ taskId, url, label }) => {
+      try {
+        const link = await client.addTaskLink(taskId, url, label)
+        return formatSuccess(link)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // remove_task_link
+  server.tool(
+    'remove_task_link',
+    'Remove a URL link from a task',
+    {
+      taskId: z.string().describe('Task ID'),
+      linkId: z.string().describe('Link ID to remove'),
+    },
+    async ({ taskId, linkId }) => {
+      try {
+        await client.removeTaskLink(taskId, linkId)
+        return formatSuccess({ removed: linkId })
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // list_task_links
+  server.tool(
+    'list_task_links',
+    'List all URL links attached to a task',
+    {
+      taskId: z.string().describe('Task ID'),
+    },
+    async ({ taskId }) => {
+      try {
+        const links = await client.listTaskLinks(taskId)
+        return formatSuccess(links)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
 }

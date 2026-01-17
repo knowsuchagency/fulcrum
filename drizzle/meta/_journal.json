@@ -176,6 +176,13 @@
       "when": 1767698032542,
       "tag": "0024_milky_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1768366384190,
+      "tag": "0025_tiny_gamma_corps",
+      "breakpoints": true
     }
   ]
 }

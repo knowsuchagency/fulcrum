@@ -142,12 +142,77 @@ export async function handleCurrentTaskCommand(
     return
   }
 
+  // Handle link management
+  if (action === 'link') {
+    const firstArg = rest[0]
+
+    // No args - list links
+    if (!firstArg) {
+      const task = await findCurrentTask(client, pathOverride)
+      const links = task.links ?? []
+      if (isJsonOutput()) {
+        output(links)
+      } else {
+        if (links.length === 0) {
+          console.log('No links attached to this task')
+        } else {
+          for (const link of links) {
+            console.log(`  ${link.label || link.url}`)
+            console.log(`    URL: ${link.url}`)
+            console.log(`    ID:  ${link.id}`)
+          }
+        }
+      }
+      return
+    }
+
+    // --remove flag - remove a link
+    if (firstArg === '--remove' || firstArg === '-r') {
+      const urlOrId = rest[1]
+      if (!urlOrId) {
+        throw new CliError(
+          'MISSING_LINK_ID',
+          'Usage: vibora current-task link --remove <url-or-id>',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+      const task = await findCurrentTask(client, pathOverride)
+      const link = task.links?.find((l) => l.url === urlOrId || l.id === urlOrId)
+      if (!link) {
+        throw new CliError(
+          'LINK_NOT_FOUND',
+          `Link not found: ${urlOrId}`,
+          ExitCodes.NOT_FOUND
+        )
+      }
+      await client.removeTaskLink(task.id, link.id)
+      if (isJsonOutput()) {
+        output({ success: true, removed: link.id })
+      } else {
+        console.log(`Removed link: ${link.label || link.url}`)
+      }
+      return
+    }
+
+    // Add a link
+    const url = firstArg
+    const label = flags.label
+    const task = await findCurrentTask(client, pathOverride)
+    const newLink = await client.addTaskLink(task.id, url, label)
+    if (isJsonOutput()) {
+      output(newLink)
+    } else {
+      console.log(`Added link: ${newLink.label}`)
+    }
+    return
+  }
+
   // Handle status change actions
   const newStatus = STATUS_MAP[action]
   if (!newStatus) {
     throw new CliError(
       'INVALID_ACTION',
-      `Unknown action: ${action}. Valid actions: in-progress, review, done, cancel, pr, linear`,
+      `Unknown action: ${action}. Valid actions: in-progress, review, done, cancel, pr, linear, link`,
       ExitCodes.INVALID_ARGS
     )
   }

@@ -21,6 +21,7 @@ Use the Vibora CLI when:
 - **Updating task status** - Mark tasks as in-progress, ready for review, done, or canceled
 - **Linking PRs** - Associate a GitHub PR with the current task
 - **Linking Linear tickets** - Connect a Linear issue to the current task
+- **Linking URLs** - Attach any relevant URLs (design docs, specs, external resources) to the task
 - **Sending notifications** - Alert the user when work is complete or needs attention
 
 Use the Vibora MCP tools when:
@@ -48,6 +49,12 @@ vibora current-task pr <github-pr-url>
 
 # Link a Linear ticket to the current task
 vibora current-task linear <linear-issue-url>
+
+# Add arbitrary URL links to the task
+vibora current-task link <url>                  # Add link (auto-detects type/label)
+vibora current-task link <url> --label "Docs"   # Add link with custom label
+vibora current-task link                        # List all links
+vibora current-task link --remove <url-or-id>   # Remove a link
 ```
 
 ### tasks
@@ -136,6 +143,10 @@ vibora current-task pr https://github.com/owner/repo/pull/123
 
 # After identifying the relevant Linear ticket
 vibora current-task linear https://linear.app/team/issue/TEAM-123
+
+# Add any URL link (design docs, figma, notion, external resources)
+vibora current-task link https://figma.com/file/abc123/design
+vibora current-task link https://notion.so/team/spec --label "Product Spec"
 ```
 
 ### Notifying the User
@@ -238,8 +249,9 @@ Clean up a session when you're done to free resources.
 
 1. **Use `current-task` inside worktrees** - It auto-detects which task you're in
 2. **Link PRs immediately** - Run `vibora current-task pr <url>` right after creating a PR
-3. **Mark review when done** - `vibora current-task review` notifies the user
-4. **Send notifications for blocking issues** - Keep the user informed of progress
-5. **Name sessions for identification** - Use descriptive names to find sessions later
-6. **Reuse sessions for related commands** - Preserve state across multiple execute_command calls
-7. **Clean up sessions when done** - Use destroy_exec_session to free resources
+3. **Link relevant resources** - Attach design docs, specs, or reference materials with `vibora current-task link <url>`
+4. **Mark review when done** - `vibora current-task review` notifies the user
+5. **Send notifications for blocking issues** - Keep the user informed of progress
+6. **Name sessions for identification** - Use descriptive names to find sessions later
+7. **Reuse sessions for related commands** - Preserve state across multiple execute_command calls
+8. **Clean up sessions when done** - Use destroy_exec_session to free resources
