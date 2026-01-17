@@ -73,7 +73,6 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       scrollback: 10000,
       rightClickSelectsWord: true,
       scrollOnUserInput: false,
-      scrollOnEraseInDisplay: false,
     })
 
     const fitAddon = new FitAddon()
