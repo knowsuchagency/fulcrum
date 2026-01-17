@@ -1,0 +1,230 @@
+import { ViboraClient } from '../client'
+import { output, isJsonOutput } from '../utils/output'
+import { CliError, ExitCodes } from '../utils/errors'
+import type { ProjectWithDetails } from '@shared/types'
+
+const VALID_STATUSES = ['active', 'archived'] as const
+
+function formatProject(project: ProjectWithDetails): void {
+  console.log(`${project.name}`)
+  console.log(`  ID:          ${project.id}`)
+  console.log(`  Status:      ${project.status}`)
+  if (project.description) console.log(`  Description: ${project.description}`)
+  if (project.repository) {
+    console.log(`  Repository:  ${project.repository.path}`)
+    if (project.repository.remoteUrl) {
+      console.log(`  Remote:      ${project.repository.remoteUrl}`)
+    }
+  }
+  if (project.app) {
+    console.log(`  App:         ${project.app.name} (${project.app.status})`)
+  }
+  if (project.terminalTab) {
+    console.log(`  Terminal:    ${project.terminalTab.name}`)
+  }
+}
+
+function formatProjectList(projects: ProjectWithDetails[]): void {
+  if (projects.length === 0) {
+    console.log('No projects found')
+    return
+  }
+
+  // Group by status
+  const byStatus = {
+    active: projects.filter((p) => p.status === 'active'),
+    archived: projects.filter((p) => p.status === 'archived'),
+  }
+
+  for (const [status, statusProjects] of Object.entries(byStatus)) {
+    if (statusProjects.length === 0) continue
+    console.log(`\n${status.toUpperCase()} (${statusProjects.length})`)
+    for (const project of statusProjects) {
+      const repoPath = project.repository?.path || 'no repository'
+      const appStatus = project.app ? ` [${project.app.status}]` : ''
+      console.log(`  ${project.name}${appStatus}`)
+      console.log(`    ${project.id} · ${repoPath}`)
+    }
+  }
+}
+
+export async function handleProjectsCommand(
+  action: string | undefined,
+  positional: string[],
+  flags: Record<string, string>
+) {
+  const client = new ViboraClient(flags.url, flags.port)
+
+  switch (action) {
+    case 'list': {
+      // Validate status filter before making network call
+      let statusFilter: 'active' | 'archived' | undefined
+      if (flags.status) {
+        const status = flags.status.toLowerCase() as 'active' | 'archived'
+        if (!VALID_STATUSES.includes(status)) {
+          throw new CliError(
+            'INVALID_STATUS',
+            `Invalid status: ${flags.status}. Valid: ${VALID_STATUSES.join(', ')}`,
+            ExitCodes.INVALID_ARGS
+          )
+        }
+        statusFilter = status
+      }
+
+      let projects = await client.listProjects()
+
+      // Apply filters
+      if (statusFilter) {
+        projects = projects.filter((p) => p.status === statusFilter)
+      }
+
+      if (isJsonOutput()) {
+        output(projects)
+      } else {
+        formatProjectList(projects)
+      }
+      break
+    }
+
+    case 'get': {
+      const [id] = positional
+      if (!id) {
+        throw new CliError('MISSING_ID', 'Project ID required', ExitCodes.INVALID_ARGS)
+      }
+      const project = await client.getProject(id)
+      if (isJsonOutput()) {
+        output(project)
+      } else {
+        formatProject(project)
+      }
+      break
+    }
+
+    case 'create': {
+      const name = flags.name
+      if (!name) {
+        throw new CliError('MISSING_NAME', '--name is required', ExitCodes.INVALID_ARGS)
+      }
+
+      // Must provide exactly one of: repository-id, path, or url
+      const options = [flags['repository-id'], flags.path, flags.url].filter(Boolean)
+      if (options.length === 0) {
+        throw new CliError(
+          'MISSING_SOURCE',
+          'Must provide --repository-id, --path, or --url',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+      if (options.length > 1) {
+        throw new CliError(
+          'CONFLICTING_OPTIONS',
+          'Provide only one of: --repository-id, --path, or --url',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+
+      const project = await client.createProject({
+        name,
+        description: flags.description,
+        repositoryId: flags['repository-id'],
+        path: flags.path,
+        url: flags.url,
+        targetDir: flags['target-dir'],
+        folderName: flags['folder-name'],
+      })
+
+      if (isJsonOutput()) {
+        output(project)
+      } else {
+        console.log(`Created project: ${project.name}`)
+        console.log(`  ID: ${project.id}`)
+        if (project.repository) {
+          console.log(`  Path: ${project.repository.path}`)
+        }
+      }
+      break
+    }
+
+    case 'update': {
+      const [id] = positional
+      if (!id) {
+        throw new CliError('MISSING_ID', 'Project ID required', ExitCodes.INVALID_ARGS)
+      }
+
+      const updates: Record<string, unknown> = {}
+      if (flags.name !== undefined) updates.name = flags.name
+      if (flags.description !== undefined) updates.description = flags.description
+      if (flags.status !== undefined) {
+        const status = flags.status.toLowerCase()
+        if (!VALID_STATUSES.includes(status as 'active' | 'archived')) {
+          throw new CliError(
+            'INVALID_STATUS',
+            `Invalid status: ${flags.status}. Valid: ${VALID_STATUSES.join(', ')}`,
+            ExitCodes.INVALID_ARGS
+          )
+        }
+        updates.status = status
+      }
+
+      if (Object.keys(updates).length === 0) {
+        throw new CliError(
+          'NO_UPDATES',
+          'No updates provided. Use --name, --description, or --status',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+
+      const project = await client.updateProject(id, updates)
+      if (isJsonOutput()) {
+        output(project)
+      } else {
+        console.log(`Updated project: ${project.name}`)
+      }
+      break
+    }
+
+    case 'delete': {
+      const [id] = positional
+      if (!id) {
+        throw new CliError('MISSING_ID', 'Project ID required', ExitCodes.INVALID_ARGS)
+      }
+
+      const deleteDirectory = flags['delete-directory'] === 'true' || flags['delete-directory'] === ''
+      const deleteApp = flags['delete-app'] === 'true' || flags['delete-app'] === ''
+
+      const result = await client.deleteProject(id, { deleteDirectory, deleteApp })
+      if (isJsonOutput()) {
+        output({ deleted: id, ...result })
+      } else {
+        console.log(`Deleted project: ${id}`)
+        if (result.deletedDirectory) console.log('  Directory deleted')
+        if (result.deletedApp) console.log('  App deleted')
+      }
+      break
+    }
+
+    case 'scan': {
+      const directory = flags.directory || flags.path
+      const result = await client.scanProjects(directory)
+      if (isJsonOutput()) {
+        output(result)
+      } else {
+        console.log(`Scanned: ${result.directory}`)
+        console.log(`Found ${result.repositories.length} git repositories:`)
+        for (const repo of result.repositories) {
+          const status = repo.hasProject ? '[project]' : repo.hasRepository ? '[repo]' : '[new]'
+          console.log(`  ${status} ${repo.name}`)
+          console.log(`    ${repo.path}`)
+        }
+      }
+      break
+    }
+
+    default:
+      throw new CliError(
+        'UNKNOWN_ACTION',
+        `Unknown action: ${action}. Valid: list, get, create, update, delete, scan`,
+        ExitCodes.INVALID_ARGS
+      )
+  }
+}

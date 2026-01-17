@@ -5,6 +5,9 @@ import { consola } from 'consola'
 import { handleCurrentTaskCommand } from './commands/current-task'
 import { handleMcpCommand } from './commands/mcp'
 import { handleTasksCommand } from './commands/tasks'
+import { handleProjectsCommand } from './commands/projects'
+import { handleAppsCommand } from './commands/apps'
+import { handleFsCommand } from './commands/fs'
 import { handleUpCommand } from './commands/up'
 import { handleDownCommand } from './commands/down'
 import { handleStatusCommand } from './commands/status'
@@ -284,6 +287,577 @@ const tasksCommand = defineCommand({
     update: tasksUpdateCommand,
     move: tasksMoveCommand,
     delete: tasksDeleteCommand,
+  },
+})
+
+// ============================================================================
+// Projects Commands
+// ============================================================================
+
+const projectsListCommand = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List all projects',
+  },
+  args: {
+    ...globalArgs,
+    status: {
+      type: 'string' as const,
+      description: 'Filter by status (active, archived)',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleProjectsCommand('list', [], toFlags(args))
+  },
+})
+
+const projectsGetCommand = defineCommand({
+  meta: {
+    name: 'get',
+    description: 'Get a project by ID',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Project ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleProjectsCommand('get', [args.id as string], toFlags(args))
+  },
+})
+
+const projectsCreateCommand = defineCommand({
+  meta: {
+    name: 'create',
+    description: 'Create a new project',
+  },
+  args: {
+    ...globalArgs,
+    name: {
+      type: 'string' as const,
+      description: 'Project name',
+      required: true,
+    },
+    description: {
+      type: 'string' as const,
+      description: 'Project description',
+    },
+    'repository-id': {
+      type: 'string' as const,
+      description: 'Link to existing repository ID',
+    },
+    path: {
+      type: 'string' as const,
+      description: 'Create from local directory path',
+    },
+    url: {
+      type: 'string' as const,
+      description: 'Clone from git URL',
+    },
+    'target-dir': {
+      type: 'string' as const,
+      description: 'Target directory for cloning',
+    },
+    'folder-name': {
+      type: 'string' as const,
+      description: 'Folder name for cloned repo',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleProjectsCommand('create', [], toFlags(args))
+  },
+})
+
+const projectsUpdateCommand = defineCommand({
+  meta: {
+    name: 'update',
+    description: 'Update a project',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Project ID',
+      required: true,
+    },
+    name: {
+      type: 'string' as const,
+      description: 'New name',
+    },
+    description: {
+      type: 'string' as const,
+      description: 'New description',
+    },
+    status: {
+      type: 'string' as const,
+      description: 'New status (active, archived)',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleProjectsCommand('update', [args.id as string], toFlags(args))
+  },
+})
+
+const projectsDeleteCommand = defineCommand({
+  meta: {
+    name: 'delete',
+    description: 'Delete a project',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Project ID',
+      required: true,
+    },
+    'delete-directory': {
+      type: 'boolean' as const,
+      description: 'Also delete the repository directory',
+    },
+    'delete-app': {
+      type: 'boolean' as const,
+      description: 'Also delete the linked app',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleProjectsCommand('delete', [args.id as string], toFlags(args))
+  },
+})
+
+const projectsScanCommand = defineCommand({
+  meta: {
+    name: 'scan',
+    description: 'Scan a directory for git repositories',
+  },
+  args: {
+    ...globalArgs,
+    directory: {
+      type: 'string' as const,
+      description: 'Directory to scan',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleProjectsCommand('scan', [], toFlags(args))
+  },
+})
+
+const projectsCommand = defineCommand({
+  meta: {
+    name: 'projects',
+    description: 'Manage projects',
+  },
+  subCommands: {
+    list: projectsListCommand,
+    get: projectsGetCommand,
+    create: projectsCreateCommand,
+    update: projectsUpdateCommand,
+    delete: projectsDeleteCommand,
+    scan: projectsScanCommand,
+  },
+})
+
+// ============================================================================
+// Apps Commands
+// ============================================================================
+
+const appsListCommand = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List all apps',
+  },
+  args: {
+    ...globalArgs,
+    status: {
+      type: 'string' as const,
+      description: 'Filter by status (stopped, building, running, failed)',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('list', [], toFlags(args))
+  },
+})
+
+const appsGetCommand = defineCommand({
+  meta: {
+    name: 'get',
+    description: 'Get an app by ID',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('get', [args.id as string], toFlags(args))
+  },
+})
+
+const appsCreateCommand = defineCommand({
+  meta: {
+    name: 'create',
+    description: 'Create a new app',
+  },
+  args: {
+    ...globalArgs,
+    name: {
+      type: 'string' as const,
+      description: 'App name',
+      required: true,
+    },
+    'repository-id': {
+      type: 'string' as const,
+      description: 'Repository ID',
+      required: true,
+    },
+    branch: {
+      type: 'string' as const,
+      description: 'Git branch (default: main)',
+    },
+    'compose-file': {
+      type: 'string' as const,
+      description: 'Path to compose file',
+    },
+    'auto-deploy': {
+      type: 'boolean' as const,
+      description: 'Enable auto-deploy on git push',
+    },
+    'no-cache': {
+      type: 'boolean' as const,
+      description: 'Disable Docker build cache',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('create', [], toFlags(args))
+  },
+})
+
+const appsUpdateCommand = defineCommand({
+  meta: {
+    name: 'update',
+    description: 'Update an app',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+    name: {
+      type: 'string' as const,
+      description: 'New name',
+    },
+    branch: {
+      type: 'string' as const,
+      description: 'New branch',
+    },
+    'auto-deploy': {
+      type: 'boolean' as const,
+      description: 'Enable/disable auto-deploy',
+    },
+    'no-cache': {
+      type: 'boolean' as const,
+      description: 'Enable/disable no-cache build',
+    },
+    notifications: {
+      type: 'boolean' as const,
+      description: 'Enable/disable notifications',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('update', [args.id as string], toFlags(args))
+  },
+})
+
+const appsDeleteCommand = defineCommand({
+  meta: {
+    name: 'delete',
+    description: 'Delete an app',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+    'keep-containers': {
+      type: 'boolean' as const,
+      description: 'Keep containers running',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('delete', [args.id as string], toFlags(args))
+  },
+})
+
+const appsDeployCommand = defineCommand({
+  meta: {
+    name: 'deploy',
+    description: 'Deploy an app',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('deploy', [args.id as string], toFlags(args))
+  },
+})
+
+const appsStopCommand = defineCommand({
+  meta: {
+    name: 'stop',
+    description: 'Stop an app',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('stop', [args.id as string], toFlags(args))
+  },
+})
+
+const appsLogsCommand = defineCommand({
+  meta: {
+    name: 'logs',
+    description: 'Get app logs',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+    service: {
+      type: 'string' as const,
+      description: 'Service name',
+    },
+    tail: {
+      type: 'string' as const,
+      description: 'Number of lines (default: 100)',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('logs', [args.id as string], toFlags(args))
+  },
+})
+
+const appsStatusCommand = defineCommand({
+  meta: {
+    name: 'status',
+    description: 'Get app container status',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('status', [args.id as string], toFlags(args))
+  },
+})
+
+const appsDeploymentsCommand = defineCommand({
+  meta: {
+    name: 'deployments',
+    description: 'Get deployment history',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'App ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleAppsCommand('deployments', [args.id as string], toFlags(args))
+  },
+})
+
+const appsCommand = defineCommand({
+  meta: {
+    name: 'apps',
+    description: 'Manage apps',
+  },
+  subCommands: {
+    list: appsListCommand,
+    get: appsGetCommand,
+    create: appsCreateCommand,
+    update: appsUpdateCommand,
+    delete: appsDeleteCommand,
+    deploy: appsDeployCommand,
+    stop: appsStopCommand,
+    logs: appsLogsCommand,
+    status: appsStatusCommand,
+    deployments: appsDeploymentsCommand,
+  },
+})
+
+// ============================================================================
+// Filesystem Commands
+// ============================================================================
+
+const fsListCommand = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List directory contents',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'Directory path',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleFsCommand('list', [], toFlags(args))
+  },
+})
+
+const fsTreeCommand = defineCommand({
+  meta: {
+    name: 'tree',
+    description: 'Get file tree',
+  },
+  args: {
+    ...globalArgs,
+    root: {
+      type: 'string' as const,
+      description: 'Root directory',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleFsCommand('tree', [], toFlags(args))
+  },
+})
+
+const fsReadCommand = defineCommand({
+  meta: {
+    name: 'read',
+    description: 'Read a file',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'File path (relative to root)',
+      required: true,
+    },
+    root: {
+      type: 'string' as const,
+      description: 'Root directory for security boundary',
+      required: true,
+    },
+    'max-lines': {
+      type: 'string' as const,
+      description: 'Maximum lines to return',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleFsCommand('read', [], toFlags(args))
+  },
+})
+
+const fsWriteCommand = defineCommand({
+  meta: {
+    name: 'write',
+    description: 'Write to a file',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'File path (relative to root)',
+      required: true,
+    },
+    root: {
+      type: 'string' as const,
+      description: 'Root directory for security boundary',
+      required: true,
+    },
+    content: {
+      type: 'string' as const,
+      description: 'Content to write',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleFsCommand('write', [], toFlags(args))
+  },
+})
+
+const fsStatCommand = defineCommand({
+  meta: {
+    name: 'stat',
+    description: 'Get file/directory metadata',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'Path to check',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleFsCommand('stat', [], toFlags(args))
+  },
+})
+
+const fsCommand = defineCommand({
+  meta: {
+    name: 'fs',
+    description: 'Filesystem operations',
+  },
+  subCommands: {
+    list: fsListCommand,
+    tree: fsTreeCommand,
+    read: fsReadCommand,
+    write: fsWriteCommand,
+    stat: fsStatCommand,
   },
 })
 
@@ -824,6 +1398,9 @@ const main = defineCommand({
   subCommands: {
     'current-task': currentTaskCommand,
     tasks: tasksCommand,
+    projects: projectsCommand,
+    apps: appsCommand,
+    fs: fsCommand,
     up: upCommand,
     down: downCommand,
     status: statusCommand,

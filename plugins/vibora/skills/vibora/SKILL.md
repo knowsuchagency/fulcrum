@@ -125,6 +125,103 @@ vibora git diff                # Git diff for current worktree
 vibora worktrees list          # List all worktrees
 ```
 
+### projects
+
+Manage projects (repositories with metadata):
+
+```bash
+# List all projects
+vibora projects list
+vibora projects list --status=active    # Filter by status (active, archived)
+
+# Get project details
+vibora projects get <project-id>
+
+# Create a new project
+vibora projects create --name="My Project" --path=/path/to/repo          # From local path
+vibora projects create --name="My Project" --url=https://github.com/...  # Clone from URL
+vibora projects create --name="My Project" --repository-id=<repo-id>     # Link existing repo
+
+# Update project
+vibora projects update <project-id> --name="New Name"
+vibora projects update <project-id> --status=archived
+
+# Delete project
+vibora projects delete <project-id>
+vibora projects delete <project-id> --delete-directory   # Also delete directory
+vibora projects delete <project-id> --delete-app         # Also delete linked app
+
+# Scan for git repositories
+vibora projects scan                        # Scan default directory
+vibora projects scan --directory=/path      # Scan specific directory
+```
+
+### apps
+
+Manage Docker Compose app deployments:
+
+```bash
+# List all apps
+vibora apps list
+vibora apps list --status=running   # Filter by status (stopped, building, running, failed)
+
+# Get app details
+vibora apps get <app-id>
+
+# Create a new app
+vibora apps create --name="My App" --repository-id=<repo-id>
+vibora apps create --name="My App" --repository-id=<repo-id> --branch=develop --auto-deploy
+
+# Update app
+vibora apps update <app-id> --name="New Name"
+vibora apps update <app-id> --auto-deploy      # Enable auto-deploy
+vibora apps update <app-id> --no-cache         # Enable no-cache builds
+
+# Deploy an app
+vibora apps deploy <app-id>
+
+# Stop an app
+vibora apps stop <app-id>
+
+# Get logs
+vibora apps logs <app-id>                     # All services
+vibora apps logs <app-id> --service=web       # Specific service
+vibora apps logs <app-id> --tail=200          # Last 200 lines
+
+# Get container status
+vibora apps status <app-id>
+
+# Get deployment history
+vibora apps deployments <app-id>
+
+# Delete an app
+vibora apps delete <app-id>
+vibora apps delete <app-id> --keep-containers   # Keep containers running
+```
+
+### fs (Filesystem)
+
+Browse and manage files on the server:
+
+```bash
+# List directory contents
+vibora fs list                     # Home directory
+vibora fs list --path=/path/to/dir
+
+# Get file tree
+vibora fs tree --root=/path/to/worktree
+
+# Read a file (with path traversal protection)
+vibora fs read --path=src/index.ts --root=/path/to/worktree
+vibora fs read --path=src/index.ts --root=/path/to/worktree --max-lines=100
+
+# Write to a file
+vibora fs write --path=src/index.ts --root=/path/to/worktree --content="..."
+
+# Get file/directory info
+vibora fs stat --path=/path/to/check
+```
+
 ## Agent Workflow Patterns
 
 ### Typical Task Lifecycle
@@ -174,11 +271,81 @@ These flags work with most commands:
 - `DONE` - Task is finished
 - `CANCELED` - Task was abandoned
 
-## MCP Tools for Remote Execution
+## MCP Tools
+
+Vibora provides a comprehensive set of MCP tools for AI agents. Use `search_tools` to discover available tools.
+
+### Tool Discovery
+
+#### search_tools
+
+Search for available tools by keyword or category:
+
+```json
+{
+  "query": "deploy",      // Optional: Search term
+  "category": "apps"      // Optional: Filter by category
+}
+```
+
+**Categories:** core, tasks, projects, apps, filesystem, git, notifications, exec
+
+**Example Usage:**
+```
+search_tools { query: "project create" }
+→ Returns tools for creating projects
+
+search_tools { category: "filesystem" }
+→ Returns all filesystem tools
+```
+
+### Task Tools
+
+- `list_tasks` - List all tasks with optional filtering
+- `get_task` - Get task details by ID
+- `create_task` - Create a new task with worktree
+- `update_task` - Update task metadata
+- `delete_task` - Delete a task
+- `move_task` - Move task to different status
+- `add_task_link` - Add URL link to task
+- `remove_task_link` - Remove link from task
+- `list_task_links` - List all task links
+
+### Project Tools
+
+- `list_projects` - List all projects
+- `get_project` - Get project details
+- `create_project` - Create from path, URL, or existing repo
+- `update_project` - Update name, description, status
+- `delete_project` - Delete project and optionally directory/app
+- `scan_projects` - Scan directory for git repos
+
+### App/Deployment Tools
+
+- `list_apps` - List all deployed apps
+- `get_app` - Get app details with services
+- `create_app` - Create app for deployment
+- `deploy_app` - Trigger deployment
+- `stop_app` - Stop running app
+- `get_app_logs` - Get container logs
+- `get_app_status` - Get container status
+- `list_deployments` - Get deployment history
+- `delete_app` - Delete app
+
+### Filesystem Tools
+
+- `list_directory` - List directory contents
+- `get_file_tree` - Get recursive file tree
+- `read_file` - Read file contents (secured)
+- `write_file` - Write to file (secured)
+- `file_stat` - Get file/directory metadata
+- `is_git_repo` - Check if directory is git repo
+
+### Command Execution
 
 When using Claude Desktop with Vibora's MCP server, you can execute commands on the remote Vibora server. This is useful when connecting to Vibora via SSH port forwarding.
 
-### execute_command
+#### execute_command
 
 Execute shell commands with optional persistent session support:
 
