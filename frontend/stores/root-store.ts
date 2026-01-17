@@ -993,7 +993,15 @@ export const RootStore = types
             const { terminalId, data } = payload as { terminalId: string; data: string }
             const terminal = self.terminals.get(terminalId)
             if (terminal?.xterm) {
-              terminal.xterm.write(data)
+              const xterm = terminal.xterm
+              // Write data and always scroll to bottom after
+              // This counteracts xterm.js behavior that can scroll viewport to 0 during writes
+              // (seen with TUI apps like Claude Code that do rapid screen updates)
+              xterm.write(data, () => {
+                requestAnimationFrame(() => {
+                  xterm.scrollToBottom()
+                })
+              })
             } else {
               getWs().log.ws.warn('terminal:output but no xterm', { terminalId })
             }

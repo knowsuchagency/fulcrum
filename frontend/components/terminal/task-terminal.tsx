@@ -114,6 +114,8 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
       theme: terminalTheme,
       scrollback: 10000,
       rightClickSelectsWord: true,
+      scrollOnUserInput: false,
+      scrollOnEraseInDisplay: false,
     })
 
     const fitAddon = new FitAddon()
