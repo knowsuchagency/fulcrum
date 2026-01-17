@@ -212,7 +212,14 @@ export const toolRegistry: ToolMetadata[] = [
     name: 'write_file',
     description: 'Write content to an existing file (with path traversal protection)',
     category: 'filesystem',
-    keywords: ['file', 'write', 'save', 'modify', 'edit'],
+    keywords: ['file', 'write', 'save', 'modify'],
+    deferred: true,
+  },
+  {
+    name: 'edit_file',
+    description: 'Edit a file by replacing an exact string (must be unique in file)',
+    category: 'filesystem',
+    keywords: ['file', 'edit', 'replace', 'modify', 'change', 'update'],
     deferred: true,
   },
   {

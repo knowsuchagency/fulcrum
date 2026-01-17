@@ -201,7 +201,7 @@ vibora apps delete <app-id> --keep-containers   # Keep containers running
 
 ### fs (Filesystem)
 
-Browse and manage files on the server:
+Remote filesystem operations for reading/writing files on the Vibora server. These tools are designed for working with a **remote Vibora instance** - they allow AI agents to read/write files on the server's filesystem through the API, which is useful when the agent runs on a different machine than the Vibora server.
 
 ```bash
 # List directory contents
@@ -215,8 +215,11 @@ vibora fs tree --root=/path/to/worktree
 vibora fs read --path=src/index.ts --root=/path/to/worktree
 vibora fs read --path=src/index.ts --root=/path/to/worktree --max-lines=100
 
-# Write to a file
+# Write to a file (replaces entire content)
 vibora fs write --path=src/index.ts --root=/path/to/worktree --content="..."
+
+# Edit a file (replace a unique string)
+vibora fs edit --path=src/index.ts --root=/path/to/worktree --old-string="foo" --new-string="bar"
 
 # Get file/directory info
 vibora fs stat --path=/path/to/check
@@ -334,10 +337,13 @@ search_tools { category: "filesystem" }
 
 ### Filesystem Tools
 
+Remote filesystem tools for working with files on the Vibora server. Useful when the agent runs on a different machine than the server (e.g., via SSH tunneling to Claude Desktop).
+
 - `list_directory` - List directory contents
 - `get_file_tree` - Get recursive file tree
 - `read_file` - Read file contents (secured)
-- `write_file` - Write to file (secured)
+- `write_file` - Write entire file content (secured)
+- `edit_file` - Edit file by replacing a unique string (secured)
 - `file_stat` - Get file/directory metadata
 - `is_git_repo` - Check if directory is git repo
 

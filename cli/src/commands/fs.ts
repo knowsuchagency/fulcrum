@@ -155,10 +155,40 @@ export async function handleFsCommand(
       break
     }
 
+    case 'edit': {
+      const path = flags.path || positional[0]
+      const root = flags.root
+      const old_string = flags['old-string']
+      const new_string = flags['new-string']
+
+      if (!path) {
+        throw new CliError('MISSING_PATH', '--path is required', ExitCodes.INVALID_ARGS)
+      }
+      if (!root) {
+        throw new CliError('MISSING_ROOT', '--root is required', ExitCodes.INVALID_ARGS)
+      }
+      if (old_string === undefined) {
+        throw new CliError('MISSING_OLD_STRING', '--old-string is required', ExitCodes.INVALID_ARGS)
+      }
+      if (new_string === undefined) {
+        throw new CliError('MISSING_NEW_STRING', '--new-string is required', ExitCodes.INVALID_ARGS)
+      }
+
+      const result = await client.editFile({ path, root, old_string, new_string })
+      if (isJsonOutput()) {
+        output(result)
+      } else {
+        console.log(`Edited: ${path}`)
+        console.log(`  Size: ${result.size} bytes`)
+        console.log(`  Modified: ${result.mtime}`)
+      }
+      break
+    }
+
     default:
       throw new CliError(
         'UNKNOWN_ACTION',
-        `Unknown action: ${action}. Valid: list, tree, read, write, stat, is-git-repo`,
+        `Unknown action: ${action}. Valid: list, tree, read, write, edit, stat, is-git-repo`,
         ExitCodes.INVALID_ARGS
       )
   }

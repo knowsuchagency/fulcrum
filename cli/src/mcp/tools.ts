@@ -744,6 +744,26 @@ export function registerTools(server: McpServer, client: ViboraClient) {
     }
   )
 
+  // edit_file
+  server.tool(
+    'edit_file',
+    'Edit a file by replacing an exact string (must be unique in file). The old_string must appear exactly once in the file.',
+    {
+      path: z.string().describe('File path relative to root'),
+      root: z.string().describe('Root directory for security boundary'),
+      old_string: z.string().describe('Exact string to find (must appear exactly once)'),
+      new_string: z.string().describe('String to replace it with'),
+    },
+    async ({ path, root, old_string, new_string }) => {
+      try {
+        const result = await client.editFile({ path, root, old_string, new_string })
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
   // file_stat
   server.tool(
     'file_stat',

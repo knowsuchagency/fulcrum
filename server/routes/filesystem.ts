@@ -504,6 +504,91 @@ app.post('/write', async (c) => {
   }
 })
 
+// POST /api/fs/edit
+// Body: { path: string, root: string, old_string: string, new_string: string }
+// Performs exact string replacement (old_string must appear exactly once)
+app.post('/edit', async (c) => {
+  const body = await c.req.json<{
+    path?: string
+    root?: string
+    old_string?: string
+    new_string?: string
+  }>()
+  const { path: filePath, root, old_string, new_string } = body
+
+  if (!filePath) {
+    return c.json({ error: 'path is required' }, 400)
+  }
+
+  if (!root) {
+    return c.json({ error: 'root is required' }, 400)
+  }
+
+  if (old_string === undefined) {
+    return c.json({ error: 'old_string is required' }, 400)
+  }
+
+  if (new_string === undefined) {
+    return c.json({ error: 'new_string is required' }, 400)
+  }
+
+  const resolvedRoot = path.resolve(root)
+  const resolvedPath = path.resolve(resolvedRoot, filePath)
+
+  // Security: validate path is within root
+  if (!isPathWithinRoot(resolvedPath, resolvedRoot)) {
+    return c.json({ error: 'Access denied: path outside root' }, 403)
+  }
+
+  try {
+    if (!fs.existsSync(resolvedPath)) {
+      return c.json({ error: 'File not found' }, 404)
+    }
+
+    const stat = fs.statSync(resolvedPath)
+    if (!stat.isFile()) {
+      return c.json({ error: 'Path is not a file' }, 400)
+    }
+
+    // Read current content
+    const content = fs.readFileSync(resolvedPath, 'utf-8')
+
+    // Count occurrences
+    let count = 0
+    let index = 0
+    while ((index = content.indexOf(old_string, index)) !== -1) {
+      count++
+      index += old_string.length
+    }
+
+    if (count === 0) {
+      return c.json({ error: 'String not found in file' }, 400)
+    }
+
+    if (count > 1) {
+      return c.json(
+        { error: `String found ${count} times, provide more context to make it unique` },
+        400
+      )
+    }
+
+    // Replace and write
+    const newContent = content.replace(old_string, new_string)
+    fs.writeFileSync(resolvedPath, newContent, 'utf-8')
+
+    // Get the new mtime
+    const newStat = fs.statSync(resolvedPath)
+
+    return c.json({
+      success: true,
+      size: Buffer.byteLength(newContent, 'utf-8'),
+      mtime: newStat.mtime.toISOString(),
+    })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to edit file' }, 500)
+  }
+})
+
 // GET /api/fs/stat?path=/path/to/check
 // Returns type and existence info for a path
 app.get('/stat', (c) => {

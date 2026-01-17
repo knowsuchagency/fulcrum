@@ -103,5 +103,49 @@ describe('fs command', () => {
         expect((err as CliError).message).toContain('--path is required')
       }
     })
+
+    test('edit: throws when path is missing', async () => {
+      try {
+        await handleFsCommand('edit', [], { root: '/some/root', 'old-string': 'foo', 'new-string': 'bar' })
+        expect(true).toBe(false)
+      } catch (err) {
+        expect(err).toBeInstanceOf(CliError)
+        expect((err as CliError).code).toBe('MISSING_PATH')
+        expect((err as CliError).message).toContain('--path is required')
+      }
+    })
+
+    test('edit: throws when root is missing', async () => {
+      try {
+        await handleFsCommand('edit', [], { path: 'file.txt', 'old-string': 'foo', 'new-string': 'bar' })
+        expect(true).toBe(false)
+      } catch (err) {
+        expect(err).toBeInstanceOf(CliError)
+        expect((err as CliError).code).toBe('MISSING_ROOT')
+        expect((err as CliError).message).toContain('--root is required')
+      }
+    })
+
+    test('edit: throws when old-string is missing', async () => {
+      try {
+        await handleFsCommand('edit', [], { path: 'file.txt', root: '/some/root', 'new-string': 'bar' })
+        expect(true).toBe(false)
+      } catch (err) {
+        expect(err).toBeInstanceOf(CliError)
+        expect((err as CliError).code).toBe('MISSING_OLD_STRING')
+        expect((err as CliError).message).toContain('--old-string is required')
+      }
+    })
+
+    test('edit: throws when new-string is missing', async () => {
+      try {
+        await handleFsCommand('edit', [], { path: 'file.txt', root: '/some/root', 'old-string': 'foo' })
+        expect(true).toBe(false)
+      } catch (err) {
+        expect(err).toBeInstanceOf(CliError)
+        expect((err as CliError).code).toBe('MISSING_NEW_STRING')
+        expect((err as CliError).message).toContain('--new-string is required')
+      }
+    })
   })
 })

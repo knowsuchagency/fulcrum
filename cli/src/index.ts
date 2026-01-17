@@ -847,16 +847,51 @@ const fsStatCommand = defineCommand({
   },
 })
 
+const fsEditCommand = defineCommand({
+  meta: {
+    name: 'edit',
+    description: 'Edit a file by replacing an exact string',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'File path (relative to root)',
+      required: true,
+    },
+    root: {
+      type: 'string' as const,
+      description: 'Root directory for security boundary',
+      required: true,
+    },
+    'old-string': {
+      type: 'string' as const,
+      description: 'Exact string to find (must appear exactly once)',
+      required: true,
+    },
+    'new-string': {
+      type: 'string' as const,
+      description: 'String to replace it with',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleFsCommand('edit', [], toFlags(args))
+  },
+})
+
 const fsCommand = defineCommand({
   meta: {
     name: 'fs',
-    description: 'Filesystem operations',
+    description: 'Remote filesystem operations (read/write/edit files on the Vibora server)',
   },
   subCommands: {
     list: fsListCommand,
     tree: fsTreeCommand,
     read: fsReadCommand,
     write: fsWriteCommand,
+    edit: fsEditCommand,
     stat: fsStatCommand,
   },
 })

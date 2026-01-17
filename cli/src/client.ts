@@ -140,6 +140,13 @@ export interface WriteFileInput {
   content: string
 }
 
+export interface EditFileInput {
+  path: string
+  root: string
+  old_string: string
+  new_string: string
+}
+
 export interface PathStatResponse {
   path: string
   exists: boolean
@@ -541,6 +548,13 @@ export class ViboraClient {
 
   async writeFile(input: WriteFileInput): Promise<{ success: true; size: number; mtime: string }> {
     return this.fetch('/api/fs/write', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  }
+
+  async editFile(input: EditFileInput): Promise<{ success: true; size: number; mtime: string }> {
+    return this.fetch('/api/fs/edit', {
       method: 'POST',
       body: JSON.stringify(input),
     })
