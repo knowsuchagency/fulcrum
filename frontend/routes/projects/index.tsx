@@ -6,6 +6,7 @@ import { useProjects, useDeleteProject } from '@/hooks/use-projects'
 import { useDeployApp, useStopApp } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
@@ -18,12 +19,15 @@ import {
   Search01Icon,
   PlayIcon,
   StopIcon,
+  TaskDaily01Icon,
+  SourceCodeSquareIcon,
 } from '@hugeicons/core-free-icons'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { toast } from 'sonner'
 import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { ProjectWithDetails } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
+import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/projects/create-project-modal'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -126,6 +130,11 @@ function ProjectCard({
     }
   }
 
+  // Get repo count - use repositories array if available, otherwise count legacy repositoryId
+  const repoCount = project.repositories.length > 0
+    ? project.repositories.length
+    : project.repositoryId ? 1 : 0
+
   return (
     <Card className="h-full group transition-colors hover:border-foreground/20">
       <Link to="/projects/$projectId" params={{ projectId: project.id }} className="block">
@@ -138,7 +147,44 @@ function ProjectCard({
             </span>
           </div>
 
-          {/* Path */}
+          {/* Labels */}
+          {project.labels && project.labels.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {project.labels.slice(0, 3).map((label) => (
+                <Badge
+                  key={label.id}
+                  variant="secondary"
+                  className="text-[10px] px-1.5 py-0"
+                  style={label.color ? { backgroundColor: label.color, color: '#fff' } : undefined}
+                >
+                  {label.name}
+                </Badge>
+              ))}
+              {project.labels.length > 3 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  +{project.labels.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Repo count and task count */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            {repoCount > 0 && (
+              <div className="flex items-center gap-1">
+                <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
+                <span>{repoCount} {repoCount === 1 ? 'repository' : 'repositories'}</span>
+              </div>
+            )}
+            {project.taskCount > 0 && (
+              <div className="flex items-center gap-1">
+                <HugeiconsIcon icon={TaskDaily01Icon} size={12} strokeWidth={2} />
+                <span>{project.taskCount} {project.taskCount === 1 ? 'task' : 'tasks'}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Path (show first repo only) */}
           {repoPath && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
@@ -322,6 +368,7 @@ function DeleteProjectDialog({
 
 function ProjectsView() {
   const { t } = useTranslation('projects')
+  const navigate = useNavigate()
   const { data: projects, isLoading, error } = useProjects()
   const deleteProject = useDeleteProject()
   const [taskModalProject, setTaskModalProject] = useState<ProjectWithDetails | null>(null)
@@ -368,6 +415,27 @@ function ProjectsView() {
           />
         </div>
         <div className="hidden sm:block flex-1" />
+        {/* Projects/Repos toggle */}
+        <ToggleGroup
+          value={['projects']}
+          onValueChange={(value) => {
+            const selected = Array.isArray(value) ? value[0] : value
+            if (selected === 'repos') {
+              navigate({ to: '/repositories' })
+            }
+          }}
+          className="hidden sm:flex"
+          variant="outline"
+        >
+          <ToggleGroupItem value="projects" aria-label="View projects" className="gap-1.5 text-xs">
+            <HugeiconsIcon icon={TaskDaily01Icon} size={14} strokeWidth={2} />
+            Projects
+          </ToggleGroupItem>
+          <ToggleGroupItem value="repos" aria-label="View repositories" className="gap-1.5 text-xs">
+            <HugeiconsIcon icon={SourceCodeSquareIcon} size={14} strokeWidth={2} />
+            Repos
+          </ToggleGroupItem>
+        </ToggleGroup>
         <Button size="sm" onClick={() => setCreateModalOpen(true)}>
           <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
           <span className="max-sm:hidden">{t('newProjectButton')}</span>
