@@ -255,58 +255,6 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
             )}
           </div>
 
-          {/* Notes */}
-          <div className={`rounded-lg border bg-card ${paddingClass}`}>
-            <div className={`flex items-center justify-between ${marginClass}`}>
-              <h2 className={`${headingClass} font-medium text-muted-foreground`}>Notes</h2>
-              {!isEditingNotes && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingNotes(true)}
-                  className={compact ? 'text-xs h-6' : 'text-xs'}
-                >
-                  Edit
-                </Button>
-              )}
-            </div>
-            {isEditingNotes ? (
-              <div className="space-y-2">
-                <textarea
-                  value={editedNotes}
-                  onChange={(e) => setEditedNotes(e.target.value)}
-                  placeholder="Add notes..."
-                  rows={compact ? 3 : 4}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-                  autoFocus
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditedNotes(task.notes || '')
-                      setIsEditingNotes(false)
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleSaveNotes}>
-                    Save
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                {task.notes ? (
-                  <p className={`whitespace-pre-wrap ${compact ? 'text-sm' : ''}`}>{task.notes}</p>
-                ) : (
-                  <p className={`text-muted-foreground italic ${compact ? 'text-sm' : ''}`}>No notes</p>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Metadata Grid */}
           <div className={`grid ${gapClass} sm:grid-cols-2`}>
             {/* Labels */}
@@ -361,6 +309,58 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
           <div className={`rounded-lg border bg-card ${paddingClass}`}>
             <h2 className={`${headingClass} font-medium text-muted-foreground ${marginClass}`}>Links</h2>
             <LinksManager taskId={task.id} links={task.links || []} />
+          </div>
+
+          {/* Notes */}
+          <div className={`rounded-lg border bg-card ${paddingClass}`}>
+            <div className={`flex items-center justify-between ${marginClass}`}>
+              <h2 className={`${headingClass} font-medium text-muted-foreground`}>Notes</h2>
+              {!isEditingNotes && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingNotes(true)}
+                  className={compact ? 'text-xs h-6' : 'text-xs'}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+            {isEditingNotes ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editedNotes}
+                  onChange={(e) => setEditedNotes(e.target.value)}
+                  placeholder="Add notes..."
+                  rows={compact ? 3 : 4}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditedNotes(task.notes || '')
+                      setIsEditingNotes(false)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleSaveNotes}>
+                    Save
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                {task.notes ? (
+                  <p className={`whitespace-pre-wrap ${compact ? 'text-sm' : ''}`}>{task.notes}</p>
+                ) : (
+                  <p className={`text-muted-foreground italic ${compact ? 'text-sm' : ''}`}>No notes</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Attachments */}

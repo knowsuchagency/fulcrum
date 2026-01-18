@@ -164,58 +164,6 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
           )}
         </div>
 
-        {/* Notes */}
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Notes</h3>
-            {!isEditingNotes && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditingNotes(true)}
-                className="text-xs h-7"
-              >
-                Edit
-              </Button>
-            )}
-          </div>
-          {isEditingNotes ? (
-            <div className="space-y-2">
-              <textarea
-                value={editedNotes}
-                onChange={(e) => setEditedNotes(e.target.value)}
-                placeholder="Add notes..."
-                rows={3}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-                autoFocus
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditedNotes(task.notes || '')
-                    setIsEditingNotes(false)
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleSaveNotes}>
-                  Save
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              {task.notes ? (
-                <p className="whitespace-pre-wrap text-sm">{task.notes}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No notes</p>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* Labels and Due Date */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Labels */}
@@ -341,6 +289,58 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
         <div className="rounded-lg border bg-card p-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Links</h3>
           <LinksManager taskId={task.id} links={task.links || []} />
+        </div>
+
+        {/* Notes */}
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Notes</h3>
+            {!isEditingNotes && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditingNotes(true)}
+                className="text-xs h-7"
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+          {isEditingNotes ? (
+            <div className="space-y-2">
+              <textarea
+                value={editedNotes}
+                onChange={(e) => setEditedNotes(e.target.value)}
+                placeholder="Add notes..."
+                rows={3}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditedNotes(task.notes || '')
+                    setIsEditingNotes(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveNotes}>
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              {task.notes ? (
+                <p className="whitespace-pre-wrap text-sm">{task.notes}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No notes</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Attachments */}
