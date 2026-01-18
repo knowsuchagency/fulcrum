@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
-import { db, tasks, repositories, taskLinks, taskDependencies, taskAttachments, type Task, type NewTask, type TaskLink } from '../db'
-import { eq, asc, and } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
+import { db, tasks, repositories, taskLinks, taskDependencies, taskAttachments, labels, taskLabels, type Task, type NewTask, type TaskLink } from '../db'
+import { eq, asc, and, inArray } from 'drizzle-orm'
 import type { TaskLinkType } from '@shared/types'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
@@ -179,6 +180,38 @@ function getTaskLinks(taskId: string): TaskLink[] {
   return db.select().from(taskLinks).where(eq(taskLinks.taskId, taskId)).all()
 }
 
+// Helper to get labels for a task from join table (with fallback to JSON column)
+function getTaskLabelsFromJoinTable(taskId: string, legacyLabelsJson: string | null): string[] {
+  // Try to get labels from the join table first
+  const joins = db
+    .select()
+    .from(taskLabels)
+    .where(eq(taskLabels.taskId, taskId))
+    .all()
+
+  if (joins.length > 0) {
+    // Get label names from the labels table
+    const labelIds = joins.map((j) => j.labelId)
+    const labelRows = db
+      .select()
+      .from(labels)
+      .where(inArray(labels.id, labelIds))
+      .all()
+    return labelRows.map((l) => l.name)
+  }
+
+  // Fallback to legacy JSON column
+  if (legacyLabelsJson) {
+    try {
+      return JSON.parse(legacyLabelsJson)
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
 // Helper to parse JSON fields from database
 function toApiResponse(
   task: Task,
@@ -188,7 +221,7 @@ function toApiResponse(
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
     agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
-    labels: task.labels ? JSON.parse(task.labels) : [],
+    labels: getTaskLabelsFromJoinTable(task.id, task.labels),
   }
   if (includeLinks) {
     response.links = getTaskLinks(task.id)
@@ -216,8 +249,8 @@ app.get('/', (c) => {
   // Filter by label if specified
   if (label) {
     allTasks = allTasks.filter((t) => {
-      const labels: string[] = t.labels ? JSON.parse(t.labels) : []
-      return labels.includes(label)
+      const taskLabels = getTaskLabelsFromJoinTable(t.id, t.labels)
+      return taskLabels.includes(label)
     })
   }
 
@@ -736,50 +769,110 @@ app.post('/:id/labels', async (c) => {
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    const body = await c.req.json<{ label: string }>()
-    if (!body.label) {
-      return c.json({ error: 'Label is required' }, 400)
+    const body = await c.req.json<{ label?: string; labelId?: string; color?: string }>()
+
+    let labelId = body.labelId
+    const labelName = body.label?.trim()
+
+    // If no labelId provided, find or create label by name
+    if (!labelId && labelName) {
+      // Check if label exists
+      const existing = db.select().from(labels).where(eq(labels.name, labelName)).get()
+      if (existing) {
+        labelId = existing.id
+      } else {
+        // Create new label
+        const now = new Date().toISOString()
+        labelId = nanoid()
+        db.insert(labels)
+          .values({
+            id: labelId,
+            name: labelName,
+            color: body.color?.trim() || null,
+            createdAt: now,
+          })
+          .run()
+      }
     }
 
-    const labels: string[] = task.labels ? JSON.parse(task.labels) : []
-    if (!labels.includes(body.label)) {
-      labels.push(body.label)
+    if (!labelId) {
+      return c.json({ error: 'label or labelId is required' }, 400)
     }
 
-    const now = new Date().toISOString()
-    db.update(tasks)
-      .set({ labels: JSON.stringify(labels), updatedAt: now })
-      .where(eq(tasks.id, taskId))
-      .run()
+    // Verify label exists
+    const label = db.select().from(labels).where(eq(labels.id, labelId)).get()
+    if (!label) {
+      return c.json({ error: 'Label not found' }, 404)
+    }
 
+    // Check if already linked
+    const existingLink = db
+      .select()
+      .from(taskLabels)
+      .where(and(eq(taskLabels.taskId, taskId), eq(taskLabels.labelId, labelId)))
+      .get()
+
+    if (!existingLink) {
+      const now = new Date().toISOString()
+      db.insert(taskLabels)
+        .values({
+          id: nanoid(),
+          taskId,
+          labelId,
+          createdAt: now,
+        })
+        .run()
+
+      db.update(tasks)
+        .set({ updatedAt: now })
+        .where(eq(tasks.id, taskId))
+        .run()
+    }
+
+    const currentLabels = getTaskLabelsFromJoinTable(taskId, null)
     broadcast({ type: 'task:updated', payload: { taskId } })
-    return c.json({ labels })
+    return c.json({ labels: currentLabels })
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to add label' }, 400)
   }
 })
 
-// DELETE /api/tasks/:id/labels/:label - Remove a label from a task
+// DELETE /api/tasks/:id/labels/:label - Remove a label from a task (by label name or ID)
 app.delete('/:id/labels/:label', (c) => {
   const taskId = c.req.param('id')
-  const label = decodeURIComponent(c.req.param('label'))
+  const labelParam = decodeURIComponent(c.req.param('label'))
 
   const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
   if (!task) {
     return c.json({ error: 'Task not found' }, 404)
   }
 
-  const labels: string[] = task.labels ? JSON.parse(task.labels) : []
-  const filteredLabels = labels.filter((l) => l !== label)
+  // Find label by ID first, then by name
+  let label = db.select().from(labels).where(eq(labels.id, labelParam)).get()
+  if (!label) {
+    label = db.select().from(labels).where(eq(labels.name, labelParam)).get()
+  }
+
+  if (!label) {
+    // Label doesn't exist, nothing to remove
+    const currentLabels = getTaskLabelsFromJoinTable(taskId, task.labels)
+    return c.json({ labels: currentLabels })
+  }
+
+  // Delete the task-label association
+  db.delete(taskLabels)
+    .where(and(eq(taskLabels.taskId, taskId), eq(taskLabels.labelId, label.id)))
+    .run()
 
   const now = new Date().toISOString()
   db.update(tasks)
-    .set({ labels: filteredLabels.length > 0 ? JSON.stringify(filteredLabels) : null, updatedAt: now })
+    .set({ updatedAt: now })
     .where(eq(tasks.id, taskId))
     .run()
 
+  const currentLabels = getTaskLabelsFromJoinTable(taskId, null)
   broadcast({ type: 'task:updated', payload: { taskId } })
-  return c.json({ labels: filteredLabels })
+  return c.json({ labels: currentLabels })
 })
 
 // PATCH /api/tasks/:id/due-date - Set or clear due date

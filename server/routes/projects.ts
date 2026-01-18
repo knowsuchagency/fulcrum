@@ -3,9 +3,9 @@ import { nanoid } from 'nanoid'
 import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve, join } from 'node:path'
-import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks } from '../db'
+import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, labels, projectLabels } from '../db'
 import { eq, desc, sql, and } from 'drizzle-orm'
-import type { ProjectWithDetails, ProjectRepositoryDetails } from '../../shared/types'
+import type { ProjectWithDetails, ProjectRepositoryDetails, Label } from '../../shared/types'
 import { broadcast } from '../websocket/terminal-ws'
 
 const app = new Hono()
@@ -75,6 +75,29 @@ function getProjectTaskCount(projectId: string): number {
   return result?.count ?? 0
 }
 
+// Helper to get labels for a project
+function getProjectLabels(projectId: string): Label[] {
+  const joins = db
+    .select()
+    .from(projectLabels)
+    .where(eq(projectLabels.projectId, projectId))
+    .all()
+
+  const result: Label[] = []
+  for (const join of joins) {
+    const label = db.select().from(labels).where(eq(labels.id, join.labelId)).get()
+    if (label) {
+      result.push({
+        id: label.id,
+        name: label.name,
+        color: label.color,
+        createdAt: label.createdAt,
+      })
+    }
+  }
+  return result
+}
+
 // Helper to build project with nested entities
 function buildProjectWithDetails(
   project: typeof projects.$inferSelect,
@@ -85,6 +108,7 @@ function buildProjectWithDetails(
 ): ProjectWithDetails {
   const projectRepos = getProjectRepositories(project.id, project.repositoryId)
   const taskCount = getProjectTaskCount(project.id)
+  const projectLabelsList = getProjectLabels(project.id)
 
   return {
     id: project.id,
@@ -153,6 +177,7 @@ function buildProjectWithDetails(
           directory: tab.directory,
         }
       : null,
+    labels: projectLabelsList,
     taskCount,
   }
 }
@@ -1139,6 +1164,156 @@ app.patch('/:id/repositories/:repoId', async (c) => {
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to update repository' }, 400)
   }
+})
+
+// GET /api/projects/:id/labels - Get labels for a project
+app.get('/:id/labels', (c) => {
+  const projectId = c.req.param('id')
+
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  if (!project) {
+    return c.json({ error: 'Project not found' }, 404)
+  }
+
+  return c.json(getProjectLabels(projectId))
+})
+
+// POST /api/projects/:id/labels - Add a label to a project
+app.post('/:id/labels', async (c) => {
+  const projectId = c.req.param('id')
+
+  try {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+    if (!project) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    const body = await c.req.json<{ labelId?: string; name?: string; color?: string }>()
+
+    let labelId = body.labelId
+
+    // If no labelId provided, create or find label by name
+    if (!labelId && body.name) {
+      const name = body.name.trim()
+      if (!name) {
+        return c.json({ error: 'Label name cannot be empty' }, 400)
+      }
+
+      // Check if label exists
+      const existing = db.select().from(labels).where(eq(labels.name, name)).get()
+      if (existing) {
+        labelId = existing.id
+      } else {
+        // Create new label
+        const now = new Date().toISOString()
+        labelId = nanoid()
+        db.insert(labels)
+          .values({
+            id: labelId,
+            name,
+            color: body.color?.trim() || null,
+            createdAt: now,
+          })
+          .run()
+      }
+    }
+
+    if (!labelId) {
+      return c.json({ error: 'labelId or name is required' }, 400)
+    }
+
+    // Verify label exists
+    const label = db.select().from(labels).where(eq(labels.id, labelId)).get()
+    if (!label) {
+      return c.json({ error: 'Label not found' }, 404)
+    }
+
+    // Check if already linked
+    const existing = db
+      .select()
+      .from(projectLabels)
+      .where(
+        and(
+          eq(projectLabels.projectId, projectId),
+          eq(projectLabels.labelId, labelId)
+        )
+      )
+      .get()
+
+    if (existing) {
+      // Already linked, just return the label
+      return c.json({
+        id: label.id,
+        name: label.name,
+        color: label.color,
+        createdAt: label.createdAt,
+      })
+    }
+
+    const now = new Date().toISOString()
+    db.insert(projectLabels)
+      .values({
+        id: nanoid(),
+        projectId,
+        labelId,
+        createdAt: now,
+      })
+      .run()
+
+    db.update(projects)
+      .set({ updatedAt: now })
+      .where(eq(projects.id, projectId))
+      .run()
+
+    broadcast({ type: 'project:updated', payload: { projectId } })
+
+    return c.json({
+      id: label.id,
+      name: label.name,
+      color: label.color,
+      createdAt: label.createdAt,
+    }, 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to add label' }, 400)
+  }
+})
+
+// DELETE /api/projects/:id/labels/:labelId - Remove a label from a project
+app.delete('/:id/labels/:labelId', (c) => {
+  const projectId = c.req.param('id')
+  const labelId = c.req.param('labelId')
+
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  if (!project) {
+    return c.json({ error: 'Project not found' }, 404)
+  }
+
+  const link = db
+    .select()
+    .from(projectLabels)
+    .where(
+      and(
+        eq(projectLabels.projectId, projectId),
+        eq(projectLabels.labelId, labelId)
+      )
+    )
+    .get()
+
+  if (!link) {
+    return c.json({ error: 'Label not linked to this project' }, 404)
+  }
+
+  db.delete(projectLabels).where(eq(projectLabels.id, link.id)).run()
+
+  const now = new Date().toISOString()
+  db.update(projects)
+    .set({ updatedAt: now })
+    .where(eq(projects.id, projectId))
+    .run()
+
+  broadcast({ type: 'project:updated', payload: { projectId } })
+
+  return c.json({ success: true })
 })
 
 export default app

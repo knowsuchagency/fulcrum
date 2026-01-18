@@ -262,6 +262,15 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         else if (entry.tag.startsWith('0029') && hasTaskAttachmentsTable) {
           shouldMark = true
         }
+        // 0030 creates labels, task_labels, project_labels tables
+        else if (entry.tag.startsWith('0030')) {
+          const hasLabelsTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='labels'")
+            .get()
+          if (hasLabelsTable) {
+            shouldMark = true
+          }
+        }
 
         if (shouldMark) {
           migrationsToMark.push(entry)
@@ -310,6 +319,7 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
   // Run data migrations after schema migrations
   migrateRepositoriesToProjects(sqlite)
   migrateProjectRepositoriesToJoinTable(sqlite)
+  migrateTaskLabelsToJoinTable(sqlite)
 }
 
 // Data migration: Create projects for existing repositories
@@ -397,6 +407,99 @@ function migrateProjectRepositoriesToJoinTable(sqlite: Database): void {
   }
 
   log.db.info('Migrated project repositories to join table successfully', { count: projectsToMigrate.length })
+}
+
+// Data migration: Migrate task labels from JSON column to labels + task_labels tables
+function migrateTaskLabelsToJoinTable(sqlite: Database): void {
+  // Check if labels table exists
+  const hasLabelsTable = sqlite
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name='labels'")
+    .get()
+
+  if (!hasLabelsTable) return
+
+  // Check if any tasks have labels in the JSON column that haven't been migrated
+  const tasksWithLabels = sqlite
+    .query(`
+      SELECT t.id, t.labels
+      FROM tasks t
+      WHERE t.labels IS NOT NULL
+        AND t.labels != '[]'
+        AND t.labels != ''
+        AND NOT EXISTS (
+          SELECT 1 FROM task_labels tl WHERE tl.task_id = t.id
+        )
+    `)
+    .all() as Array<{ id: string; labels: string }>
+
+  if (tasksWithLabels.length === 0) return
+
+  log.db.info('Migrating task labels to join table', { count: tasksWithLabels.length })
+
+  const now = new Date().toISOString()
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { nanoid } = require('nanoid')
+
+  // Collect all unique labels from tasks
+  const allLabelNames = new Set<string>()
+  for (const task of tasksWithLabels) {
+    try {
+      const labels = JSON.parse(task.labels) as string[]
+      for (const label of labels) {
+        if (label && typeof label === 'string') {
+          allLabelNames.add(label)
+        }
+      }
+    } catch {
+      // Skip invalid JSON
+    }
+  }
+
+  // Create labels and build a map of name -> id
+  const labelNameToId = new Map<string, string>()
+
+  for (const name of allLabelNames) {
+    // Check if label already exists
+    const existing = sqlite
+      .query('SELECT id FROM labels WHERE name = ?')
+      .get(name) as { id: string } | null
+
+    if (existing) {
+      labelNameToId.set(name, existing.id)
+    } else {
+      // Create new label
+      const labelId = nanoid()
+      sqlite.exec(`
+        INSERT INTO labels (id, name, created_at)
+        VALUES ('${labelId}', '${name.replace(/'/g, "''")}', '${now}')
+      `)
+      labelNameToId.set(name, labelId)
+    }
+  }
+
+  // Create task_labels entries
+  for (const task of tasksWithLabels) {
+    try {
+      const labels = JSON.parse(task.labels) as string[]
+      for (const label of labels) {
+        const labelId = labelNameToId.get(label)
+        if (labelId) {
+          const linkId = nanoid()
+          sqlite.exec(`
+            INSERT INTO task_labels (id, task_id, label_id, created_at)
+            VALUES ('${linkId}', '${task.id}', '${labelId}', '${now}')
+          `)
+        }
+      }
+    } catch {
+      // Skip invalid JSON
+    }
+  }
+
+  log.db.info('Migrated task labels to join table successfully', {
+    tasks: tasksWithLabels.length,
+    labels: allLabelNames.size,
+  })
 }
 
 // Re-export schema for convenience

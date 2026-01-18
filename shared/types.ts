@@ -97,6 +97,20 @@ export interface Task {
   links?: TaskLink[]
 }
 
+// Label - reusable labels shared between tasks and projects
+export interface Label {
+  id: string
+  name: string
+  color: string | null
+  createdAt: string
+}
+
+// Label with usage count for search/suggestions
+export interface LabelWithUsage extends Label {
+  taskCount: number
+  projectCount: number
+}
+
 // Task link types for arbitrary URL associations
 export type TaskLinkType = 'pr' | 'issue' | 'docs' | 'design' | 'other'
 
@@ -601,5 +615,6 @@ export interface ProjectWithDetails extends Project {
     name: string
     directory: string | null
   } | null
+  labels: Label[] // Project labels
   taskCount: number // Number of tasks in this project
 }
