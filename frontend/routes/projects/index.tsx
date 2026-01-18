@@ -90,13 +90,13 @@ function ProjectCard({
 
           {/* Repo count and task count */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
+            <div className="flex items-center gap-1.5">
+              <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} className="shrink-0 -translate-y-px" />
               <span>{repoCount} {repoCount === 1 ? 'repository' : 'repositories'}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <HugeiconsIcon icon={TaskDaily01Icon} size={12} strokeWidth={2} />
-              <span>{project.taskCount ?? 0} {project.taskCount === 1 ? 'task' : 'tasks'}</span>
+            <div className="flex items-center gap-1.5">
+              <HugeiconsIcon icon={TaskDaily01Icon} size={14} strokeWidth={2} className="shrink-0 -translate-y-px" />
+              <span>{project.taskCount ?? 0} active {project.taskCount === 1 ? 'task' : 'tasks'}</span>
             </div>
           </div>
         </CardContent>
