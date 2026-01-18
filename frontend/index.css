@@ -49,8 +49,8 @@
     --tile: rgba(42, 42, 39, 0.1);                /* Graphite 10% */
 
     /* Status colors */
-    --status-todo: #6b7280;                       /* Gray - planned */
-    --status-in-progress: #8d909b;                /* Lavender Grey - active */
+    --status-todo: #9ca3af;                       /* Soft gray - not started */
+    --status-in-progress: #6b7280;                /* Gray - active */
     --status-in-review: #e08d3c;                  /* Tiger's Eye - waiting */
     --status-done: #0d5c63;                       /* Stormy Teal - complete */
     --status-canceled: #dd403a;                   /* Cinnabar - stopped */
@@ -99,6 +99,10 @@
     --sidebar-ring: oklch(0.985 0.001 106.423);
     --terminal-background: #0a0a0a;
     --tile: rgba(250, 249, 245, 0.1);             /* Porcelain 10% */
+
+    /* Status colors - swapped for dark mode */
+    --status-todo: #6b7280;                       /* Gray - not started */
+    --status-in-progress: #9ca3af;                /* Soft gray - active */
 }
 
 @theme inline {
