@@ -37,7 +37,7 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   }
 
   const handleAddLabel = () => {
-    const trimmed = labelInput.trim().toLowerCase()
+    const trimmed = labelInput.trim()
     if (trimmed && !task.labels.includes(trimmed)) {
       updateTask.mutate({
         taskId: task.id,

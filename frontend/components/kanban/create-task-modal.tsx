@@ -311,7 +311,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   }
 
   const handleAddLabel = () => {
-    const trimmed = labelInput.trim().toLowerCase()
+    const trimmed = labelInput.trim()
     if (trimmed && !labels.includes(trimmed)) {
       setLabels([...labels, trimmed])
       setLabelInput('')

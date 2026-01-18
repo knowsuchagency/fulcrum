@@ -1,7 +1,10 @@
 /**
- * Simple fuzzy search scoring
+ * Simple search scoring for filtering tasks
  * Returns a score > 0 if the query matches, 0 otherwise
  * Higher score = better match
+ *
+ * Case-insensitive matching: exact, starts-with, or contains.
+ * No fuzzy character matching - only substring matches.
  */
 export function fuzzyScore(text: string, query: string): number {
   const lowerText = text.toLowerCase()
@@ -15,24 +18,6 @@ export function fuzzyScore(text: string, query: string): number {
 
   // Contains
   if (lowerText.includes(lowerQuery)) return 60
-
-  // Fuzzy character match
-  let textIndex = 0
-  let queryIndex = 0
-  let score = 0
-
-  while (textIndex < lowerText.length && queryIndex < lowerQuery.length) {
-    if (lowerText[textIndex] === lowerQuery[queryIndex]) {
-      score += 1
-      queryIndex++
-    }
-    textIndex++
-  }
-
-  // Only count as a match if all query characters were found
-  if (queryIndex === lowerQuery.length) {
-    return score
-  }
 
   return 0
 }

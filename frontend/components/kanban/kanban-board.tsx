@@ -118,7 +118,8 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
             fuzzyScore(t.description || '', searchQuery),
             fuzzyScore(t.branch || '', searchQuery),
             fuzzyScore(t.linearTicketId || '', searchQuery),
-            fuzzyScore(t.prUrl || '', searchQuery)
+            fuzzyScore(t.prUrl || '', searchQuery),
+            fuzzyScore(t.labels.join(' '), searchQuery)
           ),
         }))
         .filter(({ score }) => score > 0)

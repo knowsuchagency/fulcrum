@@ -90,7 +90,7 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
   }
 
   const handleAddLabel = () => {
-    const trimmed = labelInput.trim().toLowerCase()
+    const trimmed = labelInput.trim()
     if (trimmed && !task.labels.includes(trimmed)) {
       updateTask.mutate({
         taskId: task.id,

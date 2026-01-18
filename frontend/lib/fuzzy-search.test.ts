@@ -39,68 +39,54 @@ describe('fuzzyScore', () => {
     })
   })
 
-  describe('fuzzy character match', () => {
-    test('matches characters in order', () => {
-      const score = fuzzyScore('hxexlxlxo', 'hello')
-      expect(score).toBeGreaterThan(0)
-      expect(score).toBeLessThan(60) // Less than "contains"
-    })
-
-    test('score increases with more matched characters', () => {
-      const score1 = fuzzyScore('abcdef', 'af')
-      const score2 = fuzzyScore('abcdef', 'adf')
-      expect(score2).toBeGreaterThan(score1)
-    })
-
-    test('returns 0 when not all characters match', () => {
-      expect(fuzzyScore('hello', 'helloz')).toBe(0)
-      expect(fuzzyScore('abc', 'abcd')).toBe(0)
-    })
-  })
-
   describe('no match', () => {
     test('returns 0 for no match', () => {
       expect(fuzzyScore('hello', 'world')).toBe(0)
     })
 
-    test('empty query matches everything (exact match)', () => {
-      // Empty query means all 0 characters are found, so fuzzy match succeeds with score 0
-      // But since query.length === 0, it might also be considered "starts with" or "contains"
-      // Looking at the code: lowerQuery === '' means exact match returns 100 (since '' === '')
-      // Actually: 'hello'.toLowerCase() !== ''.toLowerCase(), so no exact match
-      // But '' starts with '' is true? No, 'hello'.startsWith('') is true
-      // 'hello'.includes('') is true, so it returns 60 for "contains"
+    test('empty query starts with everything', () => {
       expect(fuzzyScore('hello', '')).toBe(80) // Starts with empty string
     })
 
-    test('returns 0 for out-of-order characters', () => {
+    test('returns 0 for partial characters not forming substring', () => {
       expect(fuzzyScore('abc', 'cba')).toBe(0)
+      expect(fuzzyScore('hxexlxlxo', 'hello')).toBe(0)
+    })
+
+    test('returns 0 when query longer than text', () => {
+      expect(fuzzyScore('hello', 'helloz')).toBe(0)
+      expect(fuzzyScore('abc', 'abcd')).toBe(0)
     })
   })
 
   describe('score ordering', () => {
-    test('exact match > starts with > contains > fuzzy', () => {
+    test('exact match > starts with > contains', () => {
       const exact = fuzzyScore('hello', 'hello')
       const startsWith = fuzzyScore('hello world', 'hello')
       const contains = fuzzyScore('say hello', 'hello')
-      const fuzzy = fuzzyScore('h_e_l_l_o', 'hello')
 
       expect(exact).toBeGreaterThan(startsWith)
       expect(startsWith).toBeGreaterThan(contains)
-      expect(contains).toBeGreaterThan(fuzzy)
     })
   })
 
   describe('real-world examples', () => {
-    test('file path matching', () => {
+    test('task search matching', () => {
+      // Matches substring
       expect(fuzzyScore('src/components/Button.tsx', 'button')).toBe(60)
-      expect(fuzzyScore('src/components/Button.tsx', 'btn')).toBeGreaterThan(0)
       expect(fuzzyScore('Button.tsx', 'Button')).toBe(80)
+      expect(fuzzyScore('git status', 'git')).toBe(80)
+
+      // Does NOT match scattered characters
+      expect(fuzzyScore('src/components/Button.tsx', 'btn')).toBe(0)
+      expect(fuzzyScore('git status', 'gs')).toBe(0)
+      expect(fuzzyScore('occasionally', 'ocai')).toBe(0)
     })
 
-    test('command matching', () => {
-      expect(fuzzyScore('git status', 'git')).toBe(80)
-      expect(fuzzyScore('git status', 'gs')).toBeGreaterThan(0)
+    test('label matching is case insensitive', () => {
+      expect(fuzzyScore('OCAI', 'ocai')).toBe(100)
+      expect(fuzzyScore('ocai', 'OCAI')).toBe(100)
+      expect(fuzzyScore('test OCAI label', 'ocai')).toBe(60)
     })
   })
 })
