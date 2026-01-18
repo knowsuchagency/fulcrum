@@ -8,6 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +41,8 @@ import {
   Rocket01Icon,
   CheckmarkCircle02Icon,
   Task01Icon,
+  ArrowRight01Icon,
+  ArrowDown01Icon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectRepositoryDetails, Task, TaskStatus } from '@/types'
 import { toast } from 'sonner'
@@ -144,52 +152,44 @@ function RepositoryCard({
   )
 }
 
-function TaskCard({ task }: { task: Task }) {
+function TaskRow({ task }: { task: Task }) {
   const navigate = useNavigate()
   const { t } = useTranslation('common')
   const statusConfig = STATUS_CONFIG[task.status]
 
   return (
-    <Card
-      className="group cursor-pointer transition-colors hover:border-foreground/20"
+    <div
+      className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border last:border-b-0"
       onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })}
     >
-      <CardContent className="py-3">
-        <div className="flex items-start gap-3">
-          <div className={cn('mt-0.5 rounded-full p-1', statusConfig.bgColor)}>
-            {task.status === 'DONE' ? (
-              <HugeiconsIcon icon={CheckmarkCircle02Icon} size={12} className={statusConfig.color} />
-            ) : (
-              <HugeiconsIcon icon={Task01Icon} size={12} className={statusConfig.color} />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-              {task.title}
-            </h4>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-muted-foreground">
-                {t(`statuses.${task.status}`)}
-              </span>
-              {task.labels.length > 0 && (
-                <div className="flex gap-1">
-                  {task.labels.slice(0, 2).map((label) => (
-                    <Badge key={label} variant="secondary" className="text-xs px-1.5 py-0">
-                      {label}
-                    </Badge>
-                  ))}
-                  {task.labels.length > 2 && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                      +{task.labels.length - 2}
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Status indicator */}
+      <div className={cn('shrink-0 rounded-full p-1', statusConfig.bgColor)}>
+        {task.status === 'DONE' ? (
+          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={10} className={statusConfig.color} />
+        ) : task.status === 'CANCELED' ? (
+          <HugeiconsIcon icon={Cancel01Icon} size={10} className={statusConfig.color} />
+        ) : (
+          <HugeiconsIcon icon={Task01Icon} size={10} className={statusConfig.color} />
+        )}
+      </div>
+
+      {/* Title */}
+      <span className="flex-1 min-w-0 text-sm truncate hover:text-primary transition-colors">
+        {task.title}
+      </span>
+
+      {/* Status badge */}
+      <Badge variant="secondary" className={cn('shrink-0 text-xs', statusConfig.bgColor, statusConfig.color)}>
+        {t(`statuses.${task.status}`)}
+      </Badge>
+
+      {/* Repo name if available */}
+      {task.repoName && (
+        <span className="shrink-0 text-xs text-muted-foreground max-w-24 truncate">
+          {task.repoName}
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -208,6 +208,13 @@ function ProjectDetailView() {
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState('')
   const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Status filter state - multi-select for active statuses
+  const [statusFilter, setStatusFilter] = useState<Set<TaskStatus>>(
+    new Set(['TO_DO', 'IN_PROGRESS', 'IN_REVIEW'])
+  )
+  // Archive section collapsed state
+  const [archiveOpen, setArchiveOpen] = useState(false)
 
   // Update last accessed when viewing project
   useEffect(() => {
@@ -229,8 +236,30 @@ function ProjectDetailView() {
       task.projectId === projectId ||
       (task.repoPath && projectRepoPaths.includes(task.repoPath))
   )
-  const activeTasks = projectTasks.filter((task) => task.status !== 'DONE' && task.status !== 'CANCELED')
-  const completedTasks = projectTasks.filter((task) => task.status === 'DONE' || task.status === 'CANCELED')
+
+  // Split into active (filterable) and archived (Done/Cancelled)
+  const activeTasks = projectTasks.filter(
+    (task) => task.status !== 'DONE' && task.status !== 'CANCELED'
+  )
+  const archivedTasks = projectTasks.filter(
+    (task) => task.status === 'DONE' || task.status === 'CANCELED'
+  )
+
+  // Apply status filter to active tasks
+  const filteredTasks = activeTasks.filter((task) => statusFilter.has(task.status))
+
+  // Toggle a status in the filter
+  const toggleStatus = (status: TaskStatus) => {
+    setStatusFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(status)) {
+        next.delete(status)
+      } else {
+        next.add(status)
+      }
+      return next
+    })
+  }
 
   const handleStartEditName = useCallback(() => {
     if (project) {
@@ -311,6 +340,14 @@ function ProjectDetailView() {
           </Button>
         </Link>
         <div className="flex-1" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate({ to: '/projects/$projectId', params: { projectId }, search: { addRepo: true } })}
+        >
+          <HugeiconsIcon icon={Folder01Icon} size={14} data-slot="icon" />
+          <span className="max-sm:hidden">{t('addRepo')}</span>
+        </Button>
         <Button variant="outline" size="sm" onClick={() => setTaskModalOpen(true)}>
           <HugeiconsIcon icon={TaskAdd01Icon} size={14} data-slot="icon" />
           <span className="max-sm:hidden">{t('createTask')}</span>
@@ -400,57 +437,97 @@ function ProjectDetailView() {
             )}
           </section>
 
-          {/* Active Tasks Section */}
+          {/* Tasks Section */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Active Tasks ({activeTasks.length})
-              </h2>
-              <Button variant="ghost" size="sm" onClick={() => setTaskModalOpen(true)}>
-                <HugeiconsIcon icon={TaskAdd01Icon} size={14} data-slot="icon" />
-                New Task
-              </Button>
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Tasks ({filteredTasks.length})
+            </h2>
+
+            {/* Status filter */}
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">Filter:</span>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <Checkbox
+                  checked={statusFilter.has('TO_DO')}
+                  onCheckedChange={() => toggleStatus('TO_DO')}
+                />
+                <span>To Do</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <Checkbox
+                  checked={statusFilter.has('IN_PROGRESS')}
+                  onCheckedChange={() => toggleStatus('IN_PROGRESS')}
+                />
+                <span>In Progress</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <Checkbox
+                  checked={statusFilter.has('IN_REVIEW')}
+                  onCheckedChange={() => toggleStatus('IN_REVIEW')}
+                />
+                <span>In Review</span>
+              </label>
             </div>
-            {activeTasks.length === 0 ? (
+
+            {/* Scrollable task list */}
+            {filteredTasks.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  <p className="text-sm">No active tasks.</p>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => setTaskModalOpen(true)}
-                  >
-                    Create a task
-                  </Button>
+                  <p className="text-sm">
+                    {activeTasks.length === 0
+                      ? 'No active tasks.'
+                      : 'No tasks match the selected filters.'}
+                  </p>
+                  {activeTasks.length === 0 && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => setTaskModalOpen(true)}
+                    >
+                      Create a task
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {activeTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
+              <Card className="overflow-hidden">
+                <ScrollArea className="max-h-[300px]">
+                  <div>
+                    {filteredTasks.map((task) => (
+                      <TaskRow key={task.id} task={task} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </Card>
             )}
           </section>
 
-          {/* Completed Tasks Section */}
-          {completedTasks.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Completed ({completedTasks.length})
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {completedTasks.slice(0, 6).map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
-              {completedTasks.length > 6 && (
-                <p className="text-sm text-muted-foreground text-center">
-                  And {completedTasks.length - 6} more completed tasks...
-                </p>
-              )}
-            </section>
+          {/* Archived Tasks (Completed & Cancelled) - Collapsible */}
+          {archivedTasks.length > 0 && (
+            <Collapsible open={archiveOpen} onOpenChange={setArchiveOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
+                <HugeiconsIcon
+                  icon={archiveOpen ? ArrowDown01Icon : ArrowRight01Icon}
+                  size={14}
+                  className="text-muted-foreground"
+                />
+                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
+                  Completed & Cancelled ({archivedTasks.length})
+                </h2>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <Card className="overflow-hidden">
+                  <ScrollArea className="max-h-[200px]">
+                    <div>
+                      {archivedTasks.map((task) => (
+                        <TaskRow key={task.id} task={task} />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </Card>
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </div>
       </ScrollArea>
