@@ -121,11 +121,23 @@ const tasksListCommand = defineCommand({
     ...globalArgs,
     status: {
       type: 'string' as const,
-      description: 'Filter by status (IN_PROGRESS, IN_REVIEW, CANCELED)',
+      description: 'Filter by status (TO_DO, IN_PROGRESS, IN_REVIEW, DONE, CANCELED)',
     },
     repo: {
       type: 'string' as const,
       description: 'Filter by repository name or path',
+    },
+    'project-id': {
+      type: 'string' as const,
+      description: 'Filter by project ID',
+    },
+    orphans: {
+      type: 'boolean' as const,
+      description: 'Show only orphan tasks (no project)',
+    },
+    label: {
+      type: 'string' as const,
+      description: 'Filter by label',
     },
   },
   async run({ args }) {
@@ -167,8 +179,7 @@ const tasksCreateCommand = defineCommand({
     },
     repo: {
       type: 'string' as const,
-      description: 'Repository path',
-      required: true,
+      description: 'Repository path (optional for non-code tasks)',
     },
     'base-branch': {
       type: 'string' as const,
@@ -189,6 +200,26 @@ const tasksCreateCommand = defineCommand({
     'worktree-path': {
       type: 'string' as const,
       description: 'Worktree path',
+    },
+    'project-id': {
+      type: 'string' as const,
+      description: 'Project ID to associate task with',
+    },
+    'repository-id': {
+      type: 'string' as const,
+      description: 'Repository ID for code tasks',
+    },
+    labels: {
+      type: 'string' as const,
+      description: 'Comma-separated labels (e.g., "bug,urgent")',
+    },
+    'due-date': {
+      type: 'string' as const,
+      description: 'Due date (YYYY-MM-DD format)',
+    },
+    status: {
+      type: 'string' as const,
+      description: 'Initial status (TO_DO, IN_PROGRESS). Default: IN_PROGRESS',
     },
   },
   async run({ args }) {
@@ -238,7 +269,7 @@ const tasksMoveCommand = defineCommand({
     },
     status: {
       type: 'string' as const,
-      description: 'New status (IN_PROGRESS, IN_REVIEW, CANCELED)',
+      description: 'New status (TO_DO, IN_PROGRESS, IN_REVIEW, CANCELED)',
       required: true,
     },
     position: {
@@ -275,6 +306,145 @@ const tasksDeleteCommand = defineCommand({
   },
 })
 
+const tasksAddLabelCommand = defineCommand({
+  meta: {
+    name: 'add-label',
+    description: 'Add a label to a task',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+    label: {
+      type: 'positional' as const,
+      description: 'Label to add',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('add-label', [args.id as string, args.label as string], toFlags(args))
+  },
+})
+
+const tasksRemoveLabelCommand = defineCommand({
+  meta: {
+    name: 'remove-label',
+    description: 'Remove a label from a task',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+    label: {
+      type: 'positional' as const,
+      description: 'Label to remove',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('remove-label', [args.id as string, args.label as string], toFlags(args))
+  },
+})
+
+const tasksSetDueDateCommand = defineCommand({
+  meta: {
+    name: 'set-due-date',
+    description: 'Set or clear the due date for a task',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+    date: {
+      type: 'positional' as const,
+      description: 'Due date (YYYY-MM-DD) or "none" to clear',
+      required: false,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('set-due-date', [args.id as string, (args.date as string) || ''], toFlags(args))
+  },
+})
+
+const tasksAddDependencyCommand = defineCommand({
+  meta: {
+    name: 'add-dependency',
+    description: 'Add a dependency (task depends on another task)',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID that will have the dependency',
+      required: true,
+    },
+    'depends-on': {
+      type: 'positional' as const,
+      description: 'Task ID that must be completed first',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('add-dependency', [args.id as string, args['depends-on'] as string], toFlags(args))
+  },
+})
+
+const tasksRemoveDependencyCommand = defineCommand({
+  meta: {
+    name: 'remove-dependency',
+    description: 'Remove a dependency',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+    'dependency-id': {
+      type: 'positional' as const,
+      description: 'Dependency ID to remove',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('remove-dependency', [args.id as string, args['dependency-id'] as string], toFlags(args))
+  },
+})
+
+const tasksListDependenciesCommand = defineCommand({
+  meta: {
+    name: 'list-dependencies',
+    description: 'List dependencies for a task',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Task ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleTasksCommand('list-dependencies', [args.id as string], toFlags(args))
+  },
+})
+
 const tasksCommand = defineCommand({
   meta: {
     name: 'tasks',
@@ -287,6 +457,12 @@ const tasksCommand = defineCommand({
     update: tasksUpdateCommand,
     move: tasksMoveCommand,
     delete: tasksDeleteCommand,
+    'add-label': tasksAddLabelCommand,
+    'remove-label': tasksRemoveLabelCommand,
+    'set-due-date': tasksSetDueDateCommand,
+    'add-dependency': tasksAddDependencyCommand,
+    'remove-dependency': tasksRemoveDependencyCommand,
+    'list-dependencies': tasksListDependenciesCommand,
   },
 })
 

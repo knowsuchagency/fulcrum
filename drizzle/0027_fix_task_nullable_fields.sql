@@ -1,22 +1,8 @@
--- Project Repositories join table (M:N relationship)
-CREATE TABLE `project_repositories` (
-  `id` text PRIMARY KEY NOT NULL,
-  `project_id` text NOT NULL,
-  `repository_id` text NOT NULL,
-  `is_primary` integer DEFAULT false,
-  `created_at` text NOT NULL
-);--> statement-breakpoint
-
--- Task Dependencies table
-CREATE TABLE `task_dependencies` (
-  `id` text PRIMARY KEY NOT NULL,
-  `task_id` text NOT NULL,
-  `depends_on_task_id` text NOT NULL,
-  `created_at` text NOT NULL
-);--> statement-breakpoint
-
--- Recreate tasks table with nullable repo fields for non-code tasks
+-- Fix NOT NULL constraints on repo_path, repo_name, base_branch
 -- SQLite doesn't support ALTER TABLE to remove NOT NULL, so we recreate the table
+-- This migration is needed for databases that ran 0026 before the table recreation was added
+
+-- Create new tasks table with nullable repo fields
 CREATE TABLE `tasks_new` (
   `id` text PRIMARY KEY NOT NULL,
   `title` text NOT NULL,
@@ -53,14 +39,16 @@ INSERT INTO `tasks_new` (
   `repo_path`, `repo_name`, `base_branch`, `branch`, `worktree_path`,
   `view_state`, `pr_url`, `linear_ticket_id`, `linear_ticket_url`,
   `startup_script`, `agent`, `ai_mode`, `agent_options`, `opencode_model`,
-  `pinned`, `created_at`, `updated_at`
+  `pinned`, `project_id`, `repository_id`, `labels`, `started_at`, `due_date`,
+  `created_at`, `updated_at`
 )
 SELECT
   `id`, `title`, `description`, `status`, `position`,
   `repo_path`, `repo_name`, `base_branch`, `branch`, `worktree_path`,
   `view_state`, `pr_url`, `linear_ticket_id`, `linear_ticket_url`,
   `startup_script`, `agent`, `ai_mode`, `agent_options`, `opencode_model`,
-  `pinned`, `created_at`, `updated_at`
+  `pinned`, `project_id`, `repository_id`, `labels`, `started_at`, `due_date`,
+  `created_at`, `updated_at`
 FROM `tasks`;--> statement-breakpoint
 
 -- Drop old table and rename new one
