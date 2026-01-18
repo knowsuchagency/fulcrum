@@ -13,7 +13,7 @@ import { useSelection } from './selection-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PackageIcon, GitPullRequestIcon, Task01Icon, Settings05Icon, Calendar03Icon, Cancel02Icon } from '@hugeicons/core-free-icons'
+import { PackageIcon, GitPullRequestIcon, Task01Icon, Settings05Icon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
 import { TaskConfigModal } from '@/components/task-config-modal'
 import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
 
@@ -21,9 +21,10 @@ interface TaskCardProps {
   task: Task
   isDragPreview?: boolean
   isBlocked?: boolean
+  isBlocking?: boolean
 }
 
-export function TaskCard({ task, isDragPreview, isBlocked }: TaskCardProps) {
+export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCardProps) {
   const { setActiveTask } = useDrag()
   const { isSelected, toggleSelection } = useSelection()
   const navigate = useNavigate()
@@ -219,12 +220,22 @@ export function TaskCard({ task, isDragPreview, isBlocked }: TaskCardProps) {
           'flex items-center gap-1 text-xs text-muted-foreground/70 flex-wrap',
           task.labels.length > 0 ? 'mt-1.5' : 'mt-2'
         )}>
-          {/* Blocked indicator */}
+          {/* Blocked indicator (red) */}
           {isBlocked && (
             <>
-              <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-amber-600 dark:text-amber-500 font-medium">
-                <HugeiconsIcon icon={Cancel02Icon} size={12} strokeWidth={2} />
+              <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-destructive font-medium">
+                <HugeiconsIcon icon={AlertDiamondIcon} size={12} strokeWidth={2} />
                 <span>Blocked</span>
+              </span>
+              <span className="text-muted-foreground/30">•</span>
+            </>
+          )}
+          {/* Blocking indicator (warning/amber) */}
+          {isBlocking && (
+            <>
+              <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-warning font-medium">
+                <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2} />
+                <span>Blocking</span>
               </span>
               <span className="text-muted-foreground/30">•</span>
             </>
@@ -264,7 +275,7 @@ export function TaskCard({ task, isDragPreview, isBlocked }: TaskCardProps) {
             </>
           )}
           {/* Fallback for non-code tasks with no metadata */}
-          {!isCodeTask && !isBlocked && task.labels.length === 0 && !task.dueDate && (
+          {!isCodeTask && !isBlocked && !isBlocking && task.labels.length === 0 && !task.dueDate && (
             <span className="italic">Quick task</span>
           )}
         </div>

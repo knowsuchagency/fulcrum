@@ -19,9 +19,10 @@ interface KanbanColumnProps {
   tasks: Task[]
   isMobile?: boolean
   blockedTaskIds?: Set<string>
+  blockingTaskIds?: Set<string>
 }
 
-export function KanbanColumn({ status, tasks, isMobile, blockedTaskIds }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, isMobile, blockedTaskIds, blockingTaskIds }: KanbanColumnProps) {
   const { t } = useTranslation('common')
   const ref = useRef<HTMLDivElement>(null)
   const [isOver, setIsOver] = useState(false)
@@ -70,6 +71,7 @@ export function KanbanColumn({ status, tasks, isMobile, blockedTaskIds }: Kanban
               key={task.id}
               task={task}
               isBlocked={blockedTaskIds?.has(task.id)}
+              isBlocking={blockingTaskIds?.has(task.id)}
             />
           ))}
         </div>

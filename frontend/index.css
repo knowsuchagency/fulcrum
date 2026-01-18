@@ -26,6 +26,7 @@
     --accent: #0d5c63;                            /* Stormy Teal */
     --accent-foreground: #faf9f5;                 /* Porcelain */
     --destructive: #dd403a;                       /* Cinnabar */
+    --warning: #e08d3c;                           /* Tiger's Eye - warning/blocking */
     --border: hsl(214.3 31.8% 91.4%);             /* Light border */
     --input: hsl(214.3 31.8% 91.4%);              /* Light input */
     --ring: #2a2a27;                              /* Graphite */
@@ -76,6 +77,7 @@
     --accent: #0b7a75;                               /* Teal accent for dark mode */
     --accent-foreground: #faf9f5;
     --destructive: #dd403a;
+    --warning: #e08d3c;                              /* Tiger's Eye - warning/blocking */
     --ring: oklch(0.985 0.001 106.423);
 
     /* Chart colors */
@@ -119,6 +121,7 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-warning: var(--warning);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);

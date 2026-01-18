@@ -70,11 +70,12 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
   const { clearSelection, selectedIds } = useSelection()
   const [activeTab, setActiveTab] = useState<TaskStatus>('IN_PROGRESS')
 
-  // Compute which tasks are blocked (have incomplete dependencies)
-  const blockedTaskIds = useMemo(() => {
-    if (!dependencyGraph) return new Set<string>()
+  // Compute which tasks are blocked (have incomplete dependencies) and blocking (blocking other tasks)
+  const { blockedTaskIds, blockingTaskIds } = useMemo(() => {
+    if (!dependencyGraph) return { blockedTaskIds: new Set<string>(), blockingTaskIds: new Set<string>() }
 
     const blocked = new Set<string>()
+    const blocking = new Set<string>()
     const nodeStatusMap = new Map(dependencyGraph.nodes.map(n => [n.id, n.status]))
 
     // For each edge, check if the source (dependency) is incomplete
@@ -83,10 +84,11 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
       // A task is blocked if any of its dependencies are not DONE or CANCELED
       if (dependencyStatus && dependencyStatus !== 'DONE' && dependencyStatus !== 'CANCELED') {
         blocked.add(edge.target)
+        blocking.add(edge.source)
       }
     }
 
-    return blocked
+    return { blockedTaskIds: blocked, blockingTaskIds: blocking }
   }, [dependencyGraph])
 
   // Escape key clears selection
@@ -246,6 +248,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
             status={status}
             tasks={tasks.filter((t) => t.status === status)}
             blockedTaskIds={blockedTaskIds}
+            blockingTaskIds={blockingTaskIds}
           />
         ))}
       </div>
@@ -257,6 +260,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
           tasks={tasks.filter((t) => t.status === activeTab)}
           isMobile
           blockedTaskIds={blockedTaskIds}
+          blockingTaskIds={blockingTaskIds}
         />
       </div>
 

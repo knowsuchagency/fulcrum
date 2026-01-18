@@ -230,3 +230,55 @@ export function useTaskDependencyGraph() {
     queryFn: () => fetchJSON<TaskDependencyGraph>(`${API_BASE}/api/task-dependencies/graph`),
   })
 }
+
+// Task dependency types for individual task view
+export interface TaskDependencyInfo {
+  id: string
+  title: string
+  status: TaskStatus
+  dependencyId: string
+}
+
+export interface TaskDependencies {
+  blockedBy: TaskDependencyInfo[]
+  blocking: TaskDependencyInfo[]
+}
+
+export function useTaskDependencies(taskId: string) {
+  return useQuery({
+    queryKey: ['task-dependencies', taskId],
+    queryFn: () => fetchJSON<TaskDependencies>(`${API_BASE}/api/task-dependencies/${taskId}`),
+    enabled: !!taskId,
+  })
+}
+
+export function useAddTaskDependency() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, dependsOnTaskId }: { taskId: string; dependsOnTaskId: string }) =>
+      fetchJSON<{ id: string }>(`${API_BASE}/api/task-dependencies/${taskId}`, {
+        method: 'POST',
+        body: JSON.stringify({ dependsOnTaskId }),
+      }),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
+    },
+  })
+}
+
+export function useRemoveTaskDependency() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, dependencyId }: { taskId: string; dependencyId: string }) =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/task-dependencies/${taskId}/${dependencyId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
+    },
+  })
+}
