@@ -232,6 +232,13 @@
       "when": 1768906400000,
       "tag": "0032_add_task_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1768992800000,
+      "tag": "0033_project_notes_and_attachments",
+      "breakpoints": true
     }
   ]
 }

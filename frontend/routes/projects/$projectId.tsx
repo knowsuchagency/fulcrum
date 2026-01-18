@@ -6,6 +6,7 @@ import { useTasks } from '@/hooks/use-tasks'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -41,6 +42,7 @@ import {
   Task01Icon,
   ArrowRight01Icon,
   ArrowDown01Icon,
+  Edit02Icon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectRepositoryDetails, Task, TaskStatus } from '@/types'
 import { toast } from 'sonner'
@@ -48,6 +50,8 @@ import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
 import { buildEditorUrl, openExternalUrl } from '@/lib/editor-url'
 import { cn } from '@/lib/utils'
+import { ProjectTagsManager } from '@/components/project/project-tags-manager'
+import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
 
 export const Route = createFileRoute('/projects/$projectId')({
   component: ProjectDetailView,
@@ -207,6 +211,11 @@ function ProjectDetailView() {
   const [editedName, setEditedName] = useState('')
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  // Notes editing state
+  const [isEditingNotes, setIsEditingNotes] = useState(false)
+  const [editedNotes, setEditedNotes] = useState('')
+  const notesTextareaRef = useRef<HTMLTextAreaElement>(null)
+
   // Status filter state - multi-select for active statuses
   const [statusFilter, setStatusFilter] = useState<Set<TaskStatus>>(
     new Set(['TO_DO', 'IN_PROGRESS', 'IN_REVIEW'])
@@ -288,6 +297,27 @@ function ProjectDetailView() {
       handleCancelEditName()
     }
   }, [handleSaveName, handleCancelEditName])
+
+  const handleStartEditNotes = useCallback(() => {
+    if (project) {
+      setEditedNotes(project.notes || '')
+      setIsEditingNotes(true)
+      setTimeout(() => notesTextareaRef.current?.focus(), 0)
+    }
+  }, [project])
+
+  const handleSaveNotes = useCallback(() => {
+    const newNotes = editedNotes.trim() || null
+    if (newNotes !== (project?.notes || null)) {
+      updateProject.mutate({ id: projectId, updates: { notes: newNotes } })
+    }
+    setIsEditingNotes(false)
+  }, [editedNotes, project?.notes, projectId, updateProject])
+
+  const handleCancelEditNotes = useCallback(() => {
+    setIsEditingNotes(false)
+    setEditedNotes('')
+  }, [])
 
   const handleDelete = async () => {
     try {
@@ -383,39 +413,82 @@ function ProjectDetailView() {
 
       {/* Content */}
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto px-6 py-6 space-y-8">
-          {/* Tags */}
-          {project.tags && project.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {project.tags.map((tag) => (
-                <Badge key={tag.id} variant="secondary">
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {/* Repositories Section */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                Repositories ({project.repositories.length})
-              </h2>
-            </div>
-            {project.repositories.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  <p className="text-sm">No repositories linked to this project.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {project.repositories.map((repo) => (
-                  <RepositoryCard key={repo.id} repository={repo} />
-                ))}
+        <div className="max-w-5xl mx-auto px-6 py-6 space-y-8">
+          {/* Top section: Repositories + Sidebar (Tags & Notes) */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Repositories Section - Left side */}
+            <section className="flex-1 space-y-4 min-w-0">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  Repositories ({project.repositories.length})
+                </h2>
               </div>
-            )}
-          </section>
+              {project.repositories.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    <p className="text-sm">No repositories linked to this project.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  {project.repositories.map((repo) => (
+                    <RepositoryCard key={repo.id} repository={repo} />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Sidebar - Right side (Tags & Notes) */}
+            <aside className="w-full lg:w-72 shrink-0 space-y-6">
+              {/* Tags */}
+              <ProjectTagsManager projectId={projectId} tags={project.tags || []} />
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</h3>
+                  {!isEditingNotes && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={handleStartEditNotes}
+                    >
+                      <HugeiconsIcon icon={Edit02Icon} size={12} data-slot="icon" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+                {isEditingNotes ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      ref={notesTextareaRef}
+                      value={editedNotes}
+                      onChange={(e) => setEditedNotes(e.target.value)}
+                      placeholder="Add notes about this project..."
+                      className="min-h-[100px] text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveNotes}>
+                        <HugeiconsIcon icon={Tick02Icon} size={12} data-slot="icon" />
+                        Save
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleCancelEditNotes}>
+                        <HugeiconsIcon icon={Cancel01Icon} size={12} data-slot="icon" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : project.notes ? (
+                  <div className="text-sm whitespace-pre-wrap text-muted-foreground">
+                    {project.notes}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No notes</p>
+                )}
+              </div>
+            </aside>
+          </div>
 
           {/* Tasks Section */}
           <section className="space-y-4">
@@ -505,6 +578,11 @@ function ProjectDetailView() {
               </CollapsibleContent>
             </Collapsible>
           )}
+
+          {/* Attachments Section */}
+          <section className="space-y-4">
+            <ProjectAttachmentsManager projectId={projectId} />
+          </section>
         </div>
       </ScrollArea>
 

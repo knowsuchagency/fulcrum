@@ -3,9 +3,12 @@ import { nanoid } from 'nanoid'
 import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve, join } from 'node:path'
-import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, tags, projectTags } from '../db'
+import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, tags, projectTags, projectAttachments } from '../db'
 import { eq, desc, sql, and, or, inArray } from 'drizzle-orm'
-import type { ProjectWithDetails, ProjectRepositoryDetails, Tag } from '../../shared/types'
+import type { ProjectWithDetails, ProjectRepositoryDetails, Tag, ProjectAttachment } from '../../shared/types'
+import { getViboraDir } from '../lib/settings'
+import * as fs from 'fs'
+import * as path from 'path'
 import { broadcast } from '../websocket/terminal-ws'
 
 const app = new Hono()
@@ -145,6 +148,66 @@ function getProjectTags(projectId: string): Tag[] {
   return result
 }
 
+// Helper to get attachments for a project
+function getProjectAttachmentsList(projectId: string): ProjectAttachment[] {
+  const attachments = db
+    .select()
+    .from(projectAttachments)
+    .where(eq(projectAttachments.projectId, projectId))
+    .all()
+
+  return attachments.map((a) => ({
+    id: a.id,
+    projectId: a.projectId,
+    filename: a.filename,
+    storedPath: a.storedPath,
+    mimeType: a.mimeType,
+    size: a.size,
+    createdAt: a.createdAt,
+  }))
+}
+
+// Get upload directory for a project
+function getProjectUploadsDir(projectId: string): string {
+  const viboraDir = getViboraDir()
+  return path.join(viboraDir, 'uploads', 'projects', projectId)
+}
+
+// Allowed MIME types for attachments
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
+  'text/plain', 'text/markdown',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/json',
+  'application/zip',
+  'application/gzip',
+  'application/x-tar',
+]
+
+// Max file size: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+
+// Sanitize filename for storage
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+}
+
+// Delete all attachments for a project (files and DB records)
+function deleteProjectAttachmentsOnDisk(projectId: string): void {
+  // Delete from DB
+  db.delete(projectAttachments).where(eq(projectAttachments.projectId, projectId)).run()
+
+  // Delete the upload directory
+  const uploadDir = getProjectUploadsDir(projectId)
+  if (fs.existsSync(uploadDir)) {
+    fs.rmSync(uploadDir, { recursive: true, force: true })
+  }
+}
+
 // Helper to build project with nested entities
 function buildProjectWithDetails(
   project: typeof projects.$inferSelect,
@@ -156,11 +219,13 @@ function buildProjectWithDetails(
   const projectRepos = getProjectRepositories(project.id, project.repositoryId)
   const taskCount = getProjectTaskCount(project.id, project.repositoryId)
   const projectTagsList = getProjectTags(project.id)
+  const projectAttachmentsList = getProjectAttachmentsList(project.id)
 
   return {
     id: project.id,
     name: project.name,
     description: project.description,
+    notes: project.notes,
     repositoryId: project.repositoryId,
     appId: project.appId,
     terminalTabId: project.terminalTabId,
@@ -225,6 +290,7 @@ function buildProjectWithDetails(
         }
       : null,
     tags: projectTagsList,
+    attachments: projectAttachmentsList,
     taskCount,
   }
 }
@@ -523,6 +589,7 @@ app.patch('/:id', async (c) => {
     const body = await c.req.json<{
       name?: string
       description?: string | null
+      notes?: string | null
       status?: 'active' | 'archived'
     }>()
 
@@ -531,6 +598,7 @@ app.patch('/:id', async (c) => {
     const updateData: Record<string, unknown> = { updatedAt: now }
     if (body.name !== undefined) updateData.name = body.name
     if (body.description !== undefined) updateData.description = body.description
+    if (body.notes !== undefined) updateData.notes = body.notes
     if (body.status !== undefined) updateData.status = body.status
 
     db.update(projects).set(updateData).where(eq(projects.id, id)).run()
@@ -625,6 +693,15 @@ app.delete('/:id', async (c) => {
       }
     }
   }
+
+  // Delete project attachments (files and DB records)
+  deleteProjectAttachmentsOnDisk(id)
+
+  // Delete project tags
+  db.delete(projectTags).where(eq(projectTags.projectId, id)).run()
+
+  // Delete project repository links
+  db.delete(projectRepositories).where(eq(projectRepositories.projectId, id)).run()
 
   // Delete project
   db.delete(projects).where(eq(projects.id, id)).run()
@@ -1358,6 +1435,147 @@ app.delete('/:id/tags/:tagId', (c) => {
     .where(eq(projects.id, projectId))
     .run()
 
+  broadcast({ type: 'project:updated', payload: { projectId } })
+
+  return c.json({ success: true })
+})
+
+// ==================== ATTACHMENT ROUTES ====================
+
+// GET /api/projects/:id/attachments - List attachments for a project
+app.get('/:id/attachments', (c) => {
+  const projectId = c.req.param('id')
+
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  if (!project) {
+    return c.json({ error: 'Project not found' }, 404)
+  }
+
+  const attachments = db
+    .select()
+    .from(projectAttachments)
+    .where(eq(projectAttachments.projectId, projectId))
+    .all()
+
+  return c.json(attachments)
+})
+
+// POST /api/projects/:id/attachments - Upload an attachment
+app.post('/:id/attachments', async (c) => {
+  const projectId = c.req.param('id')
+
+  try {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+    if (!project) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    const formData = await c.req.formData()
+    const file = formData.get('file') as File | null
+
+    if (!file) {
+      return c.json({ error: 'No file provided' }, 400)
+    }
+
+    // Validate file type
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return c.json({ error: `File type not allowed: ${file.type}` }, 400)
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return c.json({ error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` }, 400)
+    }
+
+    // Create upload directory
+    const uploadDir = getProjectUploadsDir(projectId)
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
+    }
+
+    // Generate unique filename
+    const sanitized = sanitizeFilename(file.name)
+    const uniqueFilename = `${Date.now()}_${sanitized}`
+    const storedPath = path.join(uploadDir, uniqueFilename)
+
+    // Write file to disk
+    const arrayBuffer = await file.arrayBuffer()
+    fs.writeFileSync(storedPath, Buffer.from(arrayBuffer))
+
+    // Create DB record
+    const now = new Date().toISOString()
+    const newAttachment = {
+      id: crypto.randomUUID(),
+      projectId,
+      filename: file.name,
+      storedPath,
+      mimeType: file.type,
+      size: file.size,
+      createdAt: now,
+    }
+
+    db.insert(projectAttachments).values(newAttachment).run()
+    broadcast({ type: 'project:updated', payload: { projectId } })
+
+    return c.json(newAttachment, 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to upload attachment' }, 400)
+  }
+})
+
+// GET /api/projects/:id/attachments/:attachmentId - Download an attachment
+app.get('/:id/attachments/:attachmentId', (c) => {
+  const projectId = c.req.param('id')
+  const attachmentId = c.req.param('attachmentId')
+
+  const attachment = db
+    .select()
+    .from(projectAttachments)
+    .where(and(eq(projectAttachments.id, attachmentId), eq(projectAttachments.projectId, projectId)))
+    .get()
+
+  if (!attachment) {
+    return c.json({ error: 'Attachment not found' }, 404)
+  }
+
+  // Check file exists
+  if (!fs.existsSync(attachment.storedPath)) {
+    return c.json({ error: 'File not found on disk' }, 404)
+  }
+
+  // Read file and return
+  const fileBuffer = fs.readFileSync(attachment.storedPath)
+  return new Response(fileBuffer, {
+    headers: {
+      'Content-Type': attachment.mimeType,
+      'Content-Disposition': `attachment; filename="${attachment.filename}"`,
+      'Content-Length': String(attachment.size),
+    },
+  })
+})
+
+// DELETE /api/projects/:id/attachments/:attachmentId - Delete an attachment
+app.delete('/:id/attachments/:attachmentId', (c) => {
+  const projectId = c.req.param('id')
+  const attachmentId = c.req.param('attachmentId')
+
+  const attachment = db
+    .select()
+    .from(projectAttachments)
+    .where(and(eq(projectAttachments.id, attachmentId), eq(projectAttachments.projectId, projectId)))
+    .get()
+
+  if (!attachment) {
+    return c.json({ error: 'Attachment not found' }, 404)
+  }
+
+  // Delete file from disk
+  if (fs.existsSync(attachment.storedPath)) {
+    fs.unlinkSync(attachment.storedPath)
+  }
+
+  // Delete from DB
+  db.delete(projectAttachments).where(eq(projectAttachments.id, attachmentId)).run()
   broadcast({ type: 'project:updated', payload: { projectId } })
 
   return c.json({ success: true })

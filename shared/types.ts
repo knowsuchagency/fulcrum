@@ -143,6 +143,17 @@ export interface TaskAttachment {
   createdAt: string
 }
 
+// Project attachment for file uploads
+export interface ProjectAttachment {
+  id: string
+  projectId: string
+  filename: string
+  storedPath: string
+  mimeType: string
+  size: number
+  createdAt: string
+}
+
 // Project-Repository M:N relationship
 export interface ProjectRepository {
   id: string
@@ -553,6 +564,7 @@ export interface Project {
   id: string
   name: string
   description: string | null
+  notes: string | null
   repositoryId: string | null
   appId: string | null
   terminalTabId: string | null
@@ -617,5 +629,6 @@ export interface ProjectWithDetails extends Project {
     directory: string | null
   } | null
   tags: Tag[] // Project tags
+  attachments: ProjectAttachment[] // Project attachments
   taskCount: number // Number of tasks in this project
 }

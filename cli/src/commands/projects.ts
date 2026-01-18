@@ -5,11 +5,21 @@ import type { ProjectWithDetails } from '@shared/types'
 
 const VALID_STATUSES = ['active', 'archived'] as const
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 function formatProject(project: ProjectWithDetails): void {
   console.log(`${project.name}`)
   console.log(`  ID:          ${project.id}`)
   console.log(`  Status:      ${project.status}`)
   if (project.description) console.log(`  Description: ${project.description}`)
+  if (project.notes) console.log(`  Notes:       ${project.notes}`)
+  if (project.tags && project.tags.length > 0) {
+    console.log(`  Tags:        ${project.tags.map((t) => t.name).join(', ')}`)
+  }
   if (project.repository) {
     console.log(`  Repository:  ${project.repository.path}`)
     if (project.repository.remoteUrl) {
@@ -21,6 +31,13 @@ function formatProject(project: ProjectWithDetails): void {
   }
   if (project.terminalTab) {
     console.log(`  Terminal:    ${project.terminalTab.name}`)
+  }
+  if (project.attachments && project.attachments.length > 0) {
+    console.log(`  Attachments:`)
+    for (const att of project.attachments) {
+      console.log(`    - ${att.filename} (${formatFileSize(att.size)})`)
+      console.log(`      ID: ${att.id}`)
+    }
   }
 }
 
@@ -154,6 +171,7 @@ export async function handleProjectsCommand(
       const updates: Record<string, unknown> = {}
       if (flags.name !== undefined) updates.name = flags.name
       if (flags.description !== undefined) updates.description = flags.description
+      if (flags.notes !== undefined) updates.notes = flags.notes || null
       if (flags.status !== undefined) {
         const status = flags.status.toLowerCase()
         if (!VALID_STATUSES.includes(status as 'active' | 'archived')) {
@@ -169,7 +187,7 @@ export async function handleProjectsCommand(
       if (Object.keys(updates).length === 0) {
         throw new CliError(
           'NO_UPDATES',
-          'No updates provided. Use --name, --description, or --status',
+          'No updates provided. Use --name, --description, --notes, or --status',
           ExitCodes.INVALID_ARGS
         )
       }
@@ -220,10 +238,137 @@ export async function handleProjectsCommand(
       break
     }
 
+    // Tag commands
+    case 'tags': {
+      const [subAction, projectId, tagArg] = positional
+      if (!subAction) {
+        throw new CliError(
+          'MISSING_SUBACTION',
+          'Subaction required: add, remove',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+      if (!projectId) {
+        throw new CliError('MISSING_ID', 'Project ID required', ExitCodes.INVALID_ARGS)
+      }
+
+      switch (subAction) {
+        case 'add': {
+          if (!tagArg) {
+            throw new CliError('MISSING_TAG', 'Tag name required', ExitCodes.INVALID_ARGS)
+          }
+          const tag = await client.addProjectTag(projectId, tagArg)
+          if (isJsonOutput()) {
+            output(tag)
+          } else {
+            console.log(`Added tag "${tag.name}" to project`)
+          }
+          break
+        }
+        case 'remove': {
+          if (!tagArg) {
+            throw new CliError('MISSING_TAG', 'Tag ID required', ExitCodes.INVALID_ARGS)
+          }
+          await client.removeProjectTag(projectId, tagArg)
+          if (isJsonOutput()) {
+            output({ success: true })
+          } else {
+            console.log(`Removed tag from project`)
+          }
+          break
+        }
+        default:
+          throw new CliError(
+            'UNKNOWN_SUBACTION',
+            `Unknown subaction: ${subAction}. Valid: add, remove`,
+            ExitCodes.INVALID_ARGS
+          )
+      }
+      break
+    }
+
+    // Attachment commands
+    case 'attachments': {
+      const [subAction, projectId, fileOrId] = positional
+      if (!subAction) {
+        throw new CliError(
+          'MISSING_SUBACTION',
+          'Subaction required: list, upload, download, delete',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+      if (!projectId) {
+        throw new CliError('MISSING_ID', 'Project ID required', ExitCodes.INVALID_ARGS)
+      }
+
+      switch (subAction) {
+        case 'list': {
+          const attachments = await client.listProjectAttachments(projectId)
+          if (isJsonOutput()) {
+            output(attachments)
+          } else if (attachments.length === 0) {
+            console.log('No attachments')
+          } else {
+            for (const att of attachments) {
+              console.log(`${att.filename} (${formatFileSize(att.size)})`)
+              console.log(`  ID: ${att.id}`)
+              console.log(`  Type: ${att.mimeType}`)
+            }
+          }
+          break
+        }
+        case 'upload': {
+          if (!fileOrId) {
+            throw new CliError('MISSING_FILE', 'File path required', ExitCodes.INVALID_ARGS)
+          }
+          const attachment = await client.uploadProjectAttachment(projectId, fileOrId)
+          if (isJsonOutput()) {
+            output(attachment)
+          } else {
+            console.log(`Uploaded: ${attachment.filename}`)
+            console.log(`  ID: ${attachment.id}`)
+          }
+          break
+        }
+        case 'download': {
+          if (!fileOrId) {
+            throw new CliError('MISSING_ID', 'Attachment ID required', ExitCodes.INVALID_ARGS)
+          }
+          const info = await client.getProjectAttachmentPath(projectId, fileOrId)
+          if (isJsonOutput()) {
+            output(info)
+          } else {
+            console.log(`File: ${info.filename}`)
+            console.log(`Path: ${info.path}`)
+          }
+          break
+        }
+        case 'delete': {
+          if (!fileOrId) {
+            throw new CliError('MISSING_ID', 'Attachment ID required', ExitCodes.INVALID_ARGS)
+          }
+          await client.deleteProjectAttachment(projectId, fileOrId)
+          if (isJsonOutput()) {
+            output({ success: true })
+          } else {
+            console.log(`Deleted attachment: ${fileOrId}`)
+          }
+          break
+        }
+        default:
+          throw new CliError(
+            'UNKNOWN_SUBACTION',
+            `Unknown subaction: ${subAction}. Valid: list, upload, download, delete`,
+            ExitCodes.INVALID_ARGS
+          )
+      }
+      break
+    }
+
     default:
       throw new CliError(
         'UNKNOWN_ACTION',
-        `Unknown action: ${action}. Valid: list, get, create, update, delete, scan`,
+        `Unknown action: ${action}. Valid: list, get, create, update, delete, scan, tags, attachments`,
         ExitCodes.INVALID_ARGS
       )
   }

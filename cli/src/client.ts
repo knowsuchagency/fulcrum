@@ -7,6 +7,8 @@ import type {
   TaskStatus,
   TaskLink,
   TaskAttachment,
+  ProjectAttachment,
+  Tag,
   Repository,
   ProjectWithDetails,
   App,
@@ -91,6 +93,7 @@ export interface CreateProjectInput {
 export interface UpdateProjectInput {
   name?: string
   description?: string | null
+  notes?: string | null
   status?: 'active' | 'archived'
 }
 
@@ -585,6 +588,64 @@ export class ViboraClient {
       method: 'POST',
       body: JSON.stringify({ repositories }),
     })
+  }
+
+  // Project tags
+  async addProjectTag(projectId: string, tagIdOrName: string): Promise<Tag> {
+    // Check if it looks like an ID (nanoid format) or a name
+    const isId = tagIdOrName.length === 21 && /^[a-zA-Z0-9_-]+$/.test(tagIdOrName)
+    return this.fetch(`/api/projects/${projectId}/tags`, {
+      method: 'POST',
+      body: JSON.stringify(isId ? { tagId: tagIdOrName } : { name: tagIdOrName }),
+    })
+  }
+
+  async removeProjectTag(projectId: string, tagId: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/projects/${projectId}/tags/${tagId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Project attachments
+  async listProjectAttachments(projectId: string): Promise<ProjectAttachment[]> {
+    return this.fetch(`/api/projects/${projectId}/attachments`)
+  }
+
+  async uploadProjectAttachment(projectId: string, filePath: string): Promise<ProjectAttachment> {
+    const fileContent = readFileSync(filePath)
+    const filename = basename(filePath)
+
+    const formData = new FormData()
+    const blob = new Blob([fileContent])
+    formData.append('file', blob, filename)
+
+    const url = `${this.baseUrl}/api/projects/${projectId}/attachments`
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new ApiError(res.status, body.error || body.message || `Request failed: ${res.status}`)
+    }
+
+    return res.json()
+  }
+
+  async deleteProjectAttachment(projectId: string, attachmentId: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/projects/${projectId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async getProjectAttachmentPath(projectId: string, attachmentId: string): Promise<{ path: string; filename: string; mimeType: string }> {
+    const attachments = await this.listProjectAttachments(projectId)
+    const attachment = attachments.find((a) => a.id === attachmentId)
+    if (!attachment) {
+      throw new ApiError(404, `Attachment not found: ${attachmentId}`)
+    }
+    return { path: attachment.storedPath, filename: attachment.filename, mimeType: attachment.mimeType }
   }
 
   // Apps

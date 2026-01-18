@@ -59,6 +59,17 @@ export const taskAttachments = sqliteTable('task_attachments', {
   createdAt: text('created_at').notNull(),
 })
 
+// Project attachments - file uploads associated with projects
+export const projectAttachments = sqliteTable('project_attachments', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  filename: text('filename').notNull(), // Original filename
+  storedPath: text('stored_path').notNull(), // Full filesystem path
+  mimeType: text('mime_type').notNull(),
+  size: integer('size').notNull(), // Bytes
+  createdAt: text('created_at').notNull(),
+})
+
 // Terminal tabs - first-class entities that can exist without terminals
 export const terminalTabs = sqliteTable('terminal_tabs', {
   id: text('id').primaryKey(),
@@ -183,6 +194,7 @@ export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
+  notes: text('notes'), // Free-form notes/comments
   repositoryId: text('repository_id'), // DEPRECATED: use projectRepositories join table
   appId: text('app_id').unique(), // FK to apps (nullable, 1:1)
   terminalTabId: text('terminal_tab_id').unique(), // FK to terminalTabs (dedicated)
@@ -268,6 +280,8 @@ export type ProjectRepository = typeof projectRepositories.$inferSelect
 export type NewProjectRepository = typeof projectRepositories.$inferInsert
 export type TaskAttachment = typeof taskAttachments.$inferSelect
 export type NewTaskAttachment = typeof taskAttachments.$inferInsert
+export type ProjectAttachment = typeof projectAttachments.$inferSelect
+export type NewProjectAttachment = typeof projectAttachments.$inferInsert
 export type Tag = typeof tags.$inferSelect
 export type NewTag = typeof tags.$inferInsert
 export type TaskTag = typeof taskTags.$inferSelect

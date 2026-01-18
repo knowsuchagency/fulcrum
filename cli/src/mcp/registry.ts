@@ -120,6 +120,48 @@ export const toolRegistry: ToolMetadata[] = [
     keywords: ['project', 'scan', 'find', 'discover', 'repository', 'git'],
     deferred: true,
   },
+  {
+    name: 'add_project_tag',
+    description: 'Add a tag to a project',
+    category: 'projects',
+    keywords: ['project', 'tag', 'add', 'label', 'categorize'],
+    deferred: true,
+  },
+  {
+    name: 'remove_project_tag',
+    description: 'Remove a tag from a project',
+    category: 'projects',
+    keywords: ['project', 'tag', 'remove', 'delete', 'label'],
+    deferred: true,
+  },
+  {
+    name: 'list_project_attachments',
+    description: 'List all file attachments for a project',
+    category: 'projects',
+    keywords: ['project', 'attachment', 'file', 'upload', 'document', 'list'],
+    deferred: true,
+  },
+  {
+    name: 'upload_project_attachment',
+    description: 'Upload a file to a project from a local path',
+    category: 'projects',
+    keywords: ['project', 'attachment', 'file', 'upload', 'document', 'add'],
+    deferred: true,
+  },
+  {
+    name: 'delete_project_attachment',
+    description: 'Delete a file attachment from a project',
+    category: 'projects',
+    keywords: ['project', 'attachment', 'file', 'delete', 'remove'],
+    deferred: true,
+  },
+  {
+    name: 'get_project_attachment_path',
+    description: 'Get the local file path for a project attachment',
+    category: 'projects',
+    keywords: ['project', 'attachment', 'file', 'path', 'read'],
+    deferred: true,
+  },
 
   // App tools - deferred
   {

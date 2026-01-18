@@ -59,6 +59,7 @@ export function useUpdateProject() {
       updates: {
         name?: string
         description?: string | null
+        notes?: string | null
         status?: 'active' | 'archived'
       }
     }) =>
