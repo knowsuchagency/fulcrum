@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react'
+import { useCallback, useMemo, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import ReactFlow, {
   type Node,
@@ -30,12 +30,17 @@ interface TaskNodeData {
   task: TaskGraphNode
   isBlocked: boolean
   isBlocking: boolean
+  direction: 'TB' | 'LR'
 }
 
 function TaskNode({ data }: { data: TaskNodeData }) {
-  const { task, isBlocked } = data
+  const { task, isBlocked, direction } = data
   const colors = STATUS_COLORS[task.status]
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && task.status !== 'CANCELED'
+
+  // Handle positions based on layout direction
+  const targetPosition = direction === 'LR' ? Position.Left : Position.Top
+  const sourcePosition = direction === 'LR' ? Position.Right : Position.Bottom
 
   return (
     <div
@@ -48,7 +53,7 @@ function TaskNode({ data }: { data: TaskNodeData }) {
         opacity: isBlocked ? 0.7 : 1,
       }}
     >
-      <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" />
+      <Handle type="target" position={targetPosition} className="!bg-gray-400 !w-2 !h-2" />
       <div className="flex flex-col gap-1">
         <div
           className="font-medium text-sm leading-tight line-clamp-2"
@@ -103,7 +108,7 @@ function TaskNode({ data }: { data: TaskNodeData }) {
           </div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" />
+      <Handle type="source" position={sourcePosition} className="!bg-gray-400 !w-2 !h-2" />
     </div>
   )
 }
@@ -160,9 +165,26 @@ interface TaskDependencyGraphProps {
   className?: string
 }
 
+const MOBILE_BREAKPOINT = 768
+
 export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
   const navigate = useNavigate()
   const { data: graphData, isLoading } = useTaskDependencyGraph()
+
+  // Detect mobile for layout direction
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
+  )
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const direction: 'TB' | 'LR' = isMobile ? 'TB' : 'LR'
 
   // Calculate which nodes are blocked (have incomplete dependencies)
   const blockedNodes = useMemo(() => {
@@ -198,7 +220,16 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
   const { initialNodes, initialEdges } = useMemo((): { initialNodes: Node<TaskNodeData>[]; initialEdges: Edge[] } => {
     if (!graphData) return { initialNodes: [], initialEdges: [] }
 
-    const nodes: Node<TaskNodeData>[] = graphData.nodes.map((task) => ({
+    // Only include nodes that are part of dependency chains
+    const nodesInChains = new Set<string>()
+    for (const edge of graphData.edges) {
+      nodesInChains.add(edge.source)
+      nodesInChains.add(edge.target)
+    }
+
+    const filteredTasks = graphData.nodes.filter((task) => nodesInChains.has(task.id))
+
+    const nodes: Node<TaskNodeData>[] = filteredTasks.map((task) => ({
       id: task.id,
       type: 'task',
       position: { x: 0, y: 0 },
@@ -206,6 +237,7 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
         task,
         isBlocked: blockedNodes.has(task.id),
         isBlocking: blockingNodes.has(task.id),
+        direction,
       },
     }))
 
@@ -227,10 +259,10 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
       },
     }))
 
-    // Apply automatic layout
-    const layouted = getLayoutedElements(nodes, edges)
+    // Apply automatic layout (LR on desktop, TB on mobile)
+    const layouted = getLayoutedElements(nodes, edges, direction)
     return { initialNodes: layouted.nodes as Node<TaskNodeData>[], initialEdges: layouted.edges }
-  }, [graphData, blockedNodes, blockingNodes])
+  }, [graphData, blockedNodes, blockingNodes, direction])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -281,7 +313,11 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
   }
 
   return (
-    <div className={`h-full ${className}`}>
+    <div className={`h-full relative ${className}`}>
+      {/* Info badge */}
+      <div className="absolute top-2 left-2 z-10 bg-background/90 border rounded-md px-2 py-1 text-xs text-muted-foreground">
+        {nodes.length} tasks with dependencies ({graphData.edges.length} links)
+      </div>
       <ReactFlow
         nodes={nodes}
         edges={edges}
