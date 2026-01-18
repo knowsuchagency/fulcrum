@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import { useProjects, useDeleteProject } from '@/hooks/use-projects'
+import { useRepositories, useDeleteRepository } from '@/hooks/use-repositories'
+import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
+import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -17,8 +20,10 @@ import {
   Search01Icon,
   TaskDaily01Icon,
   SourceCodeSquareIcon,
+  VisualStudioCodeIcon,
+  Settings05Icon,
 } from '@hugeicons/core-free-icons'
-import type { ProjectWithDetails } from '@/types'
+import type { ProjectWithDetails, Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/projects/create-project-modal'
@@ -35,8 +40,18 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
+
+type ViewTab = 'projects' | 'repositories'
+
+interface ProjectsSearchParams {
+  tab?: ViewTab
+}
 
 export const Route = createFileRoute('/projects/')({
+  validateSearch: (search: Record<string, unknown>): ProjectsSearchParams => ({
+    tab: search.tab === 'repositories' ? 'repositories' : undefined,
+  }),
   component: ProjectsView,
 })
 
@@ -144,6 +159,106 @@ function ProjectCard({
   )
 }
 
+function RepositoryCard({
+  repository,
+  project,
+  onDeleteClick,
+}: {
+  repository: Repository
+  project: ProjectWithDetails | null
+  onDeleteClick: () => void
+}) {
+  const { t } = useTranslation('projects')
+  const navigate = useNavigate()
+  const { data: editorApp } = useEditorApp()
+  const { data: editorHost } = useEditorHost()
+  const { data: editorSshPort } = useEditorSshPort()
+
+  const handleOpenEditor = () => {
+    const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
+    openExternalUrl(url)
+  }
+
+  // If repo has a project, link to project detail; otherwise link to repository detail
+  const detailLink = project
+    ? { to: '/projects/$projectId' as const, params: { projectId: project.id } }
+    : { to: '/repositories/$repoId' as const, params: { repoId: repository.id } }
+
+  return (
+    <Card className="h-full group transition-colors hover:border-foreground/20">
+      <Link {...detailLink} className="block">
+        <CardContent className="flex flex-col gap-3 py-4">
+          {/* Header: Name */}
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium group-hover:text-primary transition-colors">
+              {repository.displayName}
+            </span>
+          </div>
+
+          {/* Path */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
+            <span className="truncate font-mono">{repository.path}</span>
+          </div>
+
+          {/* Project association */}
+          <div className="flex items-center gap-2 text-xs">
+            {project ? (
+              <Badge variant="secondary" className="text-xs">
+                Project: {project.name}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground">No project</span>
+            )}
+          </div>
+        </CardContent>
+      </Link>
+
+      <CardContent className="pt-0 pb-4 px-6">
+        {/* Action buttons row */}
+        <div className="mt-auto flex flex-wrap gap-1">
+          {/* Editor */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenEditor}
+            className="text-muted-foreground hover:text-foreground"
+            title={`Open in ${getEditorDisplayName(editorApp)}`}
+          >
+            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('editor')}</span>
+          </Button>
+
+          {/* Settings */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(detailLink)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Settings</span>
+          </Button>
+
+          {/* Delete - only if no project */}
+          {!project && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDeleteClick}
+              className="text-muted-foreground hover:text-destructive"
+              title="Delete repository"
+            >
+              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{t('delete.button')}</span>
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function DeleteProjectDialog({
   project,
   open,
@@ -218,15 +333,86 @@ function DeleteProjectDialog({
   )
 }
 
+function DeleteRepositoryDialog({
+  repository,
+  open,
+  onOpenChange,
+  onDelete,
+}: {
+  repository: Repository | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onDelete: () => Promise<void>
+}) {
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      await onDelete()
+      onOpenChange(false)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Repository</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to remove &quot;{repository?.displayName}&quot; from the repository list?
+            This will not delete the actual directory.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 function ProjectsView() {
   const { t } = useTranslation('projects')
   const navigate = useNavigate()
-  const { data: projects, isLoading, error } = useProjects()
+  const searchParams = useSearch({ from: '/projects/' }) as ProjectsSearchParams
+  const activeTab = searchParams.tab ?? 'projects'
+
+  // Projects data
+  const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects()
   const deleteProject = useDeleteProject()
   const [taskModalProject, setTaskModalProject] = useState<ProjectWithDetails | null>(null)
   const [deleteProjectState, setDeleteProjectState] = useState<ProjectWithDetails | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+
+  // Repositories data
+  const { data: repositories, isLoading: reposLoading, error: reposError } = useRepositories()
+  const deleteRepository = useDeleteRepository()
+  const [deleteRepoState, setDeleteRepoState] = useState<Repository | null>(null)
+
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Build a map from repository ID to project (for repo view)
+  const repoToProject = useMemo(() => {
+    const map = new Map<string, ProjectWithDetails>()
+    if (projects) {
+      for (const project of projects) {
+        for (const repo of project.repositories) {
+          map.set(repo.id, project)
+        }
+        if (project.repositoryId && !map.has(project.repositoryId)) {
+          map.set(project.repositoryId, project)
+        }
+      }
+    }
+    return map
+  }, [projects])
 
   const filteredProjects = useMemo(() => {
     if (!projects) return []
@@ -245,7 +431,23 @@ function ProjectsView() {
       .map(({ project }) => project)
   }, [projects, searchQuery])
 
-  const handleDelete = async (deleteDirectory: boolean, deleteApp: boolean) => {
+  const filteredRepositories = useMemo(() => {
+    if (!repositories) return []
+    if (!searchQuery?.trim()) return repositories
+    return repositories
+      .map((repo) => ({
+        repo,
+        score: Math.max(
+          fuzzyScore(repo.displayName, searchQuery),
+          fuzzyScore(repo.path, searchQuery)
+        ),
+      }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ repo }) => repo)
+  }, [repositories, searchQuery])
+
+  const handleDeleteProject = async (deleteDirectory: boolean, deleteApp: boolean) => {
     if (!deleteProjectState) return
     await deleteProject.mutateAsync({
       id: deleteProjectState.id,
@@ -253,6 +455,30 @@ function ProjectsView() {
       deleteApp,
     })
   }
+
+  const handleDeleteRepository = async () => {
+    if (!deleteRepoState) return
+    try {
+      await deleteRepository.mutateAsync(deleteRepoState.id)
+      toast.success('Repository removed')
+    } catch (err) {
+      toast.error('Failed to delete repository', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      })
+    }
+  }
+
+  const handleTabChange = (value: string | string[]) => {
+    const selected = Array.isArray(value) ? value[0] : value
+    if (selected === 'repositories') {
+      navigate({ to: '/projects', search: { tab: 'repositories' } })
+    } else {
+      navigate({ to: '/projects', search: {} })
+    }
+  }
+
+  const isLoading = activeTab === 'projects' ? projectsLoading : reposLoading
+  const error = activeTab === 'projects' ? projectsError : reposError
 
   return (
     <div className="flex h-full flex-col">
@@ -262,20 +488,15 @@ function ProjectsView() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('searchPlaceholder')}
+            placeholder={activeTab === 'projects' ? t('searchPlaceholder') : 'Search repositories...'}
             className="w-full pl-6"
           />
         </div>
         <div className="hidden sm:block flex-1" />
         {/* Projects/Repos toggle */}
         <ToggleGroup
-          value={['projects']}
-          onValueChange={(value) => {
-            const selected = Array.isArray(value) ? value[0] : value
-            if (selected === 'repos') {
-              navigate({ to: '/repositories' })
-            }
-          }}
+          value={[activeTab]}
+          onValueChange={handleTabChange}
           className="hidden sm:flex"
           variant="outline"
         >
@@ -283,15 +504,17 @@ function ProjectsView() {
             <HugeiconsIcon icon={TaskDaily01Icon} size={14} strokeWidth={2} />
             Projects
           </ToggleGroupItem>
-          <ToggleGroupItem value="repos" aria-label="View repositories" className="gap-1.5 text-xs">
+          <ToggleGroupItem value="repositories" aria-label="View repositories" className="gap-1.5 text-xs">
             <HugeiconsIcon icon={SourceCodeSquareIcon} size={14} strokeWidth={2} />
             Repos
           </ToggleGroupItem>
         </ToggleGroup>
-        <Button size="sm" onClick={() => setCreateModalOpen(true)}>
-          <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
-          <span className="max-sm:hidden">{t('newProjectButton')}</span>
-        </Button>
+        {activeTab === 'projects' && (
+          <Button size="sm" onClick={() => setCreateModalOpen(true)}>
+            <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('newProjectButton')}</span>
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto p-4">
@@ -309,33 +532,70 @@ function ProjectsView() {
         {error && (
           <div className="flex items-center gap-3 py-6 text-destructive">
             <HugeiconsIcon icon={Alert02Icon} size={20} strokeWidth={2} />
-            <span className="text-sm">{t('error.failedToLoad', { message: error.message })}</span>
+            <span className="text-sm">
+              {activeTab === 'projects'
+                ? t('error.failedToLoad', { message: error.message })
+                : `Failed to load repositories: ${error.message}`}
+            </span>
           </div>
         )}
 
-        {!isLoading && !error && projects?.length === 0 && (
-          <div className="py-12 text-muted-foreground">
-            <p className="text-sm">{t('empty.noProjects')}</p>
-          </div>
+        {/* Projects view */}
+        {activeTab === 'projects' && (
+          <>
+            {!isLoading && !error && projects?.length === 0 && (
+              <div className="py-12 text-muted-foreground">
+                <p className="text-sm">{t('empty.noProjects')}</p>
+              </div>
+            )}
+
+            {!isLoading && !error && projects && projects.length > 0 && filteredProjects.length === 0 && (
+              <div className="py-12 text-muted-foreground">
+                <p className="text-sm">{t('empty.noMatches')}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onStartTask={() => setTaskModalProject(project)}
+                  onAddRepo={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
+                  onDeleteClick={() => setDeleteProjectState(project)}
+                />
+              ))}
+            </div>
+          </>
         )}
 
-        {!isLoading && !error && projects && projects.length > 0 && filteredProjects.length === 0 && (
-          <div className="py-12 text-muted-foreground">
-            <p className="text-sm">{t('empty.noMatches')}</p>
-          </div>
-        )}
+        {/* Repositories view */}
+        {activeTab === 'repositories' && (
+          <>
+            {!isLoading && !error && repositories?.length === 0 && (
+              <div className="py-12 text-muted-foreground">
+                <p className="text-sm">No repositories found</p>
+              </div>
+            )}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onStartTask={() => setTaskModalProject(project)}
-              onAddRepo={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
-              onDeleteClick={() => setDeleteProjectState(project)}
-            />
-          ))}
-        </div>
+            {!isLoading && !error && repositories && repositories.length > 0 && filteredRepositories.length === 0 && (
+              <div className="py-12 text-muted-foreground">
+                <p className="text-sm">No repositories match your search</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredRepositories.map((repo) => (
+                <RepositoryCard
+                  key={repo.id}
+                  repository={repo}
+                  project={repoToProject.get(repo.id) ?? null}
+                  onDeleteClick={() => setDeleteRepoState(repo)}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {taskModalProject && (
@@ -351,7 +611,14 @@ function ProjectsView() {
         project={deleteProjectState}
         open={deleteProjectState !== null}
         onOpenChange={(open) => !open && setDeleteProjectState(null)}
-        onDelete={handleDelete}
+        onDelete={handleDeleteProject}
+      />
+
+      <DeleteRepositoryDialog
+        repository={deleteRepoState}
+        open={deleteRepoState !== null}
+        onOpenChange={(open) => !open && setDeleteRepoState(null)}
+        onDelete={handleDeleteRepository}
       />
 
       <CreateProjectModal

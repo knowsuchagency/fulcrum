@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { createFileRoute, Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useRepository, useUpdateRepository } from '@/hooks/use-repositories'
 import { useAppByRepository, useFindCompose } from '@/hooks/use-apps'
-import { useProjects } from '@/hooks/use-projects'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -34,7 +33,7 @@ import {
 import { WorkspacePanel } from '@/components/workspace/workspace-panel'
 import { DeploymentsTab } from '@/components/apps/deployments-tab'
 import { DeploymentSetupWizard } from '@/components/apps/deployment-setup-wizard'
-import { useDeploymentStore } from '@/stores/hooks/use-deployment-store'
+import { useDeploymentStore, DeploymentStoreProvider } from '@/stores/hooks/use-deployment-store'
 import { useDeploymentPrerequisites } from '@/hooks/use-apps'
 import { observer } from 'mobx-react-lite'
 
@@ -56,24 +55,6 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
   const deployStore = useDeploymentStore()
   const { data: prereqs } = useDeploymentPrerequisites()
   const { data: composeInfo } = useFindCompose(repoId)
-  const { data: projects } = useProjects()
-
-  // Redirect to project detail if this repo belongs to a project
-  useEffect(() => {
-    if (projects) {
-      const project = projects.find(
-        (p) => p.repository?.id === repoId ||
-               p.repositories.some((r) => r.id === repoId)
-      )
-      if (project) {
-        navigate({
-          to: '/projects/$projectId',
-          params: { projectId: project.id },
-          replace: true,
-        })
-      }
-    }
-  }, [projects, repoId, navigate])
 
   // Tab state from URL
   const activeTab = searchParams.tab ?? 'settings'
@@ -386,6 +367,14 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
   )
 })
 
+function RepositoryDetailViewWithProvider() {
+  return (
+    <DeploymentStoreProvider>
+      <RepositoryDetailView />
+    </DeploymentStoreProvider>
+  )
+}
+
 export const Route = createFileRoute('/repositories/$repoId')({
   validateSearch: (search: Record<string, unknown>): RepoSearchParams => ({
     tab: ['settings', 'workspace', 'deploy'].includes(search.tab as string)
@@ -393,5 +382,5 @@ export const Route = createFileRoute('/repositories/$repoId')({
       : undefined,
     file: typeof search.file === 'string' ? search.file : undefined,
   }),
-  component: RepositoryDetailView,
+  component: RepositoryDetailViewWithProvider,
 })
