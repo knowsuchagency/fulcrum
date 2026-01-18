@@ -11,7 +11,6 @@ describe('Agent Commands', () => {
   const baseOptions = {
     prompt: 'Test task',
     systemPrompt: 'You are a helpful assistant',
-    sessionId: 'test-session-123',
     mode: 'default' as const,
     additionalOptions: {},
   }
@@ -24,7 +23,6 @@ describe('Agent Commands', () => {
         expect(cmd).toContain('claude')
         expect(cmd).toContain('--dangerously-skip-permissions')
         expect(cmd).toContain('--append-system-prompt')
-        expect(cmd).toContain('--session-id "test-session-123"')
         expect(cmd).not.toContain('--permission-mode plan')
       })
 
@@ -34,7 +32,6 @@ describe('Agent Commands', () => {
         expect(cmd).toContain('claude')
         expect(cmd).toContain('--allow-dangerously-skip-permissions')
         expect(cmd).toContain('--permission-mode plan')
-        expect(cmd).toContain('--session-id "test-session-123"')
       })
 
       test('includes additional options', () => {

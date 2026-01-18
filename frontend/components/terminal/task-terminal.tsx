@@ -399,7 +399,6 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
       const taskCommand = buildAgentCommand(currentAgent as AgentType, {
         prompt: taskInfo,
         systemPrompt,
-        sessionId: actualTerminalId,
         mode: currentAiMode === 'plan' ? 'plan' : 'default',
         additionalOptions: currentAgentOptions ?? {},
         opencodeModel: currentOpencodeModel,

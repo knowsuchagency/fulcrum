@@ -13,8 +13,6 @@ export interface AgentCommandOptions {
   prompt: string
   /** System prompt to inject (Vibora context) */
   systemPrompt: string
-  /** Session ID for terminal correlation */
-  sessionId: string
   /** AI mode: default (full autonomy) or plan (restricted) */
   mode: 'default' | 'plan'
   /** Additional CLI options from agentOptions */
@@ -41,7 +39,7 @@ export interface AgentCommandBuilder {
  * https://docs.anthropic.com/en/docs/claude-code/cli
  */
 const claudeBuilder: AgentCommandBuilder = {
-  buildCommand({ prompt, systemPrompt, sessionId, mode, additionalOptions }) {
+  buildCommand({ prompt, systemPrompt, mode, additionalOptions }) {
     const escapedPrompt = escapeForShell(prompt)
     const escapedSystemPrompt = escapeForShell(systemPrompt)
 
@@ -54,9 +52,9 @@ const claudeBuilder: AgentCommandBuilder = {
     }
 
     if (mode === 'plan') {
-      return `claude ${escapedPrompt} --append-system-prompt ${escapedSystemPrompt} --session-id "${sessionId}" --allow-dangerously-skip-permissions --permission-mode plan${extraFlags}`
+      return `claude ${escapedPrompt} --append-system-prompt ${escapedSystemPrompt} --allow-dangerously-skip-permissions --permission-mode plan${extraFlags}`
     }
-    return `claude ${escapedPrompt} --append-system-prompt ${escapedSystemPrompt} --session-id "${sessionId}" --dangerously-skip-permissions${extraFlags}`
+    return `claude ${escapedPrompt} --append-system-prompt ${escapedSystemPrompt} --dangerously-skip-permissions${extraFlags}`
   },
   notFoundPatterns: [
     /claude: command not found/,
