@@ -489,21 +489,7 @@ function ProjectsView() {
         <CreateTaskModal
           open={taskModalProject !== null}
           onOpenChange={(open) => !open && setTaskModalProject(null)}
-          defaultRepository={{
-            id: taskModalProject.repository.id,
-            path: taskModalProject.repository.path,
-            displayName: taskModalProject.repository.displayName,
-            startupScript: taskModalProject.repository.startupScript,
-            copyFiles: taskModalProject.repository.copyFiles,
-            claudeOptions: taskModalProject.repository.claudeOptions,
-            opencodeOptions: taskModalProject.repository.opencodeOptions,
-            opencodeModel: taskModalProject.repository.opencodeModel,
-            defaultAgent: taskModalProject.repository.defaultAgent,
-            remoteUrl: taskModalProject.repository.remoteUrl,
-            isCopierTemplate: taskModalProject.repository.isCopierTemplate,
-            createdAt: '',
-            updatedAt: '',
-          }}
+          defaultRepository={taskModalProject.repository}
           showTrigger={false}
         />
       )}

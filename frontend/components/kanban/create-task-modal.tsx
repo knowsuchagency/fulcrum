@@ -41,9 +41,9 @@ import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
 import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import { useRepositories } from '@/hooks/use-repositories'
+import { useProjects } from '@/hooks/use-projects'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { DatePickerPopover } from '@/components/ui/date-picker-popover'
-import type { Repository } from '@/types'
 import { ModelPicker } from '@/components/opencode/model-picker'
 import { useUploadAttachment } from '@/hooks/use-task-attachments'
 
@@ -65,10 +65,23 @@ function generateBranchName(text: string): string {
   return `${slug}-${suffix}`
 }
 
+// Common fields needed for task creation from a repository
+interface DefaultRepositoryProps {
+  id: string
+  path: string
+  displayName: string
+  startupScript?: string | null
+  copyFiles?: string | null
+  defaultAgent?: AgentType | null
+  claudeOptions?: Record<string, string> | null
+  opencodeOptions?: Record<string, string> | null
+  opencodeModel?: string | null
+}
+
 interface CreateTaskModalProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
-  defaultRepository?: Repository
+  defaultRepository?: DefaultRepositoryProps
   showTrigger?: boolean
 }
 
@@ -101,6 +114,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [isValidatingRepo, setIsValidatingRepo] = useState(false)
   const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
 
   const navigate = useNavigate()
   const createTask = useCreateTask()
@@ -112,6 +126,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const { data: defaultAgent } = useDefaultAgent()
   const { data: globalOpencodeModel } = useOpencodeModel()
   const { data: repositories } = useRepositories()
+  const { data: projects } = useProjects()
   const { data: branchData, isLoading: branchesLoading } = useBranches(
     repoPath || null
   )
@@ -271,6 +286,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         // Generalized task fields
         labels: labels.length > 0 ? labels : undefined,
         dueDate: dueDate || null,
+        projectId: !isCodeTask ? selectedProjectId : undefined,
       },
       {
         onSuccess: async (task) => {
@@ -322,6 +338,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     setSelectedRepoId(null)
     setRepoSearchQuery('')
     setRepoError(null)
+    setSelectedProjectId(null)
     // Reset tab to saved if repositories exist, otherwise browse
     setRepoTab(repositories && repositories.length > 0 ? 'saved' : 'browse')
   }
@@ -446,6 +463,36 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                     : 'Creates a task without code context. You can add code later.'}
                 </FieldDescription>
               </Field>
+
+              {/* Project selector for quick tasks */}
+              {taskType === 'quick' && (
+                <Field>
+                  <FieldLabel>Project (optional)</FieldLabel>
+                  <Select
+                    value={selectedProjectId || '_none'}
+                    onValueChange={(value) => setSelectedProjectId(value === '_none' ? null : value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {selectedProjectId
+                          ? projects?.find((p) => p.id === selectedProjectId)?.name || 'Select project'
+                          : 'No project (Inbox)'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">No project (Inbox)</SelectItem>
+                      {projects?.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>
+                    Tasks without a project appear in the Inbox.
+                  </FieldDescription>
+                </Field>
+              )}
 
               {taskType === 'code' && (
                 <>

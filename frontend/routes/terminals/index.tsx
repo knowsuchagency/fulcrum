@@ -124,16 +124,16 @@ const TerminalsView = observer(function TerminalsView() {
     [navigate, reposFilter, projectsFilter]
   )
 
-  // Toggle a repo in the multi-select filter
-  const toggleRepoFilter = useCallback(
-    (repoName: string, checked: boolean) => {
-      const currentNames = reposFilter?.split(',').filter(Boolean) ?? []
-      const newNames = checked
-        ? [...currentNames, repoName]
-        : currentNames.filter((name) => name !== repoName)
+  // Toggle a project in the task filter multi-select
+  const toggleTaskProjectFilter = useCallback(
+    (projectId: string, checked: boolean) => {
+      const currentIds = reposFilter?.split(',').filter(Boolean) ?? []
+      const newIds = checked
+        ? [...currentIds, projectId]
+        : currentIds.filter((id) => id !== projectId)
       navigate({
         to: '/terminals',
-        search: (prev) => ({ ...prev, repos: newNames.length > 0 ? newNames.join(',') : undefined }),
+        search: (prev) => ({ ...prev, repos: newIds.length > 0 ? newIds.join(',') : undefined }),
         replace: true,
       })
     },
@@ -280,18 +280,37 @@ const TerminalsView = observer(function TerminalsView() {
     return map
   }, [tasks, repoIdByPath])
 
-  // Unique repo names from active tasks for filtering
-  const repoNames = useMemo(() => {
-    const names = new Set(
-      tasks
-        .filter((t) => ACTIVE_STATUSES.includes(t.status) && t.repoName)
-        .map((t) => t.repoName!)
-    )
-    return Array.from(names).sort()
-  }, [tasks])
+  // Unique project IDs from active tasks for filtering (including 'inbox' for tasks without project)
+  const taskProjectOptions = useMemo(() => {
+    const projectIds = new Set<string>()
+    let hasInboxTasks = false
+    for (const task of tasks) {
+      if (ACTIVE_STATUSES.includes(task.status)) {
+        if (task.projectId) {
+          projectIds.add(task.projectId)
+        } else {
+          hasInboxTasks = true
+        }
+      }
+    }
+    // Map project IDs to names for display
+    const options: { id: string; name: string }[] = []
+    for (const project of allProjects) {
+      if (projectIds.has(project.id)) {
+        options.push({ id: project.id, name: project.name })
+      }
+    }
+    // Sort by name
+    options.sort((a, b) => a.name.localeCompare(b.name))
+    // Add inbox option if there are tasks without project
+    if (hasInboxTasks) {
+      options.push({ id: 'inbox', name: 'Inbox (No Project)' })
+    }
+    return options
+  }, [tasks, allProjects])
 
-  // Parse selected repo names from URL
-  const selectedRepoNames = useMemo(() => {
+  // Parse selected task project IDs from URL (reuse repos param for backwards compat)
+  const selectedTaskProjectIds = useMemo(() => {
     return reposFilter?.split(',').filter(Boolean) ?? []
   }, [reposFilter])
 
@@ -444,14 +463,17 @@ const TerminalsView = observer(function TerminalsView() {
   // Filter terminals for the active tab and convert to TerminalInfo for component compatibility
   const visibleTerminals = useMemo(() => {
     if (activeTabId === ALL_TASKS_TAB_ID) {
-      // Show terminals for active tasks, sorted by newest task first, with optional repo filter
+      // Show terminals for active tasks, sorted by newest task first, with optional project filter
       return terminals
         .filter((t) => t.cwd && activeTaskWorktrees.has(t.cwd))
         .filter((t) => {
           // If no filter selected, show all (default behavior)
-          if (selectedRepoNames.length === 0) return true
+          if (selectedTaskProjectIds.length === 0) return true
           const task = tasks.find((task) => task.worktreePath === t.cwd)
-          return task?.repoName && selectedRepoNames.includes(task.repoName)
+          if (!task) return false
+          // Handle 'inbox' filter for tasks without project
+          if (selectedTaskProjectIds.includes('inbox') && !task.projectId) return true
+          return task.projectId && selectedTaskProjectIds.includes(task.projectId)
         })
         .sort((a, b) => {
           const taskA = tasks.find((t) => t.worktreePath === a.cwd)
@@ -477,7 +499,7 @@ const TerminalsView = observer(function TerminalsView() {
       .filter((t) => t.tabId === activeTabId)
       .sort((a, b) => a.positionInTab - b.positionInTab)
       .map(toTerminalInfo)
-  }, [activeTabId, terminals, activeTaskWorktrees, selectedRepoNames, tasks, projectRepoPaths, selectedProjectIds])
+  }, [activeTabId, terminals, activeTaskWorktrees, selectedTaskProjectIds, tasks, projectRepoPaths, selectedProjectIds])
 
   // Clear loading state when terminal appears (with minimum duration)
   useEffect(() => {
@@ -769,38 +791,38 @@ const TerminalsView = observer(function TerminalsView() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-3 max-sm:gap-1">
-          {/* Repo filter (only when Task Terminals is active and multiple repos exist) */}
-          {activeTabId === ALL_TASKS_TAB_ID && repoNames.length > 1 && (
+          {/* Project filter (only when Task Terminals is active and multiple projects exist) */}
+          {activeTabId === ALL_TASKS_TAB_ID && taskProjectOptions.length > 1 && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="sm" className="max-sm:w-auto" />}
               >
                 <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
                 <span>
-                  {selectedRepoNames.length === 0
+                  {selectedTaskProjectIds.length === 0
                     ? t('allProjects')
-                    : t('projectsSelected', { count: selectedRepoNames.length })}
+                    : t('projectsSelected', { count: selectedTaskProjectIds.length })}
                 </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64" align="end">
                 <div className="p-2 space-y-2">
                   <div className="text-sm font-medium mb-2">{t('filterByRepo')}</div>
-                  {repoNames.map((name) => (
-                    <div key={name} className="flex items-center gap-2">
+                  {taskProjectOptions.map((option) => (
+                    <div key={option.id} className="flex items-center gap-2">
                       <Checkbox
-                        id={`repo-filter-${name}`}
-                        checked={selectedRepoNames.includes(name)}
-                        onCheckedChange={(checked) => toggleRepoFilter(name, checked === true)}
+                        id={`project-filter-${option.id}`}
+                        checked={selectedTaskProjectIds.includes(option.id)}
+                        onCheckedChange={(checked) => toggleTaskProjectFilter(option.id, checked === true)}
                       />
                       <Label
-                        htmlFor={`repo-filter-${name}`}
+                        htmlFor={`project-filter-${option.id}`}
                         className="text-sm cursor-pointer"
                       >
-                        {name}
+                        {option.name}
                       </Label>
                     </div>
                   ))}
-                  {selectedRepoNames.length > 0 && (
+                  {selectedTaskProjectIds.length > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"

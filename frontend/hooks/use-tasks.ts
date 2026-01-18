@@ -44,6 +44,7 @@ export function useCreateTask() {
       // New generalized task fields
       labels?: string[]
       dueDate?: string | null
+      projectId?: string | null
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks`, {
         method: 'POST',
