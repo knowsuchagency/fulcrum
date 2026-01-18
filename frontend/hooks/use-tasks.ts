@@ -198,3 +198,30 @@ export function useRemoveTaskLink() {
     },
   })
 }
+
+export interface TaskGraphNode {
+  id: string
+  title: string
+  status: TaskStatus
+  projectId: string | null
+  labels: string[]
+  dueDate: string | null
+}
+
+export interface TaskGraphEdge {
+  id: string
+  source: string
+  target: string
+}
+
+export interface TaskDependencyGraph {
+  nodes: TaskGraphNode[]
+  edges: TaskGraphEdge[]
+}
+
+export function useTaskDependencyGraph() {
+  return useQuery({
+    queryKey: ['task-dependencies', 'graph'],
+    queryFn: () => fetchJSON<TaskDependencyGraph>(`${API_BASE}/api/task-dependencies/graph`),
+  })
+}
