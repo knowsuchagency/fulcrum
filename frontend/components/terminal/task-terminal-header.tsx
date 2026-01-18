@@ -90,8 +90,6 @@ export function TaskTerminalHeader({
     branch: taskInfo.branch,
     viewState: null,
     prUrl: taskInfo.prUrl ?? null,
-    linearTicketId: null,
-    linearTicketUrl: null,
     startupScript: null,
     agent: 'claude',
     aiMode: null,

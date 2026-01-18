@@ -14,7 +14,6 @@ function formatTask(task: Task): void {
   if (task.repoName) console.log(`  Repo:     ${task.repoName}`)
   if (task.branch) console.log(`  Branch:   ${task.branch}`)
   if (task.prUrl) console.log(`  PR:       ${task.prUrl}`)
-  if (task.linearTicketId) console.log(`  Linear:   ${task.linearTicketId}`)
   if (task.projectId) console.log(`  Project:  ${task.projectId}`)
   if (task.labels && task.labels.length > 0) console.log(`  Labels:   ${task.labels.join(', ')}`)
   if (task.dueDate) console.log(`  Due:      ${task.dueDate}`)

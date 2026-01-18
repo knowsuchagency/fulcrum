@@ -13,8 +13,6 @@ export const tasks = sqliteTable('tasks', {
   worktreePath: text('worktree_path'),
   viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
   prUrl: text('pr_url'), // GitHub PR URL for auto-completion tracking
-  linearTicketId: text('linear_ticket_id'), // e.g., "TEAM-123"
-  linearTicketUrl: text('linear_ticket_url'), // Full URL for linking
   startupScript: text('startup_script'), // Command to run after worktree creation
   agent: text('agent').notNull().default('claude'), // AI agent: 'claude' | 'opencode'
   aiMode: text('ai_mode'), // 'default' | 'plan' | null - AI mode for agent startup
@@ -45,7 +43,18 @@ export const taskLinks = sqliteTable('task_links', {
   taskId: text('task_id').notNull(),
   url: text('url').notNull(),
   label: text('label'), // User-provided or auto-detected label
-  type: text('type'), // 'pr' | 'issue' | 'linear' | 'docs' | 'design' | 'other'
+  type: text('type'), // 'pr' | 'issue' | 'docs' | 'design' | 'other'
+  createdAt: text('created_at').notNull(),
+})
+
+// Task attachments - file uploads associated with tasks
+export const taskAttachments = sqliteTable('task_attachments', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull(),
+  filename: text('filename').notNull(), // Original filename
+  storedPath: text('stored_path').notNull(), // Full filesystem path
+  mimeType: text('mime_type').notNull(),
+  size: integer('size').notNull(), // Bytes
   createdAt: text('created_at').notNull(),
 })
 
@@ -232,3 +241,5 @@ export type TaskDependency = typeof taskDependencies.$inferSelect
 export type NewTaskDependency = typeof taskDependencies.$inferInsert
 export type ProjectRepository = typeof projectRepositories.$inferSelect
 export type NewProjectRepository = typeof projectRepositories.$inferInsert
+export type TaskAttachment = typeof taskAttachments.$inferSelect
+export type NewTaskAttachment = typeof taskAttachments.$inferInsert

@@ -1,6 +1,7 @@
 -- Fix NOT NULL constraints on repo_path, repo_name, base_branch
 -- SQLite doesn't support ALTER TABLE to remove NOT NULL, so we recreate the table
 -- This migration is needed for databases that ran 0026 before the table recreation was added
+-- Note: linear_ticket_id and linear_ticket_url are intentionally omitted as they were removed
 
 -- Create new tasks table with nullable repo fields
 CREATE TABLE `tasks_new` (
@@ -16,8 +17,6 @@ CREATE TABLE `tasks_new` (
   `worktree_path` text,
   `view_state` text,
   `pr_url` text,
-  `linear_ticket_id` text,
-  `linear_ticket_url` text,
   `startup_script` text,
   `agent` text NOT NULL DEFAULT 'claude',
   `ai_mode` text,
@@ -37,7 +36,7 @@ CREATE TABLE `tasks_new` (
 INSERT INTO `tasks_new` (
   `id`, `title`, `description`, `status`, `position`,
   `repo_path`, `repo_name`, `base_branch`, `branch`, `worktree_path`,
-  `view_state`, `pr_url`, `linear_ticket_id`, `linear_ticket_url`,
+  `view_state`, `pr_url`,
   `startup_script`, `agent`, `ai_mode`, `agent_options`, `opencode_model`,
   `pinned`, `project_id`, `repository_id`, `labels`, `started_at`, `due_date`,
   `created_at`, `updated_at`
@@ -45,7 +44,7 @@ INSERT INTO `tasks_new` (
 SELECT
   `id`, `title`, `description`, `status`, `position`,
   `repo_path`, `repo_name`, `base_branch`, `branch`, `worktree_path`,
-  `view_state`, `pr_url`, `linear_ticket_id`, `linear_ticket_url`,
+  `view_state`, `pr_url`,
   `startup_script`, `agent`, `ai_mode`, `agent_options`, `opencode_model`,
   `pinned`, `project_id`, `repository_id`, `labels`, `started_at`, `due_date`,
   `created_at`, `updated_at`

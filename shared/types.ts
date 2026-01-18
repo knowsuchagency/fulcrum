@@ -80,8 +80,6 @@ export interface Task {
   worktreePath: string | null
   viewState: ViewState | null
   prUrl: string | null
-  linearTicketId: string | null
-  linearTicketUrl: string | null
   startupScript: string | null
   agent: AgentType
   aiMode: 'default' | 'plan' | null
@@ -100,7 +98,7 @@ export interface Task {
 }
 
 // Task link types for arbitrary URL associations
-export type TaskLinkType = 'pr' | 'issue' | 'linear' | 'docs' | 'design' | 'other'
+export type TaskLinkType = 'pr' | 'issue' | 'docs' | 'design' | 'other'
 
 export interface TaskLink {
   id: string
@@ -116,6 +114,17 @@ export interface TaskDependency {
   id: string
   taskId: string
   dependsOnTaskId: string
+  createdAt: string
+}
+
+// Task attachment for file uploads
+export interface TaskAttachment {
+  id: string
+  taskId: string
+  filename: string
+  storedPath: string
+  mimeType: string
+  size: number
   createdAt: string
 }
 

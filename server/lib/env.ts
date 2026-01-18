@@ -6,7 +6,6 @@ import { log } from './logger'
 const SENSITIVE_ENV_VARS = [
   'CLOUDFLARE_API_TOKEN',
   'CLOUDFLARE_ACCOUNT_ID',
-  'LINEAR_API_KEY',
   'GITHUB_PAT',
 ]
 

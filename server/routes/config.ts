@@ -31,7 +31,6 @@ export const CONFIG_KEYS = {
   EDITOR_APP: 'editor.app',
   EDITOR_HOST: 'editor.host',
   EDITOR_SSH_PORT: 'editor.sshPort',
-  LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
   DEFAULT_AGENT: 'agent.defaultAgent',
   OPENCODE_MODEL: 'agent.opencodeModel',
@@ -52,7 +51,6 @@ const LEGACY_KEY_MAP: Record<string, string> = {
   remote_host: 'remoteVibora.host',
   hostname: 'remoteVibora.host', // Extra legacy key
   ssh_port: 'editor.sshPort',
-  linear_api_key: 'integrations.linearApiKey',
   github_pat: 'integrations.githubPat',
   language: 'appearance.language',
   theme: 'appearance.theme',
@@ -60,7 +58,6 @@ const LEGACY_KEY_MAP: Record<string, string> = {
   defaultGitReposDir: 'paths.defaultGitReposDir',
   remoteHost: 'remoteVibora.host',
   sshPort: 'editor.sshPort',
-  linearApiKey: 'integrations.linearApiKey',
   githubPat: 'integrations.githubPat',
 }
 
@@ -381,7 +378,7 @@ app.put('/:key', async (c) => {
       value = value.trim()
     } else if (typeof value === 'string' && value === '') {
       // Convert empty strings to null for nullable fields
-      if (path === CONFIG_KEYS.LINEAR_API_KEY || path === CONFIG_KEYS.GITHUB_PAT ||
+      if (path === CONFIG_KEYS.GITHUB_PAT ||
           path === CONFIG_KEYS.REMOTE_HOST || path === CONFIG_KEYS.EDITOR_HOST) {
         value = null
       }

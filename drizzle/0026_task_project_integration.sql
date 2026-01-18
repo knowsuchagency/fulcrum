@@ -17,6 +17,7 @@ CREATE TABLE `task_dependencies` (
 
 -- Recreate tasks table with nullable repo fields for non-code tasks
 -- SQLite doesn't support ALTER TABLE to remove NOT NULL, so we recreate the table
+-- Note: linear_ticket_id and linear_ticket_url are intentionally omitted as they were removed
 CREATE TABLE `tasks_new` (
   `id` text PRIMARY KEY NOT NULL,
   `title` text NOT NULL,
@@ -30,8 +31,6 @@ CREATE TABLE `tasks_new` (
   `worktree_path` text,
   `view_state` text,
   `pr_url` text,
-  `linear_ticket_id` text,
-  `linear_ticket_url` text,
   `startup_script` text,
   `agent` text NOT NULL DEFAULT 'claude',
   `ai_mode` text,
@@ -51,14 +50,14 @@ CREATE TABLE `tasks_new` (
 INSERT INTO `tasks_new` (
   `id`, `title`, `description`, `status`, `position`,
   `repo_path`, `repo_name`, `base_branch`, `branch`, `worktree_path`,
-  `view_state`, `pr_url`, `linear_ticket_id`, `linear_ticket_url`,
+  `view_state`, `pr_url`,
   `startup_script`, `agent`, `ai_mode`, `agent_options`, `opencode_model`,
   `pinned`, `created_at`, `updated_at`
 )
 SELECT
   `id`, `title`, `description`, `status`, `position`,
   `repo_path`, `repo_name`, `base_branch`, `branch`, `worktree_path`,
-  `view_state`, `pr_url`, `linear_ticket_id`, `linear_ticket_url`,
+  `view_state`, `pr_url`,
   `startup_script`, `agent`, `ai_mode`, `agent_options`, `opencode_model`,
   `pinned`, `created_at`, `updated_at`
 FROM `tasks`;--> statement-breakpoint

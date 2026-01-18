@@ -270,7 +270,7 @@ export const toolRegistry: ToolMetadata[] = [
     name: 'add_task_link',
     description: 'Add a URL link to a task',
     category: 'tasks',
-    keywords: ['task', 'link', 'url', 'pr', 'linear'],
+    keywords: ['task', 'link', 'url', 'pr'],
     deferred: false,
   },
   {
@@ -355,6 +355,34 @@ export const toolRegistry: ToolMetadata[] = [
     description: 'List all unique labels in use across tasks with optional search',
     category: 'tasks',
     keywords: ['labels', 'tags', 'categories', 'filter', 'search', 'discover'],
+    deferred: false,
+  },
+  {
+    name: 'list_task_attachments',
+    description: 'List all file attachments for a task',
+    category: 'tasks',
+    keywords: ['task', 'attachment', 'file', 'upload', 'document', 'list'],
+    deferred: false,
+  },
+  {
+    name: 'upload_task_attachment',
+    description: 'Upload a file to a task from a local path',
+    category: 'tasks',
+    keywords: ['task', 'attachment', 'file', 'upload', 'document', 'add'],
+    deferred: false,
+  },
+  {
+    name: 'delete_task_attachment',
+    description: 'Delete a file attachment from a task',
+    category: 'tasks',
+    keywords: ['task', 'attachment', 'file', 'delete', 'remove'],
+    deferred: false,
+  },
+  {
+    name: 'get_task_attachment_path',
+    description: 'Get the local file path for a task attachment',
+    category: 'tasks',
+    keywords: ['task', 'attachment', 'file', 'path', 'read'],
     deferred: false,
   },
 ]

@@ -13,8 +13,7 @@ import { useSelection } from './selection-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PackageIcon, GitPullRequestIcon, Task01Icon, Settings05Icon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
-import { TaskConfigModal } from '@/components/task-config-modal'
+import { PackageIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
 import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
 
 interface TaskCardProps {
@@ -34,7 +33,6 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
   const [isDragging, setIsDragging] = useState(false)
   const [closestEdge, setClosestEdge] = useState<Edge | null>(null)
   const [previewContainer, setPreviewContainer] = useState<HTMLElement | null>(null)
-  const [configModalOpen, setConfigModalOpen] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
 
   // Determine if this is a code task (has worktree) or non-code task
@@ -179,19 +177,6 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
         <CardTitle className="text-sm font-medium leading-tight flex-1">
           {task.title}
         </CardTitle>
-        {!isDragPreview && (
-          <button
-            type="button"
-            className="shrink-0 p-0.5 -m-0.5 rounded hover:bg-muted transition-colors cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              setConfigModalOpen(true)
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} className="text-muted-foreground" />
-          </button>
-        )}
       </CardHeader>
       <CardContent className={cn('p-3 pt-1', !isDragPreview && 'pl-8')}>
         {task.description && (
@@ -251,12 +236,6 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
                   <HugeiconsIcon icon={GitPullRequestIcon} size={12} strokeWidth={2} className="text-foreground" />
                 </>
               )}
-              {task.linearTicketId && (
-                <>
-                  <span className="text-muted-foreground/30">•</span>
-                  <HugeiconsIcon icon={Task01Icon} size={12} strokeWidth={2} className="text-foreground" />
-                </>
-              )}
             </span>
           )}
           {/* Due date - shown for all tasks */}
@@ -293,11 +272,6 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
         </div>,
         previewContainer
       )}
-      <TaskConfigModal
-        task={task}
-        open={configModalOpen}
-        onOpenChange={setConfigModalOpen}
-      />
       {!isCodeTask && (
         <NonCodeTaskModal
           task={task}

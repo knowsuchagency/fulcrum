@@ -2,7 +2,6 @@ import { db, type Task, repositories } from '../db'
 import { tasks, terminalViewState } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { broadcast } from '../websocket/terminal-ws'
-import { updateLinearTicketStatus } from './linear'
 import { sendNotification } from './notification-service'
 import { killClaudeInTerminalsForWorktree } from '../terminal/pty-instance'
 import { log } from '../lib/logger'
@@ -100,7 +99,6 @@ function generateWorktreeInfo(
  * Handles all side effects:
  * - Database update (status, position, updatedAt, startedAt)
  * - WebSocket broadcast
- * - Linear ticket sync
  * - Notifications (for IN_REVIEW only)
  * - Kill Claude processes (for DONE, CANCELED)
  * - Worktree creation (for TO_DO -> IN_PROGRESS on code tasks)
@@ -184,16 +182,6 @@ export async function updateTaskStatus(
 
   // Only trigger side effects if status actually changed
   if (statusChanged && updated) {
-    // Sync to Linear if linked
-    if (existing.linearTicketId) {
-      updateLinearTicketStatus(existing.linearTicketId, newStatus).catch((err) => {
-        log.api.error('Failed to update Linear ticket', {
-          linearTicketId: existing.linearTicketId,
-          error: String(err),
-        })
-      })
-    }
-
     // Send notification when task moves to review (suppressed if user is actively viewing)
     if (newStatus === 'IN_REVIEW') {
       const STALE_MS = 5 * 60 * 1000 // 5 minutes

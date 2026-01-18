@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { DescriptionTextarea } from '@/components/ui/description-textarea'
 import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { LinksManager } from '@/components/task/links-manager'
 import { DependencyManager } from '@/components/task/dependency-manager'
+import { AttachmentsManager } from '@/components/task/attachments-manager'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, GitPullRequestIcon, Link02Icon } from '@hugeicons/core-free-icons'
 import { useUpdateTask } from '@/hooks/use-tasks'
+import { openExternalUrl } from '@/lib/editor-url'
 import type { Task } from '@/types'
 
 interface TaskDetailsPanelProps {
@@ -18,6 +22,10 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [editedDescription, setEditedDescription] = useState(task.description || '')
   const [labelInput, setLabelInput] = useState('')
+  const [prUrlInput, setPrUrlInput] = useState(task.prUrl || '')
+  const [isEditingPrUrl, setIsEditingPrUrl] = useState(false)
+
+  const isCodeTask = !!task.worktreePath
 
   const handleSaveDescription = () => {
     if (editedDescription !== (task.description || '')) {
@@ -59,6 +67,34 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
       e.preventDefault()
       handleAddLabel()
     }
+  }
+
+  const handleSavePrUrl = () => {
+    const trimmed = prUrlInput.trim()
+    if (trimmed !== (task.prUrl || '')) {
+      updateTask.mutate({
+        taskId: task.id,
+        updates: { prUrl: trimmed || null },
+      })
+    }
+    setIsEditingPrUrl(false)
+  }
+
+  const handlePrUrlKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSavePrUrl()
+    } else if (e.key === 'Escape') {
+      setPrUrlInput(task.prUrl || '')
+      setIsEditingPrUrl(false)
+    }
+  }
+
+  const handlePinnedChange = (checked: boolean) => {
+    updateTask.mutate({
+      taskId: task.id,
+      updates: { pinned: checked } as Partial<Task>,
+    })
   }
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && task.status !== 'CANCELED'
@@ -160,6 +196,77 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
           </div>
         </div>
 
+        {/* Pull Request URL - only for code tasks */}
+        {isCodeTask && (
+          <div className="rounded-lg border bg-card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Pull Request</h3>
+              {!isEditingPrUrl && task.prUrl && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingPrUrl(true)}
+                  className="text-xs h-7"
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+            {isEditingPrUrl ? (
+              <div className="flex gap-2">
+                <Input
+                  value={prUrlInput}
+                  onChange={(e) => setPrUrlInput(e.target.value)}
+                  onKeyDown={handlePrUrlKeyDown}
+                  placeholder="https://github.com/owner/repo/pull/123"
+                  className="flex-1"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleSavePrUrl}>
+                  Save
+                </Button>
+              </div>
+            ) : task.prUrl ? (
+              <button
+                onClick={() => openExternalUrl(task.prUrl!)}
+                className="flex items-center gap-2 text-sm text-primary hover:underline"
+              >
+                <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
+                <span>#{task.prUrl.match(/\/pull\/(\d+)/)?.[1] ?? 'PR'}</span>
+                <HugeiconsIcon icon={Link02Icon} size={12} strokeWidth={2} className="text-muted-foreground" />
+              </button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingPrUrl(true)}
+                className="text-xs"
+              >
+                Link PR
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Pin Worktree - only for code tasks */}
+        {isCodeTask && (
+          <div className="rounded-lg border bg-card p-4">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="pin-worktree"
+                checked={task.pinned ?? false}
+                onCheckedChange={handlePinnedChange}
+              />
+              <label htmlFor="pin-worktree" className="text-sm cursor-pointer">
+                Pin worktree (exclude from bulk cleanup)
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Pinned worktrees are preserved when deleting multiple completed tasks.
+            </p>
+          </div>
+        )}
+
         {/* Dependencies */}
         <div className="rounded-lg border bg-card p-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Dependencies</h3>
@@ -170,6 +277,12 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
         <div className="rounded-lg border bg-card p-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Links</h3>
           <LinksManager taskId={task.id} links={task.links || []} />
+        </div>
+
+        {/* Attachments */}
+        <div className="rounded-lg border bg-card p-4">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Attachments</h3>
+          <AttachmentsManager taskId={task.id} />
         </div>
       </div>
     </div>

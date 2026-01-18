@@ -31,7 +31,6 @@ export interface Settings {
     sshPort: number
   }
   integrations: {
-    linearApiKey: string | null
     githubPat: string | null
     cloudflareApiToken: string | null
     cloudflareAccountId: string | null
@@ -66,7 +65,6 @@ const DEFAULT_SETTINGS: Settings = {
     sshPort: 22,
   },
   integrations: {
-    linearApiKey: null,
     githubPat: null,
     cloudflareApiToken: null,
     cloudflareAccountId: null,
@@ -95,7 +93,6 @@ const MIGRATION_MAP: Record<string, string> = {
   defaultGitReposDir: 'paths.defaultGitReposDir',
   // remoteHost and hostname are handled specially in migrateSettings (need URL construction)
   sshPort: 'editor.sshPort',
-  linearApiKey: 'integrations.linearApiKey',
   githubPat: 'integrations.githubPat',
   language: 'appearance.language',
   theme: 'appearance.theme',
@@ -325,7 +322,6 @@ export function getSettings(): Settings {
       sshPort: ((parsed.editor as Record<string, unknown>)?.sshPort as number) ?? DEFAULT_SETTINGS.editor.sshPort,
     },
     integrations: {
-      linearApiKey: ((parsed.integrations as Record<string, unknown>)?.linearApiKey as string | null) ?? null,
       githubPat: ((parsed.integrations as Record<string, unknown>)?.githubPat as string | null) ?? null,
       cloudflareApiToken: ((parsed.integrations as Record<string, unknown>)?.cloudflareApiToken as string | null) ?? null,
       cloudflareAccountId: ((parsed.integrations as Record<string, unknown>)?.cloudflareAccountId as string | null) ?? null,
@@ -365,7 +361,6 @@ export function getSettings(): Settings {
       sshPort: !isNaN(editorSshPortEnv) && editorSshPortEnv > 0 ? editorSshPortEnv : fileSettings.editor.sshPort,
     },
     integrations: {
-      linearApiKey: process.env.LINEAR_API_KEY ?? fileSettings.integrations.linearApiKey,
       githubPat: process.env.GITHUB_PAT ?? fileSettings.integrations.githubPat,
       cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? fileSettings.integrations.cloudflareApiToken,
       cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? fileSettings.integrations.cloudflareAccountId,
@@ -393,7 +388,6 @@ export interface LegacySettings {
   port: number
   defaultGitReposDir: string
   sshPort: number
-  linearApiKey: string | null
   githubPat: string | null
   language: 'en' | 'zh' | null
   theme: 'system' | 'light' | 'dark' | null
@@ -408,7 +402,6 @@ export function toLegacySettings(settings: Settings): LegacySettings {
     port: settings.server.port,
     defaultGitReposDir: settings.paths.defaultGitReposDir,
     sshPort: settings.editor.sshPort,
-    linearApiKey: settings.integrations.linearApiKey,
     githubPat: settings.integrations.githubPat,
     language: settings.appearance.language,
     theme: settings.appearance.theme,
@@ -444,7 +437,7 @@ export function updateSettingByPath(settingPath: string, value: unknown): Settin
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
 
   // Log setting change (mask sensitive values)
-  const sensitiveKeys = ['linearApiKey', 'githubPat', 'cloudflareApiToken', 'apiKey']
+  const sensitiveKeys = ['githubPat', 'cloudflareApiToken', 'apiKey']
   const isSensitive = sensitiveKeys.some(key => settingPath.includes(key))
   const logValue = isSensitive ? '***' : value
   const logOldValue = isSensitive ? '***' : oldValue

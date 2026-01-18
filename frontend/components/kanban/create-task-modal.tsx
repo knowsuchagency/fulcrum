@@ -34,7 +34,7 @@ import {
   ComboboxEmpty,
 } from '@/components/ui/combobox'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { TaskAdd01Icon, Folder01Icon, Cancel01Icon } from '@hugeicons/core-free-icons'
+import { TaskAdd01Icon, Folder01Icon, Cancel01Icon, Attachment01Icon } from '@hugeicons/core-free-icons'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCreateTask } from '@/hooks/use-tasks'
 import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
@@ -45,6 +45,7 @@ import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import type { Repository } from '@/types'
 import { ModelPicker } from '@/components/opencode/model-picker'
+import { useUploadAttachment } from '@/hooks/use-task-attachments'
 
 type TaskType = 'code' | 'quick'
 
@@ -99,10 +100,13 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [repoError, setRepoError] = useState<string | null>(null)
   const [isValidatingRepo, setIsValidatingRepo] = useState(false)
   const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
 
   const navigate = useNavigate()
   const createTask = useCreateTask()
+  const uploadAttachment = useUploadAttachment()
   const formRef = useRef<HTMLFormElement>(null)
+  const attachmentInputRef = useRef<HTMLInputElement>(null)
   const { data: worktreeBasePath } = useWorktreeBasePath()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const { data: defaultAgent } = useDefaultAgent()
@@ -269,7 +273,18 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         dueDate: dueDate || null,
       },
       {
-        onSuccess: (task) => {
+        onSuccess: async (task) => {
+          // Upload any pending attachments
+          if (pendingFiles.length > 0) {
+            for (const file of pendingFiles) {
+              try {
+                await uploadAttachment.mutateAsync({ taskId: task.id, file })
+              } catch {
+                // Continue with other files even if one fails
+              }
+            }
+          }
+
           const navState = isCodeTask && description.trim()
             ? { aiMode, description: description.trim(), focusTerminal: true }
             : isCodeTask
@@ -295,6 +310,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     setLabels([])
     setLabelInput('')
     setDueDate('')
+    setPendingFiles([])
     setRepoPath('')
     setBaseBranch('')
     setBranch('')
@@ -330,6 +346,18 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
       // Remove last label on backspace when input is empty
       setLabels(labels.slice(0, -1))
     }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    setPendingFiles(prev => [...prev, ...Array.from(files)])
+    // Reset input so the same file can be selected again
+    e.target.value = ''
+  }
+
+  const handleRemoveFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   // Cmd+Enter to submit form when modal is open
@@ -663,6 +691,50 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                   />
                 </Field>
               </div>
+
+              {/* Attachments */}
+              <Field>
+                <FieldLabel>Attachments</FieldLabel>
+                <div className="space-y-2">
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.txt,.md,.doc,.docx,.xls,.xlsx,.csv"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-muted-foreground"
+                    onClick={() => attachmentInputRef.current?.click()}
+                  >
+                    <HugeiconsIcon icon={Attachment01Icon} size={14} className="mr-2" />
+                    {pendingFiles.length === 0 ? 'Add attachments...' : 'Add more files...'}
+                  </Button>
+                  {pendingFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {pendingFiles.map((file, index) => (
+                        <span
+                          key={`${file.name}-${index}`}
+                          className="inline-flex items-center gap-0.5 rounded border border-border bg-card px-1.5 py-0.5 text-xs font-medium"
+                        >
+                          {file.name}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(index)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <HugeiconsIcon icon={Cancel01Icon} size={10} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Field>
             </FieldGroup>
 
             <DialogFooter className="mt-4 shrink-0">

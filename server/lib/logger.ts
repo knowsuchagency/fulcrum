@@ -150,7 +150,6 @@ export const log = {
   metrics: createLogger('MetricsCollector'),
   pr: createLogger('PRMonitor'),
   github: createLogger('GitHub'),
-  linear: createLogger('Linear'),
   notification: createLogger('Notification'),
   server: createLogger('Server'),
   settings: createLogger('Settings'),

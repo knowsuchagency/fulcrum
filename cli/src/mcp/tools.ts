@@ -595,6 +595,81 @@ export function registerTools(server: McpServer, client: ViboraClient) {
     }
   )
 
+  // ==========================================================================
+  // Task Attachment Tools
+  // ==========================================================================
+
+  // list_task_attachments
+  server.tool(
+    'list_task_attachments',
+    'List all file attachments for a task',
+    {
+      taskId: z.string().describe('Task ID'),
+    },
+    async ({ taskId }) => {
+      try {
+        const attachments = await client.listTaskAttachments(taskId)
+        return formatSuccess(attachments)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // upload_task_attachment
+  server.tool(
+    'upload_task_attachment',
+    'Upload a file to a task from a local path. Supported types: PDF, images (PNG, JPEG, GIF, WebP, SVG), text files, Word docs, Excel spreadsheets, CSV.',
+    {
+      taskId: z.string().describe('Task ID'),
+      filePath: z.string().describe('Absolute path to file on the local filesystem'),
+    },
+    async ({ taskId, filePath }) => {
+      try {
+        const attachment = await client.uploadTaskAttachment(taskId, filePath)
+        return formatSuccess(attachment)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // delete_task_attachment
+  server.tool(
+    'delete_task_attachment',
+    'Delete a file attachment from a task',
+    {
+      taskId: z.string().describe('Task ID'),
+      attachmentId: z.string().describe('Attachment ID to delete'),
+    },
+    async ({ taskId, attachmentId }) => {
+      try {
+        const result = await client.deleteTaskAttachment(taskId, attachmentId)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // get_task_attachment_path
+  server.tool(
+    'get_task_attachment_path',
+    'Get the local file path for a task attachment. Use this to read attachment contents with file tools.',
+    {
+      taskId: z.string().describe('Task ID'),
+      attachmentId: z.string().describe('Attachment ID'),
+    },
+    async ({ taskId, attachmentId }) => {
+      try {
+        const result = await client.getTaskAttachmentPath(taskId, attachmentId)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
   // get_task_dependency_graph
   server.tool(
     'get_task_dependency_graph',

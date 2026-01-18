@@ -25,7 +25,6 @@ describe('Settings', () => {
       VIBORA_DIR: process.env.VIBORA_DIR,
       PORT: process.env.PORT,
       VIBORA_GIT_REPOS_DIR: process.env.VIBORA_GIT_REPOS_DIR,
-      LINEAR_API_KEY: process.env.LINEAR_API_KEY,
       GITHUB_PAT: process.env.GITHUB_PAT,
     }
 
@@ -33,7 +32,6 @@ describe('Settings', () => {
     process.env.VIBORA_DIR = tempDir
     delete process.env.PORT
     delete process.env.VIBORA_GIT_REPOS_DIR
-    delete process.env.LINEAR_API_KEY
     delete process.env.GITHUB_PAT
   })
 
@@ -81,7 +79,6 @@ describe('Settings', () => {
 
       expect(settings.server.port).toBe(7777)
       expect(settings.paths.defaultGitReposDir).toBe(process.env.HOME)
-      expect(settings.integrations.linearApiKey).toBeNull()
       expect(settings.integrations.githubPat).toBeNull()
     })
 
@@ -93,7 +90,7 @@ describe('Settings', () => {
           _schemaVersion: 2,
           server: { port: 8888 },
           paths: { defaultGitReposDir: '/custom/path' },
-          integrations: { linearApiKey: 'test-linear-key' },
+          integrations: { githubPat: 'test-github-pat' },
         })
       )
 
@@ -102,7 +99,7 @@ describe('Settings', () => {
 
       expect(settings.server.port).toBe(8888)
       expect(settings.paths.defaultGitReposDir).toBe('/custom/path')
-      expect(settings.integrations.linearApiKey).toBe('test-linear-key')
+      expect(settings.integrations.githubPat).toBe('test-github-pat')
     })
 
     test('environment variables override file settings', async () => {
@@ -112,18 +109,18 @@ describe('Settings', () => {
         JSON.stringify({
           _schemaVersion: 2,
           server: { port: 8888 },
-          integrations: { linearApiKey: 'file-key' },
+          integrations: { githubPat: 'file-key' },
         })
       )
 
       process.env.PORT = '9999'
-      process.env.LINEAR_API_KEY = 'env-key'
+      process.env.GITHUB_PAT = 'env-key'
 
       const { getSettings } = await import('./settings')
       const settings = getSettings()
 
       expect(settings.server.port).toBe(9999)
-      expect(settings.integrations.linearApiKey).toBe('env-key')
+      expect(settings.integrations.githubPat).toBe('env-key')
     })
 
     test('ignores invalid PORT env var', async () => {
@@ -144,7 +141,7 @@ describe('Settings', () => {
         JSON.stringify({
           port: 8888,
           defaultGitReposDir: '/migrated/path',
-          linearApiKey: 'migrated-key',
+          githubPat: 'migrated-key',
         })
       )
 
@@ -154,19 +151,19 @@ describe('Settings', () => {
       // Settings should be migrated
       expect(settings.server.port).toBe(8888)
       expect(settings.paths.defaultGitReposDir).toBe('/migrated/path')
-      expect(settings.integrations.linearApiKey).toBe('migrated-key')
+      expect(settings.integrations.githubPat).toBe('migrated-key')
 
       // File should be updated with nested structure
       const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
       expect(migrated._schemaVersion).toBe(9) // Current schema version
       expect(migrated.server?.port).toBe(8888)
       expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
-      expect(migrated.integrations?.linearApiKey).toBe('migrated-key')
+      expect(migrated.integrations?.githubPat).toBe('migrated-key')
 
       // Old flat keys should be removed
       expect(migrated.port).toBeUndefined()
       expect(migrated.defaultGitReposDir).toBeUndefined()
-      expect(migrated.linearApiKey).toBeUndefined()
+      expect(migrated.githubPat).toBeUndefined()
     })
 
     test('does not migrate old default port (3333)', async () => {
@@ -242,10 +239,10 @@ describe('Settings', () => {
       writeFileSync(settingsPath, JSON.stringify({}))
 
       const { updateSettingByPath } = await import('./settings')
-      updateSettingByPath('integrations.linearApiKey', 'new-key')
+      updateSettingByPath('integrations.githubPat', 'new-key')
 
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(file.integrations.linearApiKey).toBe('new-key')
+      expect(file.integrations.githubPat).toBe('new-key')
     })
   })
 
@@ -257,7 +254,7 @@ describe('Settings', () => {
         JSON.stringify({
           _schemaVersion: 2,
           server: { port: 9999 },
-          integrations: { linearApiKey: 'custom-key' },
+          integrations: { githubPat: 'custom-key' },
         })
       )
 
@@ -267,7 +264,7 @@ describe('Settings', () => {
 
       const settings = getSettings()
       expect(settings.server.port).toBe(7777)
-      expect(settings.integrations.linearApiKey).toBeNull()
+      expect(settings.integrations.githubPat).toBeNull()
     })
   })
 

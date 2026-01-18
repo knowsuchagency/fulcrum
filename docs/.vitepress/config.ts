@@ -24,7 +24,6 @@ const guideSidebar = (prefix: string) => [
   {
     text: prefix === '/zh' ? '集成' : 'Integrations',
     items: [
-      { text: 'Linear', link: `${prefix}/guide/linear` },
       { text: 'GitHub', link: `${prefix}/guide/github` },
     ],
   },

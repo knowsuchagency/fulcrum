@@ -15,7 +15,6 @@ import worktreesRoutes from './routes/worktrees'
 import terminalViewStateRoutes from './routes/terminal-view-state'
 import repositoriesRoutes from './routes/repositories'
 import copierRoutes from './routes/copier'
-import linearRoutes from './routes/linear'
 import githubRoutes from './routes/github'
 import { monitoringRoutes } from './routes/monitoring'
 import systemRoutes from './routes/system'
@@ -67,7 +66,6 @@ export function createApp() {
   app.route('/api/terminal-view-state', terminalViewStateRoutes)
   app.route('/api/repositories', repositoriesRoutes)
   app.route('/api/copier', copierRoutes)
-  app.route('/api/linear', linearRoutes)
   app.route('/api/github', githubRoutes)
   app.route('/api/monitoring', monitoringRoutes)
   app.route('/api/system', systemRoutes)

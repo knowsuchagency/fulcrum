@@ -19,7 +19,6 @@ export const CONFIG_KEYS = {
   EDITOR_APP: 'editor.app',
   EDITOR_HOST: 'editor.host',
   EDITOR_SSH_PORT: 'editor.sshPort',
-  LINEAR_API_KEY: 'integrations.linearApiKey',
   GITHUB_PAT: 'integrations.githubPat',
   DEFAULT_AGENT: 'agent.defaultAgent',
   OPENCODE_MODEL: 'agent.opencodeModel',
@@ -112,16 +111,6 @@ export function useEditorSshPort() {
   return {
     ...query,
     data: (query.data?.value as number) ?? 22,
-    isDefault: query.data?.isDefault ?? true,
-  }
-}
-
-export function useLinearApiKey() {
-  const query = useConfig(CONFIG_KEYS.LINEAR_API_KEY)
-
-  return {
-    ...query,
-    data: (query.data?.value as string) ?? '',
     isDefault: query.data?.isDefault ?? true,
   }
 }

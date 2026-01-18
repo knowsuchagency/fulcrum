@@ -20,7 +20,6 @@ import { useGitSyncParent } from '@/hooks/use-git-sync-parent'
 import { useGitCreatePR } from '@/hooks/use-git-create-pr'
 import { useKillClaudeInTask } from '@/hooks/use-kill-claude'
 import { useEditorApp, useEditorHost, useEditorSshPort, usePort, useOpencodeModel } from '@/hooks/use-config'
-import { useLinearTicket } from '@/hooks/use-linear'
 import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useStore } from '@/stores'
 import { buildEditorUrl, openExternalUrl } from '@/lib/editor-url'
@@ -46,8 +45,6 @@ import {
   ArrowUp03Icon,
   Orbit01Icon,
   VisualStudioCodeIcon,
-  Task01Icon,
-  Settings05Icon,
   ReloadIcon,
   GitCommitIcon,
   More03Icon,
@@ -57,7 +54,6 @@ import {
   SourceCodeCircleIcon,
 } from '@hugeicons/core-free-icons'
 import type { TaskLinkType } from '@/types'
-import { TaskConfigModal } from '@/components/task-config-modal'
 import { DeleteTaskDialog } from '@/components/delete-task-dialog'
 import { toast } from 'sonner'
 import {
@@ -110,8 +106,6 @@ function getLinkIcon(type: TaskLinkType | null) {
       return GitPullRequestIcon
     case 'issue':
       return SourceCodeCircleIcon
-    case 'linear':
-      return Task01Icon
     case 'docs':
       return File01Icon
     case 'design':
@@ -141,7 +135,6 @@ function TaskView() {
   const { data: editorSshPort } = useEditorSshPort()
   const { data: serverPort } = usePort()
   const { data: globalOpencodeModel } = useOpencodeModel()
-  const { data: linearTicket } = useLinearTicket(task?.linearTicketId ?? null)
   const { data: repositories = [] } = useRepositories()
   const { data: projects = [] } = useProjects()
 
@@ -166,7 +159,6 @@ function TaskView() {
   }
   const shouldAutoFocus = initialFocusTerminalRef.current ?? false
 
-  const [configModalOpen, setConfigModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [initCodeModalOpen, setInitCodeModalOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
@@ -593,16 +585,8 @@ function TaskView() {
               <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
             </Button>
           </div>
-          {/* Row 2: Settings + retry + repo + git status badge */}
+          {/* Row 2: retry + repo + git status badge */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <button
-              type="button"
-              className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              onClick={() => setConfigModalOpen(true)}
-              title="Task settings"
-            >
-              <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
-            </button>
             <button
               type="button"
               className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -639,14 +623,6 @@ function TaskView() {
               <h1 className="text-sm font-medium">
                 {task.title}
               </h1>
-              <button
-                type="button"
-                className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                onClick={() => setConfigModalOpen(true)}
-                title="Task settings"
-              >
-                <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} />
-              </button>
               <button
                 type="button"
                 className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -712,25 +688,6 @@ function TaskView() {
                   >
                     <HugeiconsIcon icon={GitPullRequestIcon} size={14} strokeWidth={2} />
                     <span>#{task.prUrl.match(/\/pull\/(\d+)/)?.[1] ?? 'PR'}</span>
-                  </a>
-                </>
-              )}
-              {task.linearTicketUrl && (
-                <>
-                  <span className="text-muted-foreground/50">•</span>
-                  <a
-                    href={linearTicket?.url ?? task.linearTicketUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-foreground hover:text-primary font-medium"
-                    onClick={(e) => e.stopPropagation()}
-                    title={linearTicket?.title}
-                  >
-                    <HugeiconsIcon icon={Task01Icon} size={14} strokeWidth={2} />
-                    <span>{task.linearTicketId}</span>
-                    {linearTicket?.status && (
-                      <span className="text-muted-foreground text-xs">({linearTicket.status})</span>
-                    )}
                   </a>
                 </>
               )}
@@ -1059,13 +1016,6 @@ function TaskView() {
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
-
-      {/* Task Config Modal */}
-      <TaskConfigModal
-        task={task}
-        open={configModalOpen}
-        onOpenChange={setConfigModalOpen}
-      />
 
       {/* Delete Task Dialog */}
       <DeleteTaskDialog

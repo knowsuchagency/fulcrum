@@ -84,8 +84,6 @@ export function TaskActionsDropdown({
     branch: null,
     viewState: null,
     prUrl: prUrl ?? null,
-    linearTicketId: null,
-    linearTicketUrl: null,
     startupScript: null,
     agent: 'claude',
     aiMode: null,

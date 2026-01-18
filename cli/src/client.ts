@@ -1,9 +1,12 @@
 import { discoverServerUrl } from './utils/server'
 import { ApiError } from './utils/errors'
+import { readFileSync } from 'node:fs'
+import { basename } from 'node:path'
 import type {
   Task,
   TaskStatus,
   TaskLink,
+  TaskAttachment,
   Repository,
   ProjectWithDetails,
   App,
@@ -468,6 +471,52 @@ export class ViboraClient {
     return this.fetch(`/api/tasks/${taskId}/dependencies/${depId}`, {
       method: 'DELETE',
     })
+  }
+
+  // Task attachments
+  async listTaskAttachments(taskId: string): Promise<TaskAttachment[]> {
+    return this.fetch(`/api/tasks/${taskId}/attachments`)
+  }
+
+  async uploadTaskAttachment(taskId: string, filePath: string): Promise<TaskAttachment> {
+    // Read file from local filesystem
+    const fileContent = readFileSync(filePath)
+    const filename = basename(filePath)
+
+    // Create form data with blob
+    const formData = new FormData()
+    const blob = new Blob([fileContent])
+    formData.append('file', blob, filename)
+
+    // Make request without Content-Type header (let browser set it with boundary)
+    const url = `${this.baseUrl}/api/tasks/${taskId}/attachments`
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new ApiError(res.status, body.error || body.message || `Request failed: ${res.status}`)
+    }
+
+    return res.json()
+  }
+
+  async deleteTaskAttachment(taskId: string, attachmentId: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/tasks/${taskId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async getTaskAttachmentPath(taskId: string, attachmentId: string): Promise<{ path: string; filename: string; mimeType: string }> {
+    // Get all attachments and find the one we need
+    const attachments = await this.listTaskAttachments(taskId)
+    const attachment = attachments.find((a) => a.id === attachmentId)
+    if (!attachment) {
+      throw new ApiError(404, `Attachment not found: ${attachmentId}`)
+    }
+    return { path: attachment.storedPath, filename: attachment.filename, mimeType: attachment.mimeType }
   }
 
   // Task dependency graph

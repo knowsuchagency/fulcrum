@@ -1,11 +1,12 @@
 import { Hono } from 'hono'
-import { db, tasks, repositories, taskLinks, taskDependencies, type Task, type NewTask, type TaskLink } from '../db'
+import { db, tasks, repositories, taskLinks, taskDependencies, taskAttachments, type Task, type NewTask, type TaskLink } from '../db'
 import { eq, asc, and } from 'drizzle-orm'
 import type { TaskLinkType } from '@shared/types'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { glob } from 'glob'
+import { getViboraDir } from '../lib/settings'
 import {
   getPTYManager,
   destroyTerminalAndBroadcast,
@@ -83,6 +84,43 @@ function destroyTerminalsForWorktree(worktreePath: string): void {
   }
 }
 
+// Allowed MIME types for attachments
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
+  'text/plain', 'text/markdown',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+]
+
+// Max file size: 50MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024
+
+// Get the uploads directory for a task
+function getTaskUploadsDir(taskId: string): string {
+  return path.join(getViboraDir(), 'uploads', 'tasks', taskId)
+}
+
+// Sanitize filename for storage
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+}
+
+// Delete all attachments for a task (files and DB records)
+function deleteTaskAttachments(taskId: string): void {
+  // Delete from DB
+  db.delete(taskAttachments).where(eq(taskAttachments.taskId, taskId)).run()
+
+  // Delete the upload directory
+  const uploadDir = getTaskUploadsDir(taskId)
+  if (fs.existsSync(uploadDir)) {
+    fs.rmSync(uploadDir, { recursive: true, force: true })
+  }
+}
+
 // Copy files to worktree based on glob patterns
 function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: string): void {
   const patternList = patterns
@@ -125,8 +163,6 @@ function detectLinkType(url: string): { type: TaskLinkType; label: string } {
   const issueMatch = url.match(/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/)
   if (issueMatch) return { type: 'issue', label: `Issue #${issueMatch[1]}` }
 
-  const linearMatch = url.match(/linear\.app\/[^/]+\/issue\/([A-Z]+-\d+)/i)
-  if (linearMatch) return { type: 'linear', label: linearMatch[1].toUpperCase() }
 
   if (url.includes('figma.com')) return { type: 'design', label: 'Figma' }
   if (url.includes('notion.so')) return { type: 'docs', label: 'Notion' }
@@ -319,6 +355,9 @@ app.delete('/bulk', async (c) => {
       // Delete associated links
       db.delete(taskLinks).where(eq(taskLinks.taskId, id)).run()
 
+      // Delete associated attachments (files and DB records)
+      deleteTaskAttachments(id)
+
       db.delete(tasks).where(eq(tasks.id, id)).run()
       broadcast({ type: 'task:updated', payload: { taskId: id } })
       deletedCount++
@@ -438,7 +477,7 @@ app.patch('/:id', async (c) => {
     const body = await c.req.json<Partial<Task> & { viewState?: unknown }>()
     const now = new Date().toISOString()
 
-    // Handle status change via centralized function (includes Linear sync)
+    // Handle status change via centralized function
     if (body.status && body.status !== existing.status) {
       await updateTaskStatus(id, body.status)
     }
@@ -513,6 +552,9 @@ app.delete('/:id', (c) => {
   // Delete associated links
   db.delete(taskLinks).where(eq(taskLinks.taskId, id)).run()
 
+  // Delete associated attachments (files and DB records)
+  deleteTaskAttachments(id)
+
   db.delete(tasks).where(eq(tasks.id, id)).run()
   broadcast({ type: 'task:updated', payload: { taskId: id } })
   return c.json({ success: true })
@@ -586,7 +628,7 @@ app.patch('/:id/status', async (c) => {
       }
     }
 
-    // Update the task status (handles all side effects: broadcast, Linear sync, notifications, killClaude)
+    // Update the task status (handles all side effects: broadcast, notifications, killClaude)
     const updated = await updateTaskStatus(id, newStatus, newPosition)
 
     return c.json(updated ? toApiResponse(updated, true) : null)
@@ -923,5 +965,147 @@ app.delete('/:id/dependencies/:depId', (c) => {
 
 // GET /api/tasks/dependencies/graph - Get all dependencies for graph visualization (must be before /:id)
 // Note: This is handled separately below since it needs to come before the :id routes
+
+// ==================== ATTACHMENT ROUTES ====================
+
+// GET /api/tasks/:id/attachments - List attachments for a task
+app.get('/:id/attachments', (c) => {
+  const taskId = c.req.param('id')
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  const attachments = db
+    .select()
+    .from(taskAttachments)
+    .where(eq(taskAttachments.taskId, taskId))
+    .all()
+
+  return c.json(attachments)
+})
+
+// POST /api/tasks/:id/attachments - Upload an attachment
+app.post('/:id/attachments', async (c) => {
+  const taskId = c.req.param('id')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    const formData = await c.req.formData()
+    const file = formData.get('file') as File | null
+
+    if (!file) {
+      return c.json({ error: 'No file provided' }, 400)
+    }
+
+    // Validate MIME type
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return c.json({ error: `File type not allowed: ${file.type}` }, 400)
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return c.json({ error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` }, 400)
+    }
+
+    // Create upload directory
+    const uploadDir = getTaskUploadsDir(taskId)
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
+    }
+
+    // Generate unique filename
+    const uuid = crypto.randomUUID()
+    const sanitizedName = sanitizeFilename(file.name)
+    const storedFilename = `${uuid}-${sanitizedName}`
+    const storedPath = path.join(uploadDir, storedFilename)
+
+    // Write file to disk
+    const arrayBuffer = await file.arrayBuffer()
+    fs.writeFileSync(storedPath, Buffer.from(arrayBuffer))
+
+    // Create DB record
+    const now = new Date().toISOString()
+    const newAttachment = {
+      id: crypto.randomUUID(),
+      taskId,
+      filename: file.name,
+      storedPath,
+      mimeType: file.type,
+      size: file.size,
+      createdAt: now,
+    }
+
+    db.insert(taskAttachments).values(newAttachment).run()
+    broadcast({ type: 'task:updated', payload: { taskId } })
+
+    return c.json(newAttachment, 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to upload attachment' }, 400)
+  }
+})
+
+// GET /api/tasks/:id/attachments/:attachmentId - Download an attachment
+app.get('/:id/attachments/:attachmentId', (c) => {
+  const taskId = c.req.param('id')
+  const attachmentId = c.req.param('attachmentId')
+
+  const attachment = db
+    .select()
+    .from(taskAttachments)
+    .where(and(eq(taskAttachments.id, attachmentId), eq(taskAttachments.taskId, taskId)))
+    .get()
+
+  if (!attachment) {
+    return c.json({ error: 'Attachment not found' }, 404)
+  }
+
+  // Check file exists
+  if (!fs.existsSync(attachment.storedPath)) {
+    return c.json({ error: 'File not found on disk' }, 404)
+  }
+
+  // Read file and return
+  const fileBuffer = fs.readFileSync(attachment.storedPath)
+  return new Response(fileBuffer, {
+    headers: {
+      'Content-Type': attachment.mimeType,
+      'Content-Disposition': `attachment; filename="${attachment.filename}"`,
+      'Content-Length': String(attachment.size),
+    },
+  })
+})
+
+// DELETE /api/tasks/:id/attachments/:attachmentId - Delete an attachment
+app.delete('/:id/attachments/:attachmentId', (c) => {
+  const taskId = c.req.param('id')
+  const attachmentId = c.req.param('attachmentId')
+
+  const attachment = db
+    .select()
+    .from(taskAttachments)
+    .where(and(eq(taskAttachments.id, attachmentId), eq(taskAttachments.taskId, taskId)))
+    .get()
+
+  if (!attachment) {
+    return c.json({ error: 'Attachment not found' }, 404)
+  }
+
+  // Delete file from disk
+  if (fs.existsSync(attachment.storedPath)) {
+    fs.unlinkSync(attachment.storedPath)
+  }
+
+  // Delete from DB
+  db.delete(taskAttachments).where(eq(taskAttachments.id, attachmentId)).run()
+  broadcast({ type: 'task:updated', payload: { taskId } })
+
+  return c.json({ success: true })
+})
 
 export default app

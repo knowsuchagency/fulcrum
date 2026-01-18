@@ -391,7 +391,6 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
         'Commit after completing each logical unit of work (feature, fix, refactor) to preserve progress. ' +
         `When you finish working and need user input, run: vibora current-task review${portFlag}. ` +
         `When linking a PR: vibora current-task pr <url>${portFlag}. ` +
-        `When linking a Linear ticket: vibora current-task linear <url-or-ticket>${portFlag}. ` +
         `When linking a URL: vibora current-task link <url>${portFlag}. ` +
         `For notifications: vibora notify "Title" "Message"${portFlag}.`
       const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName

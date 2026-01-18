@@ -185,11 +185,11 @@ describe('Config Routes', () => {
 
     test('converts empty string to null for nullable fields', async () => {
       const { put, get } = createTestApp()
-      const res = await put('/api/config/integrations.linearApiKey', { value: '' })
+      const res = await put('/api/config/integrations.githubPat', { value: '' })
 
       expect(res.status).toBe(200)
 
-      const checkRes = await get('/api/config/integrations.linearApiKey')
+      const checkRes = await get('/api/config/integrations.githubPat')
       const checkBody = await checkRes.json()
       expect(checkBody.value).toBe(null)
     })

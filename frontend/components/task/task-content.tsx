@@ -5,6 +5,7 @@ import { DescriptionTextarea } from '@/components/ui/description-textarea'
 import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { LinksManager } from '@/components/task/links-manager'
 import { DependencyManager } from '@/components/task/dependency-manager'
+import { AttachmentsManager } from '@/components/task/attachments-manager'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
@@ -296,6 +297,12 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
           <div className={`rounded-lg border bg-card ${paddingClass}`}>
             <h2 className={`${headingClass} font-medium text-muted-foreground ${marginClass}`}>Links</h2>
             <LinksManager taskId={task.id} links={task.links || []} />
+          </div>
+
+          {/* Attachments */}
+          <div className={`rounded-lg border bg-card ${paddingClass}`}>
+            <h2 className={`${headingClass} font-medium text-muted-foreground ${marginClass}`}>Attachments</h2>
+            <AttachmentsManager taskId={task.id} />
           </div>
 
           {/* Initialize as Code Task */}
