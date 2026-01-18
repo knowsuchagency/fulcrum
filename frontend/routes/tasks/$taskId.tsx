@@ -55,7 +55,6 @@ import {
   PaintBrush01Icon,
   File01Icon,
   SourceCodeCircleIcon,
-  Menu01Icon,
 } from '@hugeicons/core-free-icons'
 import type { TaskLinkType } from '@/types'
 import { TaskConfigModal } from '@/components/task-config-modal'
@@ -941,7 +940,7 @@ function TaskView() {
                     Files
                   </TabsTrigger>
                   <TabsTrigger value="details">
-                    <HugeiconsIcon icon={Menu01Icon} size={14} strokeWidth={2} data-slot="icon" />
+                    <HugeiconsIcon icon={More03Icon} size={14} strokeWidth={2} data-slot="icon" />
                     Details
                   </TabsTrigger>
                 </TabsList>
@@ -1026,7 +1025,7 @@ function TaskView() {
                   </TabsTrigger>
                   <TabsTrigger value="details">
                     <HugeiconsIcon
-                      icon={Menu01Icon}
+                      icon={More03Icon}
                       size={14}
                       strokeWidth={2}
                       data-slot="icon"
