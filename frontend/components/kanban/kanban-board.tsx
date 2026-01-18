@@ -57,11 +57,11 @@ function MobileDropZone({ status }: { status: TaskStatus }) {
 }
 
 interface KanbanBoardProps {
-  repoFilter?: string | null
+  projectFilter?: string | null // 'inbox' for tasks without project, or project ID
   searchQuery?: string
 }
 
-function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
+function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
   const { t } = useTranslation('common')
   const { data: allTasks = [], isLoading } = useTasks()
   const { data: dependencyGraph } = useTaskDependencyGraph()
@@ -102,12 +102,19 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [clearSelection, selectedIds.size])
 
-  // Filter tasks by repo and search query, sort by latest first
+  // Filter tasks by project and search query, sort by latest first
   const tasks = useMemo(() => {
     let filtered = allTasks
-    if (repoFilter) {
-      filtered = filtered.filter((t) => t.repoName === repoFilter)
+
+    // Filter by project
+    if (projectFilter === 'inbox') {
+      // Show only tasks without a project
+      filtered = filtered.filter((t) => !t.projectId)
+    } else if (projectFilter) {
+      // Show tasks for a specific project
+      filtered = filtered.filter((t) => t.projectId === projectFilter)
     }
+
     if (searchQuery?.trim()) {
       // When searching, sort by fuzzy score
       filtered = filtered
@@ -132,7 +139,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
       )
     }
     return filtered
-  }, [allTasks, repoFilter, searchQuery])
+  }, [allTasks, projectFilter, searchQuery])
 
   // Task counts for tabs
   const taskCounts = useMemo(() => {

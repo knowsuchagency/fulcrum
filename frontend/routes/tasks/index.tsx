@@ -16,18 +16,19 @@ import {
 import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTasks } from '@/hooks/use-tasks'
+import { useProjects } from '@/hooks/use-projects'
 
 type ViewMode = 'kanban' | 'graph' | 'calendar'
 
 interface TasksSearch {
-  repo?: string
+  project?: string // 'inbox' for tasks without project, or project ID
   view?: ViewMode
 }
 
 export const Route = createFileRoute('/tasks/')({
   component: TasksView,
   validateSearch: (search: Record<string, unknown>): TasksSearch => ({
-    repo: typeof search.repo === 'string' ? search.repo : undefined,
+    project: typeof search.project === 'string' ? search.project : undefined,
     view: search.view === 'graph' ? 'graph' : search.view === 'calendar' ? 'calendar' : undefined,
   }),
 })
@@ -35,15 +36,16 @@ export const Route = createFileRoute('/tasks/')({
 function TasksView() {
   const { t } = useTranslation('tasks')
   const { data: tasks = [] } = useTasks()
-  const { repo: repoFilter, view: viewMode = 'kanban' } = Route.useSearch()
+  const { data: projects = [] } = useProjects()
+  const { project: projectFilter, view: viewMode = 'kanban' } = Route.useSearch()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const setRepoFilter = useCallback(
-    (repo: string | null) => {
+  const setProjectFilter = useCallback(
+    (projectId: string | null) => {
       navigate({
         to: '/tasks',
-        search: (prev) => ({ ...prev, repo: repo || undefined }),
+        search: (prev) => ({ ...prev, project: projectId || undefined }),
         replace: true,
       })
     },
@@ -61,11 +63,18 @@ function TasksView() {
     [navigate]
   )
 
-  // Unique repo names for filtering
-  const repoNames = useMemo(() => {
-    const names = new Set(tasks.filter((t) => t.repoName).map((t) => t.repoName!))
-    return Array.from(names).sort()
+  // Get task count per project for display
+  const projectTaskCounts = useMemo(() => {
+    const counts = new Map<string | null, number>()
+    for (const task of tasks) {
+      const key = task.projectId ?? null
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return counts
   }, [tasks])
+
+  // Count of tasks without a project (inbox)
+  const inboxCount = projectTaskCounts.get(null) ?? 0
 
   return (
     <div className="flex h-full flex-col">
@@ -83,22 +92,27 @@ function TasksView() {
         )}
         {viewMode === 'kanban' && (
           <Select
-            value={repoFilter ?? ''}
-            onValueChange={(v) => setRepoFilter(v || null)}
+            value={projectFilter ?? ''}
+            onValueChange={(v) => setProjectFilter(v || null)}
           >
             <SelectTrigger size="sm" className="shrink-0 gap-1.5">
               <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
               <SelectValue>
-                {repoFilter ?? t('allProjects')}
+                {projectFilter === 'inbox'
+                  ? `Inbox (${inboxCount})`
+                  : projectFilter
+                    ? projects.find((p) => p.id === projectFilter)?.name ?? projectFilter
+                    : t('allProjects')}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent className="min-w-[160px]">
+            <SelectContent className="min-w-[200px]">
               <SelectItem value="">{t('allProjects')}</SelectItem>
-              {repoNames.map((name) => (
-                <SelectItem key={name} value={name!}>
-                  {name}
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name} ({projectTaskCounts.get(project.id) ?? 0})
                 </SelectItem>
               ))}
+              <SelectItem value="inbox">Inbox ({inboxCount})</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -125,7 +139,7 @@ function TasksView() {
       </div>
       <div className="flex-1 overflow-hidden">
         {viewMode === 'kanban' && (
-          <KanbanBoard repoFilter={repoFilter ?? null} searchQuery={searchQuery} />
+          <KanbanBoard projectFilter={projectFilter ?? null} searchQuery={searchQuery} />
         )}
         {viewMode === 'calendar' && <TaskCalendar />}
         {viewMode === 'graph' && <TaskDependencyGraph />}
