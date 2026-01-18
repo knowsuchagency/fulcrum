@@ -14,8 +14,9 @@ import ReactFlow, {
   Position,
 } from 'reactflow'
 import dagre from '@dagrejs/dagre'
-import { useTaskDependencyGraph, type TaskGraphNode } from '@/hooks/use-tasks'
-import type { TaskStatus } from '@/types'
+import { useTaskDependencyGraph, useTasks, type TaskGraphNode } from '@/hooks/use-tasks'
+import type { Task, TaskStatus } from '@/types'
+import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
 import 'reactflow/dist/style.css'
 
 const STATUS_COLORS: Record<TaskStatus, { bg: string; border: string; text: string }> = {
@@ -170,6 +171,14 @@ const MOBILE_BREAKPOINT = 768
 export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
   const navigate = useNavigate()
   const { data: graphData, isLoading } = useTaskDependencyGraph()
+  const { data: allTasks = [] } = useTasks()
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  // Create a map of task IDs to full task objects for quick lookup
+  const taskMap = useMemo(() => {
+    return new Map(allTasks.map((t) => [t.id, t]))
+  }, [allTasks])
 
   // Detect mobile for layout direction
   const [isMobile, setIsMobile] = useState(() =>
@@ -277,12 +286,22 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<TaskNodeData>) => {
-      navigate({
-        to: '/tasks/$taskId',
-        params: { taskId: node.id },
-      })
+      const task = taskMap.get(node.id)
+      if (!task) return
+
+      // For code tasks, navigate to detail page
+      // For non-code tasks, open the modal
+      if (task.worktreePath) {
+        navigate({
+          to: '/tasks/$taskId',
+          params: { taskId: node.id },
+        })
+      } else {
+        setSelectedTask(task)
+        setModalOpen(true)
+      }
     },
-    [navigate]
+    [navigate, taskMap]
   )
 
   if (isLoading) {
@@ -313,37 +332,51 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
   }
 
   return (
-    <div className={`h-full relative ${className}`}>
-      {/* Info badge */}
-      <div className="absolute top-2 left-2 z-10 bg-background/90 border rounded-md px-2 py-1 text-xs text-muted-foreground">
-        {nodes.length} tasks with dependencies ({graphData.edges.length} links)
-      </div>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={onNodeClick}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.1}
-        maxZoom={2}
-        defaultEdgeOptions={{
-          type: 'smoothstep',
-        }}
-      >
-        <Background color="#e5e7eb" gap={20} size={1} />
-        <Controls showInteractive={false} />
-        <MiniMap
-          nodeColor={(node) => {
-            const data = node.data as TaskNodeData
-            return STATUS_COLORS[data.task.status].border
+    <>
+      <div className={`h-full relative ${className}`}>
+        {/* Info badge */}
+        <div className="absolute top-2 left-2 z-10 bg-background/90 border rounded-md px-2 py-1 text-xs text-muted-foreground">
+          {nodes.length} tasks with dependencies ({graphData.edges.length} links)
+        </div>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          minZoom={0.1}
+          maxZoom={2}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
           }}
-          maskColor="rgba(0, 0, 0, 0.1)"
-          className="!bg-background/80"
+        >
+          <Background color="#e5e7eb" gap={20} size={1} />
+          <Controls showInteractive={false} />
+          <MiniMap
+            nodeColor={(node) => {
+              const data = node.data as TaskNodeData
+              return STATUS_COLORS[data.task.status].border
+            }}
+            maskColor="rgba(0, 0, 0, 0.1)"
+            className="!bg-background/80"
+          />
+        </ReactFlow>
+      </div>
+
+      {/* Non-code task modal */}
+      {selectedTask && !selectedTask.worktreePath && (
+        <NonCodeTaskModal
+          task={selectedTask}
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open)
+            if (!open) setSelectedTask(null)
+          }}
         />
-      </ReactFlow>
-    </div>
+      )}
+    </>
   )
 }

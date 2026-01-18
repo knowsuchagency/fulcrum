@@ -8,7 +8,7 @@ import { DragProvider, useDrag } from './drag-context'
 import { SelectionProvider, useSelection } from './selection-context'
 import { BulkActionsToolbar } from './bulk-actions-toolbar'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useTasks, useUpdateTaskStatus } from '@/hooks/use-tasks'
+import { useTasks, useUpdateTaskStatus, useTaskDependencyGraph } from '@/hooks/use-tasks'
 import { cn } from '@/lib/utils'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import type { TaskStatus } from '@/types'
@@ -64,10 +64,30 @@ interface KanbanBoardProps {
 function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
   const { t } = useTranslation('common')
   const { data: allTasks = [], isLoading } = useTasks()
+  const { data: dependencyGraph } = useTaskDependencyGraph()
   const updateStatus = useUpdateTaskStatus()
   const { activeTask } = useDrag()
   const { clearSelection, selectedIds } = useSelection()
   const [activeTab, setActiveTab] = useState<TaskStatus>('IN_PROGRESS')
+
+  // Compute which tasks are blocked (have incomplete dependencies)
+  const blockedTaskIds = useMemo(() => {
+    if (!dependencyGraph) return new Set<string>()
+
+    const blocked = new Set<string>()
+    const nodeStatusMap = new Map(dependencyGraph.nodes.map(n => [n.id, n.status]))
+
+    // For each edge, check if the source (dependency) is incomplete
+    for (const edge of dependencyGraph.edges) {
+      const dependencyStatus = nodeStatusMap.get(edge.source)
+      // A task is blocked if any of its dependencies are not DONE or CANCELED
+      if (dependencyStatus && dependencyStatus !== 'DONE' && dependencyStatus !== 'CANCELED') {
+        blocked.add(edge.target)
+      }
+    }
+
+    return blocked
+  }, [dependencyGraph])
 
   // Escape key clears selection
   useEffect(() => {
@@ -225,6 +245,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
             key={status}
             status={status}
             tasks={tasks.filter((t) => t.status === status)}
+            blockedTaskIds={blockedTaskIds}
           />
         ))}
       </div>
@@ -235,6 +256,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
           status={activeTab}
           tasks={tasks.filter((t) => t.status === activeTab)}
           isMobile
+          blockedTaskIds={blockedTaskIds}
         />
       </div>
 

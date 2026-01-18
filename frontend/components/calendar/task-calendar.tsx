@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
 
 const STATUS_COLORS: Record<TaskStatus, { bg: string; border: string; text: string }> = {
   TO_DO: { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-700' },
@@ -25,6 +26,8 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
   const navigate = useNavigate()
   const { data: tasks = [] } = useTasks()
   const [currentDate, setCurrentDate] = useState(() => new Date())
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
   // Get tasks with due dates grouped by date
   const tasksByDate = useMemo(() => {
@@ -77,11 +80,18 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
     setCurrentDate(new Date())
   }
 
-  const handleTaskClick = (taskId: string) => {
-    navigate({
-      to: '/tasks/$taskId',
-      params: { taskId },
-    })
+  const handleTaskClick = (task: Task) => {
+    // For code tasks, navigate to detail page
+    // For non-code tasks, open the modal
+    if (task.worktreePath) {
+      navigate({
+        to: '/tasks/$taskId',
+        params: { taskId: task.id },
+      })
+    } else {
+      setSelectedTask(task)
+      setModalOpen(true)
+    }
   }
 
   const today = new Date()
@@ -161,7 +171,7 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
                     return (
                       <button
                         key={task.id}
-                        onClick={() => handleTaskClick(task.id)}
+                        onClick={() => handleTaskClick(task)}
                         className={cn(
                           'w-full truncate rounded px-1 py-0.5 text-left text-[10px] border transition-opacity hover:opacity-80',
                           colors.bg,
@@ -185,6 +195,18 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
           })}
         </div>
       </div>
+
+      {/* Non-code task modal */}
+      {selectedTask && !selectedTask.worktreePath && (
+        <NonCodeTaskModal
+          task={selectedTask}
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open)
+            if (!open) setSelectedTask(null)
+          }}
+        />
+      )}
     </div>
   )
 }
