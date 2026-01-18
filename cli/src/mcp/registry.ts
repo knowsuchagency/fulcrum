@@ -22,9 +22,9 @@ export const toolRegistry: ToolMetadata[] = [
   // Core tools - always loaded
   {
     name: 'list_tasks',
-    description: 'List all Vibora tasks with optional filtering by status or repository',
+    description: 'List all Vibora tasks with flexible filtering (search, labels, statuses, date range, overdue)',
     category: 'tasks',
-    keywords: ['task', 'list', 'kanban', 'worktree', 'status'],
+    keywords: ['task', 'list', 'kanban', 'worktree', 'status', 'search', 'labels', 'due date', 'overdue', 'filter'],
     deferred: false,
   },
   {
@@ -348,6 +348,13 @@ export const toolRegistry: ToolMetadata[] = [
     description: 'List tasks filtered by due date range',
     category: 'tasks',
     keywords: ['task', 'due', 'date', 'filter', 'deadline', 'overdue'],
+    deferred: false,
+  },
+  {
+    name: 'list_labels',
+    description: 'List all unique labels in use across tasks with optional search',
+    category: 'tasks',
+    keywords: ['labels', 'tags', 'categories', 'filter', 'search', 'discover'],
     deferred: false,
   },
 ]

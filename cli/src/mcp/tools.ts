@@ -59,21 +59,61 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // list_tasks
   server.tool(
     'list_tasks',
-    'List all Vibora tasks with optional filtering by status, repository, project, or label',
+    'List all Vibora tasks with flexible filtering. Supports text search across title/labels/project, multi-label filtering (OR logic), multi-status filtering, date range, and overdue detection.',
     {
-      status: z.optional(TaskStatusSchema).describe('Filter by task status'),
+      status: z.optional(TaskStatusSchema).describe('Filter by single task status (use statuses for multiple)'),
+      statuses: z.optional(z.array(TaskStatusSchema)).describe('Filter by multiple statuses (OR logic)'),
       repo: z.optional(z.string()).describe('Filter by repository name or path'),
       projectId: z.optional(z.string()).describe('Filter by project ID'),
       orphans: z.optional(z.boolean()).describe('Only show orphan tasks (not in any project)'),
-      label: z.optional(z.string()).describe('Filter by label'),
+      label: z.optional(z.string()).describe('Filter by single label (use labels for multiple)'),
+      labels: z.optional(z.array(z.string())).describe('Filter by multiple labels (OR logic, case-insensitive)'),
+      search: z.optional(z.string()).describe('Case-insensitive substring search across title, labels, and project name'),
+      dueDateStart: z.optional(z.string()).describe('Start of date range (YYYY-MM-DD, inclusive)'),
+      dueDateEnd: z.optional(z.string()).describe('End of date range (YYYY-MM-DD, inclusive)'),
+      overdue: z.optional(z.boolean()).describe('Only show overdue tasks (due date in past, not DONE/CANCELED)'),
     },
-    async ({ status, repo, projectId, orphans, label }) => {
+    async ({ status, statuses, repo, projectId, orphans, label, labels, search, dueDateStart, dueDateEnd, overdue }) => {
       try {
         let tasks = await client.listTasks()
 
+        // Build project name lookup for search functionality
+        let projectsMap: Map<string, string> | undefined
+        if (search) {
+          const projects = await client.listProjects()
+          projectsMap = new Map()
+          for (const p of projects) {
+            projectsMap.set(p.id, p.name)
+          }
+        }
+
+        // Text search filter (case-insensitive substring)
+        if (search) {
+          const searchLower = search.toLowerCase()
+          tasks = tasks.filter((t) => {
+            // Check title
+            if (t.title.toLowerCase().includes(searchLower)) return true
+            // Check labels
+            if (t.labels && t.labels.some((l) => l.toLowerCase().includes(searchLower))) return true
+            // Check project name
+            if (t.projectId && projectsMap) {
+              const projectName = projectsMap.get(t.projectId)
+              if (projectName?.toLowerCase().includes(searchLower)) return true
+            }
+            return false
+          })
+        }
+
+        // Single status filter (legacy)
         if (status) {
           tasks = tasks.filter((t) => t.status === status)
         }
+
+        // Multi-status filter (OR logic)
+        if (statuses && statuses.length > 0) {
+          tasks = tasks.filter((t) => statuses.includes(t.status))
+        }
+
         if (repo) {
           const repoLower = repo.toLowerCase()
           tasks = tasks.filter(
@@ -88,9 +128,33 @@ export function registerTools(server: McpServer, client: ViboraClient) {
         if (orphans) {
           tasks = tasks.filter((t) => t.projectId === null)
         }
+
+        // Single label filter (legacy)
         if (label) {
           const labelLower = label.toLowerCase()
           tasks = tasks.filter((t) => t.labels && t.labels.some((l) => l.toLowerCase() === labelLower))
+        }
+
+        // Multi-label filter (OR logic)
+        if (labels && labels.length > 0) {
+          const labelsLower = labels.map((l) => l.toLowerCase())
+          tasks = tasks.filter((t) => t.labels && t.labels.some((l) => labelsLower.includes(l.toLowerCase())))
+        }
+
+        // Date range filters
+        if (dueDateStart) {
+          tasks = tasks.filter((t) => t.dueDate && t.dueDate >= dueDateStart)
+        }
+        if (dueDateEnd) {
+          tasks = tasks.filter((t) => t.dueDate && t.dueDate <= dueDateEnd)
+        }
+
+        // Overdue filter
+        if (overdue) {
+          const today = new Date().toISOString().split('T')[0]
+          tasks = tasks.filter(
+            (t) => t.dueDate && t.dueDate < today && t.status !== 'DONE' && t.status !== 'CANCELED'
+          )
         }
 
         return formatSuccess(tasks)
@@ -120,7 +184,7 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // create_task
   server.tool(
     'create_task',
-    'Create a new task. For code tasks, provide repoPath to create a git worktree. For non-code tasks, omit repoPath.',
+    'Create a new task. For code tasks, provide repoPath to create a git worktree. For non-code tasks, omit repoPath. When labels are provided, returns all existing labels for reference.',
     {
       title: z.string().describe('Task title'),
       repoPath: z.optional(z.string()).describe('Absolute path to the git repository (optional for non-code tasks)'),
@@ -150,6 +214,24 @@ export function registerTools(server: McpServer, client: ViboraClient) {
           labels,
           dueDate: dueDate ?? null,
         })
+
+        // If labels were provided, return all existing labels for agent reference
+        if (labels && labels.length > 0) {
+          const allTasks = await client.listTasks()
+          const existingLabels = new Set<string>()
+          for (const t of allTasks) {
+            if (t.labels) {
+              for (const l of t.labels) {
+                existingLabels.add(l)
+              }
+            }
+          }
+          return formatSuccess({
+            task,
+            existingLabels: Array.from(existingLabels).sort(),
+          })
+        }
+
         return formatSuccess(task)
       } catch (err) {
         return handleToolError(err)
@@ -386,7 +468,7 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // add_task_label
   server.tool(
     'add_task_label',
-    'Add a label to a task for categorization',
+    'Add a label to a task for categorization. Returns similar existing labels to help catch typos.',
     {
       taskId: z.string().describe('Task ID'),
       label: z.string().describe('Label to add'),
@@ -394,7 +476,30 @@ export function registerTools(server: McpServer, client: ViboraClient) {
     async ({ taskId, label }) => {
       try {
         const result = await client.addTaskLabel(taskId, label)
-        return formatSuccess(result)
+
+        // Find similar existing labels to help catch typos
+        const allTasks = await client.listTasks()
+        const existingLabels = new Set<string>()
+        for (const t of allTasks) {
+          if (t.labels) {
+            for (const l of t.labels) {
+              existingLabels.add(l)
+            }
+          }
+        }
+
+        // Find similar labels (case-insensitive substring match)
+        const labelLower = label.toLowerCase()
+        const similarLabels = Array.from(existingLabels).filter(
+          (l) =>
+            l !== label &&
+            (l.toLowerCase().includes(labelLower) || labelLower.includes(l.toLowerCase()))
+        )
+
+        return formatSuccess({
+          ...result,
+          similarLabels: similarLabels.length > 0 ? similarLabels : undefined,
+        })
       } catch (err) {
         return handleToolError(err)
       }
@@ -518,6 +623,46 @@ export function registerTools(server: McpServer, client: ViboraClient) {
         const labelLower = label.toLowerCase()
         tasks = tasks.filter((t) => t.labels && t.labels.some((l) => l.toLowerCase() === labelLower))
         return formatSuccess(tasks)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // list_labels
+  server.tool(
+    'list_labels',
+    'List all unique labels in use across tasks. Use search to find labels by partial match (helps discover exact label names and handle typos/variations).',
+    {
+      search: z.optional(z.string()).describe('Find labels matching this substring (case-insensitive)'),
+    },
+    async ({ search }) => {
+      try {
+        const tasks = await client.listTasks()
+        const labelCounts = new Map<string, number>()
+
+        for (const task of tasks) {
+          if (task.labels) {
+            for (const label of task.labels) {
+              labelCounts.set(label, (labelCounts.get(label) || 0) + 1)
+            }
+          }
+        }
+
+        let labels = Array.from(labelCounts.entries()).map(([name, count]) => ({
+          name,
+          count,
+        }))
+
+        if (search) {
+          const searchLower = search.toLowerCase()
+          labels = labels.filter((l) => l.name.toLowerCase().includes(searchLower))
+        }
+
+        // Sort by count descending
+        labels.sort((a, b) => b.count - a.count)
+
+        return formatSuccess({ labels })
       } catch (err) {
         return handleToolError(err)
       }

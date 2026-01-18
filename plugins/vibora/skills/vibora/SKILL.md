@@ -65,6 +65,12 @@ Manage tasks across the system:
 # List all tasks
 vibora tasks list
 vibora tasks list --status=IN_PROGRESS   # Filter by status
+vibora tasks list --search="ocai"        # Search by title, labels
+vibora tasks list --label="bug"          # Filter by label
+
+# List all labels in use
+vibora tasks labels                      # Show all labels with counts
+vibora tasks labels --search="comm"      # Find labels matching substring
 
 # Get a specific task
 vibora tasks get <task-id>
@@ -304,7 +310,7 @@ search_tools { category: "filesystem" }
 
 ### Task Tools
 
-- `list_tasks` - List all tasks with optional filtering
+- `list_tasks` - List tasks with flexible filtering (search, labels, statuses, date range, overdue)
 - `get_task` - Get task details by ID
 - `create_task` - Create a new task with worktree
 - `update_task` - Update task metadata
@@ -313,6 +319,37 @@ search_tools { category: "filesystem" }
 - `add_task_link` - Add URL link to task
 - `remove_task_link` - Remove link from task
 - `list_task_links` - List all task links
+- `add_task_label` - Add a label to a task (returns similar labels to catch typos)
+- `remove_task_label` - Remove a label from a task
+- `set_task_due_date` - Set or clear task due date
+- `list_labels` - List all unique labels in use with optional search
+
+#### Task Search and Filtering
+
+The `list_tasks` tool supports powerful filtering for AI agents:
+
+```json
+{
+  "search": "ocai",                              // Text search across title, labels, project name
+  "labels": ["bug", "urgent"],                   // Filter by multiple labels (OR logic)
+  "statuses": ["TO_DO", "IN_PROGRESS"],          // Filter by multiple statuses (OR logic)
+  "dueDateStart": "2026-01-18",                  // Start of date range
+  "dueDateEnd": "2026-01-25",                    // End of date range
+  "overdue": true                                // Only show overdue tasks
+}
+```
+
+#### Label Discovery
+
+Use `list_labels` to discover exact label names before filtering:
+
+```json
+// Find labels matching "communication"
+{ "search": "communication" }
+// Returns: [{ "name": "communication required", "count": 5 }]
+```
+
+This helps handle typos and variations - search first, then use the exact label name.
 
 ### Project Tools
 

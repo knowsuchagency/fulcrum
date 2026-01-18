@@ -101,6 +101,19 @@ export async function handleTasksCommand(
         tasks = tasks.filter((t) => t.labels && t.labels.some((l) => l.toLowerCase() === labelFilter))
       }
 
+      // Text search across title, labels, and project name
+      if (flags.search) {
+        const searchLower = flags.search.toLowerCase()
+        // Note: Project name search would require fetching projects, keeping it simple for CLI
+        tasks = tasks.filter((t) => {
+          // Check title
+          if (t.title.toLowerCase().includes(searchLower)) return true
+          // Check labels
+          if (t.labels && t.labels.some((l) => l.toLowerCase().includes(searchLower))) return true
+          return false
+        })
+      }
+
       if (isJsonOutput()) {
         output(tasks)
       } else {
@@ -377,10 +390,48 @@ export async function handleTasksCommand(
       break
     }
 
+    case 'labels': {
+      const tasks = await client.listTasks()
+      const labelCounts = new Map<string, number>()
+
+      for (const task of tasks) {
+        if (task.labels) {
+          for (const label of task.labels) {
+            labelCounts.set(label, (labelCounts.get(label) || 0) + 1)
+          }
+        }
+      }
+
+      let labels = Array.from(labelCounts.entries())
+
+      // Apply search filter if provided
+      if (flags.search) {
+        const searchLower = flags.search.toLowerCase()
+        labels = labels.filter(([name]) => name.toLowerCase().includes(searchLower))
+      }
+
+      // Sort by count descending
+      labels.sort((a, b) => b[1] - a[1])
+
+      if (isJsonOutput()) {
+        output(labels.map(([name, count]) => ({ name, count })))
+      } else {
+        if (labels.length === 0) {
+          console.log('No labels found')
+        } else {
+          console.log('\nLabels:')
+          for (const [name, count] of labels) {
+            console.log(`  ${name} (${count})`)
+          }
+        }
+      }
+      break
+    }
+
     default:
       throw new CliError(
         'UNKNOWN_ACTION',
-        `Unknown action: ${action}. Valid: list, get, create, update, move, delete, add-label, remove-label, set-due-date, add-dependency, remove-dependency, list-dependencies`,
+        `Unknown action: ${action}. Valid: list, get, create, update, move, delete, add-label, remove-label, set-due-date, add-dependency, remove-dependency, list-dependencies, labels`,
         ExitCodes.INVALID_ARGS
       )
   }
