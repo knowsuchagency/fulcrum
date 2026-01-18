@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { createFileRoute, Link, redirect } from '@tanstack/react-router'
-import { fetchJSON } from '@/lib/api'
+import { useState, useCallback, useEffect } from 'react'
+import { createFileRoute, Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useRepository, useUpdateRepository } from '@/hooks/use-repositories'
+import { useAppByRepository, useFindCompose } from '@/hooks/use-apps'
+import { useProjects } from '@/hooks/use-projects'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,9 +18,11 @@ import {
   Folder01Icon,
   Settings05Icon,
   Tick02Icon,
+  GridIcon,
+  RocketIcon,
+  Add01Icon,
 } from '@hugeicons/core-free-icons'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
-import type { ProjectWithDetails } from '@/types'
 import { toast } from 'sonner'
 import {
   Select,
@@ -27,33 +31,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { WorkspacePanel } from '@/components/workspace/workspace-panel'
+import { DeploymentsTab } from '@/components/apps/deployments-tab'
+import { DeploymentSetupWizard } from '@/components/apps/deployment-setup-wizard'
+import { useDeploymentStore } from '@/stores/hooks/use-deployment-store'
+import { useDeploymentPrerequisites } from '@/hooks/use-apps'
+import { observer } from 'mobx-react-lite'
 
-export const Route = createFileRoute('/repositories/$repoId')({
-  loader: async ({ params }) => {
-    // Check if there's a project for this repository - if so, redirect
-    const projects = await fetchJSON<ProjectWithDetails[]>('/api/projects')
-    const project = projects.find(
-      (p) => p.repository?.id === params.repoId ||
-             p.repositories.some((r) => r.id === params.repoId)
-    )
+type RepoTab = 'settings' | 'workspace' | 'deploy'
 
-    if (project) {
-      throw redirect({
-        to: '/projects/$projectId',
-        params: { projectId: project.id },
-      })
-    }
+interface RepoSearchParams {
+  tab?: RepoTab
+  file?: string
+}
 
-    // No project, show standalone repository view
-    return { repoId: params.repoId }
-  },
-  component: RepositoryDetailView,
-})
-
-function RepositoryDetailView() {
-  const { repoId } = Route.useLoaderData()
+const RepositoryDetailView = observer(function RepositoryDetailView() {
+  const { t } = useTranslation('repositories')
+  const navigate = useNavigate()
+  const { repoId } = useParams({ from: '/repositories/$repoId' })
+  const searchParams = useSearch({ from: '/repositories/$repoId' }) as RepoSearchParams
   const { data: repository, isLoading, error } = useRepository(repoId)
   const updateRepository = useUpdateRepository()
+  const app = useAppByRepository(repoId)
+  const deployStore = useDeploymentStore()
+  const { data: prereqs } = useDeploymentPrerequisites()
+  const { data: composeInfo } = useFindCompose(repoId)
+  const { data: projects } = useProjects()
+
+  // Redirect to project detail if this repo belongs to a project
+  useEffect(() => {
+    if (projects) {
+      const project = projects.find(
+        (p) => p.repository?.id === repoId ||
+               p.repositories.some((r) => r.id === repoId)
+      )
+      if (project) {
+        navigate({
+          to: '/projects/$projectId',
+          params: { projectId: project.id },
+          replace: true,
+        })
+      }
+    }
+  }, [projects, repoId, navigate])
+
+  // Tab state from URL
+  const activeTab = searchParams.tab ?? 'settings'
 
   // Settings state
   const [displayName, setDisplayName] = useState('')
@@ -70,6 +93,30 @@ function RepositoryDetailView() {
     if (defaultAgent !== (repository.defaultAgent || 'default')) setDefaultAgent(repository.defaultAgent || 'default')
   }
 
+  const handleTabChange = useCallback(
+    (newTab: string) => {
+      navigate({
+        to: '/repositories/$repoId',
+        params: { repoId },
+        search: { tab: newTab !== 'settings' ? (newTab as RepoTab) : undefined },
+        replace: true,
+      })
+    },
+    [navigate, repoId]
+  )
+
+  const handleFileChange = useCallback(
+    (file: string | null) => {
+      navigate({
+        to: '/repositories/$repoId',
+        params: { repoId },
+        search: { tab: activeTab !== 'settings' ? (activeTab as RepoTab) : undefined, file: file ?? undefined },
+        replace: true,
+      })
+    },
+    [navigate, repoId, activeTab]
+  )
+
   const handleSaveSettings = async () => {
     if (!repository) return
     try {
@@ -82,14 +129,19 @@ function RepositoryDetailView() {
           defaultAgent: defaultAgent === 'default' ? null : defaultAgent,
         },
       })
-      toast.success('Settings saved')
+      toast.success(t('detailView.saved'))
       setHasChanges(false)
     } catch (err) {
-      toast.error('Failed to save settings', {
+      toast.error(t('detailView.failedToSave'), {
         description: err instanceof Error ? err.message : 'Unknown error',
       })
     }
   }
+
+  const handleDeploy = useCallback(() => {
+    if (!app) return
+    deployStore.deploy(app.id)
+  }, [app, deployStore])
 
   if (isLoading) {
     return (
@@ -103,10 +155,10 @@ function RepositoryDetailView() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
         <HugeiconsIcon icon={Alert02Icon} size={24} className="text-destructive" />
-        <p className="text-sm text-muted-foreground">Repository not found</p>
+        <p className="text-sm text-muted-foreground">{t('detailView.notFound')}</p>
         <Link to="/repositories">
           <Button variant="outline" size="sm">
-            Back to Repositories
+            {t('detailView.breadcrumb')}
           </Button>
         </Link>
       </div>
@@ -120,7 +172,7 @@ function RepositoryDetailView() {
         <Link to="/repositories">
           <Button variant="ghost" size="sm">
             <HugeiconsIcon icon={ArrowLeft01Icon} size={16} data-slot="icon" />
-            <span className="max-sm:hidden">Repositories</span>
+            <span className="max-sm:hidden">{t('detailView.breadcrumb')}</span>
           </Button>
         </Link>
         <div className="flex-1" />
@@ -139,20 +191,29 @@ function RepositoryDetailView() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="settings" className="flex-1 flex flex-col">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col">
         <TabsList className="shrink-0 mx-4 mt-2">
           <TabsTrigger value="settings" className="gap-1.5">
             <HugeiconsIcon icon={Settings05Icon} size={14} />
-            Settings
+            {t('settings')}
+          </TabsTrigger>
+          <TabsTrigger value="workspace" className="gap-1.5">
+            <HugeiconsIcon icon={GridIcon} size={14} />
+            {t('detailView.tabs.workspace')}
+          </TabsTrigger>
+          <TabsTrigger value="deploy" className="gap-1.5">
+            <HugeiconsIcon icon={RocketIcon} size={14} />
+            Deploy
           </TabsTrigger>
         </TabsList>
 
+        {/* Settings Tab */}
         <TabsContent value="settings" className="flex-1 overflow-hidden mt-0">
           <ScrollArea className="h-full">
             <div className="max-w-2xl px-6 py-6 space-y-8">
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Display Name</FieldLabel>
+                  <FieldLabel>{t('detailView.settings.displayName')}</FieldLabel>
                   <FieldDescription>Name shown in the UI</FieldDescription>
                   <Input
                     value={displayName}
@@ -167,9 +228,9 @@ function RepositoryDetailView() {
 
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Startup Script</FieldLabel>
+                  <FieldLabel>{t('detailView.settings.startupScript')}</FieldLabel>
                   <FieldDescription>
-                    Command to run after creating a worktree (e.g., install dependencies)
+                    {t('detailView.settings.startupScriptDescription')}
                   </FieldDescription>
                   <Textarea
                     value={startupScript}
@@ -177,16 +238,16 @@ function RepositoryDetailView() {
                       setStartupScript(e.target.value)
                       setHasChanges(true)
                     }}
-                    placeholder="npm install"
+                    placeholder={t('detailView.settings.startupScriptPlaceholder')}
                     className="font-mono text-sm"
                     rows={3}
                   />
                 </Field>
 
                 <Field>
-                  <FieldLabel>Copy Files</FieldLabel>
+                  <FieldLabel>{t('detailView.settings.copyFiles')}</FieldLabel>
                   <FieldDescription>
-                    Comma-separated glob patterns for files to copy to new worktrees (e.g., .env, config.local.json)
+                    {t('detailView.settings.copyFilesDescription')}
                   </FieldDescription>
                   <Input
                     value={copyFiles}
@@ -194,7 +255,7 @@ function RepositoryDetailView() {
                       setCopyFiles(e.target.value)
                       setHasChanges(true)
                     }}
-                    placeholder=".env, config.local.json"
+                    placeholder={t('detailView.settings.copyFilesPlaceholder')}
                     className="font-mono text-sm"
                   />
                 </Field>
@@ -202,9 +263,9 @@ function RepositoryDetailView() {
 
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Default AI Agent</FieldLabel>
+                  <FieldLabel>{t('detailView.settings.defaultAgent')}</FieldLabel>
                   <FieldDescription>
-                    Which AI coding agent to use by default for tasks
+                    {t('detailView.settings.defaultAgentDescription')}
                   </FieldDescription>
                   <Select
                     value={defaultAgent}
@@ -219,7 +280,7 @@ function RepositoryDetailView() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="default">Use Global Default</SelectItem>
+                      <SelectItem value="default">{t('detailView.settings.defaultAgentInherit')}</SelectItem>
                       {Object.entries(AGENT_DISPLAY_NAMES).map(([key, name]) => (
                         <SelectItem key={key} value={key}>
                           {name}
@@ -239,8 +300,82 @@ function RepositoryDetailView() {
                     ) : (
                       <HugeiconsIcon icon={Tick02Icon} size={14} data-slot="icon" />
                     )}
-                    Save Settings
+                    {t('detailView.save')}
                   </Button>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        {/* Workspace Tab */}
+        <TabsContent value="workspace" className="flex-1 overflow-hidden mt-0">
+          <WorkspacePanel
+            repoPath={repository.path}
+            repoDisplayName={repository.displayName}
+            activeTab={activeTab}
+            file={searchParams.file}
+            onFileChange={handleFileChange}
+          />
+        </TabsContent>
+
+        {/* Deploy Tab */}
+        <TabsContent value="deploy" className="flex-1 overflow-hidden mt-0">
+          <ScrollArea className="h-full">
+            <div className="px-6 py-6 space-y-6">
+              {/* Check if deployment prerequisites are met */}
+              {prereqs && !prereqs.ready ? (
+                <DeploymentSetupWizard />
+              ) : app ? (
+                /* App exists - show deploy controls and history */
+                <div className="space-y-6">
+                  {/* App info header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">{app.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Branch: {app.branch} • Status: {app.status}
+                      </p>
+                    </div>
+                    <Button onClick={handleDeploy} disabled={deployStore.isDeploying}>
+                      {deployStore.isDeploying ? (
+                        <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin" data-slot="icon" />
+                      ) : (
+                        <HugeiconsIcon icon={RocketIcon} size={14} data-slot="icon" />
+                      )}
+                      Deploy
+                    </Button>
+                  </div>
+
+                  {/* Deployments history */}
+                  <DeploymentsTab
+                    appId={app.id}
+                    deployStore={deployStore}
+                    onViewStreamingLogs={() => {}}
+                  />
+                </div>
+              ) : (
+                /* No app - show create option */
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <HugeiconsIcon icon={RocketIcon} size={48} className="text-muted-foreground/50 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No App Configured</h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-md">
+                    {composeInfo?.found
+                      ? 'This repository has a Docker Compose file. Create an app to deploy it.'
+                      : 'To deploy this repository, create a docker-compose.yml file first.'}
+                  </p>
+                  {composeInfo?.found ? (
+                    <Link to="/apps/new" search={{ repoId }}>
+                      <Button>
+                        <HugeiconsIcon icon={Add01Icon} size={14} data-slot="icon" />
+                        {t('createApp')}
+                      </Button>
+                    </Link>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      <p>Create a <code className="bg-muted px-1.5 py-0.5 rounded">docker-compose.yml</code> file in your repository to enable deployment.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -249,4 +384,14 @@ function RepositoryDetailView() {
       </Tabs>
     </div>
   )
-}
+})
+
+export const Route = createFileRoute('/repositories/$repoId')({
+  validateSearch: (search: Record<string, unknown>): RepoSearchParams => ({
+    tab: ['settings', 'workspace', 'deploy'].includes(search.tab as string)
+      ? (search.tab as RepoTab)
+      : undefined,
+    file: typeof search.file === 'string' ? search.file : undefined,
+  }),
+  component: RepositoryDetailView,
+})
