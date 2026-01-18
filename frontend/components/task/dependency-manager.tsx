@@ -21,6 +21,142 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
   CANCELED: 'bg-status-canceled/20 text-status-canceled',
 }
 
+interface DependencyColumnProps {
+  title: string
+  icon: typeof ArrowUp01Icon
+  count: number
+  items: TaskDependencyInfo[]
+  isAdding: boolean
+  onStartAdding: () => void
+  onCancelAdding: () => void
+  onAdd: (taskId: string) => void
+  onRemove: (dep: TaskDependencyInfo) => void
+  filteredTasks: { id: string; title: string; status: TaskStatus }[]
+  searchQuery: string
+  onSearchChange: (query: string) => void
+  inputRef: React.RefObject<HTMLInputElement | null>
+  addButtonLabel: string
+  emptyLabel: string
+}
+
+function DependencyColumn({
+  title,
+  icon,
+  count,
+  items,
+  isAdding,
+  onStartAdding,
+  onCancelAdding,
+  onAdd,
+  onRemove,
+  filteredTasks,
+  searchQuery,
+  onSearchChange,
+  inputRef,
+  addButtonLabel,
+  emptyLabel,
+}: DependencyColumnProps) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
+        <HugeiconsIcon icon={icon} size={12} />
+        <span>{title}</span>
+        {count > 0 && (
+          <span className="text-warning">({count})</span>
+        )}
+      </div>
+
+      <div className="rounded-md border bg-muted/30 min-h-[60px]">
+        {/* Existing items */}
+        <div className="p-1.5 space-y-1">
+          {items.length > 0 ? (
+            items.map((dep) => (
+              <div
+                key={dep.id}
+                className="flex items-center gap-2 rounded bg-background px-2 py-1.5 group"
+              >
+                <span className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium', STATUS_COLORS[dep.status])}>
+                  {dep.status.replace('_', ' ')}
+                </span>
+                <span className="flex-1 truncate text-xs">{dep.title}</span>
+                <button
+                  type="button"
+                  onClick={() => onRemove(dep)}
+                  className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} size={12} />
+                </button>
+              </div>
+            ))
+          ) : (
+            !isAdding && (
+              <div className="text-xs text-muted-foreground italic px-2 py-1.5">
+                {emptyLabel}
+              </div>
+            )
+          )}
+
+          {/* Search input when adding */}
+          {isAdding && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Input
+                  ref={inputRef}
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Search tasks..."
+                  className="h-7 text-xs"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') onCancelAdding()
+                  }}
+                />
+                <Button variant="ghost" size="icon-xs" onClick={onCancelAdding}>
+                  <HugeiconsIcon icon={Cancel01Icon} size={12} />
+                </Button>
+              </div>
+              {filteredTasks.length > 0 && (
+                <div className="max-h-32 overflow-y-auto rounded border bg-background">
+                  {filteredTasks.map((task) => (
+                    <button
+                      key={task.id}
+                      type="button"
+                      className="w-full px-2 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2"
+                      onClick={() => onAdd(task.id)}
+                    >
+                      <span className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium', STATUS_COLORS[task.status])}>
+                        {task.status.replace('_', ' ')}
+                      </span>
+                      <span className="truncate">{task.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchQuery && filteredTasks.length === 0 && (
+                <div className="text-xs text-muted-foreground px-2 py-1">
+                  No tasks found
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add button */}
+      {!isAdding && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-1.5 h-7 text-xs text-muted-foreground hover:text-foreground w-full justify-start"
+          onClick={onStartAdding}
+        >
+          <HugeiconsIcon icon={Add01Icon} size={12} className="mr-1.5" />
+          {addButtonLabel}
+        </Button>
+      )}
+    </div>
+  )
+}
+
 interface DependencyManagerProps {
   taskId: string
   compact?: boolean
@@ -35,14 +171,21 @@ export function DependencyManager({ taskId, compact }: DependencyManagerProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddingBlockedBy, setIsAddingBlockedBy] = useState(false)
   const [isAddingBlocking, setIsAddingBlocking] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const blockedByInputRef = useRef<HTMLInputElement>(null)
+  const blockingInputRef = useRef<HTMLInputElement>(null)
 
   // Focus input when opening add mode
   useEffect(() => {
-    if ((isAddingBlockedBy || isAddingBlocking) && inputRef.current) {
-      inputRef.current.focus()
+    if (isAddingBlockedBy && blockedByInputRef.current) {
+      blockedByInputRef.current.focus()
     }
-  }, [isAddingBlockedBy, isAddingBlocking])
+  }, [isAddingBlockedBy])
+
+  useEffect(() => {
+    if (isAddingBlocking && blockingInputRef.current) {
+      blockingInputRef.current.focus()
+    }
+  }, [isAddingBlocking])
 
   // Get IDs of tasks already in dependencies
   const existingDependencyIds = useMemo(() => {
@@ -113,12 +256,6 @@ export function DependencyManager({ taskId, compact }: DependencyManagerProps) {
     removeDependency.mutate({ taskId, dependencyId: dep.dependencyId })
   }
 
-  const handleCancel = () => {
-    setSearchQuery('')
-    setIsAddingBlockedBy(false)
-    setIsAddingBlocking(false)
-  }
-
   if (isLoading) {
     return (
       <div className="text-sm text-muted-foreground">Loading dependencies...</div>
@@ -129,198 +266,59 @@ export function DependencyManager({ taskId, compact }: DependencyManagerProps) {
   const blocking = dependencies?.blocking ?? []
 
   return (
-    <div className={cn('space-y-3', compact && 'space-y-2')}>
-      {/* Blocked By Section */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <HugeiconsIcon icon={ArrowUp01Icon} size={12} />
-            <span>Blocked by</span>
-            {blockedBy.length > 0 && (
-              <span className="text-amber-600">({blockedBy.length})</span>
-            )}
-          </div>
-          {!isAddingBlockedBy && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                setIsAddingBlocking(false)
-                setIsAddingBlockedBy(true)
-              }}
-            >
-              <HugeiconsIcon icon={Add01Icon} size={12} />
-            </Button>
-          )}
-        </div>
+    <div className={cn(
+      'grid gap-4',
+      compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
+    )}>
+      <DependencyColumn
+        title="Blocked by"
+        icon={ArrowUp01Icon}
+        count={blockedBy.length}
+        items={blockedBy}
+        isAdding={isAddingBlockedBy}
+        onStartAdding={() => {
+          setIsAddingBlocking(false)
+          setSearchQuery('')
+          setIsAddingBlockedBy(true)
+        }}
+        onCancelAdding={() => {
+          setSearchQuery('')
+          setIsAddingBlockedBy(false)
+        }}
+        onAdd={handleAddBlockedBy}
+        onRemove={handleRemove}
+        filteredTasks={filteredTasks}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        inputRef={blockedByInputRef}
+        addButtonLabel="Add blocker"
+        emptyLabel="No blockers"
+      />
 
-        {isAddingBlockedBy && (
-          <div className="mb-2 space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Input
-                ref={inputRef}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tasks..."
-                className="h-7 text-xs"
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') handleCancel()
-                }}
-              />
-              <Button variant="ghost" size="icon-xs" onClick={handleCancel}>
-                <HugeiconsIcon icon={Cancel01Icon} size={12} />
-              </Button>
-            </div>
-            {filteredTasks.length > 0 && (
-              <div className="max-h-32 overflow-y-auto rounded border bg-background">
-                {filteredTasks.map((task) => (
-                  <button
-                    key={task.id}
-                    type="button"
-                    className="w-full px-2 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2"
-                    onClick={() => handleAddBlockedBy(task.id)}
-                  >
-                    <span className={cn('shrink-0 rounded px-1 py-0.5 text-[10px]', STATUS_COLORS[task.status])}>
-                      {task.status.replace('_', ' ')}
-                    </span>
-                    <span className="truncate">{task.title}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {searchQuery && filteredTasks.length === 0 && (
-              <div className="text-xs text-muted-foreground px-2 py-1">
-                No tasks found
-              </div>
-            )}
-          </div>
-        )}
-
-        {blockedBy.length > 0 ? (
-          <div className="space-y-1">
-            {blockedBy.map((dep) => (
-              <div
-                key={dep.id}
-                className="flex items-center gap-2 rounded bg-muted/50 px-2 py-1"
-              >
-                <span className={cn('shrink-0 rounded px-1 py-0.5 text-[10px]', STATUS_COLORS[dep.status])}>
-                  {dep.status.replace('_', ' ')}
-                </span>
-                <span className="flex-1 truncate text-xs">{dep.title}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemove(dep)}
-                  className="shrink-0 text-muted-foreground hover:text-foreground"
-                >
-                  <HugeiconsIcon icon={Cancel01Icon} size={10} />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          !isAddingBlockedBy && (
-            <div className="text-xs text-muted-foreground italic">
-              No blocking tasks
-            </div>
-          )
-        )}
-      </div>
-
-      {/* Blocking Section */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <HugeiconsIcon icon={ArrowDown01Icon} size={12} />
-            <span>Blocking</span>
-            {blocking.length > 0 && (
-              <span className="text-amber-600">({blocking.length})</span>
-            )}
-          </div>
-          {!isAddingBlocking && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                setIsAddingBlockedBy(false)
-                setIsAddingBlocking(true)
-              }}
-            >
-              <HugeiconsIcon icon={Add01Icon} size={12} />
-            </Button>
-          )}
-        </div>
-
-        {isAddingBlocking && (
-          <div className="mb-2 space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Input
-                ref={inputRef}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tasks..."
-                className="h-7 text-xs"
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') handleCancel()
-                }}
-              />
-              <Button variant="ghost" size="icon-xs" onClick={handleCancel}>
-                <HugeiconsIcon icon={Cancel01Icon} size={12} />
-              </Button>
-            </div>
-            {filteredTasks.length > 0 && (
-              <div className="max-h-32 overflow-y-auto rounded border bg-background">
-                {filteredTasks.map((task) => (
-                  <button
-                    key={task.id}
-                    type="button"
-                    className="w-full px-2 py-1.5 text-left text-xs hover:bg-muted flex items-center gap-2"
-                    onClick={() => handleAddBlocking(task.id)}
-                  >
-                    <span className={cn('shrink-0 rounded px-1 py-0.5 text-[10px]', STATUS_COLORS[task.status])}>
-                      {task.status.replace('_', ' ')}
-                    </span>
-                    <span className="truncate">{task.title}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {searchQuery && filteredTasks.length === 0 && (
-              <div className="text-xs text-muted-foreground px-2 py-1">
-                No tasks found
-              </div>
-            )}
-          </div>
-        )}
-
-        {blocking.length > 0 ? (
-          <div className="space-y-1">
-            {blocking.map((dep) => (
-              <div
-                key={dep.id}
-                className="flex items-center gap-2 rounded bg-muted/50 px-2 py-1"
-              >
-                <span className={cn('shrink-0 rounded px-1 py-0.5 text-[10px]', STATUS_COLORS[dep.status])}>
-                  {dep.status.replace('_', ' ')}
-                </span>
-                <span className="flex-1 truncate text-xs">{dep.title}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemove(dep)}
-                  className="shrink-0 text-muted-foreground hover:text-foreground"
-                >
-                  <HugeiconsIcon icon={Cancel01Icon} size={10} />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          !isAddingBlocking && (
-            <div className="text-xs text-muted-foreground italic">
-              Not blocking any tasks
-            </div>
-          )
-        )}
-      </div>
+      <DependencyColumn
+        title="Blocking"
+        icon={ArrowDown01Icon}
+        count={blocking.length}
+        items={blocking}
+        isAdding={isAddingBlocking}
+        onStartAdding={() => {
+          setIsAddingBlockedBy(false)
+          setSearchQuery('')
+          setIsAddingBlocking(true)
+        }}
+        onCancelAdding={() => {
+          setSearchQuery('')
+          setIsAddingBlocking(false)
+        }}
+        onAdd={handleAddBlocking}
+        onRemove={handleRemove}
+        filteredTasks={filteredTasks}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        inputRef={blockingInputRef}
+        addButtonLabel="Add blocked task"
+        emptyLabel="Not blocking any"
+      />
     </div>
   )
 }
