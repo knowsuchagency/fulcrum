@@ -26,15 +26,13 @@ export function NonCodeTaskModal({ task, open, onOpenChange }: NonCodeTaskModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto p-0">
-        <div className="pr-8">
-          <TaskContent
-            task={task}
-            onInitializeAsCodeTask={handleInitializeAsCodeTask}
-            onDeleted={handleDeleted}
-            compact
-          />
-        </div>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto p-0" showCloseButton={false}>
+        <TaskContent
+          task={task}
+          onInitializeAsCodeTask={handleInitializeAsCodeTask}
+          onDeleted={handleDeleted}
+          compact
+        />
       </DialogContent>
     </Dialog>
   )

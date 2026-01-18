@@ -157,6 +157,9 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
       const hasTaskLinksTable = sqlite
         .query("SELECT name FROM sqlite_master WHERE type='table' AND name='task_links'")
         .get()
+      const hasTaskAttachmentsTable = sqlite
+        .query("SELECT name FROM sqlite_master WHERE type='table' AND name='task_attachments'")
+        .get()
 
       // Determine which migrations should be marked as applied based on schema state
       const migrationsToMark: Array<{ tag: string; when: number }> = []
@@ -240,6 +243,24 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
           if (hasProjectRepositoriesTable) {
             shouldMark = true
           }
+        }
+        // 0027 fixes task nullable fields (no-op if already correct from 0026)
+        else if (entry.tag.startsWith('0027')) {
+          // This migration recreates tasks table, mark as applied if tasks table has the expected structure
+          const hasTasksTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
+            .get()
+          if (hasTasksTable) {
+            shouldMark = true
+          }
+        }
+        // 0028 is a no-op (Linear columns removed in 0027)
+        else if (entry.tag.startsWith('0028')) {
+          shouldMark = true
+        }
+        // 0029 creates task_attachments table
+        else if (entry.tag.startsWith('0029') && hasTaskAttachmentsTable) {
+          shouldMark = true
         }
 
         if (shouldMark) {

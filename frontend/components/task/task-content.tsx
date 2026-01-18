@@ -127,7 +127,7 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
     <>
       {/* Header */}
       <div className={`shrink-0 border-b border-border bg-background px-4 py-3`}>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             {isEditingTitle ? (
               <Input
