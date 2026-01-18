@@ -3,8 +3,9 @@ import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KanbanBoard } from '@/components/kanban/kanban-board'
 import { TaskDependencyGraph } from '@/components/graph/task-dependency-graph'
+import { TaskCalendar } from '@/components/calendar/task-calendar'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { FilterIcon, Search01Icon, GridViewIcon, HierarchyIcon } from '@hugeicons/core-free-icons'
+import { FilterIcon, Search01Icon, GridViewIcon, HierarchyIcon, Calendar03Icon } from '@hugeicons/core-free-icons'
 import {
   Select,
   SelectContent,
@@ -16,7 +17,7 @@ import { Input } from '@/components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTasks } from '@/hooks/use-tasks'
 
-type ViewMode = 'kanban' | 'graph'
+type ViewMode = 'kanban' | 'graph' | 'calendar'
 
 interface TasksSearch {
   repo?: string
@@ -27,7 +28,7 @@ export const Route = createFileRoute('/tasks/')({
   component: TasksView,
   validateSearch: (search: Record<string, unknown>): TasksSearch => ({
     repo: typeof search.repo === 'string' ? search.repo : undefined,
-    view: search.view === 'graph' ? 'graph' : undefined,
+    view: search.view === 'graph' ? 'graph' : search.view === 'calendar' ? 'calendar' : undefined,
   }),
 })
 
@@ -114,17 +115,20 @@ function TasksView() {
           <ToggleGroupItem value="kanban" aria-label="Kanban view">
             <HugeiconsIcon icon={GridViewIcon} size={14} strokeWidth={2} />
           </ToggleGroupItem>
+          <ToggleGroupItem value="calendar" aria-label="Calendar view">
+            <HugeiconsIcon icon={Calendar03Icon} size={14} strokeWidth={2} />
+          </ToggleGroupItem>
           <ToggleGroupItem value="graph" aria-label="Dependency graph">
             <HugeiconsIcon icon={HierarchyIcon} size={14} strokeWidth={2} />
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
       <div className="flex-1 overflow-hidden">
-        {viewMode === 'kanban' ? (
+        {viewMode === 'kanban' && (
           <KanbanBoard repoFilter={repoFilter ?? null} searchQuery={searchQuery} />
-        ) : (
-          <TaskDependencyGraph />
         )}
+        {viewMode === 'calendar' && <TaskCalendar />}
+        {viewMode === 'graph' && <TaskDependencyGraph />}
       </div>
     </div>
   )
