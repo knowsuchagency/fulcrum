@@ -3,11 +3,77 @@ import { nanoid } from 'nanoid'
 import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve, join } from 'node:path'
-import { db, projects, repositories, apps, appServices, terminalTabs } from '../db'
-import { eq, desc, sql } from 'drizzle-orm'
-import type { ProjectWithDetails } from '../../shared/types'
+import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks } from '../db'
+import { eq, desc, sql, and } from 'drizzle-orm'
+import type { ProjectWithDetails, ProjectRepositoryDetails } from '../../shared/types'
+import { broadcast } from '../websocket/terminal-ws'
 
 const app = new Hono()
+
+// Helper to get repositories for a project (from join table and legacy repositoryId)
+function getProjectRepositories(projectId: string, legacyRepoId: string | null): ProjectRepositoryDetails[] {
+  // Get repositories from the join table
+  const joinedRepos = db
+    .select()
+    .from(projectRepositories)
+    .where(eq(projectRepositories.projectId, projectId))
+    .all()
+
+  const result: ProjectRepositoryDetails[] = []
+
+  for (const jr of joinedRepos) {
+    const repo = db.select().from(repositories).where(eq(repositories.id, jr.repositoryId)).get()
+    if (repo) {
+      result.push({
+        id: repo.id,
+        path: repo.path,
+        displayName: repo.displayName,
+        startupScript: repo.startupScript,
+        copyFiles: repo.copyFiles,
+        defaultAgent: repo.defaultAgent as 'claude' | 'opencode' | null,
+        claudeOptions: repo.claudeOptions ? JSON.parse(repo.claudeOptions) : null,
+        opencodeOptions: repo.opencodeOptions ? JSON.parse(repo.opencodeOptions) : null,
+        opencodeModel: repo.opencodeModel,
+        remoteUrl: repo.remoteUrl,
+        isCopierTemplate: repo.isCopierTemplate ?? false,
+        isPrimary: jr.isPrimary ?? false,
+      })
+    }
+  }
+
+  // If no repos in join table but legacy repositoryId exists, include it
+  if (result.length === 0 && legacyRepoId) {
+    const repo = db.select().from(repositories).where(eq(repositories.id, legacyRepoId)).get()
+    if (repo) {
+      result.push({
+        id: repo.id,
+        path: repo.path,
+        displayName: repo.displayName,
+        startupScript: repo.startupScript,
+        copyFiles: repo.copyFiles,
+        defaultAgent: repo.defaultAgent as 'claude' | 'opencode' | null,
+        claudeOptions: repo.claudeOptions ? JSON.parse(repo.claudeOptions) : null,
+        opencodeOptions: repo.opencodeOptions ? JSON.parse(repo.opencodeOptions) : null,
+        opencodeModel: repo.opencodeModel,
+        remoteUrl: repo.remoteUrl,
+        isCopierTemplate: repo.isCopierTemplate ?? false,
+        isPrimary: true, // Legacy single repo is primary by default
+      })
+    }
+  }
+
+  return result
+}
+
+// Helper to get task count for a project
+function getProjectTaskCount(projectId: string): number {
+  const result = db
+    .select({ count: sql<number>`count(*)` })
+    .from(tasks)
+    .where(eq(tasks.projectId, projectId))
+    .get()
+  return result?.count ?? 0
+}
 
 // Helper to build project with nested entities
 function buildProjectWithDetails(
@@ -17,6 +83,9 @@ function buildProjectWithDetails(
   services: (typeof appServices.$inferSelect)[],
   tab: typeof terminalTabs.$inferSelect | null
 ): ProjectWithDetails {
+  const projectRepos = getProjectRepositories(project.id, project.repositoryId)
+  const taskCount = getProjectTaskCount(project.id)
+
   return {
     id: project.id,
     name: project.name,
@@ -28,6 +97,7 @@ function buildProjectWithDetails(
     lastAccessedAt: project.lastAccessedAt,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
+    // DEPRECATED: Use repositories array instead
     repository: repo
       ? {
           id: repo.id,
@@ -43,6 +113,8 @@ function buildProjectWithDetails(
           isCopierTemplate: repo.isCopierTemplate ?? false,
         }
       : null,
+    // New: Multiple repositories per project
+    repositories: projectRepos,
     app: appRow
       ? {
           id: appRow.id,
@@ -81,6 +153,7 @@ function buildProjectWithDetails(
           directory: tab.directory,
         }
       : null,
+    taskCount,
   }
 }
 
@@ -889,6 +962,183 @@ app.post('/:id/access', (c) => {
     .run()
 
   return c.json({ success: true })
+})
+
+// GET /api/projects/:id/repositories - List repositories for a project
+app.get('/:id/repositories', (c) => {
+  const projectId = c.req.param('id')
+
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  if (!project) {
+    return c.json({ error: 'Project not found' }, 404)
+  }
+
+  const repos = getProjectRepositories(projectId, project.repositoryId)
+  return c.json(repos)
+})
+
+// POST /api/projects/:id/repositories - Add a repository to a project
+app.post('/:id/repositories', async (c) => {
+  const projectId = c.req.param('id')
+
+  try {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+    if (!project) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    const body = await c.req.json<{ repositoryId: string; isPrimary?: boolean }>()
+    if (!body.repositoryId) {
+      return c.json({ error: 'repositoryId is required' }, 400)
+    }
+
+    // Verify repository exists
+    const repo = db.select().from(repositories).where(eq(repositories.id, body.repositoryId)).get()
+    if (!repo) {
+      return c.json({ error: 'Repository not found' }, 404)
+    }
+
+    // Check if already linked
+    const existing = db
+      .select()
+      .from(projectRepositories)
+      .where(
+        and(
+          eq(projectRepositories.projectId, projectId),
+          eq(projectRepositories.repositoryId, body.repositoryId)
+        )
+      )
+      .get()
+
+    if (existing) {
+      return c.json({ error: 'Repository already linked to this project' }, 400)
+    }
+
+    const now = new Date().toISOString()
+
+    // If setting as primary, unset other primaries first
+    if (body.isPrimary) {
+      db.update(projectRepositories)
+        .set({ isPrimary: false })
+        .where(eq(projectRepositories.projectId, projectId))
+        .run()
+    }
+
+    const newLink = {
+      id: nanoid(),
+      projectId,
+      repositoryId: body.repositoryId,
+      isPrimary: body.isPrimary ?? false,
+      createdAt: now,
+    }
+
+    db.insert(projectRepositories).values(newLink).run()
+
+    // Update project's lastAccessedAt
+    db.update(projects)
+      .set({ updatedAt: now })
+      .where(eq(projects.id, projectId))
+      .run()
+
+    broadcast({ type: 'project:updated', payload: { projectId } })
+
+    return c.json(newLink, 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to add repository' }, 400)
+  }
+})
+
+// DELETE /api/projects/:id/repositories/:repoId - Remove a repository from a project
+app.delete('/:id/repositories/:repoId', (c) => {
+  const projectId = c.req.param('id')
+  const repoId = c.req.param('repoId')
+
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  if (!project) {
+    return c.json({ error: 'Project not found' }, 404)
+  }
+
+  const link = db
+    .select()
+    .from(projectRepositories)
+    .where(
+      and(
+        eq(projectRepositories.projectId, projectId),
+        eq(projectRepositories.repositoryId, repoId)
+      )
+    )
+    .get()
+
+  if (!link) {
+    return c.json({ error: 'Repository not linked to this project' }, 404)
+  }
+
+  db.delete(projectRepositories).where(eq(projectRepositories.id, link.id)).run()
+
+  const now = new Date().toISOString()
+  db.update(projects)
+    .set({ updatedAt: now })
+    .where(eq(projects.id, projectId))
+    .run()
+
+  broadcast({ type: 'project:updated', payload: { projectId } })
+
+  return c.json({ success: true })
+})
+
+// PATCH /api/projects/:id/repositories/:repoId - Update repository link (e.g., set as primary)
+app.patch('/:id/repositories/:repoId', async (c) => {
+  const projectId = c.req.param('id')
+  const repoId = c.req.param('repoId')
+
+  try {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+    if (!project) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    const link = db
+      .select()
+      .from(projectRepositories)
+      .where(
+        and(
+          eq(projectRepositories.projectId, projectId),
+          eq(projectRepositories.repositoryId, repoId)
+        )
+      )
+      .get()
+
+    if (!link) {
+      return c.json({ error: 'Repository not linked to this project' }, 404)
+    }
+
+    const body = await c.req.json<{ isPrimary?: boolean }>()
+
+    // If setting as primary, unset other primaries first
+    if (body.isPrimary) {
+      db.update(projectRepositories)
+        .set({ isPrimary: false })
+        .where(eq(projectRepositories.projectId, projectId))
+        .run()
+    }
+
+    db.update(projectRepositories)
+      .set({ isPrimary: body.isPrimary ?? link.isPrimary })
+      .where(eq(projectRepositories.id, link.id))
+      .run()
+
+    const now = new Date().toISOString()
+    db.update(projects)
+      .set({ updatedAt: now })
+      .where(eq(projects.id, projectId))
+      .run()
+
+    broadcast({ type: 'project:updated', payload: { projectId } })
+
+    return c.json({ success: true })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to update repository' }, 400)
+  }
 })
 
 export default app

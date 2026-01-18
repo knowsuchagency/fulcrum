@@ -5,7 +5,7 @@ import type { ViboraClient } from '../client'
 import { formatSuccess, handleToolError } from './utils'
 import { searchTools, toolRegistry } from './registry'
 
-const TaskStatusSchema = z.enum(['IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED'])
+const TaskStatusSchema = z.enum(['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED'])
 const ProjectStatusSchema = z.enum(['active', 'archived'])
 const AppStatusSchema = z.enum(['stopped', 'building', 'running', 'failed'])
 const ToolCategorySchema = z.enum(['core', 'tasks', 'projects', 'apps', 'filesystem', 'git', 'notifications', 'exec'])
@@ -59,12 +59,15 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // list_tasks
   server.tool(
     'list_tasks',
-    'List all Vibora tasks with optional filtering by status or repository',
+    'List all Vibora tasks with optional filtering by status, repository, project, or label',
     {
       status: z.optional(TaskStatusSchema).describe('Filter by task status'),
       repo: z.optional(z.string()).describe('Filter by repository name or path'),
+      projectId: z.optional(z.string()).describe('Filter by project ID'),
+      orphans: z.optional(z.boolean()).describe('Only show orphan tasks (not in any project)'),
+      label: z.optional(z.string()).describe('Filter by label'),
     },
-    async ({ status, repo }) => {
+    async ({ status, repo, projectId, orphans, label }) => {
       try {
         let tasks = await client.listTasks()
 
@@ -75,9 +78,19 @@ export function registerTools(server: McpServer, client: ViboraClient) {
           const repoLower = repo.toLowerCase()
           tasks = tasks.filter(
             (t) =>
-              t.repoName.toLowerCase().includes(repoLower) ||
-              t.repoPath.toLowerCase().includes(repoLower)
+              (t.repoName && t.repoName.toLowerCase().includes(repoLower)) ||
+              (t.repoPath && t.repoPath.toLowerCase().includes(repoLower))
           )
+        }
+        if (projectId) {
+          tasks = tasks.filter((t) => t.projectId === projectId)
+        }
+        if (orphans) {
+          tasks = tasks.filter((t) => t.projectId === null)
+        }
+        if (label) {
+          const labelLower = label.toLowerCase()
+          tasks = tasks.filter((t) => t.labels && t.labels.some((l) => l.toLowerCase() === labelLower))
         }
 
         return formatSuccess(tasks)
@@ -107,26 +120,35 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // create_task
   server.tool(
     'create_task',
-    'Create a new task with an isolated git worktree',
+    'Create a new task. For code tasks, provide repoPath to create a git worktree. For non-code tasks, omit repoPath.',
     {
       title: z.string().describe('Task title'),
-      repoPath: z.string().describe('Absolute path to the git repository'),
+      repoPath: z.optional(z.string()).describe('Absolute path to the git repository (optional for non-code tasks)'),
       baseBranch: z.string().default('main').describe('Base branch for the worktree'),
       branch: z.optional(z.string()).describe('Branch name for the task worktree (auto-generated if omitted)'),
       description: z.optional(z.string()).describe('Task description'),
+      status: z.optional(TaskStatusSchema).describe('Initial status (default: IN_PROGRESS, use TO_DO for deferred worktree creation)'),
+      projectId: z.optional(z.string()).describe('Project ID to associate with'),
+      repositoryId: z.optional(z.string()).describe('Repository ID (alternative to repoPath)'),
+      labels: z.optional(z.array(z.string())).describe('Labels to add to the task'),
+      dueDate: z.optional(z.string()).describe('Due date in YYYY-MM-DD format'),
     },
-    async ({ title, repoPath, baseBranch, branch, description }) => {
+    async ({ title, repoPath, baseBranch, branch, description, status, projectId, repositoryId, labels, dueDate }) => {
       try {
-        const repoName = basename(repoPath)
+        const repoName = repoPath ? basename(repoPath) : null
         const task = await client.createTask({
           title,
-          repoPath,
+          repoPath: repoPath ?? null,
           repoName,
-          baseBranch,
+          baseBranch: repoPath ? baseBranch : null,
           branch: branch ?? null,
           worktreePath: null,
           description,
-          status: 'IN_PROGRESS',
+          status: status ?? 'IN_PROGRESS',
+          projectId: projectId ?? null,
+          repositoryId: repositoryId ?? null,
+          labels,
+          dueDate: dueDate ?? null,
         })
         return formatSuccess(task)
       } catch (err) {
@@ -355,6 +377,179 @@ export function registerTools(server: McpServer, client: ViboraClient) {
       try {
         const links = await client.listTaskLinks(taskId)
         return formatSuccess(links)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // add_task_label
+  server.tool(
+    'add_task_label',
+    'Add a label to a task for categorization',
+    {
+      taskId: z.string().describe('Task ID'),
+      label: z.string().describe('Label to add'),
+    },
+    async ({ taskId, label }) => {
+      try {
+        const result = await client.addTaskLabel(taskId, label)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // remove_task_label
+  server.tool(
+    'remove_task_label',
+    'Remove a label from a task',
+    {
+      taskId: z.string().describe('Task ID'),
+      label: z.string().describe('Label to remove'),
+    },
+    async ({ taskId, label }) => {
+      try {
+        const result = await client.removeTaskLabel(taskId, label)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // set_task_due_date
+  server.tool(
+    'set_task_due_date',
+    'Set or clear the due date for a task',
+    {
+      taskId: z.string().describe('Task ID'),
+      dueDate: z.nullable(z.string()).describe('Due date in YYYY-MM-DD format, or null to clear'),
+    },
+    async ({ taskId, dueDate }) => {
+      try {
+        const result = await client.setTaskDueDate(taskId, dueDate)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // get_task_dependencies
+  server.tool(
+    'get_task_dependencies',
+    'Get the dependencies and dependents of a task, and whether it is blocked',
+    {
+      taskId: z.string().describe('Task ID'),
+    },
+    async ({ taskId }) => {
+      try {
+        const result = await client.getTaskDependencies(taskId)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // add_task_dependency
+  server.tool(
+    'add_task_dependency',
+    'Add a dependency between tasks (the task cannot start until the dependency is done)',
+    {
+      taskId: z.string().describe('Task ID that will depend on another task'),
+      dependsOnTaskId: z.string().describe('Task ID that must be completed first'),
+    },
+    async ({ taskId, dependsOnTaskId }) => {
+      try {
+        const result = await client.addTaskDependency(taskId, dependsOnTaskId)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // remove_task_dependency
+  server.tool(
+    'remove_task_dependency',
+    'Remove a dependency from a task',
+    {
+      taskId: z.string().describe('Task ID'),
+      dependencyId: z.string().describe('Dependency ID to remove'),
+    },
+    async ({ taskId, dependencyId }) => {
+      try {
+        const result = await client.removeTaskDependency(taskId, dependencyId)
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // get_task_dependency_graph
+  server.tool(
+    'get_task_dependency_graph',
+    'Get all tasks and their dependencies as a graph structure for visualization',
+    {},
+    async () => {
+      try {
+        const result = await client.getTaskDependencyGraph()
+        return formatSuccess(result)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // list_tasks_by_label
+  server.tool(
+    'list_tasks_by_label',
+    'List all tasks that have a specific label',
+    {
+      label: z.string().describe('Label to filter by'),
+    },
+    async ({ label }) => {
+      try {
+        let tasks = await client.listTasks()
+        const labelLower = label.toLowerCase()
+        tasks = tasks.filter((t) => t.labels && t.labels.some((l) => l.toLowerCase() === labelLower))
+        return formatSuccess(tasks)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // list_tasks_by_due_date
+  server.tool(
+    'list_tasks_by_due_date',
+    'List tasks within a date range based on due date',
+    {
+      startDate: z.optional(z.string()).describe('Start date (YYYY-MM-DD), inclusive'),
+      endDate: z.optional(z.string()).describe('End date (YYYY-MM-DD), inclusive'),
+      overdue: z.optional(z.boolean()).describe('Only show overdue tasks'),
+    },
+    async ({ startDate, endDate, overdue }) => {
+      try {
+        let tasks = await client.listTasks()
+        const today = new Date().toISOString().split('T')[0]
+
+        if (overdue) {
+          tasks = tasks.filter((t) => t.dueDate && t.dueDate < today && t.status !== 'DONE' && t.status !== 'CANCELED')
+        } else {
+          if (startDate) {
+            tasks = tasks.filter((t) => t.dueDate && t.dueDate >= startDate)
+          }
+          if (endDate) {
+            tasks = tasks.filter((t) => t.dueDate && t.dueDate <= endDate)
+          }
+        }
+
+        return formatSuccess(tasks)
       } catch (err) {
         return handleToolError(err)
       }

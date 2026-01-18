@@ -19,6 +19,7 @@ export const AGENT_DOC_URLS: Record<AgentType, string> = {
 }
 
 export type TaskStatus =
+  | 'TO_DO'
   | 'IN_PROGRESS'
   | 'IN_REVIEW'
   | 'DONE'
@@ -72,9 +73,9 @@ export interface Task {
   description: string | null
   status: TaskStatus
   position: number
-  repoPath: string
-  repoName: string
-  baseBranch: string
+  repoPath: string | null // Nullable for non-code tasks
+  repoName: string | null // Nullable for non-code tasks
+  baseBranch: string | null // Nullable for non-code tasks
   branch: string | null
   worktreePath: string | null
   viewState: ViewState | null
@@ -87,6 +88,12 @@ export interface Task {
   agentOptions: Record<string, string> | null
   opencodeModel: string | null
   pinned: boolean
+  // Generalized task management fields
+  projectId: string | null // FK to project (null = orphan/inbox)
+  repositoryId: string | null // FK to repository for code tasks
+  labels: string[] // Array of label strings
+  startedAt: string | null // Timestamp when moved out of TO_DO
+  dueDate: string | null // YYYY-MM-DD format
   createdAt: string
   updatedAt: string
   links?: TaskLink[]
@@ -101,6 +108,23 @@ export interface TaskLink {
   url: string
   label: string | null
   type: TaskLinkType | null
+  createdAt: string
+}
+
+// Task dependency for tracking blocked tasks
+export interface TaskDependency {
+  id: string
+  taskId: string
+  dependsOnTaskId: string
+  createdAt: string
+}
+
+// Project-Repository M:N relationship
+export interface ProjectRepository {
+  id: string
+  projectId: string
+  repositoryId: string
+  isPrimary: boolean
   createdAt: string
 }
 
@@ -514,8 +538,25 @@ export interface Project {
   updatedAt: string
 }
 
+// Repository details for ProjectWithDetails
+export interface ProjectRepositoryDetails {
+  id: string
+  path: string
+  displayName: string
+  startupScript: string | null
+  copyFiles: string | null
+  defaultAgent: AgentType | null
+  claudeOptions: Record<string, string> | null
+  opencodeOptions: Record<string, string> | null
+  opencodeModel: string | null
+  remoteUrl: string | null
+  isCopierTemplate: boolean
+  isPrimary: boolean // From project_repositories join
+}
+
 // Project with nested entities for API responses
 export interface ProjectWithDetails extends Project {
+  // DEPRECATED: Use repositories array instead
   repository: {
     id: string
     path: string
@@ -529,6 +570,8 @@ export interface ProjectWithDetails extends Project {
     remoteUrl: string | null
     isCopierTemplate: boolean
   } | null
+  // New: Multiple repositories per project
+  repositories: ProjectRepositoryDetails[]
   app: {
     id: string
     name: string
@@ -549,4 +592,5 @@ export interface ProjectWithDetails extends Project {
     name: string
     directory: string | null
   } | null
+  taskCount: number // Number of tasks in this project
 }

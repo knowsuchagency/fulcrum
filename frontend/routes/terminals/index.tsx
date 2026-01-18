@@ -261,7 +261,8 @@ const TerminalsView = observer(function TerminalsView() {
       pinned: boolean
     }>()
     for (const task of tasks) {
-      if (task.worktreePath) {
+      // Only include tasks with worktree that have required repo info
+      if (task.worktreePath && task.repoPath && task.repoName && task.baseBranch) {
         map.set(task.worktreePath, {
           taskId: task.id,
           repoId: repoIdByPath.get(task.repoPath),
@@ -283,8 +284,8 @@ const TerminalsView = observer(function TerminalsView() {
   const repoNames = useMemo(() => {
     const names = new Set(
       tasks
-        .filter((t) => ACTIVE_STATUSES.includes(t.status))
-        .map((t) => t.repoName)
+        .filter((t) => ACTIVE_STATUSES.includes(t.status) && t.repoName)
+        .map((t) => t.repoName!)
     )
     return Array.from(names).sort()
   }, [tasks])

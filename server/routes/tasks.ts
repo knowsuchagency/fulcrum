@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { db, tasks, repositories, taskLinks, type Task, type NewTask, type TaskLink } from '../db'
+import { db, tasks, repositories, taskLinks, taskDependencies, type Task, type NewTask, type TaskLink } from '../db'
 import { eq, asc, and } from 'drizzle-orm'
 import type { TaskLinkType } from '@shared/types'
 import { execSync } from 'child_process'
@@ -147,11 +147,12 @@ function getTaskLinks(taskId: string): TaskLink[] {
 function toApiResponse(
   task: Task,
   includeLinks = false
-): Task & { viewState: unknown; agentOptions: Record<string, string> | null; links?: TaskLink[] } {
-  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; links?: TaskLink[] } = {
+): Task & { viewState: unknown; agentOptions: Record<string, string> | null; labels: string[]; links?: TaskLink[] } {
+  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; labels: string[]; links?: TaskLink[] } = {
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
     agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
+    labels: task.labels ? JSON.parse(task.labels) : [],
   }
   if (includeLinks) {
     response.links = getTaskLinks(task.id)
@@ -159,9 +160,31 @@ function toApiResponse(
   return response
 }
 
-// GET /api/tasks - List all tasks
+// GET /api/tasks - List all tasks (optionally filter by projectId or orphans)
 app.get('/', (c) => {
-  const allTasks = db.select().from(tasks).orderBy(asc(tasks.position)).all()
+  const projectId = c.req.query('projectId')
+  const orphans = c.req.query('orphans') === 'true'
+  const label = c.req.query('label')
+
+  const query = db.select().from(tasks).orderBy(asc(tasks.position))
+
+  let allTasks = query.all()
+
+  // Apply filters in memory (for simplicity with nullable fields)
+  if (projectId) {
+    allTasks = allTasks.filter((t) => t.projectId === projectId)
+  } else if (orphans) {
+    allTasks = allTasks.filter((t) => t.projectId === null)
+  }
+
+  // Filter by label if specified
+  if (label) {
+    allTasks = allTasks.filter((t) => {
+      const labels: string[] = t.labels ? JSON.parse(t.labels) : []
+      return labels.includes(label)
+    })
+  }
+
   return c.json(allTasks.map((t) => toApiResponse(t, true)))
 })
 
@@ -175,6 +198,7 @@ app.post('/', async (c) => {
         agent?: string
         agentOptions?: Record<string, string> | null
         opencodeModel?: string | null
+        labels?: string[]
       }
     >()
 
@@ -187,15 +211,19 @@ app.post('/', async (c) => {
     const maxPosition = existingTasks.reduce((max, t) => Math.max(max, t.position), -1)
 
     const now = new Date().toISOString()
+
+    // Set startedAt based on status (null for TO_DO, now for others)
+    const startedAt = body.status === 'TO_DO' ? null : (body.startedAt || now)
+
     const newTask: NewTask = {
       id: crypto.randomUUID(),
       title: body.title,
       description: body.description || null,
       status: body.status || 'IN_PROGRESS',
       position: maxPosition + 1,
-      repoPath: body.repoPath,
-      repoName: body.repoName,
-      baseBranch: body.baseBranch,
+      repoPath: body.repoPath || null,
+      repoName: body.repoName || null,
+      baseBranch: body.baseBranch || null,
       branch: body.branch || null,
       worktreePath: body.worktreePath || null,
       startupScript: body.startupScript || null,
@@ -203,11 +231,17 @@ app.post('/', async (c) => {
       aiMode: body.aiMode || null,
       agentOptions: body.agentOptions ? JSON.stringify(body.agentOptions) : null,
       opencodeModel: body.opencodeModel || null,
+      // New generalized task fields
+      projectId: body.projectId || null,
+      repositoryId: body.repositoryId || null,
+      labels: body.labels && body.labels.length > 0 ? JSON.stringify(body.labels) : null,
+      startedAt,
+      dueDate: body.dueDate || null,
       createdAt: now,
       updatedAt: now,
     }
 
-    // Create git worktree if branch and worktreePath are provided
+    // Create git worktree if branch and worktreePath are provided (for immediate IN_PROGRESS tasks)
     if (body.branch && body.worktreePath && body.repoPath && body.baseBranch) {
       const result = createGitWorktree(body.repoPath, body.worktreePath, body.branch, body.baseBranch)
       if (!result.success) {
@@ -560,5 +594,245 @@ app.delete('/:id/links/:linkId', (c) => {
 
   return c.json({ success: true })
 })
+
+// POST /api/tasks/:id/labels - Add a label to a task
+app.post('/:id/labels', async (c) => {
+  const taskId = c.req.param('id')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    const body = await c.req.json<{ label: string }>()
+    if (!body.label) {
+      return c.json({ error: 'Label is required' }, 400)
+    }
+
+    const labels: string[] = task.labels ? JSON.parse(task.labels) : []
+    if (!labels.includes(body.label)) {
+      labels.push(body.label)
+    }
+
+    const now = new Date().toISOString()
+    db.update(tasks)
+      .set({ labels: JSON.stringify(labels), updatedAt: now })
+      .where(eq(tasks.id, taskId))
+      .run()
+
+    broadcast({ type: 'task:updated', payload: { taskId } })
+    return c.json({ labels })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to add label' }, 400)
+  }
+})
+
+// DELETE /api/tasks/:id/labels/:label - Remove a label from a task
+app.delete('/:id/labels/:label', (c) => {
+  const taskId = c.req.param('id')
+  const label = decodeURIComponent(c.req.param('label'))
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  const labels: string[] = task.labels ? JSON.parse(task.labels) : []
+  const filteredLabels = labels.filter((l) => l !== label)
+
+  const now = new Date().toISOString()
+  db.update(tasks)
+    .set({ labels: filteredLabels.length > 0 ? JSON.stringify(filteredLabels) : null, updatedAt: now })
+    .where(eq(tasks.id, taskId))
+    .run()
+
+  broadcast({ type: 'task:updated', payload: { taskId } })
+  return c.json({ labels: filteredLabels })
+})
+
+// PATCH /api/tasks/:id/due-date - Set or clear due date
+app.patch('/:id/due-date', async (c) => {
+  const taskId = c.req.param('id')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    const body = await c.req.json<{ dueDate: string | null }>()
+
+    const now = new Date().toISOString()
+    db.update(tasks)
+      .set({ dueDate: body.dueDate, updatedAt: now })
+      .where(eq(tasks.id, taskId))
+      .run()
+
+    broadcast({ type: 'task:updated', payload: { taskId } })
+    return c.json({ dueDate: body.dueDate })
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to set due date' }, 400)
+  }
+})
+
+// GET /api/tasks/:id/dependencies - Get dependencies for a task
+app.get('/:id/dependencies', (c) => {
+  const taskId = c.req.param('id')
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  // Get tasks that this task depends on (blockers)
+  const dependsOn = db
+    .select()
+    .from(taskDependencies)
+    .where(eq(taskDependencies.taskId, taskId))
+    .all()
+
+  // Get tasks that depend on this task (dependents)
+  const dependents = db
+    .select()
+    .from(taskDependencies)
+    .where(eq(taskDependencies.dependsOnTaskId, taskId))
+    .all()
+
+  // Fetch the actual task details for dependencies
+  const dependsOnTasks = dependsOn.map((dep) => {
+    const t = db.select().from(tasks).where(eq(tasks.id, dep.dependsOnTaskId)).get()
+    return {
+      id: dep.id,
+      dependsOnTaskId: dep.dependsOnTaskId,
+      task: t ? { id: t.id, title: t.title, status: t.status } : null,
+      createdAt: dep.createdAt,
+    }
+  })
+
+  const dependentTasks = dependents.map((dep) => {
+    const t = db.select().from(tasks).where(eq(tasks.id, dep.taskId)).get()
+    return {
+      id: dep.id,
+      taskId: dep.taskId,
+      task: t ? { id: t.id, title: t.title, status: t.status } : null,
+      createdAt: dep.createdAt,
+    }
+  })
+
+  // Task is blocked if any of its dependencies are not DONE
+  const isBlocked = dependsOnTasks.some(
+    (dep) => dep.task && dep.task.status !== 'DONE' && dep.task.status !== 'CANCELED'
+  )
+
+  return c.json({
+    dependsOn: dependsOnTasks,
+    dependents: dependentTasks,
+    isBlocked,
+  })
+})
+
+// POST /api/tasks/:id/dependencies - Add a dependency
+app.post('/:id/dependencies', async (c) => {
+  const taskId = c.req.param('id')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    const body = await c.req.json<{ dependsOnTaskId: string }>()
+    if (!body.dependsOnTaskId) {
+      return c.json({ error: 'dependsOnTaskId is required' }, 400)
+    }
+
+    // Can't depend on itself
+    if (body.dependsOnTaskId === taskId) {
+      return c.json({ error: 'Task cannot depend on itself' }, 400)
+    }
+
+    // Check that the target task exists
+    const targetTask = db.select().from(tasks).where(eq(tasks.id, body.dependsOnTaskId)).get()
+    if (!targetTask) {
+      return c.json({ error: 'Target task not found' }, 404)
+    }
+
+    // Check for existing dependency
+    const existing = db
+      .select()
+      .from(taskDependencies)
+      .where(
+        and(
+          eq(taskDependencies.taskId, taskId),
+          eq(taskDependencies.dependsOnTaskId, body.dependsOnTaskId)
+        )
+      )
+      .get()
+
+    if (existing) {
+      return c.json({ error: 'Dependency already exists' }, 400)
+    }
+
+    // Check for circular dependency (target depends on us)
+    const circular = db
+      .select()
+      .from(taskDependencies)
+      .where(
+        and(
+          eq(taskDependencies.taskId, body.dependsOnTaskId),
+          eq(taskDependencies.dependsOnTaskId, taskId)
+        )
+      )
+      .get()
+
+    if (circular) {
+      return c.json({ error: 'Circular dependency detected' }, 400)
+    }
+
+    const now = new Date().toISOString()
+    const newDep = {
+      id: crypto.randomUUID(),
+      taskId,
+      dependsOnTaskId: body.dependsOnTaskId,
+      createdAt: now,
+    }
+
+    db.insert(taskDependencies).values(newDep).run()
+
+    broadcast({ type: 'task:updated', payload: { taskId } })
+    broadcast({ type: 'task:updated', payload: { taskId: body.dependsOnTaskId } })
+
+    return c.json(newDep, 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to add dependency' }, 400)
+  }
+})
+
+// DELETE /api/tasks/:id/dependencies/:depId - Remove a dependency
+app.delete('/:id/dependencies/:depId', (c) => {
+  const taskId = c.req.param('id')
+  const depId = c.req.param('depId')
+
+  const dep = db
+    .select()
+    .from(taskDependencies)
+    .where(and(eq(taskDependencies.id, depId), eq(taskDependencies.taskId, taskId)))
+    .get()
+
+  if (!dep) {
+    return c.json({ error: 'Dependency not found' }, 404)
+  }
+
+  db.delete(taskDependencies).where(eq(taskDependencies.id, depId)).run()
+
+  broadcast({ type: 'task:updated', payload: { taskId } })
+  broadcast({ type: 'task:updated', payload: { taskId: dep.dependsOnTaskId } })
+
+  return c.json({ success: true })
+})
+
+// GET /api/tasks/dependencies/graph - Get all dependencies for graph visualization (must be before /:id)
+// Note: This is handled separately below since it needs to come before the :id routes
 
 export default app

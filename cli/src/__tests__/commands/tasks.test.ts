@@ -53,16 +53,8 @@ describe('tasks command', () => {
       }
     })
 
-    test('create: throws when repo is missing', async () => {
-      try {
-        await handleTasksCommand('create', [], { title: 'Test' })
-        expect(true).toBe(false)
-      } catch (err) {
-        expect(err).toBeInstanceOf(CliError)
-        expect((err as CliError).code).toBe('MISSING_REPO')
-        expect((err as CliError).message).toContain('--repo is required')
-      }
-    })
+    // Note: repo is now optional - tasks can be created without a repo (non-code tasks)
+    // This test is replaced by integration tests that verify non-code task creation
 
     test('update: throws when id is missing', async () => {
       try {

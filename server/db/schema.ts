@@ -6,9 +6,9 @@ export const tasks = sqliteTable('tasks', {
   description: text('description'),
   status: text('status').notNull().default('IN_PROGRESS'),
   position: integer('position').notNull(),
-  repoPath: text('repo_path').notNull(),
-  repoName: text('repo_name').notNull(),
-  baseBranch: text('base_branch').notNull(),
+  repoPath: text('repo_path'), // Now nullable for non-code tasks
+  repoName: text('repo_name'), // Now nullable for non-code tasks
+  baseBranch: text('base_branch'), // Now nullable for non-code tasks
   branch: text('branch'),
   worktreePath: text('worktree_path'),
   viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
@@ -21,8 +21,22 @@ export const tasks = sqliteTable('tasks', {
   agentOptions: text('agent_options'), // JSON: { [flag]: value } - CLI options for agent
   opencodeModel: text('opencode_model'), // OpenCode model in format 'provider/model' - null means use default
   pinned: integer('pinned', { mode: 'boolean' }).default(false), // Prevent cleanup from deleting this task's worktree
+  // Generalized task management fields
+  projectId: text('project_id'), // FK to projects (nullable - null = orphan/inbox)
+  repositoryId: text('repository_id'), // FK to repositories for code tasks
+  labels: text('labels'), // JSON array: ["bug", "urgent"]
+  startedAt: text('started_at'), // Timestamp when moved out of TO_DO
+  dueDate: text('due_date'), // YYYY-MM-DD format
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+})
+
+// Task dependencies - tracks which tasks depend on other tasks
+export const taskDependencies = sqliteTable('task_dependencies', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull(),
+  dependsOnTaskId: text('depends_on_task_id').notNull(),
+  createdAt: text('created_at').notNull(),
 })
 
 // Task links - arbitrary URL links associated with tasks
@@ -159,13 +173,22 @@ export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
-  repositoryId: text('repository_id'), // FK to repositories (nullable)
+  repositoryId: text('repository_id'), // DEPRECATED: use projectRepositories join table
   appId: text('app_id').unique(), // FK to apps (nullable, 1:1)
   terminalTabId: text('terminal_tab_id').unique(), // FK to terminalTabs (dedicated)
   status: text('status').notNull().default('active'), // 'active' | 'archived'
   lastAccessedAt: text('last_accessed_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
+})
+
+// Project Repositories - M:N join table for projects and repositories
+export const projectRepositories = sqliteTable('project_repositories', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  repositoryId: text('repository_id').notNull(),
+  isPrimary: integer('is_primary', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').notNull(),
 })
 
 // System metrics for monitoring - stores historical CPU, memory, disk usage
@@ -205,3 +228,7 @@ export type Project = typeof projects.$inferSelect
 export type NewProject = typeof projects.$inferInsert
 export type TaskLink = typeof taskLinks.$inferSelect
 export type NewTaskLink = typeof taskLinks.$inferInsert
+export type TaskDependency = typeof taskDependencies.$inferSelect
+export type NewTaskDependency = typeof taskDependencies.$inferInsert
+export type ProjectRepository = typeof projectRepositories.$inferSelect
+export type NewProjectRepository = typeof projectRepositories.$inferInsert

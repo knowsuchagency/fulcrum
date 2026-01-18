@@ -48,6 +48,7 @@
     --tile: rgba(42, 42, 39, 0.1);                /* Graphite 10% */
 
     /* Status colors */
+    --status-todo: #6b7280;                       /* Gray - planned */
     --status-in-progress: #8d909b;                /* Lavender Grey - active */
     --status-in-review: #e08d3c;                  /* Tiger's Eye - waiting */
     --status-done: #0d5c63;                       /* Stormy Teal - complete */
@@ -134,6 +135,7 @@
     --color-background: var(--background);
     --color-terminal-background: var(--terminal-background);
     --color-tile: var(--tile);
+    --color-status-todo: var(--status-todo);
     --color-status-in-progress: var(--status-in-progress);
     --color-status-in-review: var(--status-in-review);
     --color-status-done: var(--status-done);

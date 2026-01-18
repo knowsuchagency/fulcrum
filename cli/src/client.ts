@@ -27,11 +27,42 @@ export interface CreateTaskInput {
   title: string
   description?: string
   status?: TaskStatus
-  repoPath: string
-  repoName: string
-  baseBranch: string
+  repoPath?: string | null
+  repoName?: string | null
+  baseBranch?: string | null
   branch?: string | null
   worktreePath?: string | null
+  projectId?: string | null
+  repositoryId?: string | null
+  labels?: string[]
+  dueDate?: string | null
+}
+
+export interface TaskLabelsResponse {
+  labels: string[]
+}
+
+export interface TaskDueDateResponse {
+  dueDate: string | null
+}
+
+export interface TaskDependencyInfo {
+  id: string
+  task: { id: string; title: string; status: TaskStatus } | null
+  createdAt: string
+}
+
+export interface TaskDependenciesResponse {
+  dependsOn: (TaskDependencyInfo & { dependsOnTaskId: string })[]
+  dependents: (TaskDependencyInfo & { taskId: string })[]
+  isBlocked: boolean
+}
+
+export interface TaskDependency {
+  id: string
+  taskId: string
+  dependsOnTaskId: string
+  createdAt: string
 }
 
 export interface DiffQueryOptions {
@@ -397,6 +428,54 @@ export class ViboraClient {
 
   async listTaskLinks(taskId: string): Promise<TaskLink[]> {
     return this.fetch(`/api/tasks/${taskId}/links`)
+  }
+
+  // Task labels
+  async addTaskLabel(taskId: string, label: string): Promise<TaskLabelsResponse> {
+    return this.fetch(`/api/tasks/${taskId}/labels`, {
+      method: 'POST',
+      body: JSON.stringify({ label }),
+    })
+  }
+
+  async removeTaskLabel(taskId: string, label: string): Promise<TaskLabelsResponse> {
+    return this.fetch(`/api/tasks/${taskId}/labels/${encodeURIComponent(label)}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Task due date
+  async setTaskDueDate(taskId: string, dueDate: string | null): Promise<TaskDueDateResponse> {
+    return this.fetch(`/api/tasks/${taskId}/due-date`, {
+      method: 'PATCH',
+      body: JSON.stringify({ dueDate }),
+    })
+  }
+
+  // Task dependencies
+  async getTaskDependencies(taskId: string): Promise<TaskDependenciesResponse> {
+    return this.fetch(`/api/tasks/${taskId}/dependencies`)
+  }
+
+  async addTaskDependency(taskId: string, dependsOnTaskId: string): Promise<TaskDependency> {
+    return this.fetch(`/api/tasks/${taskId}/dependencies`, {
+      method: 'POST',
+      body: JSON.stringify({ dependsOnTaskId }),
+    })
+  }
+
+  async removeTaskDependency(taskId: string, depId: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/tasks/${taskId}/dependencies/${depId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Task dependency graph
+  async getTaskDependencyGraph(): Promise<{
+    nodes: Array<{ id: string; title: string; status: TaskStatus; projectId: string | null; labels: string[]; dueDate: string | null }>
+    edges: Array<{ id: string; source: string; target: string }>
+  }> {
+    return this.fetch('/api/task-dependencies/graph')
   }
 
   // Projects

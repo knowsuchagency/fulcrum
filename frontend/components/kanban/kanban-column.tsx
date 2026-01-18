@@ -7,6 +7,7 @@ import type { Task, TaskStatus } from '@/types'
 import { cn } from '@/lib/utils'
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
+  TO_DO: 'border-t-status-todo',
   IN_PROGRESS: 'border-t-status-in-progress',
   IN_REVIEW: 'border-t-status-in-review',
   DONE: 'border-t-status-done',

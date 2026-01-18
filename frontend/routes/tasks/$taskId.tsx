@@ -86,6 +86,7 @@ export const Route = createFileRoute('/tasks/$taskId')({
 })
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
+  TO_DO: 'To Do',
   IN_PROGRESS: 'In Progress',
   IN_REVIEW: 'In Review',
   DONE: 'Done',
@@ -93,6 +94,7 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
+  TO_DO: 'bg-status-todo/20 text-status-todo',
   IN_PROGRESS: 'bg-status-in-progress/20 text-status-in-progress',
   IN_REVIEW: 'bg-status-in-review/20 text-status-in-review',
   DONE: 'bg-status-done/20 text-status-done',
@@ -295,7 +297,7 @@ function TaskView() {
       await gitSync.mutateAsync({
         repoPath: task.repoPath,
         worktreePath: task.worktreePath,
-        baseBranch: task.baseBranch,
+        baseBranch: task.baseBranch ?? undefined,
       })
       toast.success(t('git.syncedFromMain'))
     } catch (err) {
@@ -319,7 +321,7 @@ function TaskView() {
       await gitMerge.mutateAsync({
         repoPath: task.repoPath,
         worktreePath: task.worktreePath,
-        baseBranch: task.baseBranch,
+        baseBranch: task.baseBranch ?? undefined,
       })
       toast.success(t('git.mergedToMain'))
       // Kill Claude if running in the task's terminals
@@ -370,7 +372,7 @@ function TaskView() {
     try {
       await gitSyncParent.mutateAsync({
         repoPath: task.repoPath,
-        baseBranch: task.baseBranch,
+        baseBranch: task.baseBranch ?? undefined,
       })
       toast.success(t('git.parentSynced'))
     } catch (err) {
@@ -401,7 +403,7 @@ function TaskView() {
       const result = await gitCreatePR.mutateAsync({
         worktreePath: task.worktreePath,
         title: task.title,
-        baseBranch: task.baseBranch,
+        baseBranch: task.baseBranch ?? undefined,
       })
       // Auto-link PR to task
       updateTask.mutate({
@@ -918,7 +920,7 @@ function TaskView() {
               </div>
 
               <TabsContent value="diff" className="flex-1 overflow-hidden">
-                <DiffViewer taskId={task.id} worktreePath={task.worktreePath} baseBranch={task.baseBranch} />
+                <DiffViewer taskId={task.id} worktreePath={task.worktreePath} baseBranch={task.baseBranch ?? undefined} />
               </TabsContent>
 
               <TabsContent value="browser" className="flex-1 overflow-hidden">
@@ -994,7 +996,7 @@ function TaskView() {
               </div>
 
               <TabsContent value="diff" className="flex-1 overflow-hidden">
-                <DiffViewer taskId={task.id} worktreePath={task.worktreePath} baseBranch={task.baseBranch} />
+                <DiffViewer taskId={task.id} worktreePath={task.worktreePath} baseBranch={task.baseBranch ?? undefined} />
               </TabsContent>
 
               <TabsContent value="browser" className="flex-1 overflow-hidden">

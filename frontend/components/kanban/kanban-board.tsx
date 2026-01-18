@@ -14,6 +14,7 @@ import { fuzzyScore } from '@/lib/fuzzy-search'
 import type { TaskStatus } from '@/types'
 
 const COLUMNS: TaskStatus[] = [
+  'TO_DO',
   'IN_PROGRESS',
   'IN_REVIEW',
   'DONE',
@@ -114,6 +115,7 @@ function KanbanBoardInner({ repoFilter, searchQuery }: KanbanBoardProps) {
   // Task counts for tabs
   const taskCounts = useMemo(() => {
     const counts: Record<TaskStatus, number> = {
+      TO_DO: 0,
       IN_PROGRESS: 0,
       IN_REVIEW: 0,
       DONE: 0,

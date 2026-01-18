@@ -36,6 +36,7 @@ import type { Worktree, TaskStatus } from '@/types'
 type StatusFilter = TaskStatus | 'ORPHANED'
 
 const STATUS_BADGE_COLORS: Record<StatusFilter, string> = {
+  TO_DO: 'bg-muted/50 text-muted-foreground',
   IN_PROGRESS: 'bg-muted-foreground/20 text-muted-foreground',
   IN_REVIEW: 'bg-primary/20 text-primary',
   DONE: 'bg-accent/20 text-accent',
@@ -43,7 +44,7 @@ const STATUS_BADGE_COLORS: Record<StatusFilter, string> = {
   ORPHANED: 'bg-destructive/20 text-destructive',
 }
 
-const ALL_STATUSES: StatusFilter[] = ['IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED', 'ORPHANED']
+const ALL_STATUSES: StatusFilter[] = ['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELED', 'ORPHANED']
 
 function useFormatRelativeTime() {
   const { t } = useTranslation('common')

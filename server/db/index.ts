@@ -232,6 +232,15 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         else if (entry.tag.startsWith('0025') && hasTaskLinksTable) {
           shouldMark = true
         }
+        // 0026 creates project_repositories and task_dependencies tables
+        else if (entry.tag.startsWith('0026')) {
+          const hasProjectRepositoriesTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='project_repositories'")
+            .get()
+          if (hasProjectRepositoriesTable) {
+            shouldMark = true
+          }
+        }
 
         if (shouldMark) {
           migrationsToMark.push(entry)
@@ -279,6 +288,7 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
 
   // Run data migrations after schema migrations
   migrateRepositoriesToProjects(sqlite)
+  migrateProjectRepositoriesToJoinTable(sqlite)
 }
 
 // Data migration: Create projects for existing repositories
@@ -325,6 +335,47 @@ function migrateRepositoriesToProjects(sqlite: Database): void {
   }
 
   log.db.info('Migrated repositories to projects successfully', { count: orphanedRepos.length })
+}
+
+// Data migration: Migrate projects with repositoryId to project_repositories join table
+function migrateProjectRepositoriesToJoinTable(sqlite: Database): void {
+  // Check if project_repositories table exists
+  const hasJoinTable = sqlite
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name='project_repositories'")
+    .get()
+
+  if (!hasJoinTable) return
+
+  // Find projects with repositoryId that don't have entries in the join table
+  const projectsToMigrate = sqlite
+    .query(`
+      SELECT p.id, p.repository_id
+      FROM projects p
+      WHERE p.repository_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM project_repositories pr
+          WHERE pr.project_id = p.id AND pr.repository_id = p.repository_id
+        )
+    `)
+    .all() as Array<{ id: string; repository_id: string }>
+
+  if (projectsToMigrate.length === 0) return
+
+  log.db.info('Migrating project repositories to join table', { count: projectsToMigrate.length })
+
+  const now = new Date().toISOString()
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { nanoid } = require('nanoid')
+
+  for (const project of projectsToMigrate) {
+    const linkId = nanoid()
+    sqlite.exec(`
+      INSERT INTO project_repositories (id, project_id, repository_id, is_primary, created_at)
+      VALUES ('${linkId}', '${project.id}', '${project.repository_id}', 1, '${now}')
+    `)
+  }
+
+  log.db.info('Migrated project repositories to join table successfully', { count: projectsToMigrate.length })
 }
 
 // Re-export schema for convenience

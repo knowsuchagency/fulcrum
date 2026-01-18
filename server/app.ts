@@ -26,6 +26,7 @@ import deploymentRoutes from './routes/deployment'
 import jobsRoutes from './routes/jobs'
 import opencodeRoutes from './routes/opencode'
 import projectsRoutes from './routes/projects'
+import taskDependenciesRoutes from './routes/task-dependencies'
 import { writeEntry } from './lib/logger'
 import type { LogEntry } from '../shared/logger'
 
@@ -77,6 +78,7 @@ export function createApp() {
   app.route('/api/jobs', jobsRoutes)
   app.route('/api/opencode', opencodeRoutes)
   app.route('/api/projects', projectsRoutes)
+  app.route('/api/task-dependencies', taskDependenciesRoutes)
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {
