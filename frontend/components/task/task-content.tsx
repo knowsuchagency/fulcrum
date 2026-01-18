@@ -251,7 +251,7 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
                 {task.labels.map((label) => (
                   <span
                     key={label}
-                    className={`inline-flex items-center gap-1 rounded-full bg-muted ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'} text-xs font-medium`}
+                    className={`inline-flex items-center gap-1 rounded-full border border-border bg-card ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'} text-xs font-medium`}
                   >
                     {label}
                     <button

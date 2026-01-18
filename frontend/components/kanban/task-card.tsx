@@ -205,7 +205,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
             {task.labels.slice(0, 3).map((label) => (
               <span
                 key={label}
-                className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                className="rounded-full border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium"
               >
                 {label}
               </span>

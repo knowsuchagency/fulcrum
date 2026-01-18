@@ -42,6 +42,7 @@ import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencod
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import { useRepositories } from '@/hooks/use-repositories'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
+import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import type { Repository } from '@/types'
 import { ModelPicker } from '@/components/opencode/model-picker'
 
@@ -396,51 +397,6 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                 />
               </Field>
 
-              {/* Labels and Due Date row */}
-              <div className="flex gap-3">
-                <Field className="flex-1">
-                  <FieldLabel htmlFor="labels">Labels</FieldLabel>
-                  <div className="flex flex-wrap items-center gap-1 rounded-md border border-input bg-background px-2 py-1.5 min-h-[36px]">
-                    {labels.map((label) => (
-                      <span
-                        key={label}
-                        className="inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium"
-                      >
-                        {label}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLabel(label)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <HugeiconsIcon icon={Cancel01Icon} size={10} />
-                        </button>
-                      </span>
-                    ))}
-                    <input
-                      id="labels"
-                      type="text"
-                      value={labelInput}
-                      onChange={(e) => setLabelInput(e.target.value)}
-                      onKeyDown={handleLabelKeyDown}
-                      onBlur={handleAddLabel}
-                      placeholder={labels.length === 0 ? 'Add labels...' : ''}
-                      className="flex-1 min-w-[60px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                    />
-                  </div>
-                </Field>
-
-                <Field className="w-36">
-                  <FieldLabel htmlFor="dueDate">Due Date</FieldLabel>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full"
-                  />
-                </Field>
-              </div>
-
               {/* Task Type Toggle */}
               <Field>
                 <FieldLabel>Task Type</FieldLabel>
@@ -662,6 +618,51 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
               </Field>
                 </>
               )}
+
+              {/* Labels and Due Date row - always at bottom */}
+              <div className="flex gap-3">
+                <Field className="flex-1">
+                  <FieldLabel htmlFor="labels">Labels</FieldLabel>
+                  <div className="flex flex-wrap items-center gap-1 rounded-md border border-input bg-background px-2 py-1.5 min-h-[36px]">
+                    {labels.map((label) => (
+                      <span
+                        key={label}
+                        className="inline-flex items-center gap-0.5 rounded border border-border bg-card px-1.5 py-0.5 text-xs font-medium"
+                      >
+                        {label}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLabel(label)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} size={10} />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      id="labels"
+                      type="text"
+                      value={labelInput}
+                      onChange={(e) => setLabelInput(e.target.value)}
+                      onKeyDown={handleLabelKeyDown}
+                      onBlur={handleAddLabel}
+                      placeholder={labels.length === 0 ? 'Add labels...' : ''}
+                      className="flex-1 min-w-[60px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </Field>
+
+                <Field className="w-40">
+                  <FieldLabel>Due Date</FieldLabel>
+                  <DatePickerPopover
+                    value={dueDate || null}
+                    onChange={(date) => setDueDate(date || '')}
+                    placeholder="Set date"
+                    showClear
+                    className="border border-input rounded-md px-3 py-2 w-full justify-start"
+                  />
+                </Field>
+              </div>
             </FieldGroup>
 
             <DialogFooter className="mt-4 shrink-0">
