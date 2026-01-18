@@ -101,19 +101,23 @@ function getProjectTaskCount(projectId: string, legacyRepoId: string | null): nu
     }
   }
 
-  // Build conditions
-  const conditions = [eq(tasks.projectId, projectId)]
+  // Build conditions for project/repo association
+  const associationConditions = [eq(tasks.projectId, projectId)]
   if (repoIds.length > 0) {
-    conditions.push(inArray(tasks.repositoryId, repoIds))
+    associationConditions.push(inArray(tasks.repositoryId, repoIds))
   }
   if (repoPaths.length > 0) {
-    conditions.push(inArray(tasks.repoPath, repoPaths))
+    associationConditions.push(inArray(tasks.repoPath, repoPaths))
   }
 
+  // Only count active tasks (not DONE or CANCELED)
   const result = db
     .select({ count: sql<number>`count(*)` })
     .from(tasks)
-    .where(or(...conditions))
+    .where(and(
+      or(...associationConditions),
+      sql`${tasks.status} NOT IN ('DONE', 'CANCELED')`
+    ))
     .get()
   return result?.count ?? 0
 }
