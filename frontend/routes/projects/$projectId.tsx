@@ -218,7 +218,17 @@ function ProjectDetailView() {
   }, [projectId])
 
   // Filter tasks for this project
-  const projectTasks = allTasks.filter((task) => task.projectId === projectId)
+  // Match by projectId OR by repoPath matching any of the project's repositories
+  const projectRepoPaths = project?.repositories.map((r) => r.path) ?? []
+  const legacyRepoPath = project?.repository?.path
+  if (legacyRepoPath && !projectRepoPaths.includes(legacyRepoPath)) {
+    projectRepoPaths.push(legacyRepoPath)
+  }
+  const projectTasks = allTasks.filter(
+    (task) =>
+      task.projectId === projectId ||
+      (task.repoPath && projectRepoPaths.includes(task.repoPath))
+  )
   const activeTasks = projectTasks.filter((task) => task.status !== 'DONE' && task.status !== 'CANCELED')
   const completedTasks = projectTasks.filter((task) => task.status === 'DONE' || task.status === 'CANCELED')
 

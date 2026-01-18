@@ -4,7 +4,7 @@ import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve, join } from 'node:path'
 import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, tags, projectTags } from '../db'
-import { eq, desc, sql, and } from 'drizzle-orm'
+import { eq, desc, sql, and, or, inArray } from 'drizzle-orm'
 import type { ProjectWithDetails, ProjectRepositoryDetails, Tag } from '../../shared/types'
 import { broadcast } from '../websocket/terminal-ws'
 
@@ -66,11 +66,54 @@ function getProjectRepositories(projectId: string, legacyRepoId: string | null):
 }
 
 // Helper to get task count for a project
-function getProjectTaskCount(projectId: string): number {
+// Counts tasks that are either:
+// 1. Directly associated with the project via projectId
+// 2. Associated with a repository that belongs to this project (via repositoryId or repoPath)
+function getProjectTaskCount(projectId: string, legacyRepoId: string | null): number {
+  // Get repository info associated with this project
+  const repoIds: string[] = []
+  const repoPaths: string[] = []
+
+  // From join table
+  const joinedRepos = db
+    .select({ repositoryId: projectRepositories.repositoryId })
+    .from(projectRepositories)
+    .where(eq(projectRepositories.projectId, projectId))
+    .all()
+
+  for (const jr of joinedRepos) {
+    repoIds.push(jr.repositoryId)
+    // Get the repo path too
+    const repo = db.select({ path: repositories.path }).from(repositories).where(eq(repositories.id, jr.repositoryId)).get()
+    if (repo?.path) {
+      repoPaths.push(repo.path)
+    }
+  }
+
+  // Legacy repositoryId
+  if (legacyRepoId) {
+    if (!repoIds.includes(legacyRepoId)) {
+      repoIds.push(legacyRepoId)
+    }
+    const repo = db.select({ path: repositories.path }).from(repositories).where(eq(repositories.id, legacyRepoId)).get()
+    if (repo?.path && !repoPaths.includes(repo.path)) {
+      repoPaths.push(repo.path)
+    }
+  }
+
+  // Build conditions
+  const conditions = [eq(tasks.projectId, projectId)]
+  if (repoIds.length > 0) {
+    conditions.push(inArray(tasks.repositoryId, repoIds))
+  }
+  if (repoPaths.length > 0) {
+    conditions.push(inArray(tasks.repoPath, repoPaths))
+  }
+
   const result = db
     .select({ count: sql<number>`count(*)` })
     .from(tasks)
-    .where(eq(tasks.projectId, projectId))
+    .where(or(...conditions))
     .get()
   return result?.count ?? 0
 }
@@ -107,7 +150,7 @@ function buildProjectWithDetails(
   tab: typeof terminalTabs.$inferSelect | null
 ): ProjectWithDetails {
   const projectRepos = getProjectRepositories(project.id, project.repositoryId)
-  const taskCount = getProjectTaskCount(project.id)
+  const taskCount = getProjectTaskCount(project.id, project.repositoryId)
   const projectTagsList = getProjectTags(project.id)
 
   return {
