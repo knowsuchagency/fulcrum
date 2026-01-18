@@ -100,6 +100,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [labels, setLabels] = useState<string[]>([])
   const [labelInput, setLabelInput] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [notes, setNotes] = useState('')
   const [repoPath, setRepoPath] = useState('')
   const [baseBranch, setBaseBranch] = useState('')
   const [branch, setBranch] = useState('')
@@ -286,6 +287,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         // Generalized task fields
         labels: labels.length > 0 ? labels : undefined,
         dueDate: dueDate || null,
+        notes: notes.trim() || null,
         projectId: !isCodeTask ? selectedProjectId : undefined,
       },
       {
@@ -326,6 +328,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     setLabels([])
     setLabelInput('')
     setDueDate('')
+    setNotes('')
     setPendingFiles([])
     setRepoPath('')
     setBaseBranch('')
@@ -738,6 +741,19 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                   />
                 </Field>
               </div>
+
+              {/* Notes */}
+              <Field>
+                <FieldLabel htmlFor="notes">Notes</FieldLabel>
+                <textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add notes..."
+                  rows={2}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                />
+              </Field>
 
               {/* Attachments */}
               <Field>

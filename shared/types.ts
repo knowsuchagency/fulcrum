@@ -92,6 +92,7 @@ export interface Task {
   labels: string[] // Array of label strings
   startedAt: string | null // Timestamp when moved out of TO_DO
   dueDate: string | null // YYYY-MM-DD format
+  notes: string | null // Free-form notes/comments
   createdAt: string
   updatedAt: string
   links?: TaskLink[]

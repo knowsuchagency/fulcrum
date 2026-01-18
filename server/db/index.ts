@@ -287,6 +287,15 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
             shouldMark = true
           }
         }
+        // 0032 adds notes column to tasks
+        else if (entry.tag.startsWith('0032')) {
+          const hasNotesColumn = sqlite
+            .query("SELECT name FROM pragma_table_info('tasks') WHERE name='notes'")
+            .get()
+          if (hasNotesColumn) {
+            shouldMark = true
+          }
+        }
 
         if (shouldMark) {
           migrationsToMark.push(entry)

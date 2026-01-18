@@ -225,6 +225,13 @@
       "when": 1768820000000,
       "tag": "0031_rename_labels_to_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1768906400000,
+      "tag": "0032_add_task_notes",
+      "breakpoints": true
     }
   ]
 }

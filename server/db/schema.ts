@@ -25,6 +25,7 @@ export const tasks = sqliteTable('tasks', {
   labels: text('labels'), // JSON array: ["bug", "urgent"]
   startedAt: text('started_at'), // Timestamp when moved out of TO_DO
   dueDate: text('due_date'), // YYYY-MM-DD format
+  notes: text('notes'), // Free-form notes/comments
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
