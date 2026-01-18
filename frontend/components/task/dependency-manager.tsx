@@ -159,10 +159,9 @@ function DependencyColumn({
 
 interface DependencyManagerProps {
   taskId: string
-  compact?: boolean
 }
 
-export function DependencyManager({ taskId, compact }: DependencyManagerProps) {
+export function DependencyManager({ taskId }: DependencyManagerProps) {
   const { data: allTasks = [] } = useTasks()
   const { data: dependencies, isLoading } = useTaskDependencies(taskId)
   const addDependency = useAddTaskDependency()
@@ -266,10 +265,7 @@ export function DependencyManager({ taskId, compact }: DependencyManagerProps) {
   const blocking = dependencies?.blocking ?? []
 
   return (
-    <div className={cn(
-      'grid gap-4',
-      compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
-    )}>
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
       <DependencyColumn
         title="Blocked by"
         icon={ArrowUp01Icon}

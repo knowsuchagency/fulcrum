@@ -289,7 +289,7 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
           {/* Dependencies */}
           <div className={`rounded-lg border bg-card ${paddingClass}`}>
             <h2 className={`${headingClass} font-medium text-muted-foreground ${marginClass}`}>Dependencies</h2>
-            <DependencyManager taskId={task.id} compact={compact} />
+            <DependencyManager taskId={task.id} />
           </div>
 
           {/* Links */}
