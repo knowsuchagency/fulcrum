@@ -340,6 +340,91 @@ app.get('/:id', (c) => {
   return c.json(toApiResponse(task, true))
 })
 
+// POST /api/tasks/:id/initialize-code - Initialize a non-code task as a code task
+app.post('/:id/initialize-code', async (c) => {
+  const id = c.req.param('id')
+
+  try {
+    const existing = db.select().from(tasks).where(eq(tasks.id, id)).get()
+    if (!existing) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    // Check if task already has code context
+    if (existing.worktreePath) {
+      return c.json({ error: 'Task already has code context' }, 400)
+    }
+
+    const body = await c.req.json<{
+      agent?: string
+      aiMode?: 'default' | 'plan'
+      repoPath: string
+      repoName: string
+      baseBranch: string
+      branch: string
+      worktreePath: string
+      copyFiles?: string
+      startupScript?: string
+      agentOptions?: Record<string, string> | null
+      opencodeModel?: string | null
+    }>()
+
+    if (!body.repoPath || !body.branch || !body.worktreePath || !body.baseBranch) {
+      return c.json({ error: 'repoPath, branch, worktreePath, and baseBranch are required' }, 400)
+    }
+
+    // Create git worktree
+    const result = createGitWorktree(body.repoPath, body.worktreePath, body.branch, body.baseBranch)
+    if (!result.success) {
+      return c.json({ error: `Failed to create worktree: ${result.error}` }, 500)
+    }
+
+    // Copy files if patterns provided
+    if (body.copyFiles) {
+      try {
+        copyFilesToWorktree(body.repoPath, body.worktreePath, body.copyFiles)
+      } catch (err) {
+        log.api.error('Failed to copy files during code initialization', { error: String(err) })
+        // Non-fatal: continue with task update
+      }
+    }
+
+    const now = new Date().toISOString()
+
+    // Update the task with code fields and change status to IN_PROGRESS
+    db.update(tasks)
+      .set({
+        agent: body.agent || 'claude',
+        aiMode: body.aiMode || null,
+        repoPath: body.repoPath,
+        repoName: body.repoName,
+        baseBranch: body.baseBranch,
+        branch: body.branch,
+        worktreePath: body.worktreePath,
+        startupScript: body.startupScript || null,
+        agentOptions: body.agentOptions ? JSON.stringify(body.agentOptions) : null,
+        opencodeModel: body.opencodeModel || null,
+        status: 'IN_PROGRESS',
+        startedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(tasks.id, id))
+      .run()
+
+    // Update lastUsedAt for the repository
+    db.update(repositories)
+      .set({ lastUsedAt: now, updatedAt: now })
+      .where(eq(repositories.path, body.repoPath))
+      .run()
+
+    const updated = db.select().from(tasks).where(eq(tasks.id, id)).get()
+    broadcast({ type: 'task:updated', payload: { taskId: id } })
+    return c.json(updated ? toApiResponse(updated, true) : null)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to initialize code task' }, 400)
+  }
+})
+
 // PATCH /api/tasks/:id - Update task
 app.patch('/:id', async (c) => {
   const id = c.req.param('id')
@@ -364,6 +449,10 @@ app.patch('/:id', async (c) => {
     const updates: Record<string, unknown> = { ...otherFields, updatedAt: now }
     if (body.viewState !== undefined) {
       updates.viewState = body.viewState ? JSON.stringify(body.viewState) : null
+    }
+    // Serialize labels array to JSON string
+    if (body.labels !== undefined) {
+      updates.labels = body.labels && body.labels.length > 0 ? JSON.stringify(body.labels) : null
     }
 
     // Only do additional db update if there are other fields to update

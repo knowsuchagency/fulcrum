@@ -134,7 +134,7 @@ export function useTaskViewState(taskId: string) {
   )
 
   const setActiveTab = useCallback(
-    (tab: 'diff' | 'browser' | 'files') => {
+    (tab: ViewState['activeTab']) => {
       updateViewState({ activeTab: tab })
     },
     [updateViewState]

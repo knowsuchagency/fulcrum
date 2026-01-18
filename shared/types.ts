@@ -38,7 +38,7 @@ export interface FilesViewState {
 }
 
 export interface ViewState {
-  activeTab: 'diff' | 'browser' | 'files'
+  activeTab: 'diff' | 'browser' | 'files' | 'details'
   browserUrl: string
   diffOptions: DiffOptions
   filesViewState: FilesViewState

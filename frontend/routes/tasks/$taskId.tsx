@@ -29,6 +29,9 @@ import { DiffViewer } from '@/components/viewer/diff-viewer'
 import { BrowserPreview } from '@/components/viewer/browser-preview'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
+import { NonCodeTaskView } from '@/components/task/non-code-task-view'
+import { InitializeCodeTaskModal } from '@/components/task/initialize-code-task-modal'
+import { TaskDetailsPanel } from '@/components/task/task-details-panel'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   CodeIcon,
@@ -52,6 +55,7 @@ import {
   PaintBrush01Icon,
   File01Icon,
   SourceCodeCircleIcon,
+  Menu01Icon,
 } from '@hugeicons/core-free-icons'
 import type { TaskLinkType } from '@/types'
 import { TaskConfigModal } from '@/components/task-config-modal'
@@ -68,7 +72,7 @@ import {
 import type { TaskStatus } from '@/types'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 
-type TabType = 'diff' | 'browser' | 'files'
+type TabType = 'diff' | 'browser' | 'files' | 'details'
 
 interface TaskViewSearch {
   tab?: TabType
@@ -78,7 +82,7 @@ interface TaskViewSearch {
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskView,
   validateSearch: (search: Record<string, unknown>): TaskViewSearch => ({
-    tab: ['diff', 'browser', 'files'].includes(search.tab as string)
+    tab: ['diff', 'browser', 'files', 'details'].includes(search.tab as string)
       ? (search.tab as TabType)
       : undefined,
     file: typeof search.file === 'string' ? search.file : undefined,
@@ -165,10 +169,14 @@ function TaskView() {
 
   const [configModalOpen, setConfigModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [initCodeModalOpen, setInitCodeModalOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
   const [terminalKey, setTerminalKey] = useState(0)
   const [pendingRetryTerminalId, setPendingRetryTerminalId] = useState<string | null>(null)
   const isMobile = useIsMobile()
+
+  // Determine if this is a code task (has worktree path)
+  const isCodeTask = !!task?.worktreePath
 
   // Determine the active tab - URL takes precedence, then database state
   const activeTab = searchParams.tab ?? viewState.activeTab
@@ -480,6 +488,23 @@ function TaskView() {
           <Button variant="outline">Back to Tasks</Button>
         </Link>
       </div>
+    )
+  }
+
+  // Non-code task view
+  if (!isCodeTask) {
+    return (
+      <>
+        <NonCodeTaskView
+          task={task}
+          onInitializeAsCodeTask={() => setInitCodeModalOpen(true)}
+        />
+        <InitializeCodeTaskModal
+          task={task}
+          open={initCodeModalOpen}
+          onOpenChange={setInitCodeModalOpen}
+        />
+      </>
     )
   }
 
@@ -915,6 +940,10 @@ function TaskView() {
                     <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} data-slot="icon" />
                     Files
                   </TabsTrigger>
+                  <TabsTrigger value="details">
+                    <HugeiconsIcon icon={Menu01Icon} size={14} strokeWidth={2} data-slot="icon" />
+                    Details
+                  </TabsTrigger>
                 </TabsList>
                 <GitStatusBadge worktreePath={task.worktreePath} />
               </div>
@@ -933,6 +962,10 @@ function TaskView() {
                   initialSelectedFile={activeFile}
                   onFileChange={handleFileChange}
                 />
+              </TabsContent>
+
+              <TabsContent value="details" className="flex-1 overflow-hidden">
+                <TaskDetailsPanel task={task} />
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -991,6 +1024,15 @@ function TaskView() {
                     />
                     Files
                   </TabsTrigger>
+                  <TabsTrigger value="details">
+                    <HugeiconsIcon
+                      icon={Menu01Icon}
+                      size={14}
+                      strokeWidth={2}
+                      data-slot="icon"
+                    />
+                    Details
+                  </TabsTrigger>
                 </TabsList>
                 <GitStatusBadge worktreePath={task.worktreePath} />
               </div>
@@ -1009,6 +1051,10 @@ function TaskView() {
                   initialSelectedFile={activeFile}
                   onFileChange={handleFileChange}
                 />
+              </TabsContent>
+
+              <TabsContent value="details" className="flex-1 overflow-hidden">
+                <TaskDetailsPanel task={task} />
               </TabsContent>
             </Tabs>
           </ResizablePanel>

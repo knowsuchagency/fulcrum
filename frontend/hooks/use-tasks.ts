@@ -26,25 +26,30 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: (data: {
       title: string
-      description: string
+      description?: string
       agent?: string
       aiMode?: 'default' | 'plan'
-      repoPath: string
-      repoName: string
-      baseBranch: string
-      branch: string
-      worktreePath: string
+      status?: TaskStatus
+      // Git-related fields - optional for non-code tasks
+      repoPath?: string | null
+      repoName?: string | null
+      baseBranch?: string | null
+      branch?: string | null
+      worktreePath?: string | null
       prUrl?: string | null
       copyFiles?: string
       startupScript?: string
       agentOptions?: Record<string, string> | null
       opencodeModel?: string | null
+      // New generalized task fields
+      labels?: string[]
+      dueDate?: string | null
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks`, {
         method: 'POST',
         body: JSON.stringify({
           ...data,
-          status: 'IN_PROGRESS',
+          status: data.status ?? 'IN_PROGRESS',
         }),
       }),
     onSuccess: () => {
@@ -85,7 +90,7 @@ export function useUpdateTask() {
       updates,
     }: {
       taskId: string
-      updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'viewState' | 'prUrl' | 'linearTicketId' | 'linearTicketUrl'>>
+      updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'viewState' | 'prUrl' | 'linearTicketId' | 'linearTicketUrl' | 'labels' | 'dueDate'>>
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks/${taskId}`, {
         method: 'PATCH',

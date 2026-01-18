@@ -1,0 +1,147 @@
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  Link01Icon,
+  Add01Icon,
+  Delete02Icon,
+} from '@hugeicons/core-free-icons'
+import { useAddTaskLink, useRemoveTaskLink } from '@/hooks/use-tasks'
+import { openExternalUrl } from '@/lib/editor-url'
+import type { TaskLink } from '@/types'
+
+interface LinksManagerProps {
+  taskId: string
+  links: TaskLink[]
+}
+
+export function LinksManager({ taskId, links }: LinksManagerProps) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [newUrl, setNewUrl] = useState('')
+  const [newLabel, setNewLabel] = useState('')
+  const addLink = useAddTaskLink()
+  const removeLink = useRemoveTaskLink()
+
+  const handleAddLink = () => {
+    const trimmedUrl = newUrl.trim()
+    if (!trimmedUrl) return
+
+    addLink.mutate(
+      {
+        taskId,
+        url: trimmedUrl,
+        label: newLabel.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          setNewUrl('')
+          setNewLabel('')
+          setIsAdding(false)
+        },
+      }
+    )
+  }
+
+  const handleRemoveLink = (linkId: string) => {
+    removeLink.mutate({ taskId, linkId })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddLink()
+    } else if (e.key === 'Escape') {
+      setIsAdding(false)
+      setNewUrl('')
+      setNewLabel('')
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Existing links */}
+      {links.length > 0 && (
+        <div className="space-y-1.5">
+          {links.map((link) => (
+            <div
+              key={link.id}
+              className="flex items-center gap-2 group"
+            >
+              <button
+                type="button"
+                onClick={() => openExternalUrl(link.url)}
+                className="flex items-center gap-2 text-sm text-primary hover:underline flex-1 min-w-0"
+              >
+                <HugeiconsIcon icon={Link01Icon} size={14} className="shrink-0" />
+                <span className="truncate">{link.label || link.url}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveLink(link.id)}
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                title="Remove link"
+              >
+                <HugeiconsIcon icon={Delete02Icon} size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add link form */}
+      {isAdding ? (
+        <div className="space-y-2 pt-1">
+          <Input
+            type="url"
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="https://..."
+            className="h-8 text-sm"
+            autoFocus
+          />
+          <Input
+            type="text"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Label (optional)"
+            className="h-8 text-sm"
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="h-7"
+              onClick={handleAddLink}
+              disabled={!newUrl.trim() || addLink.isPending}
+            >
+              Add
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              onClick={() => {
+                setIsAdding(false)
+                setNewUrl('')
+                setNewLabel('')
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsAdding(true)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <HugeiconsIcon icon={Add01Icon} size={14} />
+          <span>Add link</span>
+        </button>
+      )}
+    </div>
+  )
+}
