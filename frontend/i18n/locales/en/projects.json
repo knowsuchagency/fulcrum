@@ -3,6 +3,7 @@
   "total": "{{count}} total",
   "searchPlaceholder": "Search projects...",
   "newTask": "New Task",
+  "addRepo": "Add Repo",
   "terminal": "Terminal",
   "editor": "Editor",
   "deploy": "Deploy",

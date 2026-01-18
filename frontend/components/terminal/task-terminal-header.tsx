@@ -100,6 +100,7 @@ export function TaskTerminalHeader({
     labels: [],
     startedAt: null,
     dueDate: null,
+    notes: null,
     createdAt: '',
     updatedAt: '',
   }

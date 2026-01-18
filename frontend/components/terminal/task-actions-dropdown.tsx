@@ -94,6 +94,7 @@ export function TaskActionsDropdown({
     labels: [],
     startedAt: null,
     dueDate: null,
+    notes: null,
     createdAt: '',
     updatedAt: '',
   }

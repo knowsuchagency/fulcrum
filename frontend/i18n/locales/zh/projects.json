@@ -3,6 +3,7 @@
   "total": "共 {{count}} 个",
   "searchPlaceholder": "搜索项目...",
   "newTask": "新建任务",
+  "addRepo": "添加仓库",
   "terminal": "终端",
   "editor": "编辑器",
   "deploy": "部署",

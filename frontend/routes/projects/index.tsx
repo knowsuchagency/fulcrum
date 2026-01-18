@@ -3,7 +3,6 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import { useProjects, useDeleteProject } from '@/hooks/use-projects'
-import { useDeployApp, useStopApp } from '@/hooks/use-apps'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -15,22 +14,15 @@ import {
   Folder01Icon,
   Loading03Icon,
   Alert02Icon,
-  VisualStudioCodeIcon,
   Search01Icon,
-  PlayIcon,
-  StopIcon,
   TaskDaily01Icon,
   SourceCodeSquareIcon,
 } from '@hugeicons/core-free-icons'
-import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
-import { toast } from 'sonner'
-import { buildEditorUrl, getEditorDisplayName, openExternalUrl } from '@/lib/editor-url'
 import type { ProjectWithDetails } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModal } from '@/components/projects/create-project-modal'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,87 +40,18 @@ export const Route = createFileRoute('/projects/')({
   component: ProjectsView,
 })
 
-function getStatusColor(status: string | undefined): string {
-  switch (status) {
-    case 'running':
-      return 'bg-green-500'
-    case 'building':
-      return 'bg-yellow-500'
-    case 'failed':
-      return 'bg-red-500'
-    default:
-      return 'bg-muted-foreground/30'
-  }
-}
-
-function getStatusText(status: string | undefined, t: (key: string) => string): string {
-  switch (status) {
-    case 'running':
-      return t('card.running')
-    case 'building':
-      return t('card.building')
-    case 'failed':
-      return t('card.failed')
-    case 'stopped':
-      return t('card.stopped')
-    default:
-      return t('card.noApp')
-  }
-}
-
 function ProjectCard({
   project,
   onStartTask,
+  onAddRepo,
   onDeleteClick,
 }: {
   project: ProjectWithDetails
   onStartTask: () => void
+  onAddRepo: () => void
   onDeleteClick: () => void
 }) {
   const { t } = useTranslation('projects')
-  const navigate = useNavigate()
-  const { data: editorApp } = useEditorApp()
-  const { data: editorHost } = useEditorHost()
-  const { data: editorSshPort } = useEditorSshPort()
-  const deployApp = useDeployApp()
-  const stopApp = useStopApp()
-
-  const hasApp = !!project.app
-  const appStatus = project.app?.status
-  const isRunning = appStatus === 'running'
-  const isBuilding = appStatus === 'building'
-  const repoPath = project.repository?.path
-
-  // Get primary domain from services
-  const primaryDomain = project.app?.services?.find((s) => s.exposed && s.domain)?.domain
-
-  const handleOpenEditor = () => {
-    if (!repoPath) {
-      toast.error('No repository path')
-      return
-    }
-    const url = buildEditorUrl(repoPath, editorApp, editorHost, editorSshPort)
-    openExternalUrl(url)
-  }
-
-  const handleDeploy = async () => {
-    if (!project.app) return
-    try {
-      await deployApp.mutateAsync(project.app.id)
-      navigate({ to: '/projects/$projectId', params: { projectId: project.id }, search: { tab: 'deploy', subtab: 'deployments' } })
-    } catch (err) {
-      toast.error('Deploy failed', { description: err instanceof Error ? err.message : 'Unknown error' })
-    }
-  }
-
-  const handleStop = async () => {
-    if (!project.app) return
-    try {
-      await stopApp.mutateAsync(project.app.id)
-    } catch (err) {
-      toast.error('Stop failed', { description: err instanceof Error ? err.message : 'Unknown error' })
-    }
-  }
 
   // Get repo count - use repositories array if available, otherwise count legacy repositoryId
   const repoCount = project.repositories.length > 0
@@ -139,13 +62,10 @@ function ProjectCard({
     <Card className="h-full group transition-colors hover:border-foreground/20">
       <Link to="/projects/$projectId" params={{ projectId: project.id }} className="block">
         <CardContent className="flex flex-col gap-3 py-4">
-          {/* Header: Status dot + Name */}
-          <div className="flex items-center gap-2">
-            <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', getStatusColor(appStatus))} />
-            <span className="truncate font-medium group-hover:text-primary transition-colors">
-              {project.name}
-            </span>
-          </div>
+          {/* Project Name */}
+          <span className="truncate font-medium group-hover:text-primary transition-colors">
+            {project.name}
+          </span>
 
           {/* Tags */}
           {project.tags && project.tags.length > 0 && (
@@ -170,44 +90,14 @@ function ProjectCard({
 
           {/* Repo count and task count */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {repoCount > 0 && (
-              <div className="flex items-center gap-1">
-                <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
-                <span>{repoCount} {repoCount === 1 ? 'repository' : 'repositories'}</span>
-              </div>
-            )}
-            {project.taskCount > 0 && (
-              <div className="flex items-center gap-1">
-                <HugeiconsIcon icon={TaskDaily01Icon} size={12} strokeWidth={2} />
-                <span>{project.taskCount} {project.taskCount === 1 ? 'task' : 'tasks'}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Path (show first repo only) */}
-          {repoPath && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
-              <span className="truncate font-mono">{repoPath}</span>
+            <div className="flex items-center gap-1">
+              <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} />
+              <span>{repoCount} {repoCount === 1 ? 'repository' : 'repositories'}</span>
             </div>
-          )}
-
-          {/* App status / domain */}
-          <div className="flex items-center gap-2 text-xs">
-            {hasApp ? (
-              <>
-                <span className="text-muted-foreground">
-                  App: {getStatusText(appStatus, t)}
-                </span>
-                {primaryDomain && (
-                  <span className="text-muted-foreground truncate">
-                    {primaryDomain}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-muted-foreground">{t('card.noApp')}</span>
-            )}
+            <div className="flex items-center gap-1">
+              <HugeiconsIcon icon={TaskDaily01Icon} size={12} strokeWidth={2} />
+              <span>{project.taskCount ?? 0} {project.taskCount === 1 ? 'task' : 'tasks'}</span>
+            </div>
           </div>
         </CardContent>
       </Link>
@@ -216,64 +106,26 @@ function ProjectCard({
         {/* Action buttons row */}
         <div className="mt-auto flex flex-wrap gap-1">
           {/* New Task */}
-          {project.repository && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onStartTask}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="max-sm:hidden">{t('newTask')}</span>
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onStartTask}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('newTask')}</span>
+          </Button>
 
-          {/* Editor - hidden on mobile */}
-          {repoPath && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleOpenEditor}
-              className="text-muted-foreground hover:text-foreground max-sm:hidden"
-              title={`Open in ${getEditorDisplayName(editorApp)}`}
-            >
-              <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
-              <span>{t('editor')}</span>
-            </Button>
-          )}
-
-          {/* Deploy / Stop */}
-          {hasApp && (
-            <>
-              {isRunning ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleStop}
-                  disabled={stopApp.isPending}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <HugeiconsIcon icon={StopIcon} size={14} strokeWidth={2} data-slot="icon" />
-                  <span className="max-sm:hidden">{t('stop')}</span>
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDeploy}
-                  disabled={deployApp.isPending || isBuilding}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  {isBuilding ? (
-                    <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" data-slot="icon" />
-                  ) : (
-                    <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} data-slot="icon" />
-                  )}
-                  <span className="max-sm:hidden">{t('deploy')}</span>
-                </Button>
-              )}
-            </>
-          )}
+          {/* Add Repo */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onAddRepo}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('addRepo')}</span>
+          </Button>
 
           {/* Delete */}
           <Button
@@ -479,17 +331,18 @@ function ProjectsView() {
               key={project.id}
               project={project}
               onStartTask={() => setTaskModalProject(project)}
+              onAddRepo={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
               onDeleteClick={() => setDeleteProjectState(project)}
             />
           ))}
         </div>
       </div>
 
-      {taskModalProject?.repository && (
+      {taskModalProject && (
         <CreateTaskModal
           open={taskModalProject !== null}
           onOpenChange={(open) => !open && setTaskModalProject(null)}
-          defaultRepository={taskModalProject.repository}
+          defaultRepository={taskModalProject.repositories[0] ?? taskModalProject.repository ?? undefined}
           showTrigger={false}
         />
       )}
