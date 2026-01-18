@@ -29,8 +29,6 @@ import {
   Loading03Icon,
   Alert02Icon,
   Delete02Icon,
-  PencilEdit02Icon,
-  ArrowLeft01Icon,
   Cancel01Icon,
   Folder01Icon,
   TaskAdd01Icon,
@@ -333,12 +331,33 @@ function ProjectDetailView() {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
-        <Link to="/projects">
-          <Button variant="ghost" size="sm">
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={16} data-slot="icon" />
-            <span className="max-sm:hidden">{t('backToProjects')}</span>
-          </Button>
-        </Link>
+        {isEditingName ? (
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Input
+              ref={nameInputRef}
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={handleNameKeyDown}
+              onBlur={handleSaveName}
+              className="font-semibold h-8"
+              autoFocus
+            />
+            <Button variant="ghost" size="sm" onClick={handleSaveName}>
+              <HugeiconsIcon icon={Tick02Icon} size={16} />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleCancelEditName}>
+              <HugeiconsIcon icon={Cancel01Icon} size={16} />
+            </Button>
+          </div>
+        ) : (
+          <h1
+            className="font-semibold cursor-pointer hover:text-primary transition-colors truncate"
+            onClick={handleStartEditName}
+            title="Click to edit"
+          >
+            {project.name}
+          </h1>
+        )}
         <div className="flex-1" />
         <Button
           variant="outline"
@@ -352,68 +371,29 @@ function ProjectDetailView() {
           <HugeiconsIcon icon={TaskAdd01Icon} size={14} data-slot="icon" />
           <span className="max-sm:hidden">{t('createTask')}</span>
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="text-muted-foreground hover:text-destructive"
+        >
+          <HugeiconsIcon icon={Delete02Icon} size={14} data-slot="icon" />
+        </Button>
       </div>
 
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="max-w-4xl mx-auto px-6 py-6 space-y-8">
-          {/* Project Header */}
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                {isEditingName ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      ref={nameInputRef}
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      onKeyDown={handleNameKeyDown}
-                      onBlur={handleSaveName}
-                      className="text-xl font-semibold h-auto py-1"
-                      autoFocus
-                    />
-                    <Button variant="ghost" size="sm" onClick={handleSaveName}>
-                      <HugeiconsIcon icon={Tick02Icon} size={16} />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={handleCancelEditName}>
-                      <HugeiconsIcon icon={Cancel01Icon} size={16} />
-                    </Button>
-                  </div>
-                ) : (
-                  <h1
-                    className="text-xl font-semibold cursor-pointer hover:text-primary transition-colors"
-                    onClick={handleStartEditName}
-                  >
-                    {project.name}
-                  </h1>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleStartEditName}>
-                  <HugeiconsIcon icon={PencilEdit02Icon} size={16} data-slot="icon" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={16} data-slot="icon" />
-                </Button>
-              </div>
+          {/* Tags */}
+          {project.tags && project.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {project.tags.map((tag) => (
+                <Badge key={tag.id} variant="secondary">
+                  {tag.name}
+                </Badge>
+              ))}
             </div>
-
-            {/* Tags */}
-            {project.tags && project.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {project.tags.map((tag) => (
-                  <Badge key={tag.id} variant="secondary">
-                    {tag.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Repositories Section */}
           <section className="space-y-4">
@@ -492,13 +472,11 @@ function ProjectDetailView() {
               </Card>
             ) : (
               <Card className="overflow-hidden">
-                <ScrollArea className="max-h-[300px]">
-                  <div>
-                    {filteredTasks.map((task) => (
-                      <TaskRow key={task.id} task={task} />
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="max-h-[300px] overflow-y-auto">
+                  {filteredTasks.map((task) => (
+                    <TaskRow key={task.id} task={task} />
+                  ))}
+                </div>
               </Card>
             )}
           </section>
@@ -518,13 +496,11 @@ function ProjectDetailView() {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
                 <Card className="overflow-hidden">
-                  <ScrollArea className="max-h-[200px]">
-                    <div>
-                      {archivedTasks.map((task) => (
-                        <TaskRow key={task.id} task={task} />
-                      ))}
-                    </div>
-                  </ScrollArea>
+                  <div className="max-h-[250px] overflow-y-auto">
+                    {archivedTasks.map((task) => (
+                      <TaskRow key={task.id} task={task} />
+                    ))}
+                  </div>
                 </Card>
               </CollapsibleContent>
             </Collapsible>
