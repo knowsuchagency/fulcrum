@@ -356,12 +356,12 @@ function ProjectDetailView() {
               </div>
             </div>
 
-            {/* Labels */}
-            {project.labels && project.labels.length > 0 && (
+            {/* Tags */}
+            {project.tags && project.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {project.labels.map((label) => (
-                  <Badge key={label.id} variant="secondary">
-                    {label.name}
+                {project.tags.map((tag) => (
+                  <Badge key={tag.id} variant="secondary">
+                    {tag.name}
                   </Badge>
                 ))}
               </div>

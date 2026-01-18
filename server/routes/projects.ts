@@ -3,9 +3,9 @@ import { nanoid } from 'nanoid'
 import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve, join } from 'node:path'
-import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, labels, projectLabels } from '../db'
+import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, tags, projectTags } from '../db'
 import { eq, desc, sql, and } from 'drizzle-orm'
-import type { ProjectWithDetails, ProjectRepositoryDetails, Label } from '../../shared/types'
+import type { ProjectWithDetails, ProjectRepositoryDetails, Tag } from '../../shared/types'
 import { broadcast } from '../websocket/terminal-ws'
 
 const app = new Hono()
@@ -75,23 +75,23 @@ function getProjectTaskCount(projectId: string): number {
   return result?.count ?? 0
 }
 
-// Helper to get labels for a project
-function getProjectLabels(projectId: string): Label[] {
+// Helper to get tags for a project
+function getProjectTags(projectId: string): Tag[] {
   const joins = db
     .select()
-    .from(projectLabels)
-    .where(eq(projectLabels.projectId, projectId))
+    .from(projectTags)
+    .where(eq(projectTags.projectId, projectId))
     .all()
 
-  const result: Label[] = []
+  const result: Tag[] = []
   for (const join of joins) {
-    const label = db.select().from(labels).where(eq(labels.id, join.labelId)).get()
-    if (label) {
+    const tag = db.select().from(tags).where(eq(tags.id, join.tagId)).get()
+    if (tag) {
       result.push({
-        id: label.id,
-        name: label.name,
-        color: label.color,
-        createdAt: label.createdAt,
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+        createdAt: tag.createdAt,
       })
     }
   }
@@ -108,7 +108,7 @@ function buildProjectWithDetails(
 ): ProjectWithDetails {
   const projectRepos = getProjectRepositories(project.id, project.repositoryId)
   const taskCount = getProjectTaskCount(project.id)
-  const projectLabelsList = getProjectLabels(project.id)
+  const projectTagsList = getProjectTags(project.id)
 
   return {
     id: project.id,
@@ -177,7 +177,7 @@ function buildProjectWithDetails(
           directory: tab.directory,
         }
       : null,
-    labels: projectLabelsList,
+    tags: projectTagsList,
     taskCount,
   }
 }
@@ -1166,8 +1166,8 @@ app.patch('/:id/repositories/:repoId', async (c) => {
   }
 })
 
-// GET /api/projects/:id/labels - Get labels for a project
-app.get('/:id/labels', (c) => {
+// GET /api/projects/:id/tags - Get tags for a project
+app.get('/:id/tags', (c) => {
   const projectId = c.req.param('id')
 
   const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
@@ -1175,11 +1175,11 @@ app.get('/:id/labels', (c) => {
     return c.json({ error: 'Project not found' }, 404)
   }
 
-  return c.json(getProjectLabels(projectId))
+  return c.json(getProjectTags(projectId))
 })
 
-// POST /api/projects/:id/labels - Add a label to a project
-app.post('/:id/labels', async (c) => {
+// POST /api/projects/:id/tags - Add a tag to a project
+app.post('/:id/tags', async (c) => {
   const projectId = c.req.param('id')
 
   try {
@@ -1188,28 +1188,28 @@ app.post('/:id/labels', async (c) => {
       return c.json({ error: 'Project not found' }, 404)
     }
 
-    const body = await c.req.json<{ labelId?: string; name?: string; color?: string }>()
+    const body = await c.req.json<{ tagId?: string; name?: string; color?: string }>()
 
-    let labelId = body.labelId
+    let tagId = body.tagId
 
-    // If no labelId provided, create or find label by name
-    if (!labelId && body.name) {
+    // If no tagId provided, create or find tag by name
+    if (!tagId && body.name) {
       const name = body.name.trim()
       if (!name) {
-        return c.json({ error: 'Label name cannot be empty' }, 400)
+        return c.json({ error: 'Tag name cannot be empty' }, 400)
       }
 
-      // Check if label exists
-      const existing = db.select().from(labels).where(eq(labels.name, name)).get()
+      // Check if tag exists
+      const existing = db.select().from(tags).where(eq(tags.name, name)).get()
       if (existing) {
-        labelId = existing.id
+        tagId = existing.id
       } else {
-        // Create new label
+        // Create new tag
         const now = new Date().toISOString()
-        labelId = nanoid()
-        db.insert(labels)
+        tagId = nanoid()
+        db.insert(tags)
           .values({
-            id: labelId,
+            id: tagId,
             name,
             color: body.color?.trim() || null,
             createdAt: now,
@@ -1218,44 +1218,44 @@ app.post('/:id/labels', async (c) => {
       }
     }
 
-    if (!labelId) {
-      return c.json({ error: 'labelId or name is required' }, 400)
+    if (!tagId) {
+      return c.json({ error: 'tagId or name is required' }, 400)
     }
 
-    // Verify label exists
-    const label = db.select().from(labels).where(eq(labels.id, labelId)).get()
-    if (!label) {
-      return c.json({ error: 'Label not found' }, 404)
+    // Verify tag exists
+    const tag = db.select().from(tags).where(eq(tags.id, tagId)).get()
+    if (!tag) {
+      return c.json({ error: 'Tag not found' }, 404)
     }
 
     // Check if already linked
     const existing = db
       .select()
-      .from(projectLabels)
+      .from(projectTags)
       .where(
         and(
-          eq(projectLabels.projectId, projectId),
-          eq(projectLabels.labelId, labelId)
+          eq(projectTags.projectId, projectId),
+          eq(projectTags.tagId, tagId)
         )
       )
       .get()
 
     if (existing) {
-      // Already linked, just return the label
+      // Already linked, just return the tag
       return c.json({
-        id: label.id,
-        name: label.name,
-        color: label.color,
-        createdAt: label.createdAt,
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+        createdAt: tag.createdAt,
       })
     }
 
     const now = new Date().toISOString()
-    db.insert(projectLabels)
+    db.insert(projectTags)
       .values({
         id: nanoid(),
         projectId,
-        labelId,
+        tagId,
         createdAt: now,
       })
       .run()
@@ -1268,20 +1268,20 @@ app.post('/:id/labels', async (c) => {
     broadcast({ type: 'project:updated', payload: { projectId } })
 
     return c.json({
-      id: label.id,
-      name: label.name,
-      color: label.color,
-      createdAt: label.createdAt,
+      id: tag.id,
+      name: tag.name,
+      color: tag.color,
+      createdAt: tag.createdAt,
     }, 201)
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to add label' }, 400)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to add tag' }, 400)
   }
 })
 
-// DELETE /api/projects/:id/labels/:labelId - Remove a label from a project
-app.delete('/:id/labels/:labelId', (c) => {
+// DELETE /api/projects/:id/tags/:tagId - Remove a tag from a project
+app.delete('/:id/tags/:tagId', (c) => {
   const projectId = c.req.param('id')
-  const labelId = c.req.param('labelId')
+  const tagId = c.req.param('tagId')
 
   const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
   if (!project) {
@@ -1290,20 +1290,20 @@ app.delete('/:id/labels/:labelId', (c) => {
 
   const link = db
     .select()
-    .from(projectLabels)
+    .from(projectTags)
     .where(
       and(
-        eq(projectLabels.projectId, projectId),
-        eq(projectLabels.labelId, labelId)
+        eq(projectTags.projectId, projectId),
+        eq(projectTags.tagId, tagId)
       )
     )
     .get()
 
   if (!link) {
-    return c.json({ error: 'Label not linked to this project' }, 404)
+    return c.json({ error: 'Tag not linked to this project' }, 404)
   }
 
-  db.delete(projectLabels).where(eq(projectLabels.id, link.id)).run()
+  db.delete(projectTags).where(eq(projectTags.id, link.id)).run()
 
   const now = new Date().toISOString()
   db.update(projects)

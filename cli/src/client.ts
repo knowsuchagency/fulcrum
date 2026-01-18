@@ -41,8 +41,8 @@ export interface CreateTaskInput {
   dueDate?: string | null
 }
 
-export interface TaskLabelsResponse {
-  labels: string[]
+export interface TaskTagsResponse {
+  tags: string[]
 }
 
 export interface TaskDueDateResponse {
@@ -433,16 +433,16 @@ export class ViboraClient {
     return this.fetch(`/api/tasks/${taskId}/links`)
   }
 
-  // Task labels
-  async addTaskLabel(taskId: string, label: string): Promise<TaskLabelsResponse> {
-    return this.fetch(`/api/tasks/${taskId}/labels`, {
+  // Task tags
+  async addTaskTag(taskId: string, tag: string): Promise<TaskTagsResponse> {
+    return this.fetch(`/api/tasks/${taskId}/tags`, {
       method: 'POST',
-      body: JSON.stringify({ label }),
+      body: JSON.stringify({ tag }),
     })
   }
 
-  async removeTaskLabel(taskId: string, label: string): Promise<TaskLabelsResponse> {
-    return this.fetch(`/api/tasks/${taskId}/labels/${encodeURIComponent(label)}`, {
+  async removeTaskTag(taskId: string, tag: string): Promise<TaskTagsResponse> {
+    return this.fetch(`/api/tasks/${taskId}/tags/${encodeURIComponent(tag)}`, {
       method: 'DELETE',
     })
   }

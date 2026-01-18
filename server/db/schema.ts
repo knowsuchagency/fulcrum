@@ -200,27 +200,27 @@ export const projectRepositories = sqliteTable('project_repositories', {
   createdAt: text('created_at').notNull(),
 })
 
-// Labels - reusable labels shared between tasks and projects
-export const labels = sqliteTable('labels', {
+// Tags - reusable tags shared between tasks and projects
+export const tags = sqliteTable('tags', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
   color: text('color'), // Optional color for visual distinction (e.g., "blue", "#3b82f6")
   createdAt: text('created_at').notNull(),
 })
 
-// Task Labels - M:N join table for tasks and labels
-export const taskLabels = sqliteTable('task_labels', {
+// Task Tags - M:N join table for tasks and tags
+export const taskTags = sqliteTable('task_tags', {
   id: text('id').primaryKey(),
   taskId: text('task_id').notNull(),
-  labelId: text('label_id').notNull(),
+  tagId: text('tag_id').notNull(),
   createdAt: text('created_at').notNull(),
 })
 
-// Project Labels - M:N join table for projects and labels
-export const projectLabels = sqliteTable('project_labels', {
+// Project Tags - M:N join table for projects and tags
+export const projectTags = sqliteTable('project_tags', {
   id: text('id').primaryKey(),
   projectId: text('project_id').notNull(),
-  labelId: text('label_id').notNull(),
+  tagId: text('tag_id').notNull(),
   createdAt: text('created_at').notNull(),
 })
 
@@ -267,9 +267,9 @@ export type ProjectRepository = typeof projectRepositories.$inferSelect
 export type NewProjectRepository = typeof projectRepositories.$inferInsert
 export type TaskAttachment = typeof taskAttachments.$inferSelect
 export type NewTaskAttachment = typeof taskAttachments.$inferInsert
-export type Label = typeof labels.$inferSelect
-export type NewLabel = typeof labels.$inferInsert
-export type TaskLabel = typeof taskLabels.$inferSelect
-export type NewTaskLabel = typeof taskLabels.$inferInsert
-export type ProjectLabel = typeof projectLabels.$inferSelect
-export type NewProjectLabel = typeof projectLabels.$inferInsert
+export type Tag = typeof tags.$inferSelect
+export type NewTag = typeof tags.$inferInsert
+export type TaskTag = typeof taskTags.$inferSelect
+export type NewTaskTag = typeof taskTags.$inferInsert
+export type ProjectTag = typeof projectTags.$inferSelect
+export type NewProjectTag = typeof projectTags.$inferInsert

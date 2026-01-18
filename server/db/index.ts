@@ -262,12 +262,28 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
         else if (entry.tag.startsWith('0029') && hasTaskAttachmentsTable) {
           shouldMark = true
         }
-        // 0030 creates labels, task_labels, project_labels tables
+        // 0030 creates labels, task_labels, project_labels tables (later renamed to tags, task_tags, project_tags)
         else if (entry.tag.startsWith('0030')) {
           const hasLabelsTable = sqlite
             .query("SELECT name FROM sqlite_master WHERE type='table' AND name='labels'")
             .get()
-          if (hasLabelsTable) {
+          const hasTagsTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='tags'")
+            .get()
+          if (hasLabelsTable || hasTagsTable) {
+            shouldMark = true
+          }
+        }
+        // 0031 renames labels to tags tables - mark as applied if tags already exist (fresh DB has tags directly)
+        else if (entry.tag.startsWith('0031')) {
+          const hasLabelsTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='labels'")
+            .get()
+          const hasTagsTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='tags'")
+            .get()
+          // Mark as applied if tags table exists and labels table doesn't (fresh DB or already migrated)
+          if (hasTagsTable && !hasLabelsTable) {
             shouldMark = true
           }
         }
@@ -319,7 +335,7 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
   // Run data migrations after schema migrations
   migrateRepositoriesToProjects(sqlite)
   migrateProjectRepositoriesToJoinTable(sqlite)
-  migrateTaskLabelsToJoinTable(sqlite)
+  migrateTaskTagsToJoinTable(sqlite)
 }
 
 // Data migration: Create projects for existing repositories
@@ -409,17 +425,17 @@ function migrateProjectRepositoriesToJoinTable(sqlite: Database): void {
   log.db.info('Migrated project repositories to join table successfully', { count: projectsToMigrate.length })
 }
 
-// Data migration: Migrate task labels from JSON column to labels + task_labels tables
-function migrateTaskLabelsToJoinTable(sqlite: Database): void {
-  // Check if labels table exists
-  const hasLabelsTable = sqlite
-    .query("SELECT name FROM sqlite_master WHERE type='table' AND name='labels'")
+// Data migration: Migrate task tags from JSON column to tags + task_tags tables
+function migrateTaskTagsToJoinTable(sqlite: Database): void {
+  // Check if tags table exists (or old labels table for backwards compatibility)
+  const hasTagsTable = sqlite
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name='tags'")
     .get()
 
-  if (!hasLabelsTable) return
+  if (!hasTagsTable) return
 
   // Check if any tasks have labels in the JSON column that haven't been migrated
-  const tasksWithLabels = sqlite
+  const tasksWithTags = sqlite
     .query(`
       SELECT t.id, t.labels
       FROM tasks t
@@ -427,27 +443,27 @@ function migrateTaskLabelsToJoinTable(sqlite: Database): void {
         AND t.labels != '[]'
         AND t.labels != ''
         AND NOT EXISTS (
-          SELECT 1 FROM task_labels tl WHERE tl.task_id = t.id
+          SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id
         )
     `)
     .all() as Array<{ id: string; labels: string }>
 
-  if (tasksWithLabels.length === 0) return
+  if (tasksWithTags.length === 0) return
 
-  log.db.info('Migrating task labels to join table', { count: tasksWithLabels.length })
+  log.db.info('Migrating task tags to join table', { count: tasksWithTags.length })
 
   const now = new Date().toISOString()
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { nanoid } = require('nanoid')
 
-  // Collect all unique labels from tasks
-  const allLabelNames = new Set<string>()
-  for (const task of tasksWithLabels) {
+  // Collect all unique tags from tasks
+  const allTagNames = new Set<string>()
+  for (const task of tasksWithTags) {
     try {
-      const labels = JSON.parse(task.labels) as string[]
-      for (const label of labels) {
-        if (label && typeof label === 'string') {
-          allLabelNames.add(label)
+      const tags = JSON.parse(task.labels) as string[]
+      for (const tag of tags) {
+        if (tag && typeof tag === 'string') {
+          allTagNames.add(tag)
         }
       }
     } catch {
@@ -455,39 +471,39 @@ function migrateTaskLabelsToJoinTable(sqlite: Database): void {
     }
   }
 
-  // Create labels and build a map of name -> id
-  const labelNameToId = new Map<string, string>()
+  // Create tags and build a map of name -> id
+  const tagNameToId = new Map<string, string>()
 
-  for (const name of allLabelNames) {
-    // Check if label already exists
+  for (const name of allTagNames) {
+    // Check if tag already exists
     const existing = sqlite
-      .query('SELECT id FROM labels WHERE name = ?')
+      .query('SELECT id FROM tags WHERE name = ?')
       .get(name) as { id: string } | null
 
     if (existing) {
-      labelNameToId.set(name, existing.id)
+      tagNameToId.set(name, existing.id)
     } else {
-      // Create new label
-      const labelId = nanoid()
+      // Create new tag
+      const tagId = nanoid()
       sqlite.exec(`
-        INSERT INTO labels (id, name, created_at)
-        VALUES ('${labelId}', '${name.replace(/'/g, "''")}', '${now}')
+        INSERT INTO tags (id, name, created_at)
+        VALUES ('${tagId}', '${name.replace(/'/g, "''")}', '${now}')
       `)
-      labelNameToId.set(name, labelId)
+      tagNameToId.set(name, tagId)
     }
   }
 
-  // Create task_labels entries
-  for (const task of tasksWithLabels) {
+  // Create task_tags entries
+  for (const task of tasksWithTags) {
     try {
-      const labels = JSON.parse(task.labels) as string[]
-      for (const label of labels) {
-        const labelId = labelNameToId.get(label)
-        if (labelId) {
+      const tags = JSON.parse(task.labels) as string[]
+      for (const tag of tags) {
+        const tagId = tagNameToId.get(tag)
+        if (tagId) {
           const linkId = nanoid()
           sqlite.exec(`
-            INSERT INTO task_labels (id, task_id, label_id, created_at)
-            VALUES ('${linkId}', '${task.id}', '${labelId}', '${now}')
+            INSERT INTO task_tags (id, task_id, tag_id, created_at)
+            VALUES ('${linkId}', '${task.id}', '${tagId}', '${now}')
           `)
         }
       }
@@ -496,9 +512,9 @@ function migrateTaskLabelsToJoinTable(sqlite: Database): void {
     }
   }
 
-  log.db.info('Migrated task labels to join table successfully', {
-    tasks: tasksWithLabels.length,
-    labels: allLabelNames.size,
+  log.db.info('Migrated task tags to join table successfully', {
+    tasks: tasksWithTags.length,
+    tags: allTagNames.size,
   })
 }
 
