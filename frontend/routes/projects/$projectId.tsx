@@ -32,6 +32,7 @@ import {
   Delete02Icon,
   Cancel01Icon,
   Folder01Icon,
+  FolderAddIcon,
   Tick02Icon,
   Settings05Icon,
   WindowsOldIcon,
@@ -54,6 +55,7 @@ import { ProjectTagsManager } from '@/components/project/project-tags-manager'
 import { ProjectDescriptionEditor } from '@/components/project/project-description-editor'
 import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
 import { BulkAddRepositoriesModal } from '@/components/projects/bulk-add-repositories-modal'
+import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
 import { RemoveRepositoryDialog } from '@/components/projects/remove-repository-dialog'
 import { MoveRepositoryDialog } from '@/components/projects/move-repository-dialog'
 
@@ -283,6 +285,7 @@ function ProjectDetailView() {
 
   // Repository modal states
   const [bulkAddModalOpen, setBulkAddModalOpen] = useState(false)
+  const [addRepoModalOpen, setAddRepoModalOpen] = useState(false)
   const [removeRepoDialog, setRemoveRepoDialog] = useState<{
     open: boolean
     repository: ProjectRepositoryDetails | null
@@ -546,15 +549,26 @@ function ProjectDetailView() {
                     </Button>
                   )}
                   {project.repositories.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBulkAddModalOpen(true)}
-                      className="h-7 text-xs"
-                    >
-                      <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
-                      {t('linkRepo')}
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAddRepoModalOpen(true)}
+                        className="h-7 text-xs"
+                      >
+                        <HugeiconsIcon icon={FolderAddIcon} size={14} data-slot="icon" />
+                        {t('addRepo')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBulkAddModalOpen(true)}
+                        className="h-7 text-xs"
+                      >
+                        <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
+                        {t('linkRepo')}
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -562,15 +576,24 @@ function ProjectDetailView() {
                 <Card className="border-dashed">
                   <CardContent className="py-8 text-center text-muted-foreground">
                     <p className="text-sm">No repositories linked to this project.</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBulkAddModalOpen(true)}
-                      className="mt-4"
-                    >
-                      <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
-                      {t('linkRepo')}
-                    </Button>
+                    <div className="mt-4 flex justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAddRepoModalOpen(true)}
+                      >
+                        <HugeiconsIcon icon={FolderAddIcon} size={14} data-slot="icon" />
+                        {t('addRepo')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBulkAddModalOpen(true)}
+                      >
+                        <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
+                        {t('linkRepo')}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (
@@ -783,6 +806,13 @@ function ProjectDetailView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Repository Modal (with project pre-selected) */}
+      <AddRepositoryModal
+        open={addRepoModalOpen}
+        onOpenChange={setAddRepoModalOpen}
+        projectId={projectId}
+      />
 
       {/* Bulk Add Repositories Modal */}
       <BulkAddRepositoriesModal

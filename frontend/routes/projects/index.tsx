@@ -10,6 +10,7 @@ import {
   Delete02Icon,
   PackageAddIcon,
   Folder01Icon,
+  FolderAddIcon,
   Loading03Icon,
   Alert02Icon,
   Search01Icon,
@@ -270,8 +271,8 @@ function ProjectsView() {
         </div>
         <div className="hidden sm:block flex-1" />
         <Button size="sm" variant="outline" onClick={() => setAddRepoModalOpen(true)}>
-          <HugeiconsIcon icon={CopyLinkIcon} size={16} strokeWidth={2} data-slot="icon" />
-          <span className="max-sm:hidden">{t('linkRepo')}</span>
+          <HugeiconsIcon icon={FolderAddIcon} size={16} strokeWidth={2} data-slot="icon" />
+          <span className="max-sm:hidden">{t('addRepo')}</span>
         </Button>
         <Button size="sm" onClick={() => setCreateModalOpen(true)}>
           <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
