@@ -9,7 +9,6 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
   PackageAddIcon,
-  TaskAdd01Icon,
   Folder01Icon,
   Loading03Icon,
   Alert02Icon,
@@ -18,7 +17,6 @@ import {
   CopyLinkIcon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectWithDetails } from '@/types'
-import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModalSimple } from '@/components/projects/create-project-modal-simple'
 import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
@@ -42,12 +40,10 @@ export const Route = createFileRoute('/projects/')({
 
 function ProjectCard({
   project,
-  onStartTask,
   onAddRepo,
   onDeleteClick,
 }: {
   project: ProjectWithDetails
-  onStartTask: () => void
   onAddRepo: () => void
   onDeleteClick: () => void
 }) {
@@ -112,17 +108,6 @@ function ProjectCard({
       <CardContent className="flex flex-col items-start pt-0 pb-4">
         {/* Action buttons row */}
         <div className="flex flex-wrap gap-1">
-          {/* New Task */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onStartTask}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{t('newTask')}</span>
-          </Button>
-
           {/* Link Repo */}
           <Button
             variant="outline"
@@ -237,7 +222,6 @@ function ProjectsView() {
   // Projects data
   const { data: projects, isLoading, error } = useProjects()
   const deleteProject = useDeleteProject()
-  const [taskModalProject, setTaskModalProject] = useState<ProjectWithDetails | null>(null)
   const [deleteProjectState, setDeleteProjectState] = useState<ProjectWithDetails | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
 
@@ -333,22 +317,12 @@ function ProjectsView() {
             <ProjectCard
               key={project.id}
               project={project}
-              onStartTask={() => setTaskModalProject(project)}
               onAddRepo={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id }, search: { addRepo: true } })}
               onDeleteClick={() => setDeleteProjectState(project)}
             />
           ))}
         </div>
       </div>
-
-      {taskModalProject && (
-        <CreateTaskModal
-          open={taskModalProject !== null}
-          onOpenChange={(open) => !open && setTaskModalProject(null)}
-          defaultRepository={taskModalProject.repositories[0] ?? taskModalProject.repository ?? undefined}
-          showTrigger={false}
-        />
-      )}
 
       <DeleteProjectDialog
         project={deleteProjectState}

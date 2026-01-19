@@ -44,6 +44,7 @@ import {
   CheckmarkSquare03Icon,
   CopyLinkIcon,
   Move01Icon,
+  TaskAdd01Icon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectRepositoryDetails, Task, TaskStatus } from '@/types'
 import { toast } from 'sonner'
@@ -72,12 +73,14 @@ const STATUS_CONFIG: Record<TaskStatus, { color: string; bgColor: string }> = {
 function RepositoryCard({
   repository,
   onRemove,
+  onNewTask,
   selectionMode,
   isSelected,
   onToggleSelect,
 }: {
   repository: ProjectRepositoryDetails
   onRemove: () => void
+  onNewTask: () => void
   selectionMode?: boolean
   isSelected?: boolean
   onToggleSelect?: () => void
@@ -128,6 +131,18 @@ function RepositoryCard({
         {/* Action buttons - hidden in selection mode */}
         {!selectionMode && (
           <div className="mt-4 flex flex-wrap gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                onNewTask()
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">New Task</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -249,7 +264,7 @@ function ProjectDetailView() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [taskModalOpen, setTaskModalOpen] = useState(false)
+  const [taskModalRepo, setTaskModalRepo] = useState<ProjectRepositoryDetails | null>(null)
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState('')
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -554,6 +569,7 @@ function ProjectDetailView() {
                       key={repo.id}
                       repository={repo}
                       onRemove={() => setRemoveRepoDialog({ open: true, repository: repo })}
+                      onNewTask={() => setTaskModalRepo(repo)}
                       selectionMode={repoSelectionMode}
                       isSelected={selectedRepoIds.has(repo.id)}
                       onToggleSelect={() => toggleRepoSelection(repo.id)}
@@ -663,12 +679,12 @@ function ProjectDetailView() {
                       ? 'No active tasks.'
                       : 'No tasks match the selected filters.'}
                   </p>
-                  {activeTasks.length === 0 && (
+                  {activeTasks.length === 0 && project.repositories.length > 0 && (
                     <Button
                       variant="link"
                       size="sm"
                       className="mt-2"
-                      onClick={() => setTaskModalOpen(true)}
+                      onClick={() => setTaskModalRepo(project.repositories[0])}
                     >
                       Create a task
                     </Button>
@@ -719,12 +735,14 @@ function ProjectDetailView() {
       </ScrollArea>
 
       {/* Task creation modal */}
-      <CreateTaskModal
-        open={taskModalOpen}
-        onOpenChange={setTaskModalOpen}
-        defaultRepository={project.repositories[0]}
-        showTrigger={false}
-      />
+      {taskModalRepo && (
+        <CreateTaskModal
+          open={taskModalRepo !== null}
+          onOpenChange={(open) => !open && setTaskModalRepo(null)}
+          defaultRepository={taskModalRepo}
+          showTrigger={false}
+        />
+      )}
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !isDeleting && setShowDeleteConfirm(open)}>
