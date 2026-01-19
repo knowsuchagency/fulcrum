@@ -9,6 +9,7 @@ import {
   useScanProjects,
   useBulkCreateProjects,
   useProjects,
+  useCreateProject,
   type ScannedProject,
   type RepositoryConflict,
 } from '@/hooks/use-projects'
@@ -42,6 +43,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from '@/components/ui/combobox'
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -53,6 +62,7 @@ import {
   Link01Icon,
   EyeIcon,
   ViewOffIcon,
+  Add01Icon,
 } from '@hugeicons/core-free-icons'
 import { useDefaultGitReposDir } from '@/hooks/use-config'
 import type { CopierQuestion } from '@/types'
@@ -116,10 +126,14 @@ export function AddRepositoryModal({
   const addRepositoryMutation = useAddRepositoryToProject()
   const scanMutation = useScanProjects()
   const bulkCreateMutation = useBulkCreateProjects()
+  const createProjectMutation = useCreateProject()
 
   // Project selection state (only used when propProjectId is not provided)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [projectSearchQuery, setProjectSearchQuery] = useState('')
+  const [projectError, setProjectError] = useState<string | null>(null)
+  const [isCreatingProject, setIsCreatingProject] = useState(false)
+  const [newProjectName, setNewProjectName] = useState('')
 
   // Effective project ID - either from prop or selected
   const projectId = propProjectId ?? selectedProjectId
@@ -179,6 +193,9 @@ export function AddRepositoryModal({
       setActiveTab(initialTab)
       setSelectedProjectId(null)
       setProjectSearchQuery('')
+      setProjectError(null)
+      setIsCreatingProject(false)
+      setNewProjectName('')
       setCloneUrl('')
       setTargetDir('')
       setFolderName('')
@@ -247,6 +264,23 @@ export function AddRepositoryModal({
   // Selected project name for display
   const selectedProject = projects?.find((p) => p.id === selectedProjectId)
 
+  // Handle creating a new project inline
+  const handleCreateProject = async () => {
+    if (!newProjectName.trim()) return
+    setProjectError(null)
+
+    try {
+      const newProject = await createProjectMutation.mutateAsync({
+        name: newProjectName.trim(),
+      })
+      setSelectedProjectId(newProject.id)
+      setIsCreatingProject(false)
+      setNewProjectName('')
+    } catch (err) {
+      setProjectError(err instanceof Error ? err.message : 'Failed to create project')
+    }
+  }
+
   // Initialize template answers with defaults when questions load
   useEffect(() => {
     if (questionsData?.questions) {
@@ -284,8 +318,12 @@ export function AddRepositoryModal({
 
   // Handle clone
   const handleClone = async (moveFromProject = false) => {
-    if (!projectId) return
+    if (!projectId) {
+      setProjectError('Please select a project first')
+      return
+    }
     setCloneError(null)
+    setProjectError(null)
     const url = cloneUrl.trim()
     if (!url || !isGitUrl(url)) return
 
@@ -314,8 +352,12 @@ export function AddRepositoryModal({
 
   // Handle add local
   const handleAddLocal = async (moveFromProject = false) => {
-    if (!projectId) return
+    if (!projectId) {
+      setProjectError('Please select a project first')
+      return
+    }
     setLocalError(null)
+    setProjectError(null)
     const path = localPath.trim()
     if (!path) return
 
@@ -380,9 +422,13 @@ export function AddRepositoryModal({
   }
 
   const handleBulkAdd = async () => {
-    if (!projectId) return
+    if (!projectId) {
+      setProjectError('Please select a project first')
+      return
+    }
     if (selectedPaths.size === 0) return
     setScanError(null)
+    setProjectError(null)
 
     // Add each repository to the project
     let added = 0
@@ -411,8 +457,12 @@ export function AddRepositoryModal({
   const shouldTrust = !!templateSource || trust
 
   const handleCreateFromTemplate = async () => {
-    if (!projectId) return
+    if (!projectId) {
+      setProjectError('Please select a project first')
+      return
+    }
     setTemplateError(null)
+    setProjectError(null)
     try {
       // First create the repository from template via copier API
       const result = await fetchJSON<{ projectId: string; repositoryId: string; path: string }>(
@@ -571,55 +621,92 @@ export function AddRepositoryModal({
               {!propProjectId && (
                 <div className="space-y-2">
                   <Label>Add to Project</Label>
-                  <div className="relative">
-                    <HugeiconsIcon
-                      icon={Search01Icon}
-                      size={14}
-                      strokeWidth={2}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                      value={projectSearchQuery}
-                      onChange={(e) => setProjectSearchQuery(e.target.value)}
-                      placeholder="Search projects..."
-                      className="pl-9"
-                    />
-                  </div>
-                  <div className="max-h-40 overflow-y-auto rounded-md border">
-                    {filteredProjects.length === 0 ? (
-                      <div className="px-3 py-4 text-center text-sm text-muted-foreground">
-                        No projects found
-                      </div>
-                    ) : (
-                      filteredProjects.map((project) => (
-                        <div
-                          key={project.id}
-                          className={`flex items-center gap-3 px-3 py-2 cursor-pointer border-b last:border-b-0 transition-colors ${
-                            selectedProjectId === project.id
-                              ? 'bg-primary/10 text-primary'
-                              : 'hover:bg-muted/50'
-                          }`}
-                          onClick={() => setSelectedProjectId(project.id)}
-                        >
-                          <div
-                            className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                              selectedProjectId === project.id
-                                ? 'border-primary bg-primary'
-                                : 'border-muted-foreground'
-                            }`}
+                  {isCreatingProject ? (
+                    // Inline project creation
+                    <div className="flex gap-2">
+                      <Input
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        placeholder="New project name..."
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleCreateProject()
+                          } else if (e.key === 'Escape') {
+                            setIsCreatingProject(false)
+                            setNewProjectName('')
+                          }
+                        }}
+                        disabled={createProjectMutation.isPending}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleCreateProject}
+                        disabled={!newProjectName.trim() || createProjectMutation.isPending}
+                      >
+                        {createProjectMutation.isPending ? (
+                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+                        ) : (
+                          'Create'
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setIsCreatingProject(false)
+                          setNewProjectName('')
+                        }}
+                        disabled={createProjectMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    // Project combobox
+                    <Combobox
+                      value={selectedProjectId}
+                      onValueChange={(value) => {
+                        setSelectedProjectId(value as string | null)
+                        setProjectError(null)
+                      }}
+                    >
+                      <ComboboxInput
+                        placeholder={selectedProject?.name || 'Select a project...'}
+                        value={projectSearchQuery}
+                        onChange={(e) => setProjectSearchQuery(e.target.value)}
+                        className="w-full"
+                      />
+                      <ComboboxContent>
+                        <ComboboxList>
+                          <ComboboxEmpty>No projects found</ComboboxEmpty>
+                          {filteredProjects.map((project) => (
+                            <ComboboxItem key={project.id} value={project.id}>
+                              {project.name}
+                            </ComboboxItem>
+                          ))}
+                        </ComboboxList>
+                        <div className="border-t p-1">
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground"
+                            onClick={() => {
+                              setIsCreatingProject(true)
+                              setProjectSearchQuery('')
+                            }}
                           >
-                            {selectedProjectId === project.id && (
-                              <div className="h-2 w-2 rounded-full bg-background" />
-                            )}
-                          </div>
-                          <span className="text-sm font-medium truncate">{project.name}</span>
+                            <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
+                            Create new project
+                          </button>
                         </div>
-                      ))
-                    )}
-                  </div>
-                  {selectedProject && (
-                    <div className="text-xs text-muted-foreground">
-                      Selected: <span className="font-medium text-foreground">{selectedProject.name}</span>
+                      </ComboboxContent>
+                    </Combobox>
+                  )}
+                  {projectError && (
+                    <div className="flex items-center gap-2 text-xs text-destructive">
+                      <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2} />
+                      {projectError}
                     </div>
                   )}
                 </div>
