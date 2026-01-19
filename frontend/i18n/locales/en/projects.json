@@ -4,6 +4,7 @@
   "searchPlaceholder": "Search projects...",
   "newTask": "New Task",
   "addRepo": "Add Repo",
+  "linkRepo": "Link Repo",
   "backToProjects": "Back to Projects",
   "createTask": "New Task",
   "notFound": "Project not found",

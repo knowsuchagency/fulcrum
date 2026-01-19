@@ -610,6 +610,105 @@ export function AddRepositoryModal({
     onOpenChange(false)
   }
 
+  // Render project selector - shown when propProjectId is not provided
+  const renderProjectSelector = () => {
+    if (propProjectId) return null
+
+    return (
+      <div className="space-y-2 border-t border-border pt-4">
+        <Label>Add to Project</Label>
+        {isCreatingProject ? (
+          // Inline project creation
+          <div className="flex gap-2">
+            <Input
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              placeholder="New project name..."
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleCreateProject()
+                } else if (e.key === 'Escape') {
+                  setIsCreatingProject(false)
+                  setNewProjectName('')
+                }
+              }}
+              disabled={createProjectMutation.isPending}
+            />
+            <Button
+              size="sm"
+              onClick={handleCreateProject}
+              disabled={!newProjectName.trim() || createProjectMutation.isPending}
+            >
+              {createProjectMutation.isPending ? (
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+              ) : (
+                'Create'
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setIsCreatingProject(false)
+                setNewProjectName('')
+              }}
+              disabled={createProjectMutation.isPending}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          // Project combobox
+          <Combobox
+            value={selectedProjectId}
+            onValueChange={(value) => {
+              setSelectedProjectId(value as string | null)
+              setProjectError(null)
+            }}
+          >
+            <ComboboxInput
+              placeholder={selectedProject?.name || 'Select a project...'}
+              value={projectSearchQuery}
+              onChange={(e) => setProjectSearchQuery(e.target.value)}
+              className="w-full"
+            />
+            <ComboboxContent>
+              <ComboboxList>
+                <ComboboxEmpty>No projects found</ComboboxEmpty>
+                {filteredProjects.map((project) => (
+                  <ComboboxItem key={project.id} value={project.id}>
+                    {project.name}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+              <div className="border-t p-1">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    setIsCreatingProject(true)
+                    setProjectSearchQuery('')
+                  }}
+                >
+                  <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
+                  Create new project
+                </button>
+              </div>
+            </ComboboxContent>
+          </Combobox>
+        )}
+        {projectError && (
+          <div className="flex items-center gap-2 text-xs text-destructive">
+            <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2} />
+            {projectError}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -620,101 +719,6 @@ export function AddRepositoryModal({
 
           <div className="flex-1 overflow-y-auto min-h-0 px-1">
             <div className="space-y-4">
-              {/* Project selector - only shown when propProjectId is not provided */}
-              {!propProjectId && (
-                <div className="space-y-2">
-                  <Label>Add to Project</Label>
-                  {isCreatingProject ? (
-                    // Inline project creation
-                    <div className="flex gap-2">
-                      <Input
-                        value={newProjectName}
-                        onChange={(e) => setNewProjectName(e.target.value)}
-                        placeholder="New project name..."
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            handleCreateProject()
-                          } else if (e.key === 'Escape') {
-                            setIsCreatingProject(false)
-                            setNewProjectName('')
-                          }
-                        }}
-                        disabled={createProjectMutation.isPending}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleCreateProject}
-                        disabled={!newProjectName.trim() || createProjectMutation.isPending}
-                      >
-                        {createProjectMutation.isPending ? (
-                          <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
-                        ) : (
-                          'Create'
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setIsCreatingProject(false)
-                          setNewProjectName('')
-                        }}
-                        disabled={createProjectMutation.isPending}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    // Project combobox
-                    <Combobox
-                      value={selectedProjectId}
-                      onValueChange={(value) => {
-                        setSelectedProjectId(value as string | null)
-                        setProjectError(null)
-                      }}
-                    >
-                      <ComboboxInput
-                        placeholder={selectedProject?.name || 'Select a project...'}
-                        value={projectSearchQuery}
-                        onChange={(e) => setProjectSearchQuery(e.target.value)}
-                        className="w-full"
-                      />
-                      <ComboboxContent>
-                        <ComboboxList>
-                          <ComboboxEmpty>No projects found</ComboboxEmpty>
-                          {filteredProjects.map((project) => (
-                            <ComboboxItem key={project.id} value={project.id}>
-                              {project.name}
-                            </ComboboxItem>
-                          ))}
-                        </ComboboxList>
-                        <div className="border-t p-1">
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground"
-                            onClick={() => {
-                              setIsCreatingProject(true)
-                              setProjectSearchQuery('')
-                            }}
-                          >
-                            <HugeiconsIcon icon={Add01Icon} size={14} strokeWidth={2} />
-                            Create new project
-                          </button>
-                        </div>
-                      </ComboboxContent>
-                    </Combobox>
-                  )}
-                  {projectError && (
-                    <div className="flex items-center gap-2 text-xs text-destructive">
-                      <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2} />
-                      {projectError}
-                    </div>
-                  )}
-                </div>
-              )}
-
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="w-full">
                   <TabsTrigger value="clone" className="flex-1">
@@ -834,6 +838,8 @@ export function AddRepositoryModal({
                     </div>
                   )}
 
+                  {renderProjectSelector()}
+
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={handleCancel} disabled={isClonePending}>
                       {t('addModal.cancel')}
@@ -921,6 +927,8 @@ export function AddRepositoryModal({
                       <span>{localError}</span>
                     </div>
                   )}
+
+                  {renderProjectSelector()}
 
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={handleCancel} disabled={isLocalPending}>
@@ -1090,6 +1098,8 @@ export function AddRepositoryModal({
                       <span>{scanError}</span>
                     </div>
                   )}
+
+                  {renderProjectSelector()}
 
                   {selectedPaths.size > 0 && (
                     <Button
@@ -1295,6 +1305,8 @@ export function AddRepositoryModal({
                       <span>{templateError}</span>
                     </div>
                   )}
+
+                  {renderProjectSelector()}
 
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center gap-2">

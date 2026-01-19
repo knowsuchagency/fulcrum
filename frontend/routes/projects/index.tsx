@@ -15,6 +15,7 @@ import {
   Alert02Icon,
   Search01Icon,
   TaskDaily01Icon,
+  CopyLinkIcon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectWithDetails } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
@@ -115,15 +116,15 @@ function ProjectCard({
             <span className="max-sm:hidden">{t('newTask')}</span>
           </Button>
 
-          {/* Add Repo */}
+          {/* Link Repo */}
           <Button
             variant="outline"
             size="sm"
             onClick={onAddRepo}
             className="text-muted-foreground hover:text-foreground"
           >
-            <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{t('addRepo')}</span>
+            <HugeiconsIcon icon={CopyLinkIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('linkRepo')}</span>
           </Button>
 
           {/* Delete */}
@@ -278,8 +279,8 @@ function ProjectsView() {
         </div>
         <div className="hidden sm:block flex-1" />
         <Button size="sm" variant="outline" onClick={() => setAddRepoModalOpen(true)}>
-          <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} data-slot="icon" />
-          <span className="max-sm:hidden">{t('addRepo')}</span>
+          <HugeiconsIcon icon={CopyLinkIcon} size={16} strokeWidth={2} data-slot="icon" />
+          <span className="max-sm:hidden">{t('linkRepo')}</span>
         </Button>
         <Button size="sm" onClick={() => setCreateModalOpen(true)}>
           <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />

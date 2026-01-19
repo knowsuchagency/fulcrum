@@ -41,8 +41,9 @@ import {
   ArrowRight01Icon,
   ArrowDown01Icon,
   Edit02Icon,
-  Move01Icon,
   CheckmarkSquare03Icon,
+  CopyLinkIcon,
+  Move01Icon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectRepositoryDetails, Task, TaskStatus } from '@/types'
 import { toast } from 'sonner'
@@ -70,14 +71,12 @@ const STATUS_CONFIG: Record<TaskStatus, { color: string; bgColor: string }> = {
 function RepositoryCard({
   repository,
   onRemove,
-  onMove,
   selectionMode,
   isSelected,
   onToggleSelect,
 }: {
   repository: ProjectRepositoryDetails
   onRemove: () => void
-  onMove: () => void
   selectionMode?: boolean
   isSelected?: boolean
   onToggleSelect?: () => void
@@ -181,18 +180,6 @@ function RepositoryCard({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
-                onMove()
-              }}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <HugeiconsIcon icon={Move01Icon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="max-sm:hidden">Move to...</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
                 onRemove()
               }}
               className="text-muted-foreground hover:text-destructive"
@@ -281,10 +268,6 @@ function ProjectDetailView() {
   // Repository modal states
   const [bulkAddModalOpen, setBulkAddModalOpen] = useState(false)
   const [removeRepoDialog, setRemoveRepoDialog] = useState<{
-    open: boolean
-    repository: ProjectRepositoryDetails | null
-  }>({ open: false, repository: null })
-  const [moveRepoDialog, setMoveRepoDialog] = useState<{
     open: boolean
     repository: ProjectRepositoryDetails | null
   }>({ open: false, repository: null })
@@ -552,8 +535,8 @@ function ProjectDetailView() {
                     onClick={() => setBulkAddModalOpen(true)}
                     className="h-7 text-xs"
                   >
-                    <HugeiconsIcon icon={Folder01Icon} size={14} data-slot="icon" />
-                    {t('addRepo')}
+                    <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
+                    {t('linkRepo')}
                   </Button>
                 </div>
               </div>
@@ -564,13 +547,12 @@ function ProjectDetailView() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {project.repositories.map((repo) => (
                     <RepositoryCard
                       key={repo.id}
                       repository={repo}
                       onRemove={() => setRemoveRepoDialog({ open: true, repository: repo })}
-                      onMove={() => setMoveRepoDialog({ open: true, repository: repo })}
                       selectionMode={repoSelectionMode}
                       isSelected={selectedRepoIds.has(repo.id)}
                       onToggleSelect={() => toggleRepoSelection(repo.id)}
@@ -783,24 +765,6 @@ function ProjectDetailView() {
         onOpenChange={(open) => setRemoveRepoDialog({ open, repository: open ? removeRepoDialog.repository : null })}
         projectId={projectId}
         repository={removeRepoDialog.repository}
-      />
-
-      {/* Move Repository Dialog */}
-      <MoveRepositoryDialog
-        open={moveRepoDialog.open}
-        onOpenChange={(open) => setMoveRepoDialog({ open, repository: open ? moveRepoDialog.repository : null })}
-        repositories={
-          moveRepoDialog.repository
-            ? [{
-                id: moveRepoDialog.repository.id,
-                displayName: moveRepoDialog.repository.displayName,
-                path: moveRepoDialog.repository.path,
-                currentProjectId: projectId,
-                currentProjectName: project?.name,
-              }]
-            : []
-        }
-        excludeProjectId={projectId}
       />
 
       {/* Bulk Move Repository Dialog */}
