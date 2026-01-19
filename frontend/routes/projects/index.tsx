@@ -26,7 +26,7 @@ import {
 import type { ProjectWithDetails, Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { Badge } from '@/components/ui/badge'
-import { CreateProjectModal } from '@/components/projects/create-project-modal'
+import { CreateProjectModalSimple } from '@/components/projects/create-project-modal-simple'
 import { Input } from '@/components/ui/input'
 import {
   AlertDialog,
@@ -561,7 +561,7 @@ function ProjectsView() {
                   key={project.id}
                   project={project}
                   onStartTask={() => setTaskModalProject(project)}
-                  onAddRepo={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
+                  onAddRepo={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id }, search: { addRepo: true } })}
                   onDeleteClick={() => setDeleteProjectState(project)}
                 />
               ))}
@@ -621,7 +621,7 @@ function ProjectsView() {
         onDelete={handleDeleteRepository}
       />
 
-      <CreateProjectModal
+      <CreateProjectModalSimple
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
       />

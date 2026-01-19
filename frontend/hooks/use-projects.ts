@@ -26,14 +26,13 @@ export function useCreateProject() {
     mutationFn: (data: {
       name: string
       description?: string
-      // Option 1: Link to existing repository
+      tags?: string[]
+      // Optional - for backwards compatibility
       repositoryId?: string
-      // Option 2: Create from local path
       path?: string
-      // Option 3: Clone from URL
       url?: string
-      targetDir?: string // For cloning
-      folderName?: string // For cloning
+      targetDir?: string
+      folderName?: string
     }) =>
       fetchJSON<ProjectWithDetails>(`${API_BASE}/api/projects`, {
         method: 'POST',
@@ -41,7 +40,99 @@ export function useCreateProject() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      // Also invalidate repositories since they may now have a project
+      queryClient.invalidateQueries({ queryKey: ['repositories'] })
+    },
+  })
+}
+
+// Repository conflict response type
+export interface RepositoryConflict {
+  error: string
+  conflictProject?: { id: string; name: string } | null
+}
+
+// Add repository to project result
+export interface AddRepositoryResult {
+  id: string
+  projectId: string
+  repositoryId: string
+  isPrimary: boolean
+  createdAt: string
+  repository: {
+    id: string
+    path: string
+    displayName: string
+  }
+}
+
+export function useAddRepositoryToProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      ...data
+    }: {
+      projectId: string
+      // Option 1: Link existing repository
+      repositoryId?: string
+      // Option 2: Create from local path
+      path?: string
+      // Option 3: Clone from URL
+      url?: string
+      targetDir?: string
+      folderName?: string
+      // Common options
+      isPrimary?: boolean
+      moveFromProject?: boolean
+    }) => {
+      const response = await fetch(`${API_BASE}/api/projects/${projectId}/repositories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        // Return special conflict response for 409
+        if (response.status === 409) {
+          const err = new Error(result.error) as Error & { conflict?: RepositoryConflict }
+          err.conflict = result as RepositoryConflict
+          throw err
+        }
+        throw new Error(result.error || 'Failed to add repository')
+      }
+      return result as AddRepositoryResult
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['repositories'] })
+    },
+  })
+}
+
+export function useRemoveRepositoryFromProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      repositoryId,
+      deleteRecord = false,
+    }: {
+      projectId: string
+      repositoryId: string
+      deleteRecord?: boolean
+    }) => {
+      const params = deleteRecord ? '?deleteRecord=true' : ''
+      return fetchJSON<{ success: boolean; deleted: boolean }>(
+        `${API_BASE}/api/projects/${projectId}/repositories/${repositoryId}${params}`,
+        { method: 'DELETE' }
+      )
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
     },
   })

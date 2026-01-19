@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useProject, useDeleteProject, useAccessProject, useUpdateProject } from '@/hooks/use-projects'
 import { useTasks } from '@/hooks/use-tasks'
@@ -48,6 +48,8 @@ import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { cn } from '@/lib/utils'
 import { ProjectTagsManager } from '@/components/project/project-tags-manager'
 import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
+import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
+import { RemoveRepositoryDialog } from '@/components/projects/remove-repository-dialog'
 
 export const Route = createFileRoute('/projects/$projectId')({
   component: ProjectDetailView,
@@ -64,8 +66,10 @@ const STATUS_CONFIG: Record<TaskStatus, { color: string; bgColor: string }> = {
 
 function RepositoryCard({
   repository,
+  onRemove,
 }: {
   repository: ProjectRepositoryDetails
+  onRemove: () => void
 }) {
   const navigate = useNavigate()
 
@@ -146,6 +150,18 @@ function RepositoryCard({
             <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">Deploy</span>
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Remove</span>
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -196,6 +212,7 @@ function TaskRow({ task }: { task: Task }) {
 function ProjectDetailView() {
   const { t } = useTranslation('projects')
   const { projectId } = Route.useParams()
+  const location = useRouterState({ select: (s) => s.location })
   const navigate = useNavigate()
   const { data: project, isLoading, error } = useProject(projectId)
   const { data: allTasks = [] } = useTasks()
@@ -220,6 +237,24 @@ function ProjectDetailView() {
   )
   // Archive section collapsed state
   const [archiveOpen, setArchiveOpen] = useState(false)
+
+  // Repository modal states
+  const [addRepoModalOpen, setAddRepoModalOpen] = useState(false)
+  const [removeRepoDialog, setRemoveRepoDialog] = useState<{
+    open: boolean
+    repository: ProjectRepositoryDetails | null
+  }>({ open: false, repository: null })
+
+  // Handle ?addRepo=true search param
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const addRepo = params.get('addRepo')
+    if (addRepo === 'true' && !addRepoModalOpen) {
+      setAddRepoModalOpen(true)
+      // Clear the search param after opening modal
+      navigate({ to: '/projects/$projectId', params: { projectId }, replace: true })
+    }
+  }, [location.search, addRepoModalOpen, navigate, projectId])
 
   // Update last accessed when viewing project
   useEffect(() => {
@@ -390,7 +425,7 @@ function ProjectDetailView() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate({ to: '/projects/$projectId', params: { projectId }, search: { addRepo: true } })}
+          onClick={() => setAddRepoModalOpen(true)}
         >
           <HugeiconsIcon icon={Folder01Icon} size={14} data-slot="icon" />
           <span className="max-sm:hidden">{t('addRepo')}</span>
@@ -426,7 +461,11 @@ function ProjectDetailView() {
               ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                   {project.repositories.map((repo) => (
-                    <RepositoryCard key={repo.id} repository={repo} />
+                    <RepositoryCard
+                      key={repo.id}
+                      repository={repo}
+                      onRemove={() => setRemoveRepoDialog({ open: true, repository: repo })}
+                    />
                   ))}
                 </div>
               )}
@@ -612,6 +651,21 @@ function ProjectDetailView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Repository Modal */}
+      <AddRepositoryModal
+        open={addRepoModalOpen}
+        onOpenChange={setAddRepoModalOpen}
+        projectId={projectId}
+      />
+
+      {/* Remove Repository Dialog */}
+      <RemoveRepositoryDialog
+        open={removeRepoDialog.open}
+        onOpenChange={(open) => setRemoveRepoDialog({ open, repository: open ? removeRepoDialog.repository : null })}
+        projectId={projectId}
+        repository={removeRepoDialog.repository}
+      />
     </div>
   )
 }

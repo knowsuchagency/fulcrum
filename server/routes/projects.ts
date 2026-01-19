@@ -361,184 +361,185 @@ app.get('/:id', (c) => {
   return c.json(buildProjectWithDetails(project, repo ?? null, appRow ?? null, services, tab ?? null))
 })
 
-// POST /api/projects - Create project with repository
-// Accepts either:
-// - repositoryId: Link to existing repository
-// - path: Create repository from local path
-// - url: Clone repository from URL
+// POST /api/projects - Create project (with or without repository)
+// For simple creation: just name, description (optional), tags (optional)
+// For backwards compatibility: also accepts repositoryId, path, or url
 app.post('/', async (c) => {
   try {
     const body = await c.req.json<{
       name: string
       description?: string
-      // Option 1: Link to existing repository
+      tags?: string[] // Tag names to add
+      // Optional - for backwards compatibility
       repositoryId?: string
-      // Option 2: Create from local path
       path?: string
-      // Option 3: Clone from URL
       url?: string
-      targetDir?: string // For cloning
-      folderName?: string // For cloning
+      targetDir?: string
+      folderName?: string
     }>()
 
     if (!body.name) {
       return c.json({ error: 'name is required' }, 400)
     }
 
-    // Must provide exactly one of: repositoryId, path, or url
-    const options = [body.repositoryId, body.path, body.url].filter(Boolean)
-    if (options.length === 0) {
-      return c.json({ error: 'Must provide repositoryId, path, or url' }, 400)
-    }
-    if (options.length > 1) {
-      return c.json({ error: 'Provide only one of: repositoryId, path, or url' }, 400)
-    }
-
     const { expandPath } = await import('../lib/settings')
     const now = new Date().toISOString()
     let repo: typeof repositories.$inferSelect | undefined
 
-    if (body.repositoryId) {
-      // Option 1: Link to existing repository
-      repo = db.select().from(repositories).where(eq(repositories.id, body.repositoryId)).get()
+    // Check if any repository option is provided
+    const hasRepoOption = body.repositoryId || body.path || body.url
+
+    if (hasRepoOption) {
+      // Validate that only one option is provided
+      const options = [body.repositoryId, body.path, body.url].filter(Boolean)
+      if (options.length > 1) {
+        return c.json({ error: 'Provide only one of: repositoryId, path, or url' }, 400)
+      }
+
+      if (body.repositoryId) {
+        // Option 1: Link to existing repository
+        repo = db.select().from(repositories).where(eq(repositories.id, body.repositoryId)).get()
+        if (!repo) {
+          return c.json({ error: 'Repository not found' }, 404)
+        }
+      } else if (body.path) {
+        // Option 2: Create from local path
+        const repoPath = expandPath(body.path)
+
+        if (!existsSync(repoPath)) {
+          return c.json({ error: `Directory does not exist: ${repoPath}` }, 400)
+        }
+
+        // Check for duplicate path
+        const existing = db.select().from(repositories).where(eq(repositories.path, repoPath)).get()
+        if (existing) {
+          return c.json({ error: 'Repository with this path already exists' }, 400)
+        }
+
+        const displayName = repoPath.split('/').pop() || 'repo'
+        const repoId = nanoid()
+
+        db.insert(repositories)
+          .values({
+            id: repoId,
+            path: repoPath,
+            displayName,
+            startupScript: null,
+            copyFiles: null,
+            isCopierTemplate: false,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        repo = db.select().from(repositories).where(eq(repositories.id, repoId)).get()
+      } else if (body.url) {
+        // Option 3: Clone from URL
+        const { isGitUrl, extractRepoNameFromUrl } = await import('../lib/git-utils')
+        const { getSettings } = await import('../lib/settings')
+        const { execSync } = await import('node:child_process')
+        const { mkdirSync, rmSync } = await import('node:fs')
+        const { homedir } = await import('node:os')
+
+        if (!isGitUrl(body.url)) {
+          return c.json({ error: 'Invalid git URL format' }, 400)
+        }
+
+        const settings = getSettings()
+        let parentDir = body.targetDir?.trim() || settings.paths.defaultGitReposDir
+        parentDir = expandPath(parentDir)
+
+        const home = homedir()
+        if (resolve(parentDir) === home) {
+          return c.json({ error: 'Cannot clone directly into home directory. Please specify a subdirectory.' }, 400)
+        }
+
+        const repoName = body.folderName?.trim() || extractRepoNameFromUrl(body.url)
+        if (!repoName || repoName === '.' || repoName === '..') {
+          return c.json({ error: 'Invalid folder name' }, 400)
+        }
+        if (repoName.includes('/') || repoName.includes('\\')) {
+          return c.json({ error: 'Folder name cannot contain path separators' }, 400)
+        }
+
+        const targetPath = join(parentDir, repoName)
+        const resolvedParent = resolve(parentDir)
+        const resolvedTarget = resolve(targetPath)
+
+        if (!resolvedTarget.startsWith(resolvedParent + '/') && resolvedTarget !== resolvedParent) {
+          return c.json({ error: 'Invalid target path' }, 400)
+        }
+
+        if (existsSync(targetPath)) {
+          return c.json({ error: `Directory already exists: ${targetPath}` }, 400)
+        }
+
+        // Check for duplicate path in database
+        const existingRepo = db.select().from(repositories).where(eq(repositories.path, targetPath)).get()
+        if (existingRepo) {
+          return c.json({ error: 'Repository with this path already exists in database' }, 400)
+        }
+
+        if (!existsSync(parentDir)) {
+          mkdirSync(parentDir, { recursive: true })
+        }
+
+        // Clone the repository
+        try {
+          execSync(`git clone "${body.url}" "${targetPath}"`, {
+            encoding: 'utf-8',
+            stdio: 'pipe',
+            timeout: 120000,
+          })
+        } catch (cloneErr) {
+          if (existsSync(targetPath) && resolvedTarget.startsWith(resolvedParent + '/')) {
+            rmSync(targetPath, { recursive: true, force: true })
+          }
+          const errorMessage = cloneErr instanceof Error ? cloneErr.message : 'Clone failed'
+          if (errorMessage.includes('Permission denied') || errorMessage.includes('publickey')) {
+            return c.json({ error: 'Authentication failed. Check your SSH keys or use HTTPS with credentials.' }, 500)
+          }
+          if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+            return c.json({ error: 'Repository not found or access denied' }, 500)
+          }
+          return c.json({ error: `Failed to clone repository: ${errorMessage}` }, 500)
+        }
+
+        const displayName = repoName
+        const repoId = nanoid()
+
+        db.insert(repositories)
+          .values({
+            id: repoId,
+            path: targetPath,
+            displayName,
+            remoteUrl: body.url,
+            startupScript: null,
+            copyFiles: null,
+            isCopierTemplate: false,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        repo = db.select().from(repositories).where(eq(repositories.id, repoId)).get()
+      }
+
       if (!repo) {
-        return c.json({ error: 'Repository not found' }, 404)
-      }
-    } else if (body.path) {
-      // Option 2: Create from local path
-      const repoPath = expandPath(body.path)
-
-      if (!existsSync(repoPath)) {
-        return c.json({ error: `Directory does not exist: ${repoPath}` }, 400)
+        return c.json({ error: 'Failed to create or find repository' }, 500)
       }
 
-      // Check for duplicate path
-      const existing = db.select().from(repositories).where(eq(repositories.path, repoPath)).get()
-      if (existing) {
-        return c.json({ error: 'Repository with this path already exists' }, 400)
+      // Check if project already exists for this repository (legacy check)
+      const existingProject = db.select().from(projects).where(eq(projects.repositoryId, repo.id)).get()
+      if (existingProject) {
+        return c.json({ error: 'Project already exists for this repository' }, 400)
       }
-
-      const displayName = repoPath.split('/').pop() || 'repo'
-      const repoId = nanoid()
-
-      db.insert(repositories)
-        .values({
-          id: repoId,
-          path: repoPath,
-          displayName,
-          startupScript: null,
-          copyFiles: null,
-          isCopierTemplate: false,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run()
-
-      repo = db.select().from(repositories).where(eq(repositories.id, repoId)).get()
-    } else if (body.url) {
-      // Option 3: Clone from URL
-      const { isGitUrl, extractRepoNameFromUrl } = await import('../lib/git-utils')
-      const { getSettings } = await import('../lib/settings')
-      const { execSync } = await import('node:child_process')
-      const { mkdirSync, rmSync } = await import('node:fs')
-      const { homedir } = await import('node:os')
-
-      if (!isGitUrl(body.url)) {
-        return c.json({ error: 'Invalid git URL format' }, 400)
-      }
-
-      const settings = getSettings()
-      let parentDir = body.targetDir?.trim() || settings.paths.defaultGitReposDir
-      parentDir = expandPath(parentDir)
-
-      const home = homedir()
-      if (resolve(parentDir) === home) {
-        return c.json({ error: 'Cannot clone directly into home directory. Please specify a subdirectory.' }, 400)
-      }
-
-      const repoName = body.folderName?.trim() || extractRepoNameFromUrl(body.url)
-      if (!repoName || repoName === '.' || repoName === '..') {
-        return c.json({ error: 'Invalid folder name' }, 400)
-      }
-      if (repoName.includes('/') || repoName.includes('\\')) {
-        return c.json({ error: 'Folder name cannot contain path separators' }, 400)
-      }
-
-      const targetPath = join(parentDir, repoName)
-      const resolvedParent = resolve(parentDir)
-      const resolvedTarget = resolve(targetPath)
-
-      if (!resolvedTarget.startsWith(resolvedParent + '/') && resolvedTarget !== resolvedParent) {
-        return c.json({ error: 'Invalid target path' }, 400)
-      }
-
-      if (existsSync(targetPath)) {
-        return c.json({ error: `Directory already exists: ${targetPath}` }, 400)
-      }
-
-      // Check for duplicate path in database
-      const existingRepo = db.select().from(repositories).where(eq(repositories.path, targetPath)).get()
-      if (existingRepo) {
-        return c.json({ error: 'Repository with this path already exists in database' }, 400)
-      }
-
-      if (!existsSync(parentDir)) {
-        mkdirSync(parentDir, { recursive: true })
-      }
-
-      // Clone the repository
-      try {
-        execSync(`git clone "${body.url}" "${targetPath}"`, {
-          encoding: 'utf-8',
-          stdio: 'pipe',
-          timeout: 120000,
-        })
-      } catch (cloneErr) {
-        if (existsSync(targetPath) && resolvedTarget.startsWith(resolvedParent + '/')) {
-          rmSync(targetPath, { recursive: true, force: true })
-        }
-        const errorMessage = cloneErr instanceof Error ? cloneErr.message : 'Clone failed'
-        if (errorMessage.includes('Permission denied') || errorMessage.includes('publickey')) {
-          return c.json({ error: 'Authentication failed. Check your SSH keys or use HTTPS with credentials.' }, 500)
-        }
-        if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
-          return c.json({ error: 'Repository not found or access denied' }, 500)
-        }
-        return c.json({ error: `Failed to clone repository: ${errorMessage}` }, 500)
-      }
-
-      const displayName = repoName
-      const repoId = nanoid()
-
-      db.insert(repositories)
-        .values({
-          id: repoId,
-          path: targetPath,
-          displayName,
-          remoteUrl: body.url,
-          startupScript: null,
-          copyFiles: null,
-          isCopierTemplate: false,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run()
-
-      repo = db.select().from(repositories).where(eq(repositories.id, repoId)).get()
     }
 
-    if (!repo) {
-      return c.json({ error: 'Failed to create or find repository' }, 500)
-    }
-
-    // Check if project already exists for this repository
-    const existingProject = db.select().from(projects).where(eq(projects.repositoryId, repo.id)).get()
-    if (existingProject) {
-      return c.json({ error: 'Project already exists for this repository' }, 400)
-    }
-
-    // Check if there's an app linked to this repository
-    const linkedApp = db.select().from(apps).where(eq(apps.repositoryId, repo.id)).get()
+    // Check if there's an app linked to this repository (if repo exists)
+    const linkedApp = repo
+      ? db.select().from(apps).where(eq(apps.repositoryId, repo.id)).get()
+      : null
 
     // Create project
     const projectId = nanoid()
@@ -547,7 +548,7 @@ app.post('/', async (c) => {
         id: projectId,
         name: body.name,
         description: body.description ?? null,
-        repositoryId: repo.id,
+        repositoryId: repo?.id ?? null,
         appId: linkedApp?.id ?? null,
         terminalTabId: null,
         status: 'active',
@@ -556,6 +557,53 @@ app.post('/', async (c) => {
         updatedAt: now,
       })
       .run()
+
+    // If repo exists, add it to the join table
+    if (repo) {
+      db.insert(projectRepositories)
+        .values({
+          id: nanoid(),
+          projectId,
+          repositoryId: repo.id,
+          isPrimary: true,
+          createdAt: now,
+        })
+        .run()
+    }
+
+    // Add tags if provided
+    if (body.tags && body.tags.length > 0) {
+      for (const tagName of body.tags) {
+        const name = tagName.trim()
+        if (!name) continue
+
+        // Find or create tag
+        let tag = db.select().from(tags).where(eq(tags.name, name)).get()
+        if (!tag) {
+          const tagId = nanoid()
+          db.insert(tags)
+            .values({
+              id: tagId,
+              name,
+              color: null,
+              createdAt: now,
+            })
+            .run()
+          tag = db.select().from(tags).where(eq(tags.id, tagId)).get()
+        }
+
+        if (tag) {
+          db.insert(projectTags)
+            .values({
+              id: nanoid(),
+              projectId,
+              tagId: tag.id,
+              createdAt: now,
+            })
+            .run()
+        }
+      }
+    }
 
     // Fetch and return the created project
     const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
@@ -568,7 +616,7 @@ app.post('/', async (c) => {
       : []
 
     return c.json(
-      buildProjectWithDetails(project, repo, linkedApp ?? null, services, null),
+      buildProjectWithDetails(project, repo ?? null, linkedApp ?? null, services, null),
       201
     )
   } catch (err) {
@@ -1127,6 +1175,11 @@ app.get('/:id/repositories', (c) => {
 })
 
 // POST /api/projects/:id/repositories - Add a repository to a project
+// Supports multiple modes:
+// - repositoryId: Link existing repository
+// - path: Create from local path
+// - url: Clone from URL
+// - moveFromProject: If repo is in another project, move it here
 app.post('/:id/repositories', async (c) => {
   const projectId = c.req.param('id')
 
@@ -1136,34 +1189,203 @@ app.post('/:id/repositories', async (c) => {
       return c.json({ error: 'Project not found' }, 404)
     }
 
-    const body = await c.req.json<{ repositoryId: string; isPrimary?: boolean }>()
-    if (!body.repositoryId) {
-      return c.json({ error: 'repositoryId is required' }, 400)
+    const body = await c.req.json<{
+      // Option 1: Link existing repository
+      repositoryId?: string
+      // Option 2: Create from local path
+      path?: string
+      // Option 3: Clone from URL
+      url?: string
+      targetDir?: string
+      folderName?: string
+      // Common options
+      isPrimary?: boolean
+      moveFromProject?: boolean // If true, move repo from its current project
+    }>()
+
+    const { expandPath } = await import('../lib/settings')
+    const now = new Date().toISOString()
+    let repo: typeof repositories.$inferSelect | undefined
+
+    // Check which mode we're in
+    const options = [body.repositoryId, body.path, body.url].filter(Boolean)
+    if (options.length === 0) {
+      return c.json({ error: 'Must provide repositoryId, path, or url' }, 400)
+    }
+    if (options.length > 1) {
+      return c.json({ error: 'Provide only one of: repositoryId, path, or url' }, 400)
     }
 
-    // Verify repository exists
-    const repo = db.select().from(repositories).where(eq(repositories.id, body.repositoryId)).get()
+    if (body.repositoryId) {
+      // Option 1: Link existing repository
+      repo = db.select().from(repositories).where(eq(repositories.id, body.repositoryId)).get()
+      if (!repo) {
+        return c.json({ error: 'Repository not found' }, 404)
+      }
+    } else if (body.path) {
+      // Option 2: Create from local path
+      const repoPath = expandPath(body.path)
+
+      if (!existsSync(repoPath)) {
+        return c.json({ error: `Directory does not exist: ${repoPath}` }, 400)
+      }
+
+      // Check if repository already exists at this path
+      repo = db.select().from(repositories).where(eq(repositories.path, repoPath)).get()
+
+      if (!repo) {
+        // Create new repository record
+        const displayName = repoPath.split('/').pop() || 'repo'
+        const repoId = nanoid()
+
+        db.insert(repositories)
+          .values({
+            id: repoId,
+            path: repoPath,
+            displayName,
+            startupScript: null,
+            copyFiles: null,
+            isCopierTemplate: false,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        repo = db.select().from(repositories).where(eq(repositories.id, repoId)).get()
+      }
+    } else if (body.url) {
+      // Option 3: Clone from URL
+      const { isGitUrl, extractRepoNameFromUrl } = await import('../lib/git-utils')
+      const { getSettings } = await import('../lib/settings')
+      const { execSync } = await import('node:child_process')
+      const { mkdirSync, rmSync } = await import('node:fs')
+      const { homedir } = await import('node:os')
+
+      if (!isGitUrl(body.url)) {
+        return c.json({ error: 'Invalid git URL format' }, 400)
+      }
+
+      const settings = getSettings()
+      let parentDir = body.targetDir?.trim() || settings.paths.defaultGitReposDir
+      parentDir = expandPath(parentDir)
+
+      const home = homedir()
+      if (resolve(parentDir) === home) {
+        return c.json({ error: 'Cannot clone directly into home directory. Please specify a subdirectory.' }, 400)
+      }
+
+      const repoName = body.folderName?.trim() || extractRepoNameFromUrl(body.url)
+      if (!repoName || repoName === '.' || repoName === '..') {
+        return c.json({ error: 'Invalid folder name' }, 400)
+      }
+      if (repoName.includes('/') || repoName.includes('\\')) {
+        return c.json({ error: 'Folder name cannot contain path separators' }, 400)
+      }
+
+      const targetPath = join(parentDir, repoName)
+      const resolvedParent = resolve(parentDir)
+      const resolvedTarget = resolve(targetPath)
+
+      if (!resolvedTarget.startsWith(resolvedParent + '/') && resolvedTarget !== resolvedParent) {
+        return c.json({ error: 'Invalid target path' }, 400)
+      }
+
+      if (existsSync(targetPath)) {
+        return c.json({ error: `Directory already exists: ${targetPath}` }, 400)
+      }
+
+      // Check for duplicate path in database
+      const existingRepo = db.select().from(repositories).where(eq(repositories.path, targetPath)).get()
+      if (existingRepo) {
+        return c.json({ error: 'Repository with this path already exists in database' }, 400)
+      }
+
+      if (!existsSync(parentDir)) {
+        mkdirSync(parentDir, { recursive: true })
+      }
+
+      // Clone the repository
+      try {
+        execSync(`git clone "${body.url}" "${targetPath}"`, {
+          encoding: 'utf-8',
+          stdio: 'pipe',
+          timeout: 120000,
+        })
+      } catch (cloneErr) {
+        if (existsSync(targetPath) && resolvedTarget.startsWith(resolvedParent + '/')) {
+          rmSync(targetPath, { recursive: true, force: true })
+        }
+        const errorMessage = cloneErr instanceof Error ? cloneErr.message : 'Clone failed'
+        if (errorMessage.includes('Permission denied') || errorMessage.includes('publickey')) {
+          return c.json({ error: 'Authentication failed. Check your SSH keys or use HTTPS with credentials.' }, 500)
+        }
+        if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+          return c.json({ error: 'Repository not found or access denied' }, 500)
+        }
+        return c.json({ error: `Failed to clone repository: ${errorMessage}` }, 500)
+      }
+
+      const displayName = repoName
+      const repoId = nanoid()
+
+      db.insert(repositories)
+        .values({
+          id: repoId,
+          path: targetPath,
+          displayName,
+          remoteUrl: body.url,
+          startupScript: null,
+          copyFiles: null,
+          isCopierTemplate: false,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      repo = db.select().from(repositories).where(eq(repositories.id, repoId)).get()
+    }
+
     if (!repo) {
-      return c.json({ error: 'Repository not found' }, 404)
+      return c.json({ error: 'Failed to create or find repository' }, 500)
     }
 
-    // Check if already linked
-    const existing = db
+    // Check if already linked to this project
+    const existingLink = db
       .select()
       .from(projectRepositories)
       .where(
         and(
           eq(projectRepositories.projectId, projectId),
-          eq(projectRepositories.repositoryId, body.repositoryId)
+          eq(projectRepositories.repositoryId, repo.id)
         )
       )
       .get()
 
-    if (existing) {
+    if (existingLink) {
       return c.json({ error: 'Repository already linked to this project' }, 400)
     }
 
-    const now = new Date().toISOString()
+    // Check if repo is linked to another project
+    const otherProjectLink = db
+      .select()
+      .from(projectRepositories)
+      .where(eq(projectRepositories.repositoryId, repo.id))
+      .get()
+
+    if (otherProjectLink && otherProjectLink.projectId !== projectId) {
+      if (body.moveFromProject) {
+        // Remove from previous project
+        db.delete(projectRepositories).where(eq(projectRepositories.id, otherProjectLink.id)).run()
+        broadcast({ type: 'project:updated', payload: { projectId: otherProjectLink.projectId } })
+      } else {
+        // Return info about the conflict
+        const otherProject = db.select().from(projects).where(eq(projects.id, otherProjectLink.projectId)).get()
+        return c.json({
+          error: 'Repository belongs to another project',
+          conflictProject: otherProject ? { id: otherProject.id, name: otherProject.name } : null,
+        }, 409)
+      }
+    }
 
     // If setting as primary, unset other primaries first
     if (body.isPrimary) {
@@ -1176,7 +1398,7 @@ app.post('/:id/repositories', async (c) => {
     const newLink = {
       id: nanoid(),
       projectId,
-      repositoryId: body.repositoryId,
+      repositoryId: repo.id,
       isPrimary: body.isPrimary ?? false,
       createdAt: now,
     }
@@ -1191,16 +1413,27 @@ app.post('/:id/repositories', async (c) => {
 
     broadcast({ type: 'project:updated', payload: { projectId } })
 
-    return c.json(newLink, 201)
+    // Return full repository details
+    return c.json({
+      ...newLink,
+      repository: {
+        id: repo.id,
+        path: repo.path,
+        displayName: repo.displayName,
+      },
+    }, 201)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to add repository' }, 400)
   }
 })
 
 // DELETE /api/projects/:id/repositories/:repoId - Remove a repository from a project
+// Query params:
+// - deleteRecord=true: Also delete the repository record (not just unlink)
 app.delete('/:id/repositories/:repoId', (c) => {
   const projectId = c.req.param('id')
   const repoId = c.req.param('repoId')
+  const deleteRecord = c.req.query('deleteRecord') === 'true'
 
   const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
   if (!project) {
@@ -1222,7 +1455,20 @@ app.delete('/:id/repositories/:repoId', (c) => {
     return c.json({ error: 'Repository not linked to this project' }, 404)
   }
 
+  // Remove the link
   db.delete(projectRepositories).where(eq(projectRepositories.id, link.id)).run()
+
+  // Optionally delete the repository record
+  if (deleteRecord) {
+    // Also clear the legacy repositoryId if it matches
+    if (project.repositoryId === repoId) {
+      db.update(projects)
+        .set({ repositoryId: null, updatedAt: new Date().toISOString() })
+        .where(eq(projects.id, projectId))
+        .run()
+    }
+    db.delete(repositories).where(eq(repositories.id, repoId)).run()
+  }
 
   const now = new Date().toISOString()
   db.update(projects)
@@ -1231,8 +1477,9 @@ app.delete('/:id/repositories/:repoId', (c) => {
     .run()
 
   broadcast({ type: 'project:updated', payload: { projectId } })
+  broadcast({ type: 'repositories:updated' })
 
-  return c.json({ success: true })
+  return c.json({ success: true, deleted: deleteRecord })
 })
 
 // PATCH /api/projects/:id/repositories/:repoId - Update repository link (e.g., set as primary)
