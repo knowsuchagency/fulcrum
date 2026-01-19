@@ -415,7 +415,7 @@ function ProjectDetailView() {
       <ScrollArea className="flex-1 min-h-0">
         <div className="max-w-5xl mx-auto px-6 py-6 space-y-8 pb-12">
           {/* Top section: Repositories + Sidebar (Tags & Notes) */}
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-start gap-6">
             {/* Repositories Section - Left side */}
             <section className="flex-1 space-y-4 min-w-0">
               <div className="flex items-center justify-between">
@@ -439,7 +439,11 @@ function ProjectDetailView() {
             </section>
 
             {/* Sidebar - Right side (Tags & Notes) */}
-            <aside className="w-full lg:w-72 shrink-0 space-y-6">
+            <aside className="w-full lg:w-72 shrink-0 space-y-4">
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                Details
+              </h2>
+
               {/* Tags */}
               <ProjectTagsManager projectId={projectId} tags={project.tags || []} />
 
@@ -480,7 +484,7 @@ function ProjectDetailView() {
                     </div>
                   </div>
                 ) : project.notes ? (
-                  <div className="text-sm whitespace-pre-wrap text-muted-foreground">
+                  <div className="max-h-12 overflow-y-auto text-sm whitespace-pre-wrap text-muted-foreground">
                     {project.notes}
                   </div>
                 ) : (

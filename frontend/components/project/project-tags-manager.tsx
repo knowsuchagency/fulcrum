@@ -104,7 +104,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
         {tags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
-              <Badge key={tag.id} variant="secondary">
+              <Badge key={tag.id} variant="default">
                 {tag.name}
               </Badge>
             ))}
@@ -139,7 +139,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
-            <Badge key={tag.id} variant="secondary" className="pr-1 gap-1">
+            <Badge key={tag.id} variant="default" className="pr-1 gap-1">
               {tag.name}
               <button
                 onClick={() => handleRemoveTag(tag.id)}
