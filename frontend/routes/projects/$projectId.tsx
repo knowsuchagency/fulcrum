@@ -32,7 +32,6 @@ import {
   Delete02Icon,
   Cancel01Icon,
   Folder01Icon,
-  TaskAdd01Icon,
   VisualStudioCodeIcon,
   Tick02Icon,
   Settings05Icon,
@@ -396,10 +395,6 @@ function ProjectDetailView() {
         >
           <HugeiconsIcon icon={Folder01Icon} size={14} data-slot="icon" />
           <span className="max-sm:hidden">{t('addRepo')}</span>
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setTaskModalOpen(true)}>
-          <HugeiconsIcon icon={TaskAdd01Icon} size={14} data-slot="icon" />
-          <span className="max-sm:hidden">{t('createTask')}</span>
         </Button>
         <Button
           variant="ghost"
