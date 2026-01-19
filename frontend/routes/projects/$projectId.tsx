@@ -260,6 +260,7 @@ function ProjectDetailView() {
   const updateProject = useUpdateProject()
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState('')
@@ -436,6 +437,7 @@ function ProjectDetailView() {
   }, [])
 
   const handleDelete = async () => {
+    setIsDeleting(true)
     try {
       await deleteProject.mutateAsync({
         id: projectId,
@@ -443,11 +445,13 @@ function ProjectDetailView() {
         deleteApp: false,
       })
       toast.success(t('delete.success'))
+      setShowDeleteConfirm(false)
       navigate({ to: '/projects' })
     } catch (err) {
       toast.error(t('delete.error'), {
         description: err instanceof Error ? err.message : 'Unknown error',
       })
+      setIsDeleting(false)
     }
   }
 
@@ -737,7 +741,7 @@ function ProjectDetailView() {
       />
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !isDeleting && setShowDeleteConfirm(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('delete.title')}</AlertDialogTitle>
@@ -746,12 +750,20 @@ function ProjectDetailView() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('delete.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t('delete.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {t('delete.confirm')}
+              {isDeleting ? (
+                <>
+                  <HugeiconsIcon icon={Loading03Icon} size={14} className="animate-spin" data-slot="icon" />
+                  {t('delete.deleting')}
+                </>
+              ) : (
+                t('delete.confirm')
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
