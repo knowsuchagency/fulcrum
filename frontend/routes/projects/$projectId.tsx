@@ -417,43 +417,45 @@ function ProjectDetailView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-4 py-2">
-        {isEditingName ? (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Input
-              ref={nameInputRef}
-              value={editedName}
-              onChange={(e) => setEditedName(e.target.value)}
-              onKeyDown={handleNameKeyDown}
-              onBlur={handleSaveName}
-              className="font-semibold h-8"
-              autoFocus
-            />
-            <Button variant="ghost" size="sm" onClick={handleSaveName}>
-              <HugeiconsIcon icon={Tick02Icon} size={16} />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleCancelEditName}>
-              <HugeiconsIcon icon={Cancel01Icon} size={16} />
-            </Button>
-          </div>
-        ) : (
-          <h1
-            className="font-semibold cursor-pointer hover:text-primary transition-colors truncate"
-            onClick={handleStartEditName}
-            title="Click to edit"
+      <div className="shrink-0 border-b border-border bg-background">
+        <div className="max-w-5xl mx-auto px-6 py-2 flex items-center gap-2">
+          {isEditingName ? (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Input
+                ref={nameInputRef}
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={handleNameKeyDown}
+                onBlur={handleSaveName}
+                className="font-semibold h-8"
+                autoFocus
+              />
+              <Button variant="ghost" size="sm" onClick={handleSaveName}>
+                <HugeiconsIcon icon={Tick02Icon} size={16} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleCancelEditName}>
+                <HugeiconsIcon icon={Cancel01Icon} size={16} />
+              </Button>
+            </div>
+          ) : (
+            <h1
+              className="font-semibold cursor-pointer hover:text-primary transition-colors truncate"
+              onClick={handleStartEditName}
+              title="Click to edit"
+            >
+              {project.name}
+            </h1>
+          )}
+          <div className="flex-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-muted-foreground hover:text-destructive"
           >
-            {project.name}
-          </h1>
-        )}
-        <div className="flex-1" />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowDeleteConfirm(true)}
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <HugeiconsIcon icon={Delete02Icon} size={14} data-slot="icon" />
-        </Button>
+            <HugeiconsIcon icon={Delete02Icon} size={14} data-slot="icon" />
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
