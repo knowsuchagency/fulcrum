@@ -50,6 +50,7 @@ import { toast } from 'sonner'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { cn } from '@/lib/utils'
 import { ProjectTagsManager } from '@/components/project/project-tags-manager'
+import { ProjectDescriptionEditor } from '@/components/project/project-description-editor'
 import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
 import { BulkAddRepositoriesModal } from '@/components/projects/bulk-add-repositories-modal'
 import { RemoveRepositoryDialog } from '@/components/projects/remove-repository-dialog'
@@ -562,11 +563,14 @@ function ProjectDetailView() {
               )}
             </section>
 
-            {/* Sidebar - Right side (Tags & Notes) */}
+            {/* Sidebar - Right side (Description, Tags & Notes) */}
             <aside className="w-full lg:w-72 shrink-0 space-y-4">
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 Details
               </h2>
+
+              {/* Description */}
+              <ProjectDescriptionEditor projectId={projectId} description={project.description} />
 
               {/* Tags */}
               <ProjectTagsManager projectId={projectId} tags={project.tags || []} />

@@ -67,6 +67,13 @@ function ProjectCard({
             {project.name}
           </span>
 
+          {/* Description */}
+          {project.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {project.description}
+            </p>
+          )}
+
           {/* Tags */}
           {project.tags && project.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
