@@ -32,7 +32,6 @@ import {
   Delete02Icon,
   Cancel01Icon,
   Folder01Icon,
-  VisualStudioCodeIcon,
   Tick02Icon,
   Settings05Icon,
   WindowsOldIcon,
@@ -46,8 +45,6 @@ import {
 import type { ProjectRepositoryDetails, Task, TaskStatus } from '@/types'
 import { toast } from 'sonner'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
-import { useEditorApp, useEditorHost, useEditorSshPort } from '@/hooks/use-config'
-import { buildEditorUrl, openExternalUrl } from '@/lib/editor-url'
 import { cn } from '@/lib/utils'
 import { ProjectTagsManager } from '@/components/project/project-tags-manager'
 import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
@@ -70,19 +67,21 @@ function RepositoryCard({
 }: {
   repository: ProjectRepositoryDetails
 }) {
-  const { t } = useTranslation('projects')
   const navigate = useNavigate()
-  const { data: editorApp } = useEditorApp()
-  const { data: editorHost } = useEditorHost()
-  const { data: editorSshPort } = useEditorSshPort()
 
-  const handleOpenEditor = () => {
-    const url = buildEditorUrl(repository.path, editorApp, editorHost, editorSshPort)
-    openExternalUrl(url)
+  const handleCardClick = () => {
+    navigate({
+      to: '/repositories/$repoId',
+      params: { repoId: repository.id },
+      search: { tab: 'settings' },
+    })
   }
 
   return (
-    <Card className="group transition-colors hover:border-foreground/20">
+    <Card
+      className="group transition-colors hover:border-foreground/20 cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardContent className="py-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
@@ -102,20 +101,30 @@ function RepositoryCard({
           <Button
             variant="outline"
             size="sm"
-            onClick={handleOpenEditor}
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate({
+                to: '/repositories/$repoId',
+                params: { repoId: repository.id },
+                search: { tab: 'settings' },
+              })
+            }}
             className="text-muted-foreground hover:text-foreground"
           >
-            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{t('editor')}</span>
+            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Task Settings</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate({
-              to: '/repositories/$repoId',
-              params: { repoId: repository.id },
-              search: { tab: 'workspace' },
-            })}
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate({
+                to: '/repositories/$repoId',
+                params: { repoId: repository.id },
+                search: { tab: 'workspace' },
+              })
+            }}
             className="text-muted-foreground hover:text-foreground"
           >
             <HugeiconsIcon icon={WindowsOldIcon} size={14} strokeWidth={2} data-slot="icon" />
@@ -124,28 +133,18 @@ function RepositoryCard({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate({
-              to: '/repositories/$repoId',
-              params: { repoId: repository.id },
-              search: { tab: 'deploy' },
-            })}
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate({
+                to: '/repositories/$repoId',
+                params: { repoId: repository.id },
+                search: { tab: 'deploy' },
+              })
+            }}
             className="text-muted-foreground hover:text-foreground"
           >
             <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
             <span className="max-sm:hidden">Deploy</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate({
-              to: '/repositories/$repoId',
-              params: { repoId: repository.id },
-              search: { tab: 'settings' },
-            })}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">Settings</span>
           </Button>
         </div>
       </CardContent>
