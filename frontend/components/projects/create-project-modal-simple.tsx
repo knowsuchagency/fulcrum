@@ -22,16 +22,19 @@ import {
   Add01Icon,
 } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
-import type { TagWithUsage } from '@shared/types'
+import type { TagWithUsage, ProjectWithDetails } from '@shared/types'
 
 interface CreateProjectModalSimpleProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Called when a project is successfully created. If provided, navigation will be skipped. */
+  onCreated?: (project: ProjectWithDetails) => void
 }
 
 export function CreateProjectModalSimple({
   open,
   onOpenChange,
+  onCreated,
 }: CreateProjectModalSimpleProps) {
   const { t } = useTranslation('projects')
   const navigate = useNavigate()
@@ -125,7 +128,12 @@ export function CreateProjectModalSimple({
       })
 
       onOpenChange(false)
-      navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
+
+      if (onCreated) {
+        onCreated(project)
+      } else {
+        navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project')
     }
