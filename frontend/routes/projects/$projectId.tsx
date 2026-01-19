@@ -545,21 +545,32 @@ function ProjectDetailView() {
                       {repoSelectionMode ? 'Cancel' : 'Select'}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBulkAddModalOpen(true)}
-                    className="h-7 text-xs"
-                  >
-                    <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
-                    {t('linkRepo')}
-                  </Button>
+                  {project.repositories.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBulkAddModalOpen(true)}
+                      className="h-7 text-xs"
+                    >
+                      <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
+                      {t('linkRepo')}
+                    </Button>
+                  )}
                 </div>
               </div>
               {project.repositories.length === 0 ? (
                 <Card className="border-dashed">
                   <CardContent className="py-8 text-center text-muted-foreground">
                     <p className="text-sm">No repositories linked to this project.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBulkAddModalOpen(true)}
+                      className="mt-4"
+                    >
+                      <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
+                      {t('linkRepo')}
+                    </Button>
                   </CardContent>
                 </Card>
               ) : (
