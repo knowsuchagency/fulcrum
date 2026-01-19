@@ -76,7 +76,7 @@ function ProjectCard({
   return (
     <Card className="h-full group transition-colors hover:border-foreground/20">
       <Link to="/projects/$projectId" params={{ projectId: project.id }} className="block">
-        <CardContent className="flex flex-col gap-3 py-4">
+        <CardContent className="flex flex-col items-start gap-3 py-4">
           {/* Project Name */}
           <span className="truncate font-medium group-hover:text-primary transition-colors">
             {project.name}
@@ -117,9 +117,9 @@ function ProjectCard({
         </CardContent>
       </Link>
 
-      <CardContent className="pt-0 pb-4 px-6">
+      <CardContent className="flex flex-col items-start pt-0 pb-4">
         {/* Action buttons row */}
-        <div className="mt-auto flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1">
           {/* New Task */}
           <Button
             variant="outline"
@@ -187,7 +187,7 @@ function RepositoryCard({
   return (
     <Card className="h-full group transition-colors hover:border-foreground/20">
       <Link {...detailLink} className="block">
-        <CardContent className="flex flex-col gap-3 py-4">
+        <CardContent className="flex flex-col items-start gap-3 py-4">
           {/* Header: Name */}
           <div className="flex items-center gap-2">
             <span className="truncate font-medium group-hover:text-primary transition-colors">
@@ -214,9 +214,9 @@ function RepositoryCard({
         </CardContent>
       </Link>
 
-      <CardContent className="pt-0 pb-4 px-6">
+      <CardContent className="flex flex-col items-start pt-0 pb-4">
         {/* Action buttons row */}
-        <div className="mt-auto flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1">
           {/* Editor */}
           <Button
             variant="outline"
