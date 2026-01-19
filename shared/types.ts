@@ -274,6 +274,7 @@ export interface CreateProjectRequest {
   answers: Record<string, unknown>
   projectName: string
   trust?: boolean // Trust template for unsafe features (tasks, migrations)
+  existingProjectId?: string // If provided, link repo to this project instead of creating a new one
 }
 
 export interface CreateProjectResponse {

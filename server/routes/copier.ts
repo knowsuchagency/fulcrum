@@ -225,7 +225,7 @@ app.post('/create', async (c) => {
     }
 
     const body = await c.req.json<CreateProjectRequest>()
-    const { templateSource, outputPath: rawOutputPath, answers, projectName, trust } = body
+    const { templateSource, outputPath: rawOutputPath, answers, projectName, trust, existingProjectId } = body
 
     // Validate inputs
     if (!templateSource || !rawOutputPath || !projectName) {
@@ -319,29 +319,49 @@ app.post('/create', async (c) => {
     // Check if there's an app linked to this repository (unlikely for new template)
     const linkedApp = db.select().from(apps).where(eq(apps.repositoryId, newRepoId)).get()
 
-    // Create project (without a dedicated terminal tab - use "All Projects" virtual tab instead)
-    const projectId = nanoid()
-    db.insert(projects)
-      .values({
-        id: projectId,
-        name: projectName,
-        description: null,
-        repositoryId: newRepoId,
-        appId: linkedApp?.id ?? null,
-        terminalTabId: null,
-        status: 'active',
-        lastAccessedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run()
+    let projectId: string
 
-    log.api.info('Created project from template', {
-      templatePath,
-      outputPath: fullOutputPath,
-      repositoryId: newRepoId,
-      projectId,
-    })
+    if (existingProjectId) {
+      // Link to existing project instead of creating a new one
+      projectId = existingProjectId
+
+      // Update existing project's repositoryId (legacy field)
+      db.update(projects)
+        .set({ repositoryId: newRepoId, updatedAt: now })
+        .where(eq(projects.id, existingProjectId))
+        .run()
+
+      log.api.info('Linked template repo to existing project', {
+        templatePath,
+        outputPath: fullOutputPath,
+        repositoryId: newRepoId,
+        projectId,
+      })
+    } else {
+      // Create new project (without a dedicated terminal tab - use "All Projects" virtual tab instead)
+      projectId = nanoid()
+      db.insert(projects)
+        .values({
+          id: projectId,
+          name: projectName,
+          description: null,
+          repositoryId: newRepoId,
+          appId: linkedApp?.id ?? null,
+          terminalTabId: null,
+          status: 'active',
+          lastAccessedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      log.api.info('Created project from template', {
+        templatePath,
+        outputPath: fullOutputPath,
+        repositoryId: newRepoId,
+        projectId,
+      })
+    }
 
     const response: CreateProjectResponse = {
       success: true,

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   useCopierTemplates,
@@ -121,6 +122,7 @@ export function AddRepositoryModal({
   initialTab = 'clone',
 }: AddRepositoryModalProps) {
   const { t } = useTranslation('repositories')
+  const queryClient = useQueryClient()
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const { data: projects } = useProjects()
   const addRepositoryMutation = useAddRepositoryToProject()
@@ -464,8 +466,8 @@ export function AddRepositoryModal({
     setTemplateError(null)
     setProjectError(null)
     try {
-      // First create the repository from template via copier API
-      const result = await fetchJSON<{ projectId: string; repositoryId: string; path: string }>(
+      // Create the repository from template and link to the selected project
+      await fetchJSON<{ projectId: string; repositoryId: string; path: string }>(
         '/api/copier/create',
         {
           method: 'POST',
@@ -475,15 +477,16 @@ export function AddRepositoryModal({
             answers,
             projectName: templateProjectName,
             trust: shouldTrust,
+            existingProjectId: projectId, // Link repo to selected project
           }),
         }
       )
 
-      // Then link the repository to this project
-      await addRepositoryMutation.mutateAsync({
-        projectId,
-        repositoryId: result.repositoryId,
-      })
+      // Invalidate queries to refresh the UI
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['repositories'] }),
+      ])
 
       onOpenChange(false)
     } catch (err) {
