@@ -88,7 +88,7 @@ function ProjectCard({
               {project.tags.slice(0, 3).map((tag) => (
                 <Badge
                   key={tag.id}
-                  variant="secondary"
+                  variant="default"
                   className="text-[10px] px-1.5 py-0"
                   style={tag.color ? { backgroundColor: tag.color, color: '#fff' } : undefined}
                 >
@@ -96,7 +96,7 @@ function ProjectCard({
                 </Badge>
               ))}
               {project.tags.length > 3 && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                <Badge variant="default" className="text-[10px] px-1.5 py-0">
                   +{project.tags.length - 3}
                 </Badge>
               )}
