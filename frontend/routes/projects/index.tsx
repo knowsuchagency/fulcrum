@@ -459,7 +459,7 @@ function ProjectsView() {
   const handleDeleteRepository = async () => {
     if (!deleteRepoState) return
     try {
-      await deleteRepository.mutateAsync(deleteRepoState.id)
+      await deleteRepository.mutateAsync({ id: deleteRepoState.id })
       toast.success('Repository removed')
     } catch (err) {
       toast.error('Failed to delete repository', {

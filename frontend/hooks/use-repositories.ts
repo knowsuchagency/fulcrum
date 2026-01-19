@@ -43,18 +43,32 @@ export function useUpdateRepository() {
   })
 }
 
-// Note: Repository deletion is only allowed for orphaned repositories (not linked to any project).
-// Use DELETE /api/projects/:id to delete a project and its repository together.
+// Delete repository with options
 export function useDeleteRepository() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) =>
-      fetchJSON<{ success: boolean }>(`${API_BASE}/api/repositories/${id}`, {
-        method: 'DELETE',
-      }),
+    mutationFn: ({
+      id,
+      deleteDirectory = false,
+      deleteApp = false,
+    }: {
+      id: string
+      deleteDirectory?: boolean
+      deleteApp?: boolean
+    }) => {
+      const params = new URLSearchParams()
+      if (deleteDirectory) params.set('deleteDirectory', 'true')
+      if (deleteApp) params.set('deleteApp', 'true')
+      const query = params.toString()
+      return fetchJSON<{ success: boolean }>(
+        `${API_BASE}/api/repositories/${id}${query ? `?${query}` : ''}`,
+        { method: 'DELETE' }
+      )
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
+      queryClient.invalidateQueries({ queryKey: ['apps'] })
     },
   })
 }

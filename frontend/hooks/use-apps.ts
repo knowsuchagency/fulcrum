@@ -69,6 +69,43 @@ export function useCreateApp() {
   })
 }
 
+// Create app for repository (simplified - auto-detects settings)
+export function useCreateAppForRepository() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      repositoryId,
+      name,
+      branch,
+      composeFile,
+      autoDeployEnabled,
+    }: {
+      repositoryId: string
+      name?: string
+      branch?: string
+      composeFile?: string
+      autoDeployEnabled?: boolean
+    }) =>
+      fetchJSON<AppWithServices>(`${API_BASE}/api/apps`, {
+        method: 'POST',
+        body: JSON.stringify({
+          repositoryId,
+          name: name ?? repositoryId, // Use repo ID as default name
+          branch,
+          composeFile,
+          autoDeployEnabled,
+          services: [], // Will be populated by sync-services after creation
+        }),
+      }),
+    onSuccess: (_, { repositoryId }) => {
+      queryClient.invalidateQueries({ queryKey: ['apps'] })
+      queryClient.invalidateQueries({ queryKey: ['apps', 'repository', repositoryId] })
+      queryClient.invalidateQueries({ queryKey: ['repositories'] })
+    },
+  })
+}
+
 // Update app
 export function useUpdateApp() {
   const queryClient = useQueryClient()
