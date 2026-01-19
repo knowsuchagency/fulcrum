@@ -52,7 +52,7 @@ import { cn } from '@/lib/utils'
 import { ProjectTagsManager } from '@/components/project/project-tags-manager'
 import { ProjectDescriptionEditor } from '@/components/project/project-description-editor'
 import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
-import { BulkAddRepositoriesModal } from '@/components/projects/bulk-add-repositories-modal'
+import { LinkRepositoriesModal } from '@/components/projects/link-repositories-modal'
 import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
 import { RemoveRepositoryDialog } from '@/components/projects/remove-repository-dialog'
 
@@ -259,7 +259,7 @@ function ProjectDetailView() {
   const [archiveOpen, setArchiveOpen] = useState(false)
 
   // Repository modal states
-  const [bulkAddModalOpen, setBulkAddModalOpen] = useState(false)
+  const [linkRepoModalOpen, setBulkAddModalOpen] = useState(false)
   const [addRepoModalOpen, setAddRepoModalOpen] = useState(false)
   const [removeRepoDialog, setRemoveRepoDialog] = useState<{
     open: boolean
@@ -270,12 +270,12 @@ function ProjectDetailView() {
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const addRepo = params.get('addRepo')
-    if (addRepo === 'true' && !bulkAddModalOpen) {
+    if (addRepo === 'true' && !linkRepoModalOpen) {
       setBulkAddModalOpen(true)
       // Clear the search param after opening modal
       navigate({ to: '/projects/$projectId', params: { projectId }, replace: true })
     }
-  }, [location.search, bulkAddModalOpen, navigate, projectId])
+  }, [location.search, linkRepoModalOpen, navigate, projectId])
 
   // Update last accessed when viewing project
   useEffect(() => {
@@ -732,8 +732,8 @@ function ProjectDetailView() {
       />
 
       {/* Bulk Add Repositories Modal */}
-      <BulkAddRepositoriesModal
-        open={bulkAddModalOpen}
+      <LinkRepositoriesModal
+        open={linkRepoModalOpen}
         onOpenChange={setBulkAddModalOpen}
         projectId={projectId}
         projectName={project.name}

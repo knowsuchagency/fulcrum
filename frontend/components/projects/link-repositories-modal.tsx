@@ -20,7 +20,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 
-interface BulkAddRepositoriesModalProps {
+interface LinkRepositoriesModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
@@ -35,12 +35,12 @@ interface RepoWithProject {
   projectName: string | null
 }
 
-export function BulkAddRepositoriesModal({
+export function LinkRepositoriesModal({
   open,
   onOpenChange,
   projectId,
   projectName,
-}: BulkAddRepositoriesModalProps) {
+}: LinkRepositoriesModalProps) {
   const { data: repositories } = useRepositories()
   const { data: projects } = useProjects()
   const addRepositoryMutation = useAddRepositoryToProject()
@@ -145,9 +145,9 @@ export function BulkAddRepositoriesModal({
     setIsAdding(false)
 
     if (failed > 0) {
-      toast.error(`Added ${added} repositories, ${failed} failed`)
+      toast.error(`Linked ${added} repositories, ${failed} failed`)
     } else {
-      toast.success(`Added ${added} ${added === 1 ? 'repository' : 'repositories'}`)
+      toast.success(`Linked ${added} ${added === 1 ? 'repository' : 'repositories'}`)
       onOpenChange(false)
     }
   }
@@ -165,7 +165,7 @@ export function BulkAddRepositoriesModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl max-h-[80dvh] flex flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Add Repositories to "{projectName}"</DialogTitle>
+          <DialogTitle>Link Repositories to "{projectName}"</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col min-h-0 space-y-4">
@@ -295,10 +295,10 @@ export function BulkAddRepositoriesModal({
                       strokeWidth={2}
                       className="animate-spin"
                     />
-                    Adding...
+                    Linking...
                   </>
                 ) : (
-                  `Add ${selectedRepoIds.size} ${selectedRepoIds.size === 1 ? 'Repository' : 'Repositories'}`
+                  `Link ${selectedRepoIds.size} ${selectedRepoIds.size === 1 ? 'Repository' : 'Repositories'}`
                 )}
               </Button>
             </div>
