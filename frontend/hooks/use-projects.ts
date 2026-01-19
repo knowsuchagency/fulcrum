@@ -186,10 +186,12 @@ export function useDeleteProject() {
         method: 'DELETE',
       })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['repositories'] })
-      queryClient.invalidateQueries({ queryKey: ['apps'] })
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['repositories'] }),
+        queryClient.invalidateQueries({ queryKey: ['apps'] }),
+      ])
     },
   })
 }

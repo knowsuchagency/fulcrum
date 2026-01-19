@@ -29,8 +29,14 @@
   "delete": {
     "title": "删除项目",
     "description": "这将删除项目「{{name}}」。",
+    "confirmText": "确定要删除「{{name}}」吗？此操作无法撤销。",
     "button": "删除",
+    "confirm": "删除",
+    "cancel": "取消",
+    "success": "项目已删除",
+    "error": "删除项目失败",
     "deleting": "删除中...",
+    "reposWarning": "此项目有 {{count}} 个关联的仓库。删除项目将取消关联。",
     "alsoDeleteDirectory": "同时删除目录",
     "alsoDeleteApp": "同时删除应用并停止容器"
   },

@@ -697,17 +697,17 @@ app.delete('/:id', async (c) => {
     db.delete(apps).where(eq(apps.id, existing.appId)).run()
   }
 
-  // Get repository path before deleting
+  // Get repository path for optional directory deletion
   let repoPath: string | null = null
   if (existing.repositoryId) {
     const repo = db.select().from(repositories).where(eq(repositories.id, existing.repositoryId)).get()
     repoPath = repo?.path ?? null
   }
 
-  // Always delete the repository record (projects and repos are synonymous)
-  if (existing.repositoryId) {
-    db.delete(repositories).where(eq(repositories.id, existing.repositoryId)).run()
-  }
+  // NOTE: We no longer automatically delete the repository record.
+  // Repos can be moved between projects, so deleting a project should not
+  // delete a repo that may have been moved elsewhere. The repo will become
+  // "unlinked" and can be found in the Repositories tab.
 
   // Optionally delete the directory from disk
   let directoryDeleted = false
@@ -1365,7 +1365,7 @@ app.post('/:id/repositories', async (c) => {
       return c.json({ error: 'Repository already linked to this project' }, 400)
     }
 
-    // Check if repo is linked to another project
+    // Check if repo is linked to another project via join table
     const otherProjectLink = db
       .select()
       .from(projectRepositories)
@@ -1383,6 +1383,30 @@ app.post('/:id/repositories', async (c) => {
         return c.json({
           error: 'Repository belongs to another project',
           conflictProject: otherProject ? { id: otherProject.id, name: otherProject.name } : null,
+        }, 409)
+      }
+    }
+
+    // Also check for legacy repositoryId links on other projects
+    const legacyProjectLink = db
+      .select()
+      .from(projects)
+      .where(eq(projects.repositoryId, repo.id))
+      .get()
+
+    if (legacyProjectLink && legacyProjectLink.id !== projectId) {
+      if (body.moveFromProject) {
+        // Clear the legacy repositoryId from the other project
+        db.update(projects)
+          .set({ repositoryId: null, updatedAt: now })
+          .where(eq(projects.id, legacyProjectLink.id))
+          .run()
+        broadcast({ type: 'project:updated', payload: { projectId: legacyProjectLink.id } })
+      } else {
+        // Return info about the conflict
+        return c.json({
+          error: 'Repository belongs to another project',
+          conflictProject: { id: legacyProjectLink.id, name: legacyProjectLink.name },
         }, 409)
       }
     }
@@ -1440,6 +1464,7 @@ app.delete('/:id/repositories/:repoId', (c) => {
     return c.json({ error: 'Project not found' }, 404)
   }
 
+  // Check for link in join table
   const link = db
     .select()
     .from(projectRepositories)
@@ -1451,22 +1476,28 @@ app.delete('/:id/repositories/:repoId', (c) => {
     )
     .get()
 
-  if (!link) {
+  // Also check for legacy repositoryId link
+  const hasLegacyLink = project.repositoryId === repoId
+
+  if (!link && !hasLegacyLink) {
     return c.json({ error: 'Repository not linked to this project' }, 404)
   }
 
-  // Remove the link
-  db.delete(projectRepositories).where(eq(projectRepositories.id, link.id)).run()
+  // Remove the join table link if it exists
+  if (link) {
+    db.delete(projectRepositories).where(eq(projectRepositories.id, link.id)).run()
+  }
+
+  // Clear the legacy repositoryId if it matches
+  if (hasLegacyLink) {
+    db.update(projects)
+      .set({ repositoryId: null, updatedAt: new Date().toISOString() })
+      .where(eq(projects.id, projectId))
+      .run()
+  }
 
   // Optionally delete the repository record
   if (deleteRecord) {
-    // Also clear the legacy repositoryId if it matches
-    if (project.repositoryId === repoId) {
-      db.update(projects)
-        .set({ repositoryId: null, updatedAt: new Date().toISOString() })
-        .where(eq(projects.id, projectId))
-        .run()
-    }
     db.delete(repositories).where(eq(repositories.id, repoId)).run()
   }
 

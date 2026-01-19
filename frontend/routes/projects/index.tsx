@@ -22,15 +22,12 @@ import {
   SourceCodeSquareIcon,
   VisualStudioCodeIcon,
   Settings05Icon,
-  Move01Icon,
-  Cancel01Icon,
-  CheckmarkCircle02Icon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectWithDetails, Repository } from '@/types'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { Badge } from '@/components/ui/badge'
 import { CreateProjectModalSimple } from '@/components/projects/create-project-modal-simple'
-import { MoveRepositoryDialog } from '@/components/projects/move-repository-dialog'
+import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
 import { Input } from '@/components/ui/input'
 import {
   AlertDialog,
@@ -42,8 +39,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 
 type ViewTab = 'projects' | 'repositories'
@@ -167,16 +164,10 @@ function RepositoryCard({
   repository,
   project,
   onDeleteClick,
-  selectionMode,
-  isSelected,
-  onToggleSelect,
 }: {
   repository: Repository
   project: ProjectWithDetails | null
   onDeleteClick: () => void
-  selectionMode?: boolean
-  isSelected?: boolean
-  onToggleSelect?: () => void
 }) {
   const { t } = useTranslation('projects')
   const navigate = useNavigate()
@@ -194,40 +185,25 @@ function RepositoryCard({
     ? { to: '/projects/$projectId' as const, params: { projectId: project.id } }
     : { to: '/repositories/$repoId' as const, params: { repoId: repository.id } }
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    if (selectionMode && onToggleSelect) {
-      e.preventDefault()
-      onToggleSelect()
-    }
-  }
-
   return (
-    <Card
-      className={`h-full group transition-colors hover:border-foreground/20 ${selectionMode ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-primary border-primary' : ''}`}
-      onClick={selectionMode ? handleCardClick : undefined}
-    >
-      {selectionMode ? (
+    <Card className="h-full group transition-colors hover:border-foreground/20">
+      <Link {...detailLink} className="block">
         <CardContent className="flex flex-col items-start gap-3 py-4">
-          {/* Header: Checkbox + Name */}
-          <div className="flex items-center gap-3 w-full">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={onToggleSelect}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <span className="truncate font-medium">
+          {/* Header: Name */}
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium group-hover:text-primary transition-colors">
               {repository.displayName}
             </span>
           </div>
 
           {/* Path */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pl-7">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
             <span className="truncate font-mono">{repository.path}</span>
           </div>
 
           {/* Project association */}
-          <div className="flex items-center gap-2 text-xs pl-7">
+          <div className="flex items-center gap-2 text-xs">
             {project ? (
               <Badge variant="secondary" className="text-xs">
                 Project: {project.name}
@@ -237,79 +213,49 @@ function RepositoryCard({
             )}
           </div>
         </CardContent>
-      ) : (
-        <>
-          <Link {...detailLink} className="block">
-            <CardContent className="flex flex-col items-start gap-3 py-4">
-              {/* Header: Name */}
-              <div className="flex items-center gap-2">
-                <span className="truncate font-medium group-hover:text-primary transition-colors">
-                  {repository.displayName}
-                </span>
-              </div>
+      </Link>
 
-              {/* Path */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
-                <span className="truncate font-mono">{repository.path}</span>
-              </div>
+      <CardContent className="flex flex-col items-start pt-0 pb-4">
+        {/* Action buttons row */}
+        <div className="flex flex-wrap gap-1">
+          {/* Editor */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenEditor}
+            className="text-muted-foreground hover:text-foreground"
+            title={`Open in ${getEditorDisplayName(editorApp)}`}
+          >
+            <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">{t('editor')}</span>
+          </Button>
 
-              {/* Project association */}
-              <div className="flex items-center gap-2 text-xs">
-                {project ? (
-                  <Badge variant="secondary" className="text-xs">
-                    Project: {project.name}
-                  </Badge>
-                ) : (
-                  <span className="text-muted-foreground">No project</span>
-                )}
-              </div>
-            </CardContent>
-          </Link>
+          {/* Settings */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(detailLink)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Settings</span>
+          </Button>
 
-          <CardContent className="flex flex-col items-start pt-0 pb-4">
-            {/* Action buttons row */}
-            <div className="flex flex-wrap gap-1">
-              {/* Editor */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleOpenEditor}
-                className="text-muted-foreground hover:text-foreground"
-                title={`Open in ${getEditorDisplayName(editorApp)}`}
-              >
-                <HugeiconsIcon icon={VisualStudioCodeIcon} size={14} strokeWidth={2} data-slot="icon" />
-                <span className="max-sm:hidden">{t('editor')}</span>
-              </Button>
-
-              {/* Settings */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(detailLink)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={Settings05Icon} size={14} strokeWidth={2} data-slot="icon" />
-                <span className="max-sm:hidden">Settings</span>
-              </Button>
-
-              {/* Delete - only if no project */}
-              {!project && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDeleteClick}
-                  className="text-muted-foreground hover:text-destructive"
-                  title="Delete repository"
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-                  <span className="max-sm:hidden">{t('delete.button')}</span>
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </>
-      )}
+          {/* Delete - only if no project */}
+          {!project && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDeleteClick}
+              className="text-muted-foreground hover:text-destructive"
+              title="Delete repository"
+            >
+              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="max-sm:hidden">{t('delete.button')}</span>
+            </Button>
+          )}
+        </div>
+      </CardContent>
     </Card>
   )
 }
@@ -351,6 +297,11 @@ function DeleteProjectDialog({
         </AlertDialogHeader>
 
         <div className="space-y-3 py-2">
+          {project && project.repositories.length > 0 && (
+            <div className="rounded-md bg-amber-500/10 px-3 py-2 text-sm text-amber-600">
+              {t('delete.reposWarning', { count: project.repositories.length })}
+            </div>
+          )}
           {project?.repository && (
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -451,10 +402,8 @@ function ProjectsView() {
   const deleteRepository = useDeleteRepository()
   const [deleteRepoState, setDeleteRepoState] = useState<Repository | null>(null)
 
-  // Selection mode for bulk operations
-  const [selectionMode, setSelectionMode] = useState(false)
-  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
-  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  // Add repository modal
+  const [addRepoModalOpen, setAddRepoModalOpen] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -535,48 +484,7 @@ function ProjectsView() {
     } else {
       navigate({ to: '/projects', search: {} })
     }
-    // Reset selection when switching tabs
-    setSelectionMode(false)
-    setSelectedRepos(new Set())
   }
-
-  // Selection helpers
-  const toggleRepoSelection = (repoId: string) => {
-    setSelectedRepos((prev) => {
-      const next = new Set(prev)
-      if (next.has(repoId)) {
-        next.delete(repoId)
-      } else {
-        next.add(repoId)
-      }
-      return next
-    })
-  }
-
-  const exitSelectionMode = () => {
-    setSelectionMode(false)
-    setSelectedRepos(new Set())
-  }
-
-  const selectAllRepos = () => {
-    setSelectedRepos(new Set(filteredRepositories.map((r) => r.id)))
-  }
-
-  // Build selected repos info for the move dialog
-  const selectedReposInfo = useMemo(() => {
-    return filteredRepositories
-      .filter((repo) => selectedRepos.has(repo.id))
-      .map((repo) => {
-        const project = repoToProject.get(repo.id)
-        return {
-          id: repo.id,
-          displayName: repo.displayName,
-          path: repo.path,
-          currentProjectId: project?.id ?? null,
-          currentProjectName: project?.name ?? null,
-        }
-      })
-  }, [filteredRepositories, selectedRepos, repoToProject])
 
   const isLoading = activeTab === 'projects' ? projectsLoading : reposLoading
   const error = activeTab === 'projects' ? projectsError : reposError
@@ -610,27 +518,14 @@ function ProjectsView() {
             Repos
           </ToggleGroupItem>
         </ToggleGroup>
-        {activeTab === 'projects' && (
-          <Button size="sm" onClick={() => setCreateModalOpen(true)}>
-            <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
-            <span className="max-sm:hidden">{t('newProjectButton')}</span>
-          </Button>
-        )}
-        {activeTab === 'repositories' && (
-          <Button
-            size="sm"
-            variant={selectionMode ? 'default' : 'outline'}
-            onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)}
-          >
-            <HugeiconsIcon
-              icon={selectionMode ? Cancel01Icon : CheckmarkCircle02Icon}
-              size={16}
-              strokeWidth={2}
-              data-slot="icon"
-            />
-            <span className="max-sm:hidden">{selectionMode ? 'Cancel' : 'Select'}</span>
-          </Button>
-        )}
+        <Button size="sm" variant="outline" onClick={() => setAddRepoModalOpen(true)}>
+          <HugeiconsIcon icon={Folder01Icon} size={16} strokeWidth={2} data-slot="icon" />
+          <span className="max-sm:hidden">{t('addRepo')}</span>
+        </Button>
+        <Button size="sm" onClick={() => setCreateModalOpen(true)}>
+          <HugeiconsIcon icon={PackageAddIcon} size={16} strokeWidth={2} data-slot="icon" />
+          <span className="max-sm:hidden">{t('newProjectButton')}</span>
+        </Button>
       </div>
 
       <div className="flex-1 overflow-auto p-4">
@@ -707,46 +602,12 @@ function ProjectsView() {
                   repository={repo}
                   project={repoToProject.get(repo.id) ?? null}
                   onDeleteClick={() => setDeleteRepoState(repo)}
-                  selectionMode={selectionMode}
-                  isSelected={selectedRepos.has(repo.id)}
-                  onToggleSelect={() => toggleRepoSelection(repo.id)}
                 />
               ))}
             </div>
           </>
         )}
       </div>
-
-      {/* Floating action bar for selection mode */}
-      {selectionMode && selectedRepos.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border rounded-lg shadow-lg px-4 py-3">
-          <span className="text-sm text-muted-foreground">
-            {selectedRepos.size} selected
-          </span>
-          <div className="h-4 w-px bg-border" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={selectAllRepos}
-          >
-            Select All
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={exitSelectionMode}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setMoveDialogOpen(true)}
-          >
-            <HugeiconsIcon icon={Move01Icon} size={14} data-slot="icon" />
-            Move to...
-          </Button>
-        </div>
-      )}
 
       {taskModalProject && (
         <CreateTaskModal
@@ -776,14 +637,10 @@ function ProjectsView() {
         onOpenChange={setCreateModalOpen}
       />
 
-      {/* Move Repository Dialog */}
-      <MoveRepositoryDialog
-        open={moveDialogOpen}
-        onOpenChange={setMoveDialogOpen}
-        repositories={selectedReposInfo}
-        onSuccess={() => {
-          exitSelectionMode()
-        }}
+      {/* Add Repository Modal */}
+      <AddRepositoryModal
+        open={addRepoModalOpen}
+        onOpenChange={setAddRepoModalOpen}
       />
     </div>
   )

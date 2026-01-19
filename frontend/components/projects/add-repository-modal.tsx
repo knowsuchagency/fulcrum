@@ -8,6 +8,7 @@ import {
   useAddRepositoryToProject,
   useScanProjects,
   useBulkCreateProjects,
+  useProjects,
   type ScannedProject,
   type RepositoryConflict,
 } from '@/hooks/use-projects'
@@ -60,7 +61,8 @@ import { fetchJSON } from '@/lib/api'
 interface AddRepositoryModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  projectId: string
+  /** If provided, skips project selection. If not, shows project selector. */
+  projectId?: string
   initialTab?: 'clone' | 'local' | 'scan' | 'template'
 }
 
@@ -105,14 +107,22 @@ function extractRepoNameFromUrl(url: string): string {
 export function AddRepositoryModal({
   open,
   onOpenChange,
-  projectId,
+  projectId: propProjectId,
   initialTab = 'clone',
 }: AddRepositoryModalProps) {
   const { t } = useTranslation('repositories')
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
+  const { data: projects } = useProjects()
   const addRepositoryMutation = useAddRepositoryToProject()
   const scanMutation = useScanProjects()
   const bulkCreateMutation = useBulkCreateProjects()
+
+  // Project selection state (only used when propProjectId is not provided)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [projectSearchQuery, setProjectSearchQuery] = useState('')
+
+  // Effective project ID - either from prop or selected
+  const projectId = propProjectId ?? selectedProjectId
 
   // Main tab state
   const [activeTab, setActiveTab] = useState<string>(initialTab)
@@ -167,6 +177,8 @@ export function AddRepositoryModal({
   useEffect(() => {
     if (open) {
       setActiveTab(initialTab)
+      setSelectedProjectId(null)
+      setProjectSearchQuery('')
       setCloneUrl('')
       setTargetDir('')
       setFolderName('')
@@ -222,6 +234,19 @@ export function AddRepositoryModal({
   const isScanPending = scanMutation.isPending || bulkCreateMutation.isPending
   const isTemplatePending = addRepositoryMutation.isPending && activeTab === 'template'
 
+  // Filtered projects for project selector
+  const filteredProjects = useMemo(() => {
+    if (!projects) return []
+    if (!projectSearchQuery.trim()) return projects
+    const query = projectSearchQuery.toLowerCase()
+    return projects.filter((p) =>
+      p.name.toLowerCase().includes(query)
+    )
+  }, [projects, projectSearchQuery])
+
+  // Selected project name for display
+  const selectedProject = projects?.find((p) => p.id === selectedProjectId)
+
   // Initialize template answers with defaults when questions load
   useEffect(() => {
     if (questionsData?.questions) {
@@ -259,6 +284,7 @@ export function AddRepositoryModal({
 
   // Handle clone
   const handleClone = async (moveFromProject = false) => {
+    if (!projectId) return
     setCloneError(null)
     const url = cloneUrl.trim()
     if (!url || !isGitUrl(url)) return
@@ -288,6 +314,7 @@ export function AddRepositoryModal({
 
   // Handle add local
   const handleAddLocal = async (moveFromProject = false) => {
+    if (!projectId) return
     setLocalError(null)
     const path = localPath.trim()
     if (!path) return
@@ -353,6 +380,7 @@ export function AddRepositoryModal({
   }
 
   const handleBulkAdd = async () => {
+    if (!projectId) return
     if (selectedPaths.size === 0) return
     setScanError(null)
 
@@ -383,6 +411,7 @@ export function AddRepositoryModal({
   const shouldTrust = !!templateSource || trust
 
   const handleCreateFromTemplate = async () => {
+    if (!projectId) return
     setTemplateError(null)
     try {
       // First create the repository from template via copier API
@@ -538,6 +567,64 @@ export function AddRepositoryModal({
 
           <div className="flex-1 overflow-y-auto min-h-0 px-1">
             <div className="space-y-4">
+              {/* Project selector - only shown when propProjectId is not provided */}
+              {!propProjectId && (
+                <div className="space-y-2">
+                  <Label>Add to Project</Label>
+                  <div className="relative">
+                    <HugeiconsIcon
+                      icon={Search01Icon}
+                      size={14}
+                      strokeWidth={2}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <Input
+                      value={projectSearchQuery}
+                      onChange={(e) => setProjectSearchQuery(e.target.value)}
+                      placeholder="Search projects..."
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="max-h-40 overflow-y-auto rounded-md border">
+                    {filteredProjects.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                        No projects found
+                      </div>
+                    ) : (
+                      filteredProjects.map((project) => (
+                        <div
+                          key={project.id}
+                          className={`flex items-center gap-3 px-3 py-2 cursor-pointer border-b last:border-b-0 transition-colors ${
+                            selectedProjectId === project.id
+                              ? 'bg-primary/10 text-primary'
+                              : 'hover:bg-muted/50'
+                          }`}
+                          onClick={() => setSelectedProjectId(project.id)}
+                        >
+                          <div
+                            className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                              selectedProjectId === project.id
+                                ? 'border-primary bg-primary'
+                                : 'border-muted-foreground'
+                            }`}
+                          >
+                            {selectedProjectId === project.id && (
+                              <div className="h-2 w-2 rounded-full bg-background" />
+                            )}
+                          </div>
+                          <span className="text-sm font-medium truncate">{project.name}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {selectedProject && (
+                    <div className="text-xs text-muted-foreground">
+                      Selected: <span className="font-medium text-foreground">{selectedProject.name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="w-full">
                   <TabsTrigger value="clone" className="flex-1">
@@ -663,7 +750,7 @@ export function AddRepositoryModal({
                     </Button>
                     <Button
                       onClick={() => handleClone(false)}
-                      disabled={!cloneUrl.trim() || !isGitUrl(cloneUrl.trim()) || isClonePending}
+                      disabled={!cloneUrl.trim() || !isGitUrl(cloneUrl.trim()) || isClonePending || !projectId}
                     >
                       {isClonePending ? (
                         <>
@@ -751,7 +838,7 @@ export function AddRepositoryModal({
                     </Button>
                     <Button
                       onClick={() => handleAddLocal(false)}
-                      disabled={!localPath.trim() || isLocalPending}
+                      disabled={!localPath.trim() || isLocalPending || !projectId}
                     >
                       {isLocalPending ? (
                         <>
@@ -917,7 +1004,7 @@ export function AddRepositoryModal({
                   {selectedPaths.size > 0 && (
                     <Button
                       onClick={handleBulkAdd}
-                      disabled={selectedPaths.size === 0 || isScanPending || addRepositoryMutation.isPending}
+                      disabled={selectedPaths.size === 0 || isScanPending || addRepositoryMutation.isPending || !projectId}
                       className="w-full"
                     >
                       {t('bulkAdd.addSelected', { count: selectedPaths.size })}
@@ -1140,7 +1227,7 @@ export function AddRepositoryModal({
                       </Button>
                       <Button
                         onClick={handleCreateFromTemplate}
-                        disabled={!canCreateFromTemplate || isTemplatePending}
+                        disabled={!canCreateFromTemplate || isTemplatePending || !projectId}
                       >
                         Create & Add
                       </Button>

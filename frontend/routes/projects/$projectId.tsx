@@ -50,7 +50,7 @@ import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { cn } from '@/lib/utils'
 import { ProjectTagsManager } from '@/components/project/project-tags-manager'
 import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
-import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
+import { BulkAddRepositoriesModal } from '@/components/projects/bulk-add-repositories-modal'
 import { RemoveRepositoryDialog } from '@/components/projects/remove-repository-dialog'
 import { MoveRepositoryDialog } from '@/components/projects/move-repository-dialog'
 
@@ -278,7 +278,7 @@ function ProjectDetailView() {
   const [archiveOpen, setArchiveOpen] = useState(false)
 
   // Repository modal states
-  const [addRepoModalOpen, setAddRepoModalOpen] = useState(false)
+  const [bulkAddModalOpen, setBulkAddModalOpen] = useState(false)
   const [removeRepoDialog, setRemoveRepoDialog] = useState<{
     open: boolean
     repository: ProjectRepositoryDetails | null
@@ -293,16 +293,16 @@ function ProjectDetailView() {
   const [selectedRepoIds, setSelectedRepoIds] = useState<Set<string>>(new Set())
   const [bulkMoveDialogOpen, setBulkMoveDialogOpen] = useState(false)
 
-  // Handle ?addRepo=true search param
+  // Handle ?addRepo=true search param (navigate to bulk add)
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const addRepo = params.get('addRepo')
-    if (addRepo === 'true' && !addRepoModalOpen) {
-      setAddRepoModalOpen(true)
+    if (addRepo === 'true' && !bulkAddModalOpen) {
+      setBulkAddModalOpen(true)
       // Clear the search param after opening modal
       navigate({ to: '/projects/$projectId', params: { projectId }, replace: true })
     }
-  }, [location.search, addRepoModalOpen, navigate, projectId])
+  }, [location.search, bulkAddModalOpen, navigate, projectId])
 
   // Update last accessed when viewing project
   useEffect(() => {
@@ -506,14 +506,6 @@ function ProjectDetailView() {
         )}
         <div className="flex-1" />
         <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setAddRepoModalOpen(true)}
-        >
-          <HugeiconsIcon icon={Folder01Icon} size={14} data-slot="icon" />
-          <span className="max-sm:hidden">{t('addRepo')}</span>
-        </Button>
-        <Button
           variant="ghost"
           size="sm"
           onClick={() => setShowDeleteConfirm(true)}
@@ -534,21 +526,32 @@ function ProjectDetailView() {
                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                   Repositories ({project.repositories.length})
                 </h2>
-                {project.repositories.length > 1 && (
+                <div className="flex items-center gap-2">
+                  {project.repositories.length > 1 && (
+                    <Button
+                      variant={repoSelectionMode ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => repoSelectionMode ? exitRepoSelectionMode() : setRepoSelectionMode(true)}
+                      className="h-7 text-xs"
+                    >
+                      <HugeiconsIcon
+                        icon={repoSelectionMode ? Cancel01Icon : CheckmarkSquare03Icon}
+                        size={14}
+                        data-slot="icon"
+                      />
+                      {repoSelectionMode ? 'Cancel' : 'Select'}
+                    </Button>
+                  )}
                   <Button
-                    variant={repoSelectionMode ? 'default' : 'ghost'}
+                    variant="outline"
                     size="sm"
-                    onClick={() => repoSelectionMode ? exitRepoSelectionMode() : setRepoSelectionMode(true)}
+                    onClick={() => setBulkAddModalOpen(true)}
                     className="h-7 text-xs"
                   >
-                    <HugeiconsIcon
-                      icon={repoSelectionMode ? Cancel01Icon : CheckmarkSquare03Icon}
-                      size={14}
-                      data-slot="icon"
-                    />
-                    {repoSelectionMode ? 'Cancel' : 'Select'}
+                    <HugeiconsIcon icon={Folder01Icon} size={14} data-slot="icon" />
+                    {t('addRepo')}
                   </Button>
-                )}
+                </div>
               </div>
               {project.repositories.length === 0 ? (
                 <Card className="border-dashed">
@@ -754,11 +757,12 @@ function ProjectDetailView() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Repository Modal */}
-      <AddRepositoryModal
-        open={addRepoModalOpen}
-        onOpenChange={setAddRepoModalOpen}
+      {/* Bulk Add Repositories Modal */}
+      <BulkAddRepositoriesModal
+        open={bulkAddModalOpen}
+        onOpenChange={setBulkAddModalOpen}
         projectId={projectId}
+        projectName={project.name}
       />
 
       {/* Remove Repository Dialog */}

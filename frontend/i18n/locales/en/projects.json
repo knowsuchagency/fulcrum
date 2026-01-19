@@ -29,8 +29,15 @@
   "delete": {
     "title": "Delete Project",
     "description": "This will remove the project \"{{name}}\".",
+    "confirmText": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
     "button": "Delete",
+    "confirm": "Delete",
+    "cancel": "Cancel",
+    "success": "Project deleted",
+    "error": "Failed to delete project",
     "deleting": "Deleting...",
+    "reposWarning_one": "This project has {{count}} linked repository. Deleting will unlink it.",
+    "reposWarning_other": "This project has {{count}} linked repositories. Deleting will unlink them.",
     "alsoDeleteDirectory": "Also delete the directory",
     "alsoDeleteApp": "Also delete the app and stop containers"
   },
