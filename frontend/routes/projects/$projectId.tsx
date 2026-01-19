@@ -42,9 +42,7 @@ import {
   ArrowRight01Icon,
   ArrowDown01Icon,
   Edit02Icon,
-  CheckmarkSquare03Icon,
   CopyLinkIcon,
-  Move01Icon,
   TaskAdd01Icon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectRepositoryDetails, Task, TaskStatus } from '@/types'
@@ -57,7 +55,6 @@ import { ProjectAttachmentsManager } from '@/components/project/project-attachme
 import { BulkAddRepositoriesModal } from '@/components/projects/bulk-add-repositories-modal'
 import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
 import { RemoveRepositoryDialog } from '@/components/projects/remove-repository-dialog'
-import { MoveRepositoryDialog } from '@/components/projects/move-repository-dialog'
 
 export const Route = createFileRoute('/projects/$projectId')({
   component: ProjectDetailView,
@@ -76,64 +73,43 @@ function RepositoryCard({
   repository,
   onRemove,
   onNewTask,
-  selectionMode,
-  isSelected,
-  onToggleSelect,
 }: {
   repository: ProjectRepositoryDetails
   onRemove: () => void
   onNewTask: () => void
-  selectionMode?: boolean
-  isSelected?: boolean
-  onToggleSelect?: () => void
 }) {
   const navigate = useNavigate()
 
   const handleCardClick = () => {
-    if (selectionMode && onToggleSelect) {
-      onToggleSelect()
-    } else {
-      navigate({
-        to: '/repositories/$repoId',
-        params: { repoId: repository.id },
-        search: { tab: 'settings' },
-      })
-    }
+    navigate({
+      to: '/repositories/$repoId',
+      params: { repoId: repository.id },
+      search: { tab: 'settings' },
+    })
   }
 
   return (
     <Card
-      className={`group transition-colors hover:border-foreground/20 cursor-pointer ${isSelected ? 'ring-2 ring-primary border-primary' : ''}`}
+      className="group transition-colors hover:border-foreground/20 cursor-pointer"
       onClick={handleCardClick}
     >
       <CardContent className="py-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1 flex items-start gap-3">
-            {selectionMode && (
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={onToggleSelect}
-                onClick={(e) => e.stopPropagation()}
-                className="mt-1"
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <h3 className="font-medium truncate group-hover:text-primary transition-colors">
-                {repository.displayName}
-              </h3>
-              <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-                <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
-                <span className="truncate font-mono">{repository.path}</span>
-              </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium truncate group-hover:text-primary transition-colors">
+              {repository.displayName}
+            </h3>
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+              <HugeiconsIcon icon={Folder01Icon} size={12} strokeWidth={2} className="shrink-0" />
+              <span className="truncate font-mono">{repository.path}</span>
             </div>
           </div>
         </div>
 
-        {/* Action buttons - hidden in selection mode */}
-        {!selectionMode && (
-          <div className="mt-4 flex flex-wrap gap-1">
-            <Button
+        {/* Action buttons */}
+        <div className="mt-4 flex flex-wrap gap-1">
+          <Button
               variant="outline"
               size="sm"
               onClick={(e) => {
@@ -193,20 +169,19 @@ function RepositoryCard({
               <HugeiconsIcon icon={Rocket01Icon} size={14} strokeWidth={2} data-slot="icon" />
               <span className="max-sm:hidden">Deploy</span>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                onRemove()
-              }}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="max-sm:hidden">Remove</span>
-            </Button>
-          </div>
-        )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} data-slot="icon" />
+            <span className="max-sm:hidden">Remove</span>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
@@ -291,11 +266,6 @@ function ProjectDetailView() {
     repository: ProjectRepositoryDetails | null
   }>({ open: false, repository: null })
 
-  // Bulk selection mode for repositories
-  const [repoSelectionMode, setRepoSelectionMode] = useState(false)
-  const [selectedRepoIds, setSelectedRepoIds] = useState<Set<string>>(new Set())
-  const [bulkMoveDialogOpen, setBulkMoveDialogOpen] = useState(false)
-
   // Handle ?addRepo=true search param (navigate to bulk add)
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -351,41 +321,6 @@ function ProjectDetailView() {
       return next
     })
   }
-
-  // Repo selection helpers
-  const toggleRepoSelection = (repoId: string) => {
-    setSelectedRepoIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(repoId)) {
-        next.delete(repoId)
-      } else {
-        next.add(repoId)
-      }
-      return next
-    })
-  }
-
-  const exitRepoSelectionMode = () => {
-    setRepoSelectionMode(false)
-    setSelectedRepoIds(new Set())
-  }
-
-  const selectAllRepos = () => {
-    if (project) {
-      setSelectedRepoIds(new Set(project.repositories.map((r) => r.id)))
-    }
-  }
-
-  // Build selected repos info for the bulk move dialog
-  const selectedReposForBulkMove = (project?.repositories ?? [])
-    .filter((repo) => selectedRepoIds.has(repo.id))
-    .map((repo) => ({
-      id: repo.id,
-      displayName: repo.displayName,
-      path: repo.path,
-      currentProjectId: projectId,
-      currentProjectName: project?.name ?? null,
-    }))
 
   const handleStartEditName = useCallback(() => {
     if (project) {
@@ -533,21 +468,6 @@ function ProjectDetailView() {
                   Repositories ({project.repositories.length})
                 </h2>
                 <div className="flex items-center gap-2">
-                  {project.repositories.length > 1 && (
-                    <Button
-                      variant={repoSelectionMode ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => repoSelectionMode ? exitRepoSelectionMode() : setRepoSelectionMode(true)}
-                      className="h-7 text-xs"
-                    >
-                      <HugeiconsIcon
-                        icon={repoSelectionMode ? Cancel01Icon : CheckmarkSquare03Icon}
-                        size={14}
-                        data-slot="icon"
-                      />
-                      {repoSelectionMode ? 'Cancel' : 'Select'}
-                    </Button>
-                  )}
                   {project.repositories.length > 0 && (
                     <>
                       <Button
@@ -604,9 +524,6 @@ function ProjectDetailView() {
                       repository={repo}
                       onRemove={() => setRemoveRepoDialog({ open: true, repository: repo })}
                       onNewTask={() => setTaskModalRepo(repo)}
-                      selectionMode={repoSelectionMode}
-                      isSelected={selectedRepoIds.has(repo.id)}
-                      onToggleSelect={() => toggleRepoSelection(repo.id)}
                     />
                   ))}
                 </div>
@@ -829,46 +746,6 @@ function ProjectDetailView() {
         projectId={projectId}
         repository={removeRepoDialog.repository}
       />
-
-      {/* Bulk Move Repository Dialog */}
-      <MoveRepositoryDialog
-        open={bulkMoveDialogOpen}
-        onOpenChange={setBulkMoveDialogOpen}
-        repositories={selectedReposForBulkMove}
-        excludeProjectId={projectId}
-        onSuccess={exitRepoSelectionMode}
-      />
-
-      {/* Floating action bar for repository selection mode */}
-      {repoSelectionMode && selectedRepoIds.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border rounded-lg shadow-lg px-4 py-3">
-          <span className="text-sm text-muted-foreground">
-            {selectedRepoIds.size} selected
-          </span>
-          <div className="h-4 w-px bg-border" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={selectAllRepos}
-          >
-            Select All
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={exitRepoSelectionMode}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setBulkMoveDialogOpen(true)}
-          >
-            <HugeiconsIcon icon={Move01Icon} size={14} data-slot="icon" />
-            Move to...
-          </Button>
-        </div>
-      )}
     </div>
   )
 }
