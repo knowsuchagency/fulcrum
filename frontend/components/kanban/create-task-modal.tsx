@@ -458,9 +458,22 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col overflow-hidden">
           <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
             <DialogHeader className="shrink-0">
-              <DialogTitle>{t('createModal.title')}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <DialogTitle>{t('createModal.title')}</DialogTitle>
+                <Select value={taskType} onValueChange={(value) => setTaskType(value as TaskType)}>
+                  <SelectTrigger className="h-6 w-auto gap-1 rounded-full border-border/50 bg-muted/50 px-2.5 text-xs font-medium">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="code">Code Task</SelectItem>
+                    <SelectItem value="quick">Quick Task</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <DialogDescription>
-                {t('createModal.description')}
+                {taskType === 'code'
+                  ? 'Creates a git worktree and opens an AI coding agent.'
+                  : 'Creates a task without code context.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -493,27 +506,27 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                 />
               </Field>
 
-              {/* Task Type Toggle */}
-              <Field>
-                <FieldLabel>Task Type</FieldLabel>
-                <ToggleGroup
-                  value={[taskType]}
-                  onValueChange={(value) => {
-                    const selected = Array.isArray(value) ? value[0] : value
-                    if (selected) setTaskType(selected as TaskType)
-                  }}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <ToggleGroupItem value="code" className="flex-1">Code Task</ToggleGroupItem>
-                  <ToggleGroupItem value="quick" className="flex-1">Quick Task</ToggleGroupItem>
-                </ToggleGroup>
-                <FieldDescription>
-                  {taskType === 'code'
-                    ? 'Creates a git worktree and opens an AI coding agent.'
-                    : 'Creates a task without code context. You can add code later.'}
-                </FieldDescription>
-              </Field>
+              {/* AI Mode - only for code tasks */}
+              {taskType === 'code' && (
+                <Field>
+                  <FieldLabel>{t('createModal.fields.aiMode')}</FieldLabel>
+                  <ToggleGroup
+                    value={[aiMode]}
+                    onValueChange={(value) => {
+                      const selected = Array.isArray(value) ? value[0] : value
+                      if (selected) {
+                        setAiMode(selected as 'default' | 'plan')
+                        setAiModeManuallySet(true)
+                      }
+                    }}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <ToggleGroupItem value="plan" className="flex-1">{t('createModal.aiModes.plan')}</ToggleGroupItem>
+                    <ToggleGroupItem value="default" className="flex-1">{t('createModal.aiModes.default')}</ToggleGroupItem>
+                  </ToggleGroup>
+                </Field>
+              )}
 
               {/* Project selector for quick tasks */}
               {taskType === 'quick' && (
@@ -547,25 +560,6 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
               {taskType === 'code' && (
                 <>
-              <Field>
-                <FieldLabel>{t('createModal.fields.aiMode')}</FieldLabel>
-                <ToggleGroup
-                  value={[aiMode]}
-                  onValueChange={(value) => {
-                    const selected = Array.isArray(value) ? value[0] : value
-                    if (selected) {
-                      setAiMode(selected as 'default' | 'plan')
-                      setAiModeManuallySet(true)
-                    }
-                  }}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <ToggleGroupItem value="plan" className="flex-1">{t('createModal.aiModes.plan')}</ToggleGroupItem>
-                  <ToggleGroupItem value="default" className="flex-1">{t('createModal.aiModes.default')}</ToggleGroupItem>
-                </ToggleGroup>
-              </Field>
-
               <Field>
                 <FieldLabel>{t('createModal.fields.agent')}</FieldLabel>
                 <Select value={agent} onValueChange={(value) => setAgent(value as AgentType)}>
