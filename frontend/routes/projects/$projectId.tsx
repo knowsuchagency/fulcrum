@@ -415,10 +415,11 @@ function ProjectDetailView() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="shrink-0 border-b border-border bg-background">
-        <div className="max-w-5xl mx-auto px-6 py-2 flex items-center gap-2">
+    <>
+      <ScrollArea className="h-full">
+      <div className="max-w-5xl mx-auto px-6 py-6 space-y-8 pb-12">
+        {/* Project Title */}
+        <div className="flex items-center gap-2">
           {isEditingName ? (
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Input
@@ -427,7 +428,7 @@ function ProjectDetailView() {
                 onChange={(e) => setEditedName(e.target.value)}
                 onKeyDown={handleNameKeyDown}
                 onBlur={handleSaveName}
-                className="font-semibold h-8"
+                className="text-2xl font-semibold h-10"
                 autoFocus
               />
               <Button variant="ghost" size="sm" onClick={handleSaveName}>
@@ -439,7 +440,7 @@ function ProjectDetailView() {
             </div>
           ) : (
             <h1
-              className="font-semibold cursor-pointer hover:text-primary transition-colors truncate"
+              className="text-2xl font-semibold cursor-pointer hover:text-primary transition-colors truncate"
               onClick={handleStartEditName}
               title="Click to edit"
             >
@@ -449,19 +450,15 @@ function ProjectDetailView() {
           <div className="flex-1" />
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => setShowDeleteConfirm(true)}
-            className="text-muted-foreground hover:text-destructive"
+            className="text-destructive hover:text-destructive/80"
           >
-            <HugeiconsIcon icon={Delete02Icon} size={14} data-slot="icon" />
+            <HugeiconsIcon icon={Delete02Icon} size={20} strokeWidth={2.5} data-slot="icon" />
           </Button>
         </div>
-      </div>
 
-      {/* Content */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="max-w-5xl mx-auto px-6 py-6 space-y-8 pb-12">
-          {/* Top section: Repositories + Sidebar (Tags & Notes) */}
+        {/* Repositories + Sidebar (Tags & Notes) */}
           <div className="flex flex-col lg:flex-row lg:items-start gap-6">
             {/* Repositories Section - Left side */}
             <section className="flex-1 space-y-4 min-w-0">
@@ -748,6 +745,6 @@ function ProjectDetailView() {
         projectId={projectId}
         repository={removeRepoDialog.repository}
       />
-    </div>
+    </>
   )
 }
