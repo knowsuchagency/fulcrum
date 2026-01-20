@@ -660,20 +660,25 @@ function SettingsPage() {
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <h1 className="text-sm font-medium">{t('title')}</h1>
         <div className="flex items-center gap-2">
-          {version && <span className="text-xs text-muted-foreground">v{version}</span>}
+          {version && <span className="text-xs font-mono text-muted-foreground">v{version}</span>}
+          
           {versionCheckLoading && (
-            <span className="text-xs text-muted-foreground">{t('version.checkingForUpdates')}</span>
+            <div className="flex h-6 items-center gap-1.5 rounded-full bg-muted/50 px-2.5 text-xs text-muted-foreground">
+              <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
+              <span>{t('version.checkingForUpdates')}</span>
+            </div>
           )}
+
           {versionCheck?.updateAvailable && versionCheck.latestVersion && (
             <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                <HugeiconsIcon icon={ArrowUp02Icon} size={12} strokeWidth={2} />
+              <span className="flex h-6 items-center gap-1.5 rounded-full bg-primary/10 px-2.5 text-xs font-medium text-primary border border-primary/20">
+                <HugeiconsIcon icon={ArrowUp02Icon} size={12} strokeWidth={2.5} />
                 {t('version.updateAvailable', { version: versionCheck.latestVersion })}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 gap-1 px-2 text-xs"
+                className="h-6 gap-1.5 px-2.5 text-xs"
                 onClick={() => {
                   if (versionCheck.releaseUrl) {
                     window.open(versionCheck.releaseUrl, '_blank')
@@ -684,9 +689,10 @@ function SettingsPage() {
               </Button>
             </div>
           )}
+
           {!versionCheckLoading && versionCheck && !versionCheck.updateAvailable && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} className="text-green-500" />
+            <span className="flex h-6 items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 text-xs font-medium text-green-600 dark:text-green-400 border border-green-500/20">
+              <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2.5} />
               {t('version.upToDate')}
             </span>
           )}
