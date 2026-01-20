@@ -346,6 +346,12 @@ const TerminalsView = observer(function TerminalsView() {
     return repoIdsFilter?.split(',').filter(Boolean) ?? []
   }, [repoIdsFilter])
 
+  // Filter selectedRepoIds to only include valid repository IDs
+  const validSelectedRepoIds = useMemo(() => {
+    const repoIds = new Set(repositories.map(r => r.id))
+    return selectedRepoIds.filter(id => repoIds.has(id))
+  }, [selectedRepoIds, repositories])
+
   // Track which repository is currently loading (single repo at a time)
   const [loadingRepoId, setLoadingRepoId] = useState<string | null>(null)
   const loadingStartTimeRef = useRef<number>(0)
@@ -391,13 +397,18 @@ const TerminalsView = observer(function TerminalsView() {
     if (hasRestoredRef.current || repoIdsFilter) return
     if (persistedRepoIds.length === 0) return
 
+    // Filter to only valid repository IDs
+    const repoIds = new Set(repositories.map(r => r.id))
+    const validPersistedIds = persistedRepoIds.filter(id => repoIds.has(id))
+    if (validPersistedIds.length === 0) return
+
     hasRestoredRef.current = true
     navigate({
       to: '/terminals',
-      search: (prev) => ({ ...prev, repoIds: persistedRepoIds.join(',') }),
+      search: (prev) => ({ ...prev, repoIds: validPersistedIds.join(',') }),
       replace: true,
     })
-  }, [activeTabId, repoIdsFilter, persistedRepoIds, navigate, isViewStateLoading])
+  }, [activeTabId, repoIdsFilter, persistedRepoIds, repositories, navigate, isViewStateLoading])
 
   // Persist repository selection to database when it changes
   useEffect(() => {
@@ -847,9 +858,9 @@ const TerminalsView = observer(function TerminalsView() {
                   <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
                 )}
                 <span>
-                  {selectedRepoIds.length === 0
+                  {validSelectedRepoIds.length === 0
                     ? t('selectRepos')
-                    : t('reposSelected', { count: selectedRepoIds.length })}
+                    : t('reposSelected', { count: validSelectedRepoIds.length })}
                 </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64" align="end">
@@ -885,7 +896,7 @@ const TerminalsView = observer(function TerminalsView() {
                       </div>
                     )
                   })}
-                  {selectedRepoIds.length > 0 && !loadingRepoId && (
+                  {validSelectedRepoIds.length > 0 && !loadingRepoId && (
                     <Button
                       variant="ghost"
                       size="sm"
