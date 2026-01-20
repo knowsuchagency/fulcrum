@@ -138,13 +138,14 @@ function migrateSettings(parsed: Record<string, unknown>): MigrationResult {
   const result: MigrationResult = { migrated: false, migratedKeys: [], warnings: [] }
 
   // Check schema version - skip if already migrated
-  const version = (parsed._schemaVersion as number) ?? 1
+  // If no _schemaVersion exists, it's a legacy file that needs migration (use 0)
+  const version = (parsed._schemaVersion as number) ?? 0
   if (version >= CURRENT_SCHEMA_VERSION) {
     return result
   }
 
-  // Schema 1 → 2: Migrate flat keys to nested structure
-  if (version < 2) {
+  // Migrate legacy flat keys to nested structure (for files without schema version)
+  if (version < CURRENT_SCHEMA_VERSION) {
     for (const [oldKey, newPath] of Object.entries(MIGRATION_MAP)) {
       // Check if old flat key exists
       if (oldKey in parsed && parsed[oldKey] !== undefined) {
