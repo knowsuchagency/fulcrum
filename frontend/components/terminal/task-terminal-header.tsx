@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   TaskDaily01Icon,
-  PackageIcon,
+  FolderLibraryIcon,
   GitBranchIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons'
@@ -12,7 +12,6 @@ import { GitActionsButtons } from './git-actions-buttons'
 import { TaskActionsDropdown } from './task-actions-dropdown'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { DeleteTaskDialog } from '@/components/delete-task-dialog'
-import { useProjects } from '@/hooks/use-projects'
 import type { Task } from '@/types'
 
 interface TaskInfo {
@@ -50,10 +49,6 @@ export function TaskTerminalHeader({
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState<number>(Infinity)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const { data: projects = [] } = useProjects()
-
-  // Find the project matching this task's repo path
-  const project = projects.find((p) => p.repository?.path === taskInfo.repoPath)
 
   // Use ResizeObserver to track container width
   useEffect(() => {
@@ -121,21 +116,21 @@ export function TaskTerminalHeader({
           <span className="truncate">{taskInfo.title}</span>
         </Link>
 
-        {/* Project name & CWD - only at widest sizes */}
+        {/* Repository name & CWD - only at widest sizes */}
         {showProjectAndCwd && (
           <>
-            {project ? (
+            {taskInfo.repoId ? (
               <Link
-                to="/projects/$projectId"
-                params={{ projectId: project.id }}
+                to="/repositories/$repoId"
+                params={{ repoId: taskInfo.repoId }}
                 className="flex min-w-0 items-center gap-1 text-xs font-medium text-foreground hover:text-primary"
               >
-                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} className="shrink-0" />
+                <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} className="shrink-0" />
                 <span className="truncate hover:underline">{taskInfo.repoName}</span>
               </Link>
             ) : (
               <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-foreground">
-                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} className="shrink-0" />
+                <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} className="shrink-0" />
                 <span className="truncate">{taskInfo.repoName}</span>
               </span>
             )}

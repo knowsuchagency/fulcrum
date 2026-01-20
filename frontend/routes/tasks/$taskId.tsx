@@ -11,7 +11,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { useTask, useUpdateTask } from '@/hooks/use-tasks'
 import { useRepositories } from '@/hooks/use-repositories'
-import { useProjects } from '@/hooks/use-projects'
 import { useTaskViewState } from '@/hooks/use-task-view-state'
 import { useGitSync } from '@/hooks/use-git-sync'
 import { useGitMergeToMain } from '@/hooks/use-git-merge'
@@ -38,7 +37,7 @@ import {
   GitBranchIcon,
   Delete02Icon,
   Folder01Icon,
-  PackageIcon,
+  FolderLibraryIcon,
   GitPullRequestIcon,
   ArrowRight03Icon,
   ArrowLeft03Icon,
@@ -136,13 +135,9 @@ function TaskView() {
   const { data: serverPort } = usePort()
   const { data: globalOpencodeModel } = useOpencodeModel()
   const { data: repositories = [] } = useRepositories()
-  const { data: projects = [] } = useProjects()
 
   // Find the repository matching this task's repo path
   const repository = repositories.find((r) => r.path === task?.repoPath)
-
-  // Find the project matching this task's repo path
-  const project = projects.find((p) => p.repository?.path === task?.repoPath)
 
   // Resolve OpenCode model: task > repo > global (cascade precedence)
   const resolvedOpencodeModel = task?.opencodeModel ?? repository?.opencodeModel ?? globalOpencodeModel
@@ -595,18 +590,18 @@ function TaskView() {
             >
               <HugeiconsIcon icon={ReloadIcon} size={14} strokeWidth={2} />
             </button>
-            {project ? (
+            {repository ? (
               <Link
-                to="/projects/$projectId"
-                params={{ projectId: project.id }}
+                to="/repositories/$repoId"
+                params={{ repoId: repository.id }}
                 className="flex items-center gap-1 hover:text-primary"
               >
-                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+                <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
                 <span className="hover:underline">{task.repoName}</span>
               </Link>
             ) : (
               <span className="flex items-center gap-1">
-                <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+                <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
                 {task.repoName}
               </span>
             )}
@@ -659,18 +654,18 @@ function TaskView() {
               )}
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {project ? (
+              {repository ? (
                 <Link
-                  to="/projects/$projectId"
-                  params={{ projectId: project.id }}
+                  to="/repositories/$repoId"
+                  params={{ repoId: repository.id }}
                   className="flex items-center gap-1 hover:text-primary"
                 >
-                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+                  <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
                   <span className="hover:underline">{task.repoName}</span>
                 </Link>
               ) : (
                 <span className="flex items-center gap-1">
-                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+                  <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
                   {task.repoName}
                 </span>
               )}
