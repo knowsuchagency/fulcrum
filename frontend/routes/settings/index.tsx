@@ -31,6 +31,7 @@ import {
   useOpencodeModel,
   useOpencodeDefaultAgent,
   useOpencodePlanAgent,
+  useTriggerUpdate,
   useUpdateConfig,
   useResetConfig,
   useNotificationSettings,
@@ -101,6 +102,7 @@ function SettingsPage() {
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
   const { version } = useFulcrumVersion()
   const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
+  const triggerUpdate = useTriggerUpdate()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -655,6 +657,17 @@ function SettingsPage() {
     }
   }
 
+  const handleUpdate = () => {
+    triggerUpdate.mutate(undefined, {
+      onSuccess: () => {
+        toast.info(t('version.updateStarted'))
+      },
+      onError: () => {
+        toast.error(t('version.updateFailed'))
+      },
+    })
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
@@ -675,6 +688,24 @@ function SettingsPage() {
                 <HugeiconsIcon icon={ArrowUp02Icon} size={12} strokeWidth={2.5} />
                 {t('version.updateAvailable', { version: versionCheck.latestVersion })}
               </span>
+              <Button
+                size="sm"
+                className="h-6 gap-1.5 px-2.5 text-xs"
+                disabled={triggerUpdate.isPending || triggerUpdate.isSuccess}
+                onClick={handleUpdate}
+              >
+                {triggerUpdate.isPending ? (
+                  <>
+                    <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
+                    {t('version.updating')}
+                  </>
+                ) : (
+                  <>
+                    <HugeiconsIcon icon={ArrowUp02Icon} size={12} strokeWidth={2} />
+                    {t('version.update')}
+                  </>
+                )}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

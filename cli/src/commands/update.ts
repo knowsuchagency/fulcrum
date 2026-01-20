@@ -1,4 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process'
+import { writeFileSync, unlinkSync, chmodSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import pkg from '../../../package.json'
@@ -66,12 +69,50 @@ function getPackageRunner(): { command: string; execCommand: string } {
   return { command: 'npx', execCommand: 'npx' }
 }
 
-function runUpdate(): Promise<number> {
+function stopServer(): void {
+  const { execCommand } = getPackageRunner()
+  console.log('Stopping current server...')
+  
+  const result = spawnSync(execCommand, [`${NPM_PACKAGE}@latest`, 'down'], {
+    stdio: 'inherit',
+    shell: true,
+  })
+  
+  if (result.status === 0) {
+    console.log('Server stopped.')
+  } else {
+    console.log('Server was not running (or already stopped).')
+  }
+}
+
+function installLatestVersion(): boolean {
+  const { execCommand, command } = getPackageRunner()
+  console.log(`\nInstalling latest version via ${command}...`)
+  
+  const args = command === 'bunx' 
+    ? ['--bun', `${NPM_PACKAGE}@latest`, '--version']
+    : ['--yes', `${NPM_PACKAGE}@latest`, '--version']
+  
+  const result = spawnSync(execCommand, args, {
+    stdio: 'inherit',
+    shell: true,
+  })
+  
+  if (result.status === 0) {
+    console.log('Latest version installed.')
+    return true
+  } else {
+    console.error('Failed to install latest version.')
+    return false
+  }
+}
+
+function startServer(): Promise<number> {
   return new Promise((resolve) => {
     const { command, execCommand } = getPackageRunner()
     const args = [`${NPM_PACKAGE}@latest`, 'up']
     
-    console.log(`\nRunning: ${command} ${args.join(' ')}\n`)
+    console.log(`\nStarting server: ${command} ${args.join(' ')}\n`)
     
     const child = spawn(execCommand, args, {
       stdio: 'inherit',
@@ -83,21 +124,78 @@ function runUpdate(): Promise<number> {
     })
 
     child.on('error', (err) => {
-      console.error('Failed to start update:', err.message)
+      console.error('Failed to start server:', err.message)
       resolve(1)
     })
   })
 }
 
+/**
+ * Spawn a detached update script that survives parent process death.
+ * Used when triggered from UI - the server calling this will die during update.
+ */
+function spawnDetachedUpdate(): void {
+  const { command } = getPackageRunner()
+  const scriptPath = join(tmpdir(), `fulcrum-update-${Date.now()}.sh`)
+  
+  const script = `#!/bin/bash
+# Fulcrum self-update script - runs independently of parent process
+
+# Wait for old server to fully stop
+sleep 2
+
+# Stop any remaining server (in case it's still running)
+${command} ${NPM_PACKAGE}@latest down 2>/dev/null || true
+
+# Install latest version (cache it)
+${command} ${command === 'bunx' ? '--bun' : '--yes'} ${NPM_PACKAGE}@latest --version
+
+# Start new server
+${command} ${NPM_PACKAGE}@latest up
+
+# Clean up this script
+rm -f "${scriptPath}"
+`
+
+  writeFileSync(scriptPath, script)
+  chmodSync(scriptPath, 0o755)
+  
+  const child = spawn('nohup', [scriptPath], {
+    detached: true,
+    stdio: 'ignore',
+    shell: false,
+  })
+  
+  child.unref()
+  
+  console.log('Update process spawned in background.')
+  console.log('The server will restart momentarily with the new version.')
+}
+
+async function runUpdate(): Promise<number> {
+  stopServer()
+  
+  const installed = installLatestVersion()
+  if (!installed) {
+    console.error('\nUpdate failed during installation. Your previous version may still work.')
+    console.log('Try running: fulcrum up')
+    return 1
+  }
+  
+  console.log('\nStarting updated server...')
+  return await startServer()
+}
+
 export async function handleUpdateCommand(flags: Record<string, string>) {
   const checkOnly = flags.check === 'true'
+  const background = flags.background === 'true'
   const { command } = getPackageRunner()
 
   if (isJsonOutput()) {
     const result = await checkForUpdates()
     output({
       ...result,
-      updateCommand: `${command} ${NPM_PACKAGE}@latest up`,
+      updateCommand: 'fulcrum update',
       releaseUrl: `https://github.com/${GITHUB_REPO}/releases/latest`,
     })
     return
@@ -121,14 +219,25 @@ export async function handleUpdateCommand(flags: Record<string, string>) {
   console.log(`\n↑ Update available: ${currentVersion} → ${latestVersion}`)
 
   if (checkOnly) {
-    console.log(`\nTo update, run: ${command} ${NPM_PACKAGE}@latest up`)
+    console.log(`\nTo update, run: fulcrum update`)
+    console.log(`Or manually: ${command} ${NPM_PACKAGE}@latest up`)
+    return
+  }
+
+  if (background) {
+    console.log('\nSpawning background update process...')
+    spawnDetachedUpdate()
     return
   }
 
   console.log('\nUpdating Fulcrum...')
+  console.log('This will stop the current server, install the update, and restart.\n')
+  
   const exitCode = await runUpdate()
   
   if (exitCode !== 0) {
     throw new CliError('Update failed', ExitCodes.GENERAL_ERROR)
   }
+  
+  console.log('\n✓ Fulcrum has been updated and restarted.')
 }

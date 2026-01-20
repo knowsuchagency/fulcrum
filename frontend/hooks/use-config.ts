@@ -441,6 +441,20 @@ export function useVersionCheck() {
   })
 }
 
+interface UpdateResponse {
+  success: boolean
+  message?: string
+  error?: string
+  fromVersion?: string
+  toVersion?: string
+}
+
+export function useTriggerUpdate() {
+  return useMutation({
+    mutationFn: () => fetchJSON<UpdateResponse>(`${API_BASE}/api/version/update`, { method: 'POST' }),
+  })
+}
+
 // Legacy hook aliases for backward compatibility
 /** @deprecated Use useEditorSshPort instead */
 export const useSshPort = useEditorSshPort

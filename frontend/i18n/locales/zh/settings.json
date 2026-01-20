@@ -17,6 +17,10 @@
     "updateAvailable": "有新版本: v{{version}}",
     "checkingForUpdates": "检查中...",
     "updateButton": "更新",
+    "update": "更新",
+    "updating": "更新中...",
+    "updateStarted": "更新已启动。服务器即将重启。",
+    "updateFailed": "更新失败。请重试或手动更新。",
     "updateCommand": "运行以更新:",
     "viewRelease": "查看版本"
   },
