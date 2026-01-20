@@ -13,7 +13,7 @@ import { useSelection } from './selection-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PackageIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
+import { FolderLibraryIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
 import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
 
 interface TaskCardProps {
@@ -228,7 +228,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
           {/* Code task metadata */}
           {isCodeTask && (
             <span className="inline-flex items-center gap-1 whitespace-nowrap">
-              <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+              <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
               <span className="truncate max-w-24">{task.repoName}</span>
               {task.prUrl && (
                 <>
