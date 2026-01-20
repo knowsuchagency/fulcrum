@@ -18,6 +18,10 @@
     "updateAvailable": "Update available: v{{version}}",
     "checkingForUpdates": "Checking...",
     "updateButton": "Update",
+    "update": "Update",
+    "updating": "Updating...",
+    "updateStarted": "Update started. The server will restart momentarily.",
+    "updateFailed": "Update failed. Please try again or update manually.",
     "updateCommand": "Run to update:",
     "viewRelease": "View release"
   },

@@ -1,8 +1,13 @@
 import { Hono } from 'hono'
+import { spawn, spawnSync } from 'node:child_process'
+import { writeFileSync, chmodSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const app = new Hono()
 
 const GITHUB_REPO = 'knowsuchagency/fulcrum'
+const NPM_PACKAGE = '@knowsuchagency/fulcrum'
 const CACHE_DURATION_MS = 5 * 60 * 1000 // 5 minutes
 
 interface VersionCache {
@@ -105,8 +110,79 @@ app.get('/check', async (c) => {
     currentVersion,
     latestVersion,
     updateAvailable,
-    updateCommand: 'npx @knowsuchagency/fulcrum@latest up',
+    updateCommand: 'fulcrum update',
     releaseUrl: `https://github.com/${GITHUB_REPO}/releases/latest`,
+  })
+})
+
+function isBunAvailable(): boolean {
+  try {
+    const result = spawnSync('bun', ['--version'], { stdio: 'pipe' })
+    return result.status === 0
+  } catch {
+    return false
+  }
+}
+
+function getPackageRunner(): string {
+  return isBunAvailable() ? 'bunx' : 'npx'
+}
+
+function spawnDetachedUpdateScript(): void {
+  const command = getPackageRunner()
+  const scriptPath = join(tmpdir(), `fulcrum-update-${Date.now()}.sh`)
+  
+  const script = `#!/bin/bash
+# Fulcrum self-update script - runs independently of parent process
+
+# Wait for old server to fully stop
+sleep 2
+
+# Stop any remaining server (in case it's still running)
+${command} ${NPM_PACKAGE}@latest down 2>/dev/null || true
+
+# Install latest version (cache it)
+${command} ${command === 'bunx' ? '--bun' : '--yes'} ${NPM_PACKAGE}@latest --version
+
+# Start new server
+${command} ${NPM_PACKAGE}@latest up
+
+# Clean up this script
+rm -f "${scriptPath}"
+`
+
+  writeFileSync(scriptPath, script)
+  chmodSync(scriptPath, 0o755)
+  
+  const child = spawn('nohup', [scriptPath], {
+    detached: true,
+    stdio: 'ignore',
+    shell: false,
+  })
+  
+  child.unref()
+}
+
+// POST /api/version/update - Trigger update (spawns detached process and returns immediately)
+app.post('/update', async (c) => {
+  const currentVersion = process.env.FULCRUM_VERSION || null
+  const latestVersion = await getLatestVersion()
+
+  if (!latestVersion) {
+    return c.json({ success: false, error: 'Could not fetch latest version' }, 503)
+  }
+
+  if (currentVersion && compareVersions(latestVersion, currentVersion) <= 0) {
+    return c.json({ success: false, error: 'Already on latest version' }, 400)
+  }
+
+  spawnDetachedUpdateScript()
+
+  return c.json({ 
+    success: true, 
+    message: 'Update started. Server will restart momentarily.',
+    fromVersion: currentVersion,
+    toVersion: latestVersion,
   })
 })
 
