@@ -63,18 +63,26 @@ function TasksView() {
     [navigate]
   )
 
-  // Get task count per project for display
-  const projectTaskCounts = useMemo(() => {
-    const counts = new Map<string | null, number>()
-    for (const task of tasks) {
-      const key = task.projectId ?? null
-      counts.set(key, (counts.get(key) ?? 0) + 1)
-    }
-    return counts
-  }, [tasks])
-
   // Count of tasks without a project (inbox)
-  const inboxCount = projectTaskCounts.get(null) ?? 0
+  // A task is in inbox if it has no projectId AND no repositoryId/repoPath that belongs to a project
+  const inboxCount = useMemo(() => {
+    // Get all repository IDs and paths that belong to projects
+    const projectRepoIds = new Set<string>()
+    const projectRepoPaths = new Set<string>()
+    for (const project of projects) {
+      for (const repo of project.repositories) {
+        projectRepoIds.add(repo.id)
+        projectRepoPaths.add(repo.path)
+      }
+    }
+    // Count tasks not associated with any project directly or via repository
+    return tasks.filter(
+      (t) =>
+        !t.projectId &&
+        (!t.repositoryId || !projectRepoIds.has(t.repositoryId)) &&
+        (!t.repoPath || !projectRepoPaths.has(t.repoPath))
+    ).length
+  }, [tasks, projects])
 
   return (
     <div className="flex h-full flex-col">
@@ -109,7 +117,7 @@ function TasksView() {
               <SelectItem value="">{t('allProjects')}</SelectItem>
               {projects.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
-                  {project.name} ({projectTaskCounts.get(project.id) ?? 0})
+                  {project.name} ({project.taskCount})
                 </SelectItem>
               ))}
               <SelectItem value="inbox">Inbox ({inboxCount})</SelectItem>

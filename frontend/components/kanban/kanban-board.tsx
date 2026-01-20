@@ -9,6 +9,7 @@ import { SelectionProvider, useSelection } from './selection-context'
 import { BulkActionsToolbar } from './bulk-actions-toolbar'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTasks, useUpdateTaskStatus, useTaskDependencyGraph } from '@/hooks/use-tasks'
+import { useProjects } from '@/hooks/use-projects'
 import { cn } from '@/lib/utils'
 import { fuzzyScore } from '@/lib/fuzzy-search'
 import type { TaskStatus } from '@/types'
@@ -64,6 +65,7 @@ interface KanbanBoardProps {
 function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
   const { t } = useTranslation('common')
   const { data: allTasks = [], isLoading } = useTasks()
+  const { data: projects = [] } = useProjects()
   const { data: dependencyGraph } = useTaskDependencyGraph()
   const updateStatus = useUpdateTaskStatus()
   const { activeTask } = useDrag()
@@ -102,17 +104,55 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [clearSelection, selectedIds.size])
 
+  // Build sets of all repository IDs and paths that belong to projects (for inbox filtering)
+  const { projectRepoIds, projectRepoPaths } = useMemo(() => {
+    const ids = new Set<string>()
+    const paths = new Set<string>()
+    for (const project of projects) {
+      for (const repo of project.repositories) {
+        ids.add(repo.id)
+        paths.add(repo.path)
+      }
+    }
+    return { projectRepoIds: ids, projectRepoPaths: paths }
+  }, [projects])
+
+  // Get repository IDs and paths for the selected project filter
+  const { selectedProjectRepoIds, selectedProjectRepoPaths } = useMemo(() => {
+    if (!projectFilter || projectFilter === 'inbox') {
+      return { selectedProjectRepoIds: new Set<string>(), selectedProjectRepoPaths: new Set<string>() }
+    }
+    const project = projects.find((p) => p.id === projectFilter)
+    if (!project) {
+      return { selectedProjectRepoIds: new Set<string>(), selectedProjectRepoPaths: new Set<string>() }
+    }
+    return {
+      selectedProjectRepoIds: new Set(project.repositories.map((r) => r.id)),
+      selectedProjectRepoPaths: new Set(project.repositories.map((r) => r.path)),
+    }
+  }, [projectFilter, projects])
+
   // Filter tasks by project and search query, sort by latest first
   const tasks = useMemo(() => {
     let filtered = allTasks
 
     // Filter by project
     if (projectFilter === 'inbox') {
-      // Show only tasks without a project
-      filtered = filtered.filter((t) => !t.projectId)
+      // Show only tasks without a project (neither directly via projectId nor via repository ID/path)
+      filtered = filtered.filter(
+        (t) =>
+          !t.projectId &&
+          (!t.repositoryId || !projectRepoIds.has(t.repositoryId)) &&
+          (!t.repoPath || !projectRepoPaths.has(t.repoPath))
+      )
     } else if (projectFilter) {
-      // Show tasks for a specific project
-      filtered = filtered.filter((t) => t.projectId === projectFilter)
+      // Show tasks for a specific project (either directly via projectId or via repository ID/path)
+      filtered = filtered.filter(
+        (t) =>
+          t.projectId === projectFilter ||
+          (t.repositoryId && selectedProjectRepoIds.has(t.repositoryId)) ||
+          (t.repoPath && selectedProjectRepoPaths.has(t.repoPath))
+      )
     }
 
     if (searchQuery?.trim()) {
@@ -139,7 +179,7 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
       )
     }
     return filtered
-  }, [allTasks, projectFilter, searchQuery])
+  }, [allTasks, projectFilter, searchQuery, projectRepoIds, projectRepoPaths, selectedProjectRepoIds, selectedProjectRepoPaths])
 
   // Task counts for tabs
   const taskCounts = useMemo(() => {
