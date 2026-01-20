@@ -27,6 +27,7 @@ import opencodeRoutes from './routes/opencode'
 import projectsRoutes from './routes/projects'
 import taskDependenciesRoutes from './routes/task-dependencies'
 import tagsRoutes from './routes/tags'
+import versionRoutes from './routes/version'
 import { writeEntry } from './lib/logger'
 import type { LogEntry } from '../shared/logger'
 
@@ -79,6 +80,7 @@ export function createApp() {
   app.route('/api/projects', projectsRoutes)
   app.route('/api/task-dependencies', taskDependenciesRoutes)
   app.route('/api/tags', tagsRoutes)
+  app.route('/api/version', versionRoutes)
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {

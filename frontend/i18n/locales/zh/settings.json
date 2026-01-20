@@ -13,6 +13,14 @@
     "appearance": "外观",
     "developer": "开发者"
   },
+  "version": {
+    "upToDate": "已是最新版本",
+    "updateAvailable": "有新版本: v{{version}}",
+    "checkingForUpdates": "检查中...",
+    "updateButton": "更新",
+    "updateCommand": "运行以更新:",
+    "viewRelease": "查看版本"
+  },
   "fields": {
     "port": {
       "label": "端口",
