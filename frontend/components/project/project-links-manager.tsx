@@ -9,6 +9,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { useAddProjectLink, useRemoveProjectLink } from '@/hooks/use-projects'
 import { openExternalUrl } from '@/lib/editor-url'
+import { toast } from 'sonner'
 import type { ProjectLink } from '@/types'
 
 interface ProjectLinksManagerProps {
@@ -26,6 +27,16 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
   const handleAddLink = () => {
     const trimmedUrl = newUrl.trim()
     if (!trimmedUrl) return
+
+    // Validate URL format
+    try {
+      new URL(trimmedUrl)
+    } catch {
+      toast.error('Invalid URL', {
+        description: 'Please enter a valid URL including the scheme (e.g., https://)',
+      })
+      return
+    }
 
     addLink.mutate(
       {
