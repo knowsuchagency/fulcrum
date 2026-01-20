@@ -34,9 +34,9 @@ import {
   ComboboxEmpty,
 } from '@/components/ui/combobox'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { TaskAdd01Icon, Folder01Icon, Cancel01Icon, Attachment01Icon } from '@hugeicons/core-free-icons'
+import { TaskAdd01Icon, Folder01Icon, Cancel01Icon, Attachment01Icon, Link01Icon, Add01Icon } from '@hugeicons/core-free-icons'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { useCreateTask } from '@/hooks/use-tasks'
+import { useCreateTask, useAddTaskLink } from '@/hooks/use-tasks'
 import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
 import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
@@ -115,11 +115,15 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [isValidatingRepo, setIsValidatingRepo] = useState(false)
   const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [pendingLinks, setPendingLinks] = useState<Array<{ url: string; label?: string }>>([])
+  const [linkUrlInput, setLinkUrlInput] = useState('')
+  const [linkLabelInput, setLinkLabelInput] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
 
   const navigate = useNavigate()
   const createTask = useCreateTask()
   const uploadAttachment = useUploadAttachment()
+  const addTaskLink = useAddTaskLink()
   const formRef = useRef<HTMLFormElement>(null)
   const attachmentInputRef = useRef<HTMLInputElement>(null)
   const { data: worktreeBasePath } = useWorktreeBasePath()
@@ -303,6 +307,17 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
             }
           }
 
+          // Add any pending links
+          if (pendingLinks.length > 0) {
+            for (const link of pendingLinks) {
+              try {
+                await addTaskLink.mutateAsync({ taskId: task.id, url: link.url, label: link.label })
+              } catch {
+                // Continue with other links even if one fails
+              }
+            }
+          }
+
           const navState = isCodeTask && description.trim()
             ? { aiMode, description: description.trim(), focusTerminal: true }
             : isCodeTask
@@ -330,6 +345,9 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     setDueDate('')
     setNotes('')
     setPendingFiles([])
+    setPendingLinks([])
+    setLinkUrlInput('')
+    setLinkLabelInput('')
     setRepoPath('')
     setBaseBranch('')
     setBranch('')
@@ -378,6 +396,36 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
   const handleRemoveFile = (index: number) => {
     setPendingFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleAddLink = () => {
+    const trimmedUrl = linkUrlInput.trim()
+    if (!trimmedUrl) return
+
+    // Validate URL format
+    try {
+      new URL(trimmedUrl)
+    } catch {
+      toast.error('Invalid URL', {
+        description: 'Please enter a valid URL including the scheme (e.g., https://)',
+      })
+      return
+    }
+
+    setPendingLinks(prev => [...prev, { url: trimmedUrl, label: linkLabelInput.trim() || undefined }])
+    setLinkUrlInput('')
+    setLinkLabelInput('')
+  }
+
+  const handleRemoveLink = (index: number) => {
+    setPendingLinks(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleLinkKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddLink()
+    }
   }
 
   // Cmd+Enter to submit form when modal is open
@@ -753,6 +801,61 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                   rows={2}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                 />
+              </Field>
+
+              {/* Links */}
+              <Field>
+                <FieldLabel>Links</FieldLabel>
+                <div className="space-y-2">
+                  {pendingLinks.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {pendingLinks.map((link, index) => (
+                        <span
+                          key={`${link.url}-${index}`}
+                          className="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-xs"
+                        >
+                          <HugeiconsIcon icon={Link01Icon} size={10} className="shrink-0" />
+                          <span className="truncate max-w-[150px]">{link.label || link.url}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLink(index)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <HugeiconsIcon icon={Cancel01Icon} size={10} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Input
+                      type="url"
+                      value={linkUrlInput}
+                      onChange={(e) => setLinkUrlInput(e.target.value)}
+                      onKeyDown={handleLinkKeyDown}
+                      placeholder="https://..."
+                      className="flex-1 h-8 text-sm"
+                    />
+                    <Input
+                      type="text"
+                      value={linkLabelInput}
+                      onChange={(e) => setLinkLabelInput(e.target.value)}
+                      onKeyDown={handleLinkKeyDown}
+                      placeholder="Label (optional)"
+                      className="w-28 h-8 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={handleAddLink}
+                      disabled={!linkUrlInput.trim()}
+                    >
+                      <HugeiconsIcon icon={Add01Icon} size={14} />
+                    </Button>
+                  </div>
+                </div>
               </Field>
 
               {/* Attachments */}
