@@ -737,7 +737,6 @@ function SettingsPage() {
               className={refreshVersionCheck.isPending ? 'animate-spin' : ''}
             />
           </Button>
-
           {versionCheckLoading && (
             <div className="flex h-6 items-center gap-1.5 rounded-full bg-muted/50 px-2.5 text-xs text-muted-foreground">
               <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
