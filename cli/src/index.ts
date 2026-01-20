@@ -17,6 +17,7 @@ import { handleGitCommand } from './commands/git'
 import { handleWorktreesCommand } from './commands/worktrees'
 import { handleConfigCommand } from './commands/config'
 import { handleOpenCodeCommand } from './commands/opencode'
+import { handleClaudeCommand } from './commands/claude'
 import { handleNotificationsCommand } from './commands/notifications'
 import { handleNotifyCommand } from './commands/notify'
 import { handleDevCommand } from './commands/dev'
@@ -1546,6 +1547,41 @@ const opencodeCommand = defineCommand({
 })
 
 // ============================================================================
+// Claude Commands
+// ============================================================================
+
+const claudeInstallCommand = defineCommand({
+  meta: {
+    name: 'install',
+    description: 'Install Fulcrum plugin for Claude Code',
+  },
+  async run() {
+    await handleClaudeCommand('install')
+  },
+})
+
+const claudeUninstallCommand = defineCommand({
+  meta: {
+    name: 'uninstall',
+    description: 'Uninstall Fulcrum plugin from Claude Code',
+  },
+  async run() {
+    await handleClaudeCommand('uninstall')
+  },
+})
+
+const claudeCommand = defineCommand({
+  meta: {
+    name: 'claude',
+    description: 'Manage Claude Code integration',
+  },
+  subCommands: {
+    install: claudeInstallCommand,
+    uninstall: claudeUninstallCommand,
+  },
+})
+
+// ============================================================================
 // Notifications Commands
 // ============================================================================
 
@@ -1845,6 +1881,7 @@ const main = defineCommand({
     worktrees: worktreesCommand,
     config: configCommand,
     opencode: opencodeCommand,
+    claude: claudeCommand,
     notifications: notificationsCommand,
     notify: notifyCommand,
     dev: devCommand,
