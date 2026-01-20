@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Collapsible,
   CollapsibleContent,
@@ -140,7 +139,7 @@ function RepositoryCard({
 
   return (
     <Card
-      className="group transition-colors hover:border-foreground/20 cursor-pointer"
+      className="group transition-colors hover:border-foreground/20 cursor-pointer bg-card"
       onClick={handleCardClick}
     >
       <CardContent className="py-3 px-4">
@@ -871,8 +870,8 @@ function ProjectDetailView() {
         </div>
 
         {/* Scrollable content */}
-        <ScrollArea className="flex-1">
-          <div className="max-w-5xl mx-auto px-6 py-6 space-y-6 pb-12">
+        <div className="flex-1 overflow-auto p-6">
+          <div className="mx-auto max-w-5xl space-y-6 pb-6">
             {/* Description (below header) */}
             {isEditingDescription ? (
               <div className="flex items-start gap-2">
@@ -910,7 +909,7 @@ function ProjectDetailView() {
             ) : null}
 
             {/* Repositories Section */}
-            <section className="space-y-3">
+            <section className="rounded-lg border bg-card p-4 space-y-3">
               <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Repositories
               </h2>
@@ -956,20 +955,24 @@ function ProjectDetailView() {
 
           {/* Links and Attachments - Two column grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InlineLinks projectId={projectId} links={project.links || []} />
-            <InlineAttachments projectId={projectId} />
+            <div className="rounded-lg border bg-card p-4">
+              <InlineLinks projectId={projectId} links={project.links || []} />
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <InlineAttachments projectId={projectId} />
+            </div>
           </div>
 
           {/* Tags and Notes - Two column grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tags */}
-            <div className="space-y-2">
+            <div className="rounded-lg border bg-card p-4 space-y-2">
               <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</h3>
               <InlineTags projectId={projectId} tags={project.tags || []} />
             </div>
 
             {/* Notes - Collapsible */}
-            <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
+            <Collapsible open={notesOpen} onOpenChange={setNotesOpen} className="rounded-lg border bg-card p-4">
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
                 <HugeiconsIcon
                   icon={notesOpen ? ArrowDown01Icon : ArrowRight01Icon}
@@ -1037,7 +1040,7 @@ function ProjectDetailView() {
           </div>
 
           {/* Active Tasks Section */}
-          <section className="space-y-3">
+          <section className="rounded-lg border bg-card p-4 space-y-3">
             <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Active Tasks
             </h2>
@@ -1076,7 +1079,7 @@ function ProjectDetailView() {
             )}
           </section>
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Task creation modal */}
