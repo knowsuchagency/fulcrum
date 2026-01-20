@@ -82,6 +82,10 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Force dev data directory - don't inherit from parent shell (e.g., when running in a Fulcrum prod terminal)
+# Use DEV_FULCRUM_DIR to override if needed
+FULCRUM_DIR="${DEV_FULCRUM_DIR:-$HOME/tmp/fulcrum}"
+
 # Default dev port to 8888 (prod uses 7777), respect PORT env var if set
 # Note: 6666 might conflict with 'cbt' (SSH tunnel) service on some systems.
 # If you encounter "Address already in use", set PORT=8888 or similar in .env
