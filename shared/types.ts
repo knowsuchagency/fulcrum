@@ -258,6 +258,11 @@ export interface Repository {
   updatedAt: string
 }
 
+// Repository with linked projects (returned from GET /api/repositories/:id)
+export interface RepositoryWithProjects extends Repository {
+  projects: { id: string; name: string }[]
+}
+
 // Copier template types
 export type CopierQuestionType = 'str' | 'bool' | 'int' | 'float' | 'yaml' | 'json'
 

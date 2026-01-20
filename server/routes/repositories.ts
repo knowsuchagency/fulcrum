@@ -82,7 +82,22 @@ app.get('/:id', (c) => {
   if (!repo) {
     return c.json({ error: 'Repository not found' }, 404)
   }
-  return c.json(toApiResponse(repo))
+
+  // Get linked projects via join table
+  const linkedProjects = db
+    .select({
+      id: projects.id,
+      name: projects.name,
+    })
+    .from(projectRepositories)
+    .innerJoin(projects, eq(projectRepositories.projectId, projects.id))
+    .where(eq(projectRepositories.repositoryId, id))
+    .all()
+
+  return c.json({
+    ...toApiResponse(repo),
+    projects: linkedProjects,
+  })
 })
 
 // POST /api/repositories - Create a standalone repository from a local path

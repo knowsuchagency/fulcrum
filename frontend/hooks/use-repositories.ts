@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchJSON } from '@/lib/api'
-import type { Repository } from '@/types'
+import type { Repository, RepositoryWithProjects } from '@/types'
 
 const API_BASE = ''
 
@@ -14,7 +14,7 @@ export function useRepositories() {
 export function useRepository(id: string | null) {
   return useQuery({
     queryKey: ['repositories', id],
-    queryFn: () => fetchJSON<Repository>(`${API_BASE}/api/repositories/${id}`),
+    queryFn: () => fetchJSON<RepositoryWithProjects>(`${API_BASE}/api/repositories/${id}`),
     enabled: !!id,
   })
 }

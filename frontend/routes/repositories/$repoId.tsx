@@ -47,6 +47,7 @@ import {
   WindowsOldIcon,
   Settings05Icon,
   PackageAddIcon,
+  PackageIcon,
 } from '@hugeicons/core-free-icons'
 import { WorkspacePanel } from '@/components/workspace/workspace-panel'
 import { DeploymentSetupWizard } from '@/components/apps/deployment-setup-wizard'
@@ -442,6 +443,19 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
               >
                 {repository.displayName}
               </button>
+            )}
+            {repository.projects && repository.projects.length > 0 && (
+              <>
+                <span className="text-muted-foreground/50 text-xs">in</span>
+                <Link
+                  to="/projects/$projectId"
+                  params={{ projectId: repository.projects[0].id }}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+                  <span>{repository.projects[0].name}</span>
+                </Link>
+              </>
             )}
             {hasApp && (
               <div

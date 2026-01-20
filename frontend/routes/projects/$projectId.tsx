@@ -678,6 +678,17 @@ function ProjectDetailView() {
     return map
   }, [allTasks, project?.repositories, projectId])
 
+  // Compute all active tasks for this project (non-DONE, non-CANCELED)
+  const activeTasks = useMemo(() => {
+    return allTasks.filter(
+      (task) =>
+        task.status !== 'DONE' &&
+        task.status !== 'CANCELED' &&
+        (task.projectId === projectId ||
+          project?.repositories.some((r) => r.path === task.repoPath))
+    )
+  }, [allTasks, projectId, project?.repositories])
+
   const handleStartEditName = useCallback(() => {
     if (project) {
       setEditedName(project.name)
@@ -846,10 +857,8 @@ function ProjectDetailView() {
             </Button>
           </div>
 
-          {/* Right: Tags, Delete */}
+          {/* Right: Delete */}
           <div className="flex items-center gap-2">
-            <InlineTags projectId={projectId} tags={project.tags || []} />
-            <div className="h-4 w-px bg-border mx-1" />
             <Button
               variant="ghost"
               size="icon"
@@ -941,26 +950,6 @@ function ProjectDetailView() {
                     onNewTask={() => setTaskModalRepo(repo)}
                   />
                 ))}
-                {/* Add repository placeholder card */}
-                <Card className="border-dashed">
-                  <CardContent className="py-6 flex items-center justify-center gap-3 text-muted-foreground">
-                    <button
-                      onClick={() => setAddRepoModalOpen(true)}
-                      className="flex items-center gap-1.5 text-sm hover:text-foreground transition-colors"
-                    >
-                      <HugeiconsIcon icon={FolderAddIcon} size={14} />
-                      <span>Add</span>
-                    </button>
-                    <span className="text-muted-foreground/50">or</span>
-                    <button
-                      onClick={() => setBulkAddModalOpen(true)}
-                      className="flex items-center gap-1.5 text-sm hover:text-foreground transition-colors"
-                    >
-                      <HugeiconsIcon icon={CopyLinkIcon} size={14} />
-                      <span>Link existing</span>
-                    </button>
-                  </CardContent>
-                </Card>
               </div>
             )}
           </section>
@@ -971,72 +960,121 @@ function ProjectDetailView() {
             <InlineAttachments projectId={projectId} />
           </div>
 
-          {/* Notes - Collapsible */}
-          <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
-            <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
-              <HugeiconsIcon
-                icon={notesOpen ? ArrowDown01Icon : ArrowRight01Icon}
-                size={14}
-                className="text-muted-foreground"
-              />
-              <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
-                Notes
-              </h2>
-              {!notesOpen && project.notes && (
-                <span className="text-xs text-muted-foreground truncate max-w-xs">
-                  — {project.notes.split('\n')[0]}
-                </span>
-              )}
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3">
-              {isEditingNotes ? (
-                <div className="space-y-2">
-                  <Textarea
-                    ref={notesTextareaRef}
-                    value={editedNotes}
-                    onChange={(e) => setEditedNotes(e.target.value)}
-                    placeholder="Add notes about this project..."
-                    className="min-h-[100px] text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.metaKey) {
-                        handleSaveNotes()
-                      } else if (e.key === 'Escape') {
-                        handleCancelEditNotes()
-                      }
-                    }}
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveNotes}>
-                      <HugeiconsIcon icon={Tick02Icon} size={12} data-slot="icon" />
-                      Save
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={handleCancelEditNotes}>
-                      Cancel
+          {/* Tags and Notes - Two column grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Tags */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</h3>
+              <InlineTags projectId={projectId} tags={project.tags || []} />
+            </div>
+
+            {/* Notes - Collapsible */}
+            <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
+                <HugeiconsIcon
+                  icon={notesOpen ? ArrowDown01Icon : ArrowRight01Icon}
+                  size={14}
+                  className="text-muted-foreground"
+                />
+                <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
+                  Notes
+                </h2>
+                {!notesOpen && project.notes && (
+                  <span className="text-xs text-muted-foreground truncate max-w-xs">
+                    — {project.notes.split('\n')[0]}
+                  </span>
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3">
+                {isEditingNotes ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      ref={notesTextareaRef}
+                      value={editedNotes}
+                      onChange={(e) => setEditedNotes(e.target.value)}
+                      placeholder="Add notes about this project..."
+                      className="min-h-[100px] text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.metaKey) {
+                          handleSaveNotes()
+                        } else if (e.key === 'Escape') {
+                          handleCancelEditNotes()
+                        }
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveNotes}>
+                        <HugeiconsIcon icon={Tick02Icon} size={12} data-slot="icon" />
+                        Save
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleCancelEditNotes}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-4">
+                    {project.notes ? (
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">
+                        {project.notes}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">No notes</p>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 h-7 text-xs"
+                      onClick={handleStartEditNotes}
+                    >
+                      <HugeiconsIcon icon={Edit02Icon} size={12} data-slot="icon" />
+                      Edit
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-start justify-between gap-4">
-                  {project.notes ? (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">
-                      {project.notes}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No notes</p>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 h-7 text-xs"
-                    onClick={handleStartEditNotes}
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+
+          {/* Active Tasks Section */}
+          <section className="space-y-3">
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Active Tasks
+            </h2>
+            {activeTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No active tasks</p>
+            ) : (
+              <div className="space-y-2">
+                {activeTasks.map((task) => (
+                  <Link
+                    key={task.id}
+                    to="/tasks/$taskId"
+                    params={{ taskId: task.id }}
+                    className="flex items-center gap-2 p-2 rounded-md border bg-background hover:bg-accent transition-colors"
                   >
-                    <HugeiconsIcon icon={Edit02Icon} size={12} data-slot="icon" />
-                    Edit
-                  </Button>
-                </div>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
+                    <Badge
+                      variant={
+                        task.status === 'IN_PROGRESS'
+                          ? 'default'
+                          : task.status === 'IN_REVIEW'
+                            ? 'secondary'
+                            : 'outline'
+                      }
+                      className="text-xs shrink-0"
+                    >
+                      {task.status.replace('_', ' ')}
+                    </Badge>
+                    <span className="text-sm truncate">{task.title}</span>
+                    {task.repoPath && (
+                      <span className="text-xs text-muted-foreground ml-auto truncate max-w-32">
+                        {task.repoPath.split('/').pop()}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
           </div>
         </ScrollArea>
       </div>
