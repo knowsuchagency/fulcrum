@@ -81,8 +81,8 @@ app.get('/dependencies', (c) => {
   // Since the server runs as a daemon without access to shell aliases,
   // we trust the CLI's detection passed via environment variable.
   // As a fallback, we also check common installation paths.
-  const claudeInstalledFromEnv = process.env.VIBORA_CLAUDE_INSTALLED === '1'
-  const claudeMissingFromEnv = process.env.VIBORA_CLAUDE_MISSING === '1'
+  const claudeInstalledFromEnv = process.env.FULCRUM_CLAUDE_INSTALLED === '1'
+  const claudeMissingFromEnv = process.env.FULCRUM_CLAUDE_MISSING === '1'
   const claudeCheck = claudeInstalledFromEnv
     ? { installed: true }
     : claudeMissingFromEnv
@@ -91,8 +91,8 @@ app.get('/dependencies', (c) => {
 
   // Check for OpenCode CLI
   // Same pattern as Claude Code - trust CLI's alias-aware detection via env vars
-  const openCodeInstalledFromEnv = process.env.VIBORA_OPENCODE_INSTALLED === '1'
-  const openCodeMissingFromEnv = process.env.VIBORA_OPENCODE_MISSING === '1'
+  const openCodeInstalledFromEnv = process.env.FULCRUM_OPENCODE_INSTALLED === '1'
+  const openCodeMissingFromEnv = process.env.FULCRUM_OPENCODE_MISSING === '1'
   const openCodeCheck = openCodeInstalledFromEnv
     ? { installed: true }
     : openCodeMissingFromEnv

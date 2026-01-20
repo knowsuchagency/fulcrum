@@ -16,16 +16,16 @@ import {
   SystemTab,
   ProcessesTab,
   ClaudeTab,
-  ViboraTab,
+  FulcrumTab,
   WorktreesTab,
   UsageTab,
   JobsTab,
 } from '@/components/monitoring/tabs'
 import { useJobsAvailable } from '@/hooks/use-jobs'
 
-type MonitoringTab = 'system' | 'processes' | 'claude' | 'vibora' | 'worktrees' | 'usage' | 'jobs'
+type MonitoringTab = 'system' | 'processes' | 'claude' | 'fulcrum' | 'worktrees' | 'usage' | 'jobs'
 
-const VALID_TABS: MonitoringTab[] = ['system', 'processes', 'claude', 'vibora', 'worktrees', 'usage', 'jobs']
+const VALID_TABS: MonitoringTab[] = ['system', 'processes', 'claude', 'fulcrum', 'worktrees', 'usage', 'jobs']
 
 type JobScope = 'all' | 'user' | 'system'
 
@@ -82,9 +82,9 @@ function MonitoringPage() {
               <HugeiconsIcon icon={ClaudeIcon} size={14} strokeWidth={2} />
               <span className="max-sm:hidden">{t('tabs.claude')}</span>
             </TabsTrigger>
-            <TabsTrigger value="vibora" className="gap-1.5 data-[state=active]:bg-muted">
+            <TabsTrigger value="fulcrum" className="gap-1.5 data-[state=active]:bg-muted">
               <HugeiconsIcon icon={BrowserIcon} size={14} strokeWidth={2} />
-              <span className="max-sm:hidden">{t('tabs.vibora')}</span>
+              <span className="max-sm:hidden">{t('tabs.fulcrum')}</span>
             </TabsTrigger>
             <TabsTrigger value="worktrees" className="gap-1.5 data-[state=active]:bg-muted">
               <HugeiconsIcon icon={GitBranchIcon} size={14} strokeWidth={2} />
@@ -115,8 +115,8 @@ function MonitoringPage() {
               <ClaudeTab />
             </TabsContent>
 
-            <TabsContent value="vibora" className="m-0">
-              <ViboraTab />
+            <TabsContent value="fulcrum" className="m-0">
+              <FulcrumTab />
             </TabsContent>
 
             <TabsContent value="worktrees" className="m-0">

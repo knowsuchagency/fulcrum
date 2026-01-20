@@ -1,10 +1,10 @@
 /**
- * Vibora Desktop Server Entry Point
+ * Fulcrum Desktop Server Entry Point
  *
- * This is the entry point for the Vibora server when running as a Neutralinojs extension.
+ * This is the entry point for the Fulcrum server when running as a Neutralinojs extension.
  * It handles:
  * 1. Reading Neutralino connectivity info from stdin
- * 2. Starting the Vibora server on an available port
+ * 2. Starting the Fulcrum server on an available port
  * 3. Connecting to Neutralino via WebSocket to broadcast events
  * 4. Graceful shutdown on Neutralino close
  */
@@ -200,7 +200,7 @@ function gracefulShutdown() {
  * Main entry point
  */
 async function main() {
-  log.desktop.info('Starting Vibora server in desktop mode')
+  log.desktop.info('Starting Fulcrum server in desktop mode')
 
   // Ensure settings file is up-to-date with latest schema on startup
   ensureLatestSettings()
@@ -258,7 +258,7 @@ async function main() {
       hostname: '127.0.0.1', // Bind to localhost only for desktop app
     },
     async (info) => {
-      log.desktop.info('Vibora server running', { port: info.port })
+      log.desktop.info('Fulcrum server running', { port: info.port })
 
       // If running as Neutralino extension, connect and broadcast ready
       if (nlConfig) {

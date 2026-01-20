@@ -13,7 +13,7 @@ interface ConfigResponse {
 // Config keys using dot-notation for nested settings
 export const CONFIG_KEYS = {
   PORT: 'server.port',
-  WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only, derived from VIBORA_DIR
+  WORKTREE_BASE_PATH: 'worktree_base_path', // Read-only, derived from FULCRUM_DIR
   HOME_DIR: 'home_dir', // Read-only, system home directory
   DEFAULT_GIT_REPOS_DIR: 'paths.defaultGitReposDir',
   EDITOR_APP: 'editor.app',
@@ -54,7 +54,7 @@ export function usePort() {
   }
 }
 
-// Read-only: derived from VIBORA_DIR on server
+// Read-only: derived from FULCRUM_DIR on server
 export function useWorktreeBasePath() {
   const query = useConfig(CONFIG_KEYS.WORKTREE_BASE_PATH)
 
@@ -393,7 +393,7 @@ export function useDeveloperMode() {
   })
 }
 
-export function useRestartVibora() {
+export function useRestartFulcrum() {
   return useMutation({
     mutationFn: () =>
       fetchJSON<RestartResponse>(`${API_BASE}/api/config/restart`, {
@@ -408,7 +408,7 @@ interface HealthResponse {
   uptime: number
 }
 
-export function useViboraVersion() {
+export function useFulcrumVersion() {
   const query = useQuery({
     queryKey: ['health'],
     queryFn: () => fetchJSON<HealthResponse>(`${API_BASE}/health`),

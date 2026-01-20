@@ -193,7 +193,7 @@ export interface PathStatResponse {
   isFile: boolean
 }
 
-export class ViboraClient {
+export class FulcrumClient {
   private baseUrl: string
 
   constructor(urlOverride?: string, portOverride?: string) {
@@ -442,7 +442,7 @@ export class ViboraClient {
     return this.fetch('/api/config/developer-mode')
   }
 
-  async restartVibora(): Promise<{ success?: boolean; message?: string; error?: string }> {
+  async restartFulcrum(): Promise<{ success?: boolean; message?: string; error?: string }> {
     return this.fetch('/api/config/restart', {
       method: 'POST',
     })

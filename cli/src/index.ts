@@ -1263,7 +1263,7 @@ const fsEditCommand = defineCommand({
 const fsCommand = defineCommand({
   meta: {
     name: 'fs',
-    description: 'Remote filesystem operations (read/write/edit files on the Vibora server)',
+    description: 'Remote filesystem operations (read/write/edit files on the Fulcrum server)',
   },
   subCommands: {
     list: fsListCommand,
@@ -1663,7 +1663,7 @@ const notificationsCommand = defineCommand({
 const upCommand = defineCommand({
   meta: {
     name: 'up',
-    description: 'Start Vibora server (daemon)',
+    description: 'Start Fulcrum server (daemon)',
   },
   args: {
     ...globalArgs,
@@ -1690,7 +1690,7 @@ const upCommand = defineCommand({
 const downCommand = defineCommand({
   meta: {
     name: 'down',
-    description: 'Stop Vibora server',
+    description: 'Stop Fulcrum server',
   },
   args: globalArgs,
   async run({ args }) {
@@ -1754,7 +1754,7 @@ const notifyCommand = defineCommand({
 const devRestartCommand = defineCommand({
   meta: {
     name: 'restart',
-    description: 'Build and restart Vibora (developer mode)',
+    description: 'Build and restart Fulcrum (developer mode)',
   },
   args: globalArgs,
   async run({ args }) {
@@ -1804,9 +1804,9 @@ const mcpCommand = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: 'vibora',
+    name: 'fulcrum',
     version: VERSION,
-    description: 'vibora CLI - Terminal-first AI agent orchestration',
+    description: 'fulcrum CLI - Terminal-first AI agent orchestration',
   },
   args: globalArgs,
   subCommands: {

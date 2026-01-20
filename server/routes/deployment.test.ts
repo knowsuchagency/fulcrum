@@ -13,7 +13,7 @@ mock.module('../services/docker-compose', () => ({
 mock.module('../services/traefik', () => ({
   detectTraefik: () =>
     Promise.resolve({
-      type: 'vibora',
+      type: 'fulcrum',
       containerName: 'traefik',
       configDir: '/etc/traefik/dynamic',
       network: 'traefik',
@@ -73,7 +73,7 @@ describe('Deployment Routes', () => {
 
       expect(body.traefik).toBeDefined()
       expect(body.traefik.detected).toBe(true)
-      expect(body.traefik.type).toBe('vibora')
+      expect(body.traefik.type).toBe('fulcrum')
       expect(body.traefik.containerName).toBe('traefik')
       expect(body.traefik.network).toBe('traefik')
       expect(body.traefik.configWritable).toBe(true)

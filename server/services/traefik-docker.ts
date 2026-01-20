@@ -2,34 +2,34 @@ import { mkdir, writeFile, chmod } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { log } from '../lib/logger'
-import { getViboraDir } from '../lib/settings'
+import { getFulcrumDir } from '../lib/settings'
 import { runDocker } from './docker-compose'
 import type { TraefikConfig } from './traefik'
 
-export const TRAEFIK_CONTAINER_NAME = 'vibora-traefik'
+export const TRAEFIK_CONTAINER_NAME = 'fulcrum-traefik'
 export const TRAEFIK_IMAGE = 'traefik:v3'
-export const TRAEFIK_NETWORK = 'vibora-network'
+export const TRAEFIK_NETWORK = 'fulcrum-network'
 export const TRAEFIK_CERTS_MOUNT = '/certs' // Mount point inside container
 
 /**
  * Get Traefik config directory (on host)
- * Uses vibora directory to avoid requiring root permissions
+ * Uses fulcrum directory to avoid requiring root permissions
  */
 export function getTraefikConfigDir(): string {
-  return join(getViboraDir(), 'traefik')
+  return join(getFulcrumDir(), 'traefik')
 }
 
 /**
  * Get Traefik dynamic config directory (on host)
  */
 export function getTraefikDynamicDir(): string {
-  return join(getViboraDir(), 'traefik', 'dynamic')
+  return join(getFulcrumDir(), 'traefik', 'dynamic')
 }
 
 export type TraefikContainerStatus = 'running' | 'stopped' | 'not_found'
 
 /**
- * Get the status of Vibora's Traefik container
+ * Get the status of Fulcrum's Traefik container
  */
 export async function getTraefikContainerStatus(): Promise<TraefikContainerStatus> {
   const result = await runDocker([
@@ -52,7 +52,7 @@ export async function getTraefikContainerStatus(): Promise<TraefikContainerStatu
 }
 
 /**
- * Ensure the vibora-network exists
+ * Ensure the fulcrum-network exists
  */
 async function ensureNetwork(): Promise<{ success: boolean; error?: string }> {
   // Check if network exists
@@ -85,7 +85,7 @@ async function ensureNetwork(): Promise<{ success: boolean; error?: string }> {
  * Get the certs directory path (on host)
  */
 function getCertsDir(): string {
-  return join(getViboraDir(), 'certs')
+  return join(getFulcrumDir(), 'certs')
 }
 
 /**
@@ -112,7 +112,7 @@ async function ensureConfigDirs(): Promise<void> {
  * Generate traefik.yml static config
  */
 function generateTraefikConfig(acmeEmail: string): string {
-  return `# Vibora Traefik Configuration
+  return `# Fulcrum Traefik Configuration
 # Auto-generated - do not edit manually
 
 api:
@@ -161,7 +161,7 @@ accessLog:
  * Generate the redirect-to-https middleware config
  */
 function generateMiddlewaresConfig(): string {
-  return `# Vibora Traefik Middlewares
+  return `# Fulcrum Traefik Middlewares
 http:
   middlewares:
     redirect-to-https:
@@ -172,7 +172,7 @@ http:
 }
 
 /**
- * Start Vibora's Traefik container
+ * Start Fulcrum's Traefik container
  */
 export async function startTraefikContainer(
   acmeEmail: string
@@ -308,7 +308,7 @@ export async function startTraefikContainer(
 }
 
 /**
- * Stop Vibora's Traefik container
+ * Stop Fulcrum's Traefik container
  */
 export async function stopTraefikContainer(): Promise<{ success: boolean; error?: string }> {
   const status = await getTraefikContainerStatus()
@@ -336,7 +336,7 @@ export async function stopTraefikContainer(): Promise<{ success: boolean; error?
 }
 
 /**
- * Remove Vibora's Traefik container
+ * Remove Fulcrum's Traefik container
  */
 export async function removeTraefikContainer(): Promise<{ success: boolean; error?: string }> {
   const status = await getTraefikContainerStatus()
@@ -380,15 +380,15 @@ export async function getTraefikLogs(tail = 100): Promise<string> {
 }
 
 /**
- * Get Vibora's Traefik config (for use when we start our own Traefik)
+ * Get Fulcrum's Traefik config (for use when we start our own Traefik)
  */
-export function getViboraTraefikConfig(): TraefikConfig {
+export function getFulcrumTraefikConfig(): TraefikConfig {
   return {
     configDir: getTraefikDynamicDir(),
     network: TRAEFIK_NETWORK,
     certResolver: 'letsencrypt',
     containerName: TRAEFIK_CONTAINER_NAME,
-    type: 'vibora',
+    type: 'fulcrum',
     certsDir: TRAEFIK_CERTS_MOUNT, // /certs inside container
   }
 }

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "fulcrum": {
+      "command": "fulcrum",
+      "args": ["mcp"]
+    }
+  }
+}

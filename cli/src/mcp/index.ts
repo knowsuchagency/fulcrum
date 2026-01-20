@@ -1,17 +1,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerTools } from './tools'
-import { ViboraClient } from '../client'
+import { FulcrumClient } from '../client'
 
 /**
- * Run the Vibora MCP server over stdio transport.
+ * Run the Fulcrum MCP server over stdio transport.
  * Exposes task management operations as MCP tools.
  */
 export async function runMcpServer(urlOverride?: string, portOverride?: string) {
-  const client = new ViboraClient(urlOverride, portOverride)
+  const client = new FulcrumClient(urlOverride, portOverride)
 
   const server = new McpServer({
-    name: 'vibora',
+    name: 'fulcrum',
     version: '1.0.0',
   })
 

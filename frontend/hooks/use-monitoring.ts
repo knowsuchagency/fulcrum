@@ -5,7 +5,7 @@ import type { AgentType } from '@shared/types'
 const API_BASE = ''
 
 export type TimeWindow = '1m' | '10m' | '1h' | '3h' | '6h' | '12h' | '24h'
-export type ClaudeFilter = 'vibora' | 'all'
+export type ClaudeFilter = 'fulcrum' | 'all'
 
 export interface ClaudeInstance {
   pid: number
@@ -18,7 +18,7 @@ export interface ClaudeInstance {
   taskId: string | null
   taskTitle: string | null
   worktreePath: string | null
-  isViboraManaged: boolean
+  isFulcrumManaged: boolean
 }
 
 export interface SystemMetric {
@@ -39,7 +39,7 @@ export interface SystemMetricsResponse {
   }
 }
 
-export function useClaudeInstances(filter: ClaudeFilter = 'vibora') {
+export function useClaudeInstances(filter: ClaudeFilter = 'fulcrum') {
   return useQuery({
     queryKey: ['monitoring', 'claude-instances', filter],
     queryFn: () =>
@@ -63,7 +63,7 @@ export function useKillClaudeInstance() {
   return useMutation({
     mutationFn: ({ terminalId, pid }: { terminalId?: string | null; pid?: number }) => {
       if (terminalId) {
-        // Kill via terminal (Vibora-managed)
+        // Kill via terminal (Fulcrum-managed)
         return fetchJSON<{ success: boolean; killed: boolean }>(
           `${API_BASE}/api/monitoring/claude-instances/${terminalId}/kill`,
           { method: 'POST' }
@@ -151,9 +151,9 @@ export function useDockerStats() {
   })
 }
 
-// Vibora instances types and hooks
-export interface ViboraInstanceGroup {
-  viboraDir: string
+// Fulcrum instances types and hooks
+export interface FulcrumInstanceGroup {
+  fulcrumDir: string
   port: number
   mode: 'development' | 'production'
   backend: { pid: number; memoryMB: number; startedAt: number | null } | null
@@ -161,25 +161,25 @@ export interface ViboraInstanceGroup {
   totalMemoryMB: number
 }
 
-export function useViboraInstances() {
+export function useFulcrumInstances() {
   return useQuery({
-    queryKey: ['monitoring', 'vibora-instances'],
-    queryFn: () => fetchJSON<ViboraInstanceGroup[]>(`${API_BASE}/api/monitoring/vibora-instances`),
+    queryKey: ['monitoring', 'fulcrum-instances'],
+    queryFn: () => fetchJSON<FulcrumInstanceGroup[]>(`${API_BASE}/api/monitoring/fulcrum-instances`),
     refetchInterval: 5000,
   })
 }
 
-export function useKillViboraInstance() {
+export function useKillFulcrumInstance() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ backendPid }: { backendPid: number }) =>
-      fetchJSON<{ success: boolean; killed: number[]; viboraDir: string; port: number }>(
-        `${API_BASE}/api/monitoring/vibora-instances/${backendPid}/kill`,
+      fetchJSON<{ success: boolean; killed: number[]; fulcrumDir: string; port: number }>(
+        `${API_BASE}/api/monitoring/fulcrum-instances/${backendPid}/kill`,
         { method: 'POST' }
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['monitoring', 'vibora-instances'] })
+      queryClient.invalidateQueries({ queryKey: ['monitoring', 'fulcrum-instances'] })
     },
   })
 }

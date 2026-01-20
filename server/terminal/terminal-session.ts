@@ -113,16 +113,16 @@ export class TerminalSession {
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
           // Signal remote context for starship/shell prompts to show full info
-          SSH_TTY: '/dev/pts/vibora',
+          SSH_TTY: '/dev/pts/fulcrum',
           SSH_CONNECTION: '127.0.0.1 0 127.0.0.1 22',
           // Explicitly unset - bun-pty merges with process.env, doesn't replace
           NODE_ENV: '',
           PORT: '',
-          // Inject Vibora URL so CLI tools (like the plugin) can find the server
+          // Inject Fulcrum URL so CLI tools (like the plugin) can find the server
           // This is critical when running on non-default ports (e.g. dev mode on 8888)
           // Use localhost to support both IPv4 and IPv6 (Bun defaults to IPv6 on macOS)
-          VIBORA_URL: `http://localhost:${getSettingByKey('port')}`,
-          ...(this._taskId ? { VIBORA_TASK_ID: this._taskId } : {}),
+          FULCRUM_URL: `http://localhost:${getSettingByKey('port')}`,
+          ...(this._taskId ? { FULCRUM_TASK_ID: this._taskId } : {}),
         },
       })
 

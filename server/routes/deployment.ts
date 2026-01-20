@@ -29,7 +29,7 @@ export interface DeploymentPrerequisites {
   }
   traefik: {
     detected: boolean
-    type: 'dokploy' | 'vibora' | 'other' | 'none'
+    type: 'dokploy' | 'fulcrum' | 'other' | 'none'
     containerName: string | null
     configDir: string | null
     network: string | null
@@ -85,7 +85,7 @@ app.get('/prerequisites', async (c) => {
   return c.json(prerequisites)
 })
 
-// POST /api/deployment/traefik/start - Start Vibora's Traefik container
+// POST /api/deployment/traefik/start - Start Fulcrum's Traefik container
 app.post('/traefik/start', async (c) => {
   // First check if Docker is running
   const dockerRunning = await checkDockerRunning()
@@ -102,7 +102,7 @@ app.post('/traefik/start', async (c) => {
 
   // Check if external Traefik already exists
   const existingTraefik = await detectTraefik()
-  if (existingTraefik && existingTraefik.type !== 'vibora') {
+  if (existingTraefik && existingTraefik.type !== 'fulcrum') {
     return c.json(
       {
         success: false,
@@ -139,7 +139,7 @@ app.post('/traefik/start', async (c) => {
   })
 })
 
-// POST /api/deployment/traefik/stop - Stop Vibora's Traefik container
+// POST /api/deployment/traefik/stop - Stop Fulcrum's Traefik container
 app.post('/traefik/stop', async (c) => {
   const result = await stopTraefikContainer()
 

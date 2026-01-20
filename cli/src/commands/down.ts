@@ -8,7 +8,7 @@ export async function handleDownCommand() {
   if (!pid) {
     throw new CliError(
       'NOT_RUNNING',
-      'No PID file found. Vibora server may not be running.',
+      'No PID file found. Fulcrum server may not be running.',
       ExitCodes.ERROR
     )
   }
@@ -19,7 +19,7 @@ export async function handleDownCommand() {
     if (isJsonOutput()) {
       output({ stopped: true, pid, wasRunning: false })
     } else {
-      console.log(`Vibora was not running (stale PID file cleaned up)`)
+      console.log(`Fulcrum was not running (stale PID file cleaned up)`)
     }
     return
   }
@@ -57,6 +57,6 @@ export async function handleDownCommand() {
   if (isJsonOutput()) {
     output({ stopped: true, pid, wasRunning: true })
   } else {
-    console.log(`Vibora stopped (PID: ${pid})`)
+    console.log(`Fulcrum stopped (PID: ${pid})`)
   }
 }

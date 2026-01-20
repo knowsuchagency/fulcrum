@@ -87,7 +87,7 @@ const server = serve(
     hostname: HOST,
   },
   (info) => {
-    log.server.info('Vibora server running', {
+    log.server.info('Fulcrum server running', {
       port: info.port,
       healthCheck: `http://localhost:${info.port}/health`,
       api: `http://localhost:${info.port}/api/tasks`,

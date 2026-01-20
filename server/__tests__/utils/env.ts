@@ -5,12 +5,12 @@ import { execSync } from 'node:child_process'
 import { resetDatabase } from '../../db'
 
 /**
- * Creates an isolated test environment with its own VIBORA_DIR.
+ * Creates an isolated test environment with its own FULCRUM_DIR.
  * Each test gets a fresh temporary directory and database.
  */
 export interface TestEnv {
-  /** The temporary VIBORA_DIR path */
-  viboraDir: string
+  /** The temporary FULCRUM_DIR path */
+  fulcrumDir: string
   /** Cleanup function - removes temp directory and resets database */
   cleanup: () => void
 }
@@ -20,20 +20,20 @@ export interface TestEnv {
  * Call this in beforeEach() to get a fresh environment for each test.
  */
 export function setupTestEnv(): TestEnv {
-  const viboraDir = mkdtempSync(join(tmpdir(), 'vibora-test-'))
+  const fulcrumDir = mkdtempSync(join(tmpdir(), 'fulcrum-test-'))
 
   // Store original env values
-  const originalViboraDir = process.env.VIBORA_DIR
+  const originalFulcrumDir = process.env.FULCRUM_DIR
   const originalPort = process.env.PORT
 
   // Set test environment
-  process.env.VIBORA_DIR = viboraDir
+  process.env.FULCRUM_DIR = fulcrumDir
   delete process.env.PORT // Clear to use defaults
 
   // Push database schema to the new test database
   try {
     execSync('bun run drizzle-kit push', {
-      env: { ...process.env, VIBORA_DIR: viboraDir },
+      env: { ...process.env, FULCRUM_DIR: fulcrumDir },
       stdio: 'pipe',
     })
   } catch (err) {
@@ -42,16 +42,16 @@ export function setupTestEnv(): TestEnv {
   }
 
   return {
-    viboraDir,
+    fulcrumDir,
     cleanup: () => {
       // Reset database first (closes connections)
       resetDatabase()
 
       // Restore original env values
-      if (originalViboraDir !== undefined) {
-        process.env.VIBORA_DIR = originalViboraDir
+      if (originalFulcrumDir !== undefined) {
+        process.env.FULCRUM_DIR = originalFulcrumDir
       } else {
-        delete process.env.VIBORA_DIR
+        delete process.env.FULCRUM_DIR
       }
       if (originalPort !== undefined) {
         process.env.PORT = originalPort
@@ -59,7 +59,7 @@ export function setupTestEnv(): TestEnv {
 
       // Remove temp directory
       try {
-        rmSync(viboraDir, { recursive: true, force: true })
+        rmSync(fulcrumDir, { recursive: true, force: true })
       } catch {
         // Ignore cleanup errors
       }

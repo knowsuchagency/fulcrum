@@ -462,7 +462,7 @@ export interface DeploymentPrerequisites {
   }
   traefik: {
     detected: boolean
-    type: 'dokploy' | 'vibora' | 'other' | 'none'
+    type: 'dokploy' | 'fulcrum' | 'other' | 'none'
     containerName: string | null
     configDir: string | null
     network: string | null
@@ -482,7 +482,7 @@ export function useDeploymentPrerequisites() {
   })
 }
 
-// Start Traefik container (only for Vibora's own Traefik, not external)
+// Start Traefik container (only for Fulcrum's own Traefik, not external)
 export function useStartTraefik() {
   const queryClient = useQueryClient()
 
@@ -498,7 +498,7 @@ export function useStartTraefik() {
   })
 }
 
-// Stop Traefik container (only Vibora's own Traefik)
+// Stop Traefik container (only Fulcrum's own Traefik)
 export function useStopTraefik() {
   const queryClient = useQueryClient()
 

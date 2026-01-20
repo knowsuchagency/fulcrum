@@ -190,7 +190,7 @@ export function LinkRepositoriesModal({
             {filteredRepos.length === 0 ? (
               <div className="px-3 py-8 text-center text-sm text-muted-foreground">
                 {repositories?.length === 0
-                  ? 'No repositories found in Vibora'
+                  ? 'No repositories found in Fulcrum'
                   : 'No repositories match your search'}
               </div>
             ) : (

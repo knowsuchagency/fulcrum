@@ -4,7 +4,7 @@
     "claude": "AI 代理",
     "system": "系统指标",
     "processes": "进程",
-    "vibora": "Vibora 服务器",
+    "fulcrum": "Fulcrum 服务器",
     "worktrees": "工作树",
     "jobs": "作业",
     "usage": "使用限额"
@@ -28,11 +28,11 @@
     "killing": "终止中...",
     "killSelected": "终止 {{count}} 个已选",
     "source": {
-      "vibora": "Vibora: {{name}}",
+      "fulcrum": "Fulcrum: {{name}}",
       "external": "外部"
     },
     "empty": "没有 AI 代理实例运行中",
-    "emptyVibora": " (在 Vibora 终端中)",
+    "emptyFulcrum": " (在 Fulcrum 终端中)",
     "error": "加载 AI 代理实例失败：{{message}}"
   },
   "system": {
@@ -72,8 +72,8 @@
     "containersEmpty": "没有容器运行中",
     "containersUnavailable": "Docker/Podman 不可用"
   },
-  "vibora": {
-    "description": "运行中的 Vibora 开发服务器",
+  "fulcrum": {
+    "description": "运行中的 Fulcrum 开发服务器",
     "instanceCount": "{{count}} 个实例运行中",
     "headers": {
       "port": "端口",
@@ -89,8 +89,8 @@
     "vite": "Vite",
     "kill": "终止",
     "killing": "终止中...",
-    "empty": "没有 Vibora 实例运行中",
-    "error": "加载 Vibora 实例失败：{{message}}"
+    "empty": "没有 Fulcrum 实例运行中",
+    "error": "加载 Fulcrum 实例失败：{{message}}"
   },
   "usage": {
     "fiveHourBlock": "5小时配额",

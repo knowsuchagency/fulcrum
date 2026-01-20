@@ -52,7 +52,7 @@ export function useTaskSync() {
 
           // Deduplicate notifications across tabs using localStorage
           // Use a claim mechanism similar to sound deduplication
-          const NOTIFICATION_CLAIM_KEY = `vibora:notification:${id}`
+          const NOTIFICATION_CLAIM_KEY = `fulcrum:notification:${id}`
           const CLAIM_SETTLE_MS = 50
           const CLAIM_TTL_MS = 10000 // Clean up old claims after 10s
 
@@ -141,7 +141,7 @@ export function useTaskSync() {
           if (playSound) {
             const SOUND_DEBOUNCE_MS = 1000
             const CLAIM_SETTLE_MS = 50
-            const storageKey = 'vibora:lastSoundPlayed'
+            const storageKey = 'fulcrum:lastSoundPlayed'
             const now = Date.now()
 
             // Parse existing claim (format: "timestamp:randomId")
@@ -180,7 +180,7 @@ export function useTaskSync() {
           // Post to parent window for desktop native notifications
           if (window.parent !== window) {
             window.parent.postMessage(
-              { type: 'vibora:notification', title, message: description, notificationType },
+              { type: 'fulcrum:notification', title, message: description, notificationType },
               '*'
             )
           }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vibora</title>
+  <title>Fulcrum</title>
   <link rel="icon" type="image/png" href="/icons/icon.png">
   <style>
     * {
@@ -270,7 +270,7 @@
     }
 
     /* Embedded app frame */
-    #vibora-frame {
+    #fulcrum-frame {
       position: fixed;
       top: 0;
       left: 0;
@@ -284,7 +284,7 @@
       display: none;
     }
 
-    body.loaded #vibora-frame {
+    body.loaded #fulcrum-frame {
       display: block;
     }
 
@@ -366,15 +366,15 @@
 </head>
 <body>
   <div id="app">
-    <img src="/icons/logo.png" alt="Vibora" class="logo">
+    <img src="/icons/logo.png" alt="Fulcrum" class="logo">
     <div class="spinner"></div>
     <div class="status">
-      <div id="status-text">Starting Vibora...</div>
+      <div id="status-text">Starting Fulcrum...</div>
       <div class="status-detail" id="status-detail"></div>
     </div>
   </div>
 
-  <iframe id="vibora-frame" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-clipboard-read allow-clipboard-write"></iframe>
+  <iframe id="fulcrum-frame" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-clipboard-read allow-clipboard-write"></iframe>
 
   <div id="zoom-trigger"></div>
   <div id="zoom-controls">

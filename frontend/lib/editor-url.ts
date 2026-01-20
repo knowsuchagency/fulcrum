@@ -1,5 +1,5 @@
 /**
- * Editor app types supported by Vibora
+ * Editor app types supported by Fulcrum
  */
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed' | 'antigravity'
 
@@ -77,7 +77,7 @@ export function buildVSCodeUrl(
 export function openExternalUrl(url: string): void {
   if (window.parent !== window) {
     // Running in desktop app iframe - delegate to Neutralino
-    window.parent.postMessage({ type: 'vibora:openUrl', url }, '*')
+    window.parent.postMessage({ type: 'fulcrum:openUrl', url }, '*')
   } else {
     // Running in web browser
     window.open(url, '_blank')

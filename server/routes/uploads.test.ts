@@ -3,7 +3,7 @@ import { createTestApp } from '../__tests__/fixtures/app'
 import { setupTestEnv, type TestEnv } from '../__tests__/utils/env'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { getViboraDir } from '../lib/settings'
+import { getFulcrumDir } from '../lib/settings'
 
 describe('Uploads Routes', () => {
   let testEnv: TestEnv
@@ -100,7 +100,7 @@ describe('Uploads Routes', () => {
     })
 
     test('creates uploads directory if it does not exist', async () => {
-      const uploadsDir = join(getViboraDir(), 'uploads')
+      const uploadsDir = join(getFulcrumDir(), 'uploads')
       expect(existsSync(uploadsDir)).toBe(false) // Should not exist yet
 
       const pngBuffer = Buffer.from([
@@ -127,7 +127,7 @@ describe('Uploads Routes', () => {
   describe('GET /api/uploads/:filename', () => {
     test('serves uploaded image', async () => {
       // Create an upload manually
-      const uploadsDir = join(getViboraDir(), 'uploads')
+      const uploadsDir = join(getFulcrumDir(), 'uploads')
       mkdirSync(uploadsDir, { recursive: true })
 
       const filename = 'clipboard-2025-01-01-120000.png'

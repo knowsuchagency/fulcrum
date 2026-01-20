@@ -14,7 +14,7 @@ const isMacOS = process.platform === 'darwin'
 
 // Agent process patterns for detection
 // Must be preceded by / or start, and followed by whitespace/null/end
-// This avoids matching directory paths like /vibora/opencode/sockets/ or /worktrees/claude-test/
+// This avoids matching directory paths like /fulcrum/opencode/sockets/ or /worktrees/claude-test/
 const AGENT_PATTERNS: Record<AgentType, RegExp> = {
   claude: /(^|\/)claude(\s|\0|$)/i,
   opencode: /(^|\/)opencode(\s|\0|$)/i,
@@ -31,7 +31,7 @@ interface AgentInstance {
   taskId: string | null
   taskTitle: string | null
   worktreePath: string | null
-  isViboraManaged: boolean
+  isFulcrumManaged: boolean
 }
 
 // Parse time window string to seconds
@@ -232,13 +232,13 @@ export const monitoringRoutes = new Hono()
 
 // GET /api/monitoring/claude-instances
 monitoringRoutes.get('/claude-instances', (c) => {
-  const filter = c.req.query('filter') || 'vibora'
+  const filter = c.req.query('filter') || 'fulcrum'
 
   // Find all agent processes on the system (Claude, OpenCode, etc.)
   const allAgentProcesses = findAllAgentProcesses()
 
-  // Get Vibora terminals and their process trees
-  const viboraManagedPids = new Map<number, { terminalId: string; terminalName: string; cwd: string }>()
+  // Get Fulcrum terminals and their process trees
+  const fulcrumManagedPids = new Map<number, { terminalId: string; terminalName: string; cwd: string }>()
 
   try {
     const ptyManager = getPTYManager()
@@ -291,7 +291,7 @@ monitoringRoutes.get('/claude-instances', (c) => {
         for (const pid of foundPids) {
           const descendants = getDescendantPids(pid)
           for (const descendantPid of [...descendants, pid]) {
-            viboraManagedPids.set(descendantPid, {
+            fulcrumManagedPids.set(descendantPid, {
               terminalId: terminal.id,
               terminalName: terminal.name,
               cwd: terminal.cwd,
@@ -316,15 +316,15 @@ monitoringRoutes.get('/claude-instances', (c) => {
   const instances: AgentInstance[] = []
 
   for (const { pid, agent } of allAgentProcesses) {
-    const viboraInfo = viboraManagedPids.get(pid)
-    const isViboraManaged = !!viboraInfo
+    const fulcrumInfo = fulcrumManagedPids.get(pid)
+    const isFulcrumManaged = !!fulcrumInfo
 
     // Apply filter
-    if (filter === 'vibora' && !isViboraManaged) {
+    if (filter === 'fulcrum' && !isFulcrumManaged) {
       continue
     }
 
-    const cwd = viboraInfo?.cwd || getProcessCwd(pid)
+    const cwd = fulcrumInfo?.cwd || getProcessCwd(pid)
     const ramMB = Math.round(getProcessMemoryMB(pid) * 10) / 10
     const startedAt = getProcessStartTime(pid)
 
@@ -333,12 +333,12 @@ monitoringRoutes.get('/claude-instances', (c) => {
     let taskTitle: string | null = null
     let worktreePath: string | null = null
 
-    if (viboraInfo) {
-      const task = tasksByWorktree.get(viboraInfo.cwd)
+    if (fulcrumInfo) {
+      const task = tasksByWorktree.get(fulcrumInfo.cwd)
       if (task) {
         taskId = task.id
         taskTitle = task.title
-        worktreePath = viboraInfo.cwd
+        worktreePath = fulcrumInfo.cwd
       }
     }
 
@@ -348,19 +348,19 @@ monitoringRoutes.get('/claude-instances', (c) => {
       cwd,
       ramMB,
       startedAt,
-      terminalId: viboraInfo?.terminalId || null,
-      terminalName: viboraInfo?.terminalName || null,
+      terminalId: fulcrumInfo?.terminalId || null,
+      terminalName: fulcrumInfo?.terminalName || null,
       taskId,
       taskTitle,
       worktreePath,
-      isViboraManaged,
+      isFulcrumManaged,
     })
   }
 
-  // Sort by Vibora-managed first, then by RAM usage
+  // Sort by Fulcrum-managed first, then by RAM usage
   instances.sort((a, b) => {
-    if (a.isViboraManaged !== b.isViboraManaged) {
-      return a.isViboraManaged ? -1 : 1
+    if (a.isFulcrumManaged !== b.isFulcrumManaged) {
+      return a.isFulcrumManaged ? -1 : 1
     }
     return b.ramMB - a.ramMB
   })
@@ -399,7 +399,7 @@ monitoringRoutes.post('/claude-instances/:terminalId/kill', (c) => {
 })
 
 // POST /api/monitoring/claude-instances/:pid/kill-pid
-// Kill an agent process by PID (for non-Vibora managed instances)
+// Kill an agent process by PID (for non-Fulcrum managed instances)
 monitoringRoutes.post('/claude-instances/:pid/kill-pid', (c) => {
   const pidStr = c.req.param('pid')
   const pid = parseInt(pidStr, 10)
@@ -751,9 +751,9 @@ monitoringRoutes.get('/docker-stats', async (c) => {
   }
 })
 
-// Types for Vibora instances
-interface ViboraInstanceGroup {
-  viboraDir: string
+// Types for Fulcrum instances
+interface FulcrumInstanceGroup {
+  fulcrumDir: string
   port: number
   mode: 'development' | 'production'
   backend: { pid: number; memoryMB: number; startedAt: number | null } | null
@@ -789,12 +789,12 @@ function getParentPid(pid: number): number | null {
   }
 }
 
-// Find all Vibora instances (backends and frontends)
-function findViboraInstances(): ViboraInstanceGroup[] {
+// Find all Fulcrum instances (backends and frontends)
+function findFulcrumInstances(): FulcrumInstanceGroup[] {
   const backends: Array<{
     pid: number
     port: number
-    viboraDir: string
+    fulcrumDir: string
     mode: 'development' | 'production'
     memoryMB: number
     startedAt: number | null
@@ -820,30 +820,30 @@ function findViboraInstances(): ViboraInstanceGroup[] {
         const env = getProcessEnv(pid)
         const parentPid = getParentPid(pid)
 
-        // Check for Vibora backend
+        // Check for Fulcrum backend
         // Dev: process starts with "bun" and has "server/index.ts" in args
-        // Prod: process starts with "bun" and has VIBORA_PACKAGE_ROOT env var
+        // Prod: process starts with "bun" and has FULCRUM_PACKAGE_ROOT env var
         // We check the first part of cmdline to avoid shell wrappers that mention bun
         const cmdParts = cmdline.trim().split(/\s+/)
         const isBunProcess = cmdParts[0]?.includes('bun') ?? false
         const isDevBackend = isBunProcess && cmdline.includes('server/index.ts') && env.NODE_ENV !== 'production'
-        const isProdBackend = isBunProcess && (!!env.VIBORA_PACKAGE_ROOT || (cmdline.includes('server/index.ts') && env.NODE_ENV === 'production'))
+        const isProdBackend = isBunProcess && (!!env.FULCRUM_PACKAGE_ROOT || (cmdline.includes('server/index.ts') && env.NODE_ENV === 'production'))
 
         if (isDevBackend || isProdBackend) {
           const port = parseInt(env.PORT || '7777', 10)
           const cwd = getProcessCwd(pid)
-          // Resolve viboraDir - if relative, combine with cwd; if absolute or starts with ~, use as-is
-          let viboraDir = env.VIBORA_DIR || (isDevBackend ? '~/.vibora/dev' : '~/.vibora')
-          if (viboraDir.startsWith('.') && cwd !== '(unknown)') {
+          // Resolve fulcrumDir - if relative, combine with cwd; if absolute or starts with ~, use as-is
+          let fulcrumDir = env.FULCRUM_DIR || (isDevBackend ? '~/.fulcrum/dev' : '~/.fulcrum')
+          if (fulcrumDir.startsWith('.') && cwd !== '(unknown)') {
             // Relative path - show the cwd for clarity
-            viboraDir = cwd
+            fulcrumDir = cwd
           }
           const mode = isDevBackend ? 'development' : 'production'
 
           backends.push({
             pid,
             port,
-            viboraDir,
+            fulcrumDir,
             mode,
             memoryMB: getProcessMemoryMB(pid),
             startedAt: getProcessStartTime(pid),
@@ -851,7 +851,7 @@ function findViboraInstances(): ViboraInstanceGroup[] {
           })
         }
 
-        // Check for Vite frontend (potential Vibora dev frontend)
+        // Check for Vite frontend (potential Fulcrum dev frontend)
         // Look for node vite processes with VITE_BACKEND_PORT set (not shell wrappers)
         const isNodeProcess = cmdParts[0]?.includes('node') ?? false
         if (isNodeProcess && cmdline.includes('vite') && env.VITE_BACKEND_PORT) {
@@ -877,7 +877,7 @@ function findViboraInstances(): ViboraInstanceGroup[] {
   }
 
   // Group backends with their frontends
-  const groups: ViboraInstanceGroup[] = []
+  const groups: FulcrumInstanceGroup[] = []
 
   for (const backend of backends) {
     // Find associated frontend: same parent (concurrently) or matching VITE_BACKEND_PORT
@@ -888,7 +888,7 @@ function findViboraInstances(): ViboraInstanceGroup[] {
     )
 
     groups.push({
-      viboraDir: backend.viboraDir,
+      fulcrumDir: backend.fulcrumDir,
       port: backend.port,
       mode: backend.mode,
       backend: {
@@ -919,15 +919,15 @@ function findViboraInstances(): ViboraInstanceGroup[] {
   return groups
 }
 
-// GET /api/monitoring/vibora-instances
-monitoringRoutes.get('/vibora-instances', (c) => {
-  const groups = findViboraInstances()
+// GET /api/monitoring/fulcrum-instances
+monitoringRoutes.get('/fulcrum-instances', (c) => {
+  const groups = findFulcrumInstances()
   return c.json(groups)
 })
 
-// POST /api/monitoring/vibora-instances/:pid/kill
-// Kill a Vibora instance group (backend + frontend if present)
-monitoringRoutes.post('/vibora-instances/:pid/kill', async (c) => {
+// POST /api/monitoring/fulcrum-instances/:pid/kill
+// Kill a Fulcrum instance group (backend + frontend if present)
+monitoringRoutes.post('/fulcrum-instances/:pid/kill', async (c) => {
   const pidStr = c.req.param('pid')
   const backendPid = parseInt(pidStr, 10)
 
@@ -936,11 +936,11 @@ monitoringRoutes.post('/vibora-instances/:pid/kill', async (c) => {
   }
 
   // Find this instance group
-  const groups = findViboraInstances()
+  const groups = findFulcrumInstances()
   const group = groups.find((g) => g.backend?.pid === backendPid)
 
   if (!group) {
-    return c.json({ error: 'Vibora instance not found' }, 404)
+    return c.json({ error: 'Fulcrum instance not found' }, 404)
   }
 
   const killedPids: number[] = []
@@ -979,7 +979,7 @@ monitoringRoutes.post('/vibora-instances/:pid/kill', async (c) => {
   return c.json({
     success: true,
     killed: killedPids,
-    viboraDir: group.viboraDir,
+    fulcrumDir: group.fulcrumDir,
     port: group.port,
   })
 })
@@ -1070,7 +1070,7 @@ async function fetchClaudeUsage(token: string): Promise<ClaudeUsageResponse> {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'vibora/1.0.0',
+        'User-Agent': 'fulcrum/1.0.0',
         Authorization: `Bearer ${token}`,
         'anthropic-beta': 'oauth-2025-04-20',
       },

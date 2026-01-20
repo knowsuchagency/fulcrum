@@ -1,5 +1,5 @@
 /**
- * Vibora Desktop - Neutralinojs Frontend
+ * Fulcrum Desktop - Neutralinojs Frontend
  *
  * This script handles:
  * 1. Initializing Neutralino
@@ -14,7 +14,7 @@ const FALLBACK_SCHEMA_VERSION = 5; // Used if package.json cannot be read
 const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
 const MAX_HEALTH_RETRIES = 10;
 const DEV_PORT = 5173;
-const UPDATE_CHECK_URL = 'https://github.com/knowsuchagency/vibora/releases/latest/download/manifest.json';
+const UPDATE_CHECK_URL = 'https://github.com/knowsuchagency/fulcrum/releases/latest/download/manifest.json';
 const UPDATE_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // Check daily (24 hours)
 
 // State
@@ -31,7 +31,7 @@ let cachedSchemaVersion = null; // Cached schema version from package.json
 const MIN_LOADING_DURATION = 3000; // Show loading screen for at least 3 seconds
 
 // =============================================================================
-// Centralized JSONL Logger (writes to ~/.vibora/desktop.log)
+// Centralized JSONL Logger (writes to ~/.fulcrum/desktop.log)
 // =============================================================================
 
 /**
@@ -41,7 +41,7 @@ async function initLogger() {
   const home = NL_OS === 'Windows'
     ? await Neutralino.os.getEnv('USERPROFILE')
     : await Neutralino.os.getEnv('HOME');
-  logFilePath = `${home}/.vibora/desktop.log`;
+  logFilePath = `${home}/.fulcrum/desktop.log`;
 }
 
 /**
@@ -86,7 +86,7 @@ async function getSettingsPath() {
   const home = NL_OS === 'Windows'
     ? await Neutralino.os.getEnv('USERPROFILE')
     : await Neutralino.os.getEnv('HOME');
-  return `${home}/.vibora/settings.json`;
+  return `${home}/.fulcrum/settings.json`;
 }
 
 /**
@@ -146,7 +146,7 @@ function migrateSettings(settings, targetVersion) {
     return settings; // Already migrated
   }
 
-  console.log('[Vibora] Migrating settings from version', version, 'to', targetVersion);
+  console.log('[Fulcrum] Migrating settings from version', version, 'to', targetVersion);
 
   const migrated = {
     _schemaVersion: targetVersion,
@@ -194,7 +194,7 @@ function migrateSettings(settings, targetVersion) {
     }
   }
 
-  console.log('[Vibora] Settings migrated:', migrated);
+  console.log('[Fulcrum] Settings migrated:', migrated);
   return migrated;
 }
 
@@ -247,10 +247,10 @@ async function saveSettings(settings) {
     const settingsPath = await getSettingsPath();
     const schemaVersion = await getSchemaVersion();
 
-    // Ensure .vibora directory exists
-    const viboraDir = settingsPath.substring(0, settingsPath.lastIndexOf('/'));
+    // Ensure .fulcrum directory exists
+    const fulcrumDir = settingsPath.substring(0, settingsPath.lastIndexOf('/'));
     try {
-      await Neutralino.filesystem.createDirectory(viboraDir);
+      await Neutralino.filesystem.createDirectory(fulcrumDir);
     } catch {
       // Directory might already exist
     }
@@ -282,7 +282,7 @@ function setStatus(text, detail = '') {
 function showError(title, message) {
   const app = document.getElementById('app');
   app.innerHTML = `
-    <img src="/icons/icon.png" alt="Vibora" class="logo" style="animation: none; opacity: 0.5;">
+    <img src="/icons/icon.png" alt="Fulcrum" class="logo" style="animation: none; opacity: 0.5;">
     <div class="error">
       <div class="error-title">${title}</div>
       <div>${message}</div>
@@ -332,7 +332,7 @@ async function waitForServerReady(baseUrl) {
 
 /**
  * Set zoom level - reloads iframe with zoom query parameter
- * The Vibora frontend applies this as root font-size for native scaling
+ * The Fulcrum frontend applies this as root font-size for native scaling
  */
 function setZoom(level, skipSave = false) {
   currentZoom = Math.max(0.5, Math.min(2.0, level)); // Clamp between 50% and 200%
@@ -342,7 +342,7 @@ function setZoom(level, skipSave = false) {
   if (zoomLevel) {
     zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
   }
-  console.log('[Vibora] Zoom:', Math.round(currentZoom * 100) + '%');
+  console.log('[Fulcrum] Zoom:', Math.round(currentZoom * 100) + '%');
 
   // Persist zoom level to settings
   if (!skipSave && desktopSettings) {
@@ -353,8 +353,8 @@ function setZoom(level, skipSave = false) {
   }
 
   // Reload iframe with new zoom parameter, preserving current SPA route
-  // Route is tracked via postMessage from the Vibora frontend
-  const frame = document.getElementById('vibora-frame');
+  // Route is tracked via postMessage from the Fulcrum frontend
+  const frame = document.getElementById('fulcrum-frame');
   if (frame && serverUrl) {
     const url = new URL(serverUrl);
     url.pathname = currentRoute.pathname;
@@ -377,11 +377,11 @@ window.zoomOut = () => setZoom(currentZoom - 0.1);
 window.zoomReset = () => setZoom(1.2);
 
 /**
- * Navigate to a path in the Vibora app
+ * Navigate to a path in the Fulcrum app
  * Updates the iframe URL, preserving zoom level
  */
 function navigateTo(path) {
-  const frame = document.getElementById('vibora-frame');
+  const frame = document.getElementById('fulcrum-frame');
   if (frame && serverUrl) {
     const url = new URL(serverUrl);
     // Parse path and query
@@ -406,11 +406,11 @@ function navigateTo(path) {
 }
 
 /**
- * Send a message to the Vibora app via postMessage
+ * Send a message to the Fulcrum app via postMessage
  * Used for triggering UI actions like opening modals
  */
 function postMessageToApp(type, data = {}) {
-  const frame = document.getElementById('vibora-frame');
+  const frame = document.getElementById('fulcrum-frame');
   if (frame?.contentWindow) {
     frame.contentWindow.postMessage({ type, ...data }, '*');
     log.debug('Posted message to app', { type, data });
@@ -418,22 +418,22 @@ function postMessageToApp(type, data = {}) {
 }
 
 /**
- * Load the Vibora app in an iframe
+ * Load the Fulcrum app in an iframe
  */
-async function loadViboraApp(url) {
-  setStatus('Loading Vibora...', url);
+async function loadFulcrumApp(url) {
+  setStatus('Loading Fulcrum...', url);
   serverUrl = url;
 
   log.info('Loading app', { url });
 
-  const frame = document.getElementById('vibora-frame');
+  const frame = document.getElementById('fulcrum-frame');
   const zoomParam = currentZoom !== 1.0 ? `?zoom=${currentZoom}` : '';
   frame.src = url + zoomParam;
 
   // Set a timeout to detect if iframe fails to load
   const loadTimeout = setTimeout(() => {
     log.error('Iframe load timeout', { url });
-    showError('Connection Failed', `Could not load Vibora from ${url}.`);
+    showError('Connection Failed', `Could not load Fulcrum from ${url}.`);
   }, 10000); // 10 second timeout
 
   frame.onload = async () => {
@@ -454,7 +454,7 @@ async function loadViboraApp(url) {
   frame.onerror = (err) => {
     clearTimeout(loadTimeout);
     log.error('Failed to load app (onerror)', { url, error: String(err) });
-    showError('Load Failed', 'Could not load Vibora interface.');
+    showError('Load Failed', 'Could not load Fulcrum interface.');
   };
 }
 
@@ -471,22 +471,22 @@ function getLocalPort() {
  */
 async function getBundlePath() {
   if (NL_OS === 'Darwin') {
-    // macOS: .../Vibora.app/Contents/MacOS -> .../Vibora.app/Contents/Resources/bundle
+    // macOS: .../Fulcrum.app/Contents/MacOS -> .../Fulcrum.app/Contents/Resources/bundle
     return `${NL_PATH}/../Resources/bundle`;
   } else {
-    // Linux: .../usr/bin -> .../usr/share/vibora/bundle
-    return `${NL_PATH}/../share/vibora/bundle`;
+    // Linux: .../usr/bin -> .../usr/share/fulcrum/bundle
+    return `${NL_PATH}/../share/fulcrum/bundle`;
   }
 }
 
 /**
- * Get the Vibora data directory
+ * Get the Fulcrum data directory
  */
-async function getViboraDir() {
+async function getFulcrumDir() {
   const home = NL_OS === 'Windows'
     ? await Neutralino.os.getEnv('USERPROFILE')
     : await Neutralino.os.getEnv('HOME');
-  return `${home}/.vibora`;
+  return `${home}/.fulcrum`;
 }
 
 /**
@@ -508,7 +508,7 @@ async function startLocalServer() {
 
   try {
     const bundleDir = await getBundlePath();
-    const viboraDir = await getViboraDir();
+    const fulcrumDir = await getFulcrumDir();
 
     // Determine PTY library based on OS and architecture
     const arch = typeof NL_ARCH !== 'undefined' ? NL_ARCH : 'x64';
@@ -524,11 +524,11 @@ async function startLocalServer() {
         : `${bundleDir}/lib/librust_pty.so`;
     }
 
-    const serverBin = `${bundleDir}/server/vibora-server`;
+    const serverBin = `${bundleDir}/server/fulcrum-server`;
 
     // Build command with environment variables
-    const cmd = `NODE_ENV=production PORT=${port} VIBORA_DIR="${viboraDir}" ` +
-      `VIBORA_PACKAGE_ROOT="${bundleDir}" BUN_PTY_LIB="${ptyLib}" ` +
+    const cmd = `NODE_ENV=production PORT=${port} FULCRUM_DIR="${fulcrumDir}" ` +
+      `FULCRUM_PACKAGE_ROOT="${bundleDir}" BUN_PTY_LIB="${ptyLib}" ` +
       `"${serverBin}"`;
 
     log.debug('Server command', { cmd });
@@ -570,7 +570,7 @@ async function connectToLocal() {
       ...desktopSettings,
       lastConnectedHost: 'localhost'
     });
-    loadViboraApp(localUrl);
+    loadFulcrumApp(localUrl);
     return true;
   }
 
@@ -581,12 +581,12 @@ async function connectToLocal() {
       ...desktopSettings,
       lastConnectedHost: 'localhost'
     });
-    loadViboraApp(localUrl);
+    loadFulcrumApp(localUrl);
     return true;
   }
 
   log.error('Could not start local server');
-  showError('Server Failed', 'Could not start local server. Check ~/.vibora/desktop.log for details.');
+  showError('Server Failed', 'Could not start local server. Check ~/.fulcrum/desktop.log for details.');
   return false;
 }
 
@@ -608,7 +608,7 @@ async function tryConnect() {
  * Handle extension ready event (when running with local server extension)
  */
 function handleExtensionReady(port) {
-  console.log(`[Vibora] Local server extension ready on port ${port}`);
+  console.log(`[Fulcrum] Local server extension ready on port ${port}`);
 
   // Save port for future reference (nested format)
   saveSettings({
@@ -617,7 +617,7 @@ function handleExtensionReady(port) {
     lastConnectedHost: 'localhost'
   });
 
-  loadViboraApp(`http://localhost:${port}`);
+  loadFulcrumApp(`http://localhost:${port}`);
 }
 
 /**
@@ -695,12 +695,12 @@ function compareVersions(v1, v2) {
  */
 async function checkForUpdates(showNoUpdateMessage = false) {
   try {
-    console.log('[Vibora] Checking for updates...');
+    console.log('[Fulcrum] Checking for updates...');
 
     // Fetch the manifest
     const response = await fetch(UPDATE_CHECK_URL);
     if (!response.ok) {
-      console.log('[Vibora] Failed to fetch update manifest:', response.status);
+      console.log('[Fulcrum] Failed to fetch update manifest:', response.status);
       return null;
     }
 
@@ -708,7 +708,7 @@ async function checkForUpdates(showNoUpdateMessage = false) {
     const currentVersion = NL_APPVERSION;
     const latestVersion = manifest.version;
 
-    console.log(`[Vibora] Current: ${currentVersion}, Latest: ${latestVersion}`);
+    console.log(`[Fulcrum] Current: ${currentVersion}, Latest: ${latestVersion}`);
 
     if (compareVersions(latestVersion, currentVersion) > 0) {
       // New version available
@@ -731,7 +731,7 @@ async function checkForUpdates(showNoUpdateMessage = false) {
 
     return null;
   } catch (err) {
-    console.error('[Vibora] Update check failed:', err);
+    console.error('[Fulcrum] Update check failed:', err);
     if (showNoUpdateMessage) {
       await Neutralino.os.showMessageBox(
         'Update Check Failed',
@@ -748,7 +748,7 @@ async function checkForUpdates(showNoUpdateMessage = false) {
  * Prompt user about available update
  */
 async function promptForUpdate(updateInfo) {
-  const message = `A new version of Vibora is available!\n\n` +
+  const message = `A new version of Fulcrum is available!\n\n` +
     `Current: ${updateInfo.currentVersion}\n` +
     `Latest: ${updateInfo.latestVersion}\n\n` +
     `Would you like to download the update?`;
@@ -766,7 +766,7 @@ async function promptForUpdate(updateInfo) {
       await Neutralino.os.open(updateInfo.downloadUrl);
     }
   } catch (err) {
-    console.error('[Vibora] Failed to show update dialog:', err);
+    console.error('[Fulcrum] Failed to show update dialog:', err);
   }
 }
 
@@ -776,7 +776,7 @@ async function promptForUpdate(updateInfo) {
 async function autoCheckForUpdates() {
   // Don't check in dev mode
   if (isDevMode) {
-    console.log('[Vibora] Skipping update check in dev mode');
+    console.log('[Fulcrum] Skipping update check in dev mode');
     return;
   }
 
@@ -795,7 +795,7 @@ async function autoCheckForUpdates() {
     const now = Date.now();
 
     if (now - lastCheck < UPDATE_CHECK_INTERVAL) {
-      console.log('[Vibora] Skipping update check (checked recently)');
+      console.log('[Fulcrum] Skipping update check (checked recently)');
       return;
     }
 
@@ -809,7 +809,7 @@ async function autoCheckForUpdates() {
       await promptForUpdate(updateInfo);
     }
   } catch (err) {
-    console.error('[Vibora] Auto update check failed:', err);
+    console.error('[Fulcrum] Auto update check failed:', err);
   }
 }
 
@@ -843,10 +843,10 @@ async function playNotificationSound() {
       // Windows: use PowerShell to play system sound
       await Neutralino.os.execCommand('powershell -c "[System.Media.SystemSounds]::Exclamation.Play()"');
     }
-    console.log('[Vibora] Notification sound played');
+    console.log('[Fulcrum] Notification sound played');
   } catch (err) {
     // Sound is non-critical, just log the error
-    console.error('[Vibora] Failed to play notification sound:', err);
+    console.error('[Fulcrum] Failed to play notification sound:', err);
   }
 }
 
@@ -870,11 +870,11 @@ async function init() {
       await Neutralino.window.setMainMenu([
         {
           id: 'app',
-          text: 'Vibora',
+          text: 'Fulcrum',
           menuItems: [
-            { id: 'about', text: 'About Vibora' },
+            { id: 'about', text: 'About Fulcrum' },
             { text: '-' },
-            { id: 'quit', text: 'Quit Vibora', shortcut: 'q', action: 'terminate:' }
+            { id: 'quit', text: 'Quit Fulcrum', shortcut: 'q', action: 'terminate:' }
           ]
         },
         {
@@ -935,19 +935,19 @@ async function init() {
           case 'goMonitoring': navigateTo('/monitoring'); break;
           case 'goSettings': navigateTo('/settings'); break;
           // Actions (via postMessage to React app)
-          case 'commandPalette': postMessageToApp('vibora:action', { action: 'openCommandPalette' }); break;
-          case 'newTask': postMessageToApp('vibora:action', { action: 'openNewTask' }); break;
-          case 'showHelp': postMessageToApp('vibora:action', { action: 'showShortcuts' }); break;
+          case 'commandPalette': postMessageToApp('fulcrum:action', { action: 'openCommandPalette' }); break;
+          case 'newTask': postMessageToApp('fulcrum:action', { action: 'openNewTask' }); break;
+          case 'showHelp': postMessageToApp('fulcrum:action', { action: 'showShortcuts' }); break;
         }
       });
 
-      console.log('[Vibora] macOS menu configured');
+      console.log('[Fulcrum] macOS menu configured');
     }
 
     // Check for --dev flag in command line args
     isDevMode = typeof NL_ARGS !== 'undefined' && NL_ARGS.includes('--dev');
     if (isDevMode) {
-      console.log('[Vibora] Running in development mode (port 5173)');
+      console.log('[Fulcrum] Running in development mode (port 5173)');
     }
 
     // Set up event listeners
@@ -959,31 +959,31 @@ async function init() {
     });
 
     Neutralino.events.on('extClientConnect', (evt) => {
-      console.log('[Vibora] Extension connected:', evt.detail);
+      console.log('[Fulcrum] Extension connected:', evt.detail);
     });
 
-    // Listen for messages from iframe (postMessage from Vibora frontend)
+    // Listen for messages from iframe (postMessage from Fulcrum frontend)
     window.addEventListener('message', (event) => {
-      if (event.data?.type === 'vibora:route') {
+      if (event.data?.type === 'fulcrum:route') {
         currentRoute = {
           pathname: event.data.pathname || '/',
           search: event.data.search || ''
         };
-        console.log('[Vibora] Route updated:', currentRoute.pathname);
-      } else if (event.data?.type === 'vibora:notification') {
+        console.log('[Fulcrum] Route updated:', currentRoute.pathname);
+      } else if (event.data?.type === 'fulcrum:notification') {
         // Show native system notification
         const { title, message } = event.data;
         Neutralino.os.showNotification(title, message || '').catch((err) => {
-          console.error('[Vibora] Failed to show notification:', err);
+          console.error('[Fulcrum] Failed to show notification:', err);
         });
-      } else if (event.data?.type === 'vibora:playSound') {
+      } else if (event.data?.type === 'fulcrum:playSound') {
         // Play notification sound locally
         playNotificationSound();
-      } else if (event.data?.type === 'vibora:openUrl') {
+      } else if (event.data?.type === 'fulcrum:openUrl') {
         // Open URL with system handler (for vscode://, cursor://, etc.)
         const { url } = event.data;
         Neutralino.os.open(url).catch((err) => {
-          console.error('[Vibora] Failed to open URL:', url, err);
+          console.error('[Fulcrum] Failed to open URL:', url, err);
         });
       }
     });

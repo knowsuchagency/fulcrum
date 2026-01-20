@@ -1,5 +1,5 @@
 #!/bin/bash
-# Package Vibora desktop app as AppImage for Linux
+# Package Fulcrum desktop app as AppImage for Linux
 # Usage: ./package-appimage.sh [arch]
 # arch: x64 (default) or arm64
 
@@ -11,9 +11,9 @@ PROJECT_ROOT="$(dirname "$DESKTOP_DIR")"
 
 ARCH="${1:-x64}"
 VERSION=$(jq -r '.version' "$PROJECT_ROOT/package.json")
-APP_NAME="Vibora"
+APP_NAME="Fulcrum"
 
-echo "Packaging Vibora ${VERSION} AppImage for ${ARCH}..."
+echo "Packaging Fulcrum ${VERSION} AppImage for ${ARCH}..."
 
 # Check for server bundle
 BUNDLE_DIR="$DESKTOP_DIR/bundle"
@@ -24,18 +24,18 @@ if [ ! -d "$BUNDLE_DIR/server" ]; then
 fi
 
 # Create AppDir structure
-APP_DIR="$DESKTOP_DIR/dist/Vibora-${ARCH}.AppDir"
+APP_DIR="$DESKTOP_DIR/dist/Fulcrum-${ARCH}.AppDir"
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/usr/bin"
-mkdir -p "$APP_DIR/usr/share/vibora/bundle"
+mkdir -p "$APP_DIR/usr/share/fulcrum/bundle"
 mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 
 # Copy Neutralino binary
 if [ "$ARCH" = "arm64" ]; then
-  NL_BINARY="$DESKTOP_DIR/dist/vibora-desktop/vibora-desktop-linux_arm64"
+  NL_BINARY="$DESKTOP_DIR/dist/fulcrum-desktop/fulcrum-desktop-linux_arm64"
 else
-  NL_BINARY="$DESKTOP_DIR/dist/vibora-desktop/vibora-desktop-linux_x64"
+  NL_BINARY="$DESKTOP_DIR/dist/fulcrum-desktop/fulcrum-desktop-linux_x64"
 fi
 
 if [ ! -f "$NL_BINARY" ]; then
@@ -44,20 +44,20 @@ if [ ! -f "$NL_BINARY" ]; then
   exit 1
 fi
 
-cp "$NL_BINARY" "$APP_DIR/usr/bin/vibora-desktop"
-chmod +x "$APP_DIR/usr/bin/vibora-desktop"
+cp "$NL_BINARY" "$APP_DIR/usr/bin/fulcrum-desktop"
+chmod +x "$APP_DIR/usr/bin/fulcrum-desktop"
 
 # Copy resources.neu (must be next to binary)
-cp "$DESKTOP_DIR/dist/vibora-desktop/resources.neu" "$APP_DIR/usr/bin/"
+cp "$DESKTOP_DIR/dist/fulcrum-desktop/resources.neu" "$APP_DIR/usr/bin/"
 
 # Copy server bundle
 echo "Copying server bundle..."
-cp -r "$BUNDLE_DIR" "$APP_DIR/usr/share/vibora/bundle"
+cp -r "$BUNDLE_DIR" "$APP_DIR/usr/share/fulcrum/bundle"
 
 # Copy launcher script
 echo "Installing launcher script..."
-cp "$SCRIPT_DIR/vibora-launcher-linux.sh" "$APP_DIR/usr/bin/vibora-launcher"
-chmod +x "$APP_DIR/usr/bin/vibora-launcher"
+cp "$SCRIPT_DIR/fulcrum-launcher-linux.sh" "$APP_DIR/usr/bin/fulcrum-launcher"
+chmod +x "$APP_DIR/usr/bin/fulcrum-launcher"
 
 # Create AppRun script (calls launcher instead of direct binary)
 cat > "$APP_DIR/AppRun" << 'APPRUN'
@@ -66,29 +66,29 @@ SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 export PATH="${HERE}/usr/bin:${PATH}"
 cd "${HERE}/usr/bin"
-exec "${HERE}/usr/bin/vibora-launcher" "$@"
+exec "${HERE}/usr/bin/fulcrum-launcher" "$@"
 APPRUN
 chmod +x "$APP_DIR/AppRun"
 
 # Create desktop entry
-cat > "$APP_DIR/usr/share/applications/vibora.desktop" << EOF
+cat > "$APP_DIR/usr/share/applications/fulcrum.desktop" << EOF
 [Desktop Entry]
 Type=Application
-Name=Vibora
+Name=Fulcrum
 Comment=Harness Attention. Orchestrate Agents. Ship.
-Exec=vibora-launcher
-Icon=vibora
+Exec=fulcrum-launcher
+Icon=fulcrum
 Categories=Development;IDE;
 Terminal=false
-StartupWMClass=vibora
+StartupWMClass=fulcrum
 EOF
 
-cp "$APP_DIR/usr/share/applications/vibora.desktop" "$APP_DIR/"
+cp "$APP_DIR/usr/share/applications/fulcrum.desktop" "$APP_DIR/"
 
 # Copy icon
 if [ -f "$DESKTOP_DIR/resources/icons/icon.png" ]; then
-  cp "$DESKTOP_DIR/resources/icons/icon.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/vibora.png"
-  cp "$DESKTOP_DIR/resources/icons/icon.png" "$APP_DIR/vibora.png"
+  cp "$DESKTOP_DIR/resources/icons/icon.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/fulcrum.png"
+  cp "$DESKTOP_DIR/resources/icons/icon.png" "$APP_DIR/fulcrum.png"
 fi
 
 # Download appimagetool if not present
@@ -104,7 +104,7 @@ if [ ! -f "$APPIMAGETOOL" ]; then
 fi
 
 # Create AppImage
-OUTPUT="$DESKTOP_DIR/dist/Vibora-linux-${ARCH}.AppImage"
+OUTPUT="$DESKTOP_DIR/dist/Fulcrum-linux-${ARCH}.AppImage"
 echo "Creating AppImage..."
 
 if [ "$ARCH" = "arm64" ]; then
@@ -122,4 +122,4 @@ echo ""
 echo "AppImage created: $OUTPUT"
 echo "Size: $(du -h "$OUTPUT" | cut -f1)"
 echo ""
-echo "The app will start its own Vibora server and install the Claude plugin."
+echo "The app will start its own Fulcrum server and install the Claude plugin."

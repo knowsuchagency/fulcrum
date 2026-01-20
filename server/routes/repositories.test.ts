@@ -141,7 +141,7 @@ describe('Repositories Routes', () => {
   describe('POST /api/repositories', () => {
     test('creates repository from valid path', async () => {
       // Create a real git repo directory
-      const repoPath = join(testEnv.viboraDir, 'test-git-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'test-git-repo')
       mkdirSync(repoPath, { recursive: true })
       mkdirSync(join(repoPath, '.git'), { recursive: true })
 
@@ -159,7 +159,7 @@ describe('Repositories Routes', () => {
     })
 
     test('defaults displayName to folder name', async () => {
-      const repoPath = join(testEnv.viboraDir, 'my-custom-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'my-custom-repo')
       mkdirSync(repoPath, { recursive: true })
       mkdirSync(join(repoPath, '.git'), { recursive: true })
 
@@ -196,7 +196,7 @@ describe('Repositories Routes', () => {
     })
 
     test('returns 400 for non-git directory', async () => {
-      const nonGitPath = join(testEnv.viboraDir, 'non-git-dir')
+      const nonGitPath = join(testEnv.fulcrumDir, 'non-git-dir')
       mkdirSync(nonGitPath, { recursive: true })
 
       const { post } = createTestApp()
@@ -210,7 +210,7 @@ describe('Repositories Routes', () => {
     })
 
     test('returns 409 for duplicate path', async () => {
-      const repoPath = join(testEnv.viboraDir, 'duplicate-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'duplicate-repo')
       mkdirSync(repoPath, { recursive: true })
       mkdirSync(join(repoPath, '.git'), { recursive: true })
 
@@ -412,8 +412,8 @@ describe('Repositories Routes', () => {
 
     test('updates repository path', async () => {
       // Create real directories
-      const oldPath = join(testEnv.viboraDir, 'old-path')
-      const newPath = join(testEnv.viboraDir, 'new-path')
+      const oldPath = join(testEnv.fulcrumDir, 'old-path')
+      const newPath = join(testEnv.fulcrumDir, 'new-path')
       mkdirSync(oldPath, { recursive: true })
       mkdirSync(newPath, { recursive: true })
 
@@ -440,7 +440,7 @@ describe('Repositories Routes', () => {
 
     test('returns 400 when updating path to non-existent directory', async () => {
       // Create only the original directory
-      const oldPath = join(testEnv.viboraDir, 'original-path')
+      const oldPath = join(testEnv.fulcrumDir, 'original-path')
       mkdirSync(oldPath, { recursive: true })
 
       const now = new Date().toISOString()
@@ -575,8 +575,8 @@ describe('Repositories Routes', () => {
 
     test('returns 400 when changing path to duplicate', async () => {
       // Create real directories
-      const pathOne = join(testEnv.viboraDir, 'path-one')
-      const pathTwo = join(testEnv.viboraDir, 'path-two')
+      const pathOne = join(testEnv.fulcrumDir, 'path-one')
+      const pathTwo = join(testEnv.fulcrumDir, 'path-two')
       mkdirSync(pathOne, { recursive: true })
       mkdirSync(pathTwo, { recursive: true })
 

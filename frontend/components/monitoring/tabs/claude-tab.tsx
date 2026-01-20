@@ -20,7 +20,7 @@ import {
 
 export default function ClaudeInstancesTab() {
   const { t } = useTranslation('monitoring')
-  const [filter, setFilter] = useState<ClaudeFilter>('vibora')
+  const [filter, setFilter] = useState<ClaudeFilter>('fulcrum')
   const [killingPid, setKillingPid] = useState<number | null>(null)
   const [selectedPids, setSelectedPids] = useState<Set<number>>(new Set())
   const [isKillingSelected, setIsKillingSelected] = useState(false)
@@ -49,7 +49,7 @@ export default function ClaudeInstancesTab() {
 
   const handleKill = (instance: ClaudeInstance) => {
     setKillingPid(instance.pid)
-    const payload = instance.isViboraManaged && instance.terminalId
+    const payload = instance.isFulcrumManaged && instance.terminalId
       ? { terminalId: instance.terminalId }
       : { pid: instance.pid }
     killInstance.mutate(payload, {
@@ -84,7 +84,7 @@ export default function ClaudeInstancesTab() {
 
     const toKill = instances.filter(i => selectedPids.has(i.pid))
     for (const instance of toKill) {
-      const payload = instance.isViboraManaged && instance.terminalId
+      const payload = instance.isFulcrumManaged && instance.terminalId
         ? { terminalId: instance.terminalId }
         : { pid: instance.pid }
       try {
@@ -106,7 +106,7 @@ export default function ClaudeInstancesTab() {
             <Switch
               id="show-all"
               checked={filter === 'all'}
-              onCheckedChange={(checked) => setFilter(checked ? 'all' : 'vibora')}
+              onCheckedChange={(checked) => setFilter(checked ? 'all' : 'fulcrum')}
             />
             <Label htmlFor="show-all" className="text-sm text-muted-foreground">
               {t('claude.showAllInstances')}
@@ -154,7 +154,7 @@ export default function ClaudeInstancesTab() {
       {instances && instances.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">
           {t('claude.empty')}
-          {filter === 'vibora' && t('claude.emptyVibora')}
+          {filter === 'fulcrum' && t('claude.emptyFulcrum')}
         </div>
       )}
 
@@ -211,7 +211,7 @@ export default function ClaudeInstancesTab() {
                         </Link>
                       ) : (
                         <span className="text-muted-foreground">
-                          {instance.isViboraManaged ? instance.terminalName : t('claude.source.external')}
+                          {instance.isFulcrumManaged ? instance.terminalName : t('claude.source.external')}
                         </span>
                       )}
                     </span>
@@ -255,7 +255,7 @@ export default function ClaudeInstancesTab() {
                   {AGENT_DISPLAY_NAMES[instance.agent] || instance.agent}
                 </Badge>
                 <span className="truncate text-sm">
-                  {instance.isViboraManaged ? (
+                  {instance.isFulcrumManaged ? (
                     <span>{instance.terminalName || `Terminal ${instance.terminalId?.slice(0, 8)}`}</span>
                   ) : (
                     <span className="text-muted-foreground">{t('claude.source.external')}</span>

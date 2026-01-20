@@ -28,10 +28,10 @@ export async function clearDatabase(): Promise<void> {
  * Initializes the database schema.
  * The database is lazily initialized when first accessed via the db proxy.
  * Migrations run automatically on initialization.
- * Since we're using VIBORA_DIR isolation, the database will be fresh.
+ * Since we're using FULCRUM_DIR isolation, the database will be fresh.
  */
 export async function initSchema(): Promise<void> {
-  // Access db to trigger lazy initialization which creates the vibora directory
+  // Access db to trigger lazy initialization which creates the fulcrum directory
   // and database file. Migrations are run automatically on initialization.
 }
 

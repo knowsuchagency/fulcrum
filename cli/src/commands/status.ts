@@ -43,14 +43,14 @@ export async function handleStatusCommand(flags: Record<string, string>) {
   } else {
     if (pidRunning) {
       const healthStatus = healthOk ? 'healthy' : 'not responding'
-      console.log(`Vibora is running (${healthStatus})`)
+      console.log(`Fulcrum is running (${healthStatus})`)
       console.log(`  PID:  ${pid}`)
       console.log(`  URL:  ${serverUrl}`)
       if (version) console.log(`  Version: ${version}`)
       if (uptime) console.log(`  Uptime:  ${Math.floor(uptime / 1000)}s`)
     } else {
-      console.log('Vibora is not running')
-      console.log(`\nStart with: vibora up`)
+      console.log('Fulcrum is not running')
+      console.log(`\nStart with: fulcrum up`)
     }
   }
 }

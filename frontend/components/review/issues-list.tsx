@@ -7,14 +7,14 @@ import { Loading03Icon, Alert02Icon, Tick02Icon } from '@hugeicons/core-free-ico
 
 interface Props {
   filter: IssueFilter
-  viboraReposOnly: boolean
+  fulcrumReposOnly: boolean
   org?: string
 }
 
-export function IssuesList({ filter, viboraReposOnly, org }: Props) {
+export function IssuesList({ filter, fulcrumReposOnly, org }: Props) {
   const { t } = useTranslation('review')
   const { t: tc } = useTranslation('common')
-  const { data: issues, isLoading, error } = useGitHubIssues(filter, viboraReposOnly, org)
+  const { data: issues, isLoading, error } = useGitHubIssues(filter, fulcrumReposOnly, org)
 
   if (isLoading) {
     return (

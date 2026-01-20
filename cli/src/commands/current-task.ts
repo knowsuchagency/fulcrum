@@ -1,4 +1,4 @@
-import { ViboraClient } from '../client'
+import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { TaskStatus, Task } from '@shared/types'
@@ -23,11 +23,11 @@ function formatTask(task: Task): void {
  * Finds the task associated with the current worktree.
  * Matches the current working directory (or --path) against task worktreePaths.
  */
-async function findCurrentTask(client: ViboraClient, pathOverride?: string) {
-  // Check VIBORA_TASK_ID env var first (injected by terminal session)
-  if (process.env.VIBORA_TASK_ID) {
+async function findCurrentTask(client: FulcrumClient, pathOverride?: string) {
+  // Check FULCRUM_TASK_ID env var first (injected by terminal session)
+  if (process.env.FULCRUM_TASK_ID) {
     try {
-      const task = await client.getTask(process.env.VIBORA_TASK_ID)
+      const task = await client.getTask(process.env.FULCRUM_TASK_ID)
       if (task) return task
     } catch {
       // Ignore error if task lookup fails (e.g. deleted task), fall back to path
@@ -49,7 +49,7 @@ async function findCurrentTask(client: ViboraClient, pathOverride?: string) {
   if (!task) {
     throw new CliError(
       'NOT_IN_WORKTREE',
-      `No task found for path: ${currentPath}. Are you inside a Vibora task worktree?`,
+      `No task found for path: ${currentPath}. Are you inside a Fulcrum task worktree?`,
       ExitCodes.NOT_FOUND
     )
   }
@@ -62,7 +62,7 @@ export async function handleCurrentTaskCommand(
   rest: string[],
   flags: Record<string, string>
 ) {
-  const client = new ViboraClient(flags.url, flags.port)
+  const client = new FulcrumClient(flags.url, flags.port)
   const pathOverride = flags.path
 
   // If no action, just return the current task info
@@ -82,7 +82,7 @@ export async function handleCurrentTaskCommand(
     if (!prUrl) {
       throw new CliError(
         'MISSING_PR_URL',
-        'Usage: vibora current-task pr <url>',
+        'Usage: fulcrum current-task pr <url>',
         ExitCodes.INVALID_ARGS
       )
     }
@@ -126,7 +126,7 @@ export async function handleCurrentTaskCommand(
       if (!urlOrId) {
         throw new CliError(
           'MISSING_LINK_ID',
-          'Usage: vibora current-task link --remove <url-or-id>',
+          'Usage: fulcrum current-task link --remove <url-or-id>',
           ExitCodes.INVALID_ARGS
         )
       }

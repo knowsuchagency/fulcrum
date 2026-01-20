@@ -1,12 +1,12 @@
 import { mock } from 'bun:test'
-import type { ViboraClient } from '../../client'
+import type { FulcrumClient } from '../../client'
 
 /**
- * Creates a mock ViboraClient for testing CLI commands.
+ * Creates a mock FulcrumClient for testing CLI commands.
  * All methods are mocked and can be configured per test.
  */
 export function createMockClient(): {
-  client: ViboraClient
+  client: FulcrumClient
   mocks: Record<string, ReturnType<typeof mock>>
 } {
   const mocks: Record<string, ReturnType<typeof mock>> = {
@@ -33,7 +33,7 @@ export function createMockClient(): {
 
   const client = Object.fromEntries(
     Object.entries(mocks).map(([key, fn]) => [key, fn])
-  ) as unknown as ViboraClient
+  ) as unknown as FulcrumClient
 
   return { client, mocks }
 }

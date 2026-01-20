@@ -1,13 +1,13 @@
 {
-  "name": "vibora",
+  "name": "@knowsuchagency/fulcrum",
   "private": true,
-  "version": "9.11.0",
+  "version": "1.0.0",
   "description": "Harness Attention. Orchestrate Agents. Ship.",
   "license": "PolyForm-Perimeter-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "dev:server": "mkdir -p ~/.vibora && bun --watch server/index.ts",
+    "dev:server": "mkdir -p ~/.fulcrum && bun --watch server/index.ts",
     "build": "tsc -b && vite build",
     "start": "NODE_ENV=production bun server/index.ts",
     "lint": "eslint .",

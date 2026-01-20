@@ -1,7 +1,7 @@
 import { execSync, spawnSync } from 'node:child_process'
 
 /**
- * Dependency definition for Vibora's required and optional tools.
+ * Dependency definition for Fulcrum's required and optional tools.
  */
 export interface Dependency {
   name: string
@@ -31,13 +31,13 @@ export interface DependencyStatus {
 }
 
 /**
- * All dependencies that Vibora uses.
+ * All dependencies that Fulcrum uses.
  */
 export const DEPENDENCIES: Dependency[] = [
   {
     name: 'bun',
     command: 'bun',
-    description: 'Runtime for Vibora server',
+    description: 'Runtime for Fulcrum server',
     required: true,
     install: {
       brew: 'brew install oven-sh/bun/bun',

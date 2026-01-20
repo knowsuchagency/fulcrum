@@ -1,12 +1,12 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import { getViboraDir } from './server'
+import { getFulcrumDir } from './server'
 
 /**
  * Gets the path to the PID file.
  */
 export function getPidPath(): string {
-  return join(getViboraDir(), 'vibora.pid')
+  return join(getFulcrumDir(), 'fulcrum.pid')
 }
 
 /**

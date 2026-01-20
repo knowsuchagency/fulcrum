@@ -351,7 +351,7 @@ export async function generateSwarmComposeFile(
   composeFile: string,
   projectName: string,
   externalNetwork: string | undefined, // Optional external network for ingress (e.g., dokploy-network)
-  outputDir: string, // Directory to write the swarm compose file (e.g., VIBORA_DIR/apps/{appId})
+  outputDir: string, // Directory to write the swarm compose file (e.g., FULCRUM_DIR/apps/{appId})
   env?: Record<string, string> // Environment variables for variable expansion (e.g., PORT=3005)
 ): Promise<{ success: boolean; swarmFile: string; error?: string }> {
   const swarmFileName = 'swarm-compose.yml'
@@ -416,7 +416,7 @@ export async function generateSwarmComposeFile(
       }
 
       // Resolve relative volume paths to absolute paths
-      // When the swarm compose file is written to VIBORA_DIR, relative paths
+      // When the swarm compose file is written to FULCRUM_DIR, relative paths
       // like ".:/app" would resolve to that directory instead of the repo
       if (Array.isArray(serviceConfig.volumes)) {
         serviceConfig.volumes = serviceConfig.volumes.map((vol: unknown) =>

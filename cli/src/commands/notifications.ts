@@ -1,4 +1,4 @@
-import { ViboraClient } from '../client'
+import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
@@ -10,7 +10,7 @@ export async function handleNotificationsCommand(
   positional: string[],
   flags: Record<string, string>
 ) {
-  const client = new ViboraClient(flags.url, flags.port)
+  const client = new FulcrumClient(flags.url, flags.port)
 
   switch (action) {
     case 'status':

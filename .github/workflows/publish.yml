@@ -137,13 +137,13 @@ jobs:
             ### Desktop App (Recommended)
 
             Download the appropriate package for your platform:
-            - **macOS (Apple Silicon)**: `Vibora-macos-arm64.dmg`
-            - **Linux (x64)**: `Vibora-linux-x64.AppImage`
+            - **macOS (Apple Silicon)**: `Fulcrum-macos-arm64.dmg`
+            - **Linux (x64)**: `Fulcrum-linux-x64.AppImage`
 
             ### CLI
 
             ```bash
-            npm install -g vibora
+            npm install -g fulcrum
             ```
 
   # Desktop builds - run in parallel on multiple platforms
@@ -158,12 +158,12 @@ jobs:
           - os: macos-latest
             platform: macos
             arch: arm64
-            artifact: Vibora-macos-arm64.dmg
+            artifact: Fulcrum-macos-arm64.dmg
           # Linux x64
           - os: ubuntu-latest
             platform: linux
             arch: x64
-            artifact: Vibora-linux-x64.AppImage
+            artifact: Fulcrum-linux-x64.AppImage
 
     runs-on: ${{ matrix.os }}
     permissions:

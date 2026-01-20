@@ -1,9 +1,0 @@
-{
-  "name": "vibora",
-  "description": "Vibora task orchestration for Claude Code",
-  "version": "9.11.0",
-  "author": {
-    "name": "Vibora"
-  },
-  "hooks": "./hooks/hooks.json"
-}

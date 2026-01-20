@@ -1,4 +1,4 @@
-import { ViboraClient } from '../client'
+import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
@@ -6,7 +6,7 @@ export async function handleDevCommand(
   action: string | undefined,
   flags: Record<string, string>
 ) {
-  const client = new ViboraClient(flags.url, flags.port)
+  const client = new FulcrumClient(flags.url, flags.port)
 
   switch (action) {
     case 'restart': {
@@ -15,7 +15,7 @@ export async function handleDevCommand(
       if (!devMode.enabled) {
         throw new CliError(
           'DEVELOPER_MODE_REQUIRED',
-          'Developer mode is not enabled. Set VIBORA_DEVELOPER=1 environment variable.',
+          'Developer mode is not enabled. Set FULCRUM_DEVELOPER=1 environment variable.',
           ExitCodes.INVALID_STATE
         )
       }
@@ -23,7 +23,7 @@ export async function handleDevCommand(
       if (!isJsonOutput()) {
         console.log('Triggering restart (build + migrate + restart)...')
       }
-      const result = await client.restartVibora()
+      const result = await client.restartFulcrum()
 
       if (result.error) {
         throw new CliError('RESTART_FAILED', result.error, ExitCodes.OPERATION_FAILED)
@@ -44,10 +44,10 @@ export async function handleDevCommand(
       } else {
         if (devMode.enabled) {
           console.log('Developer mode: enabled')
-          console.log('  Use "vibora dev restart" to rebuild and restart.')
+          console.log('  Use "fulcrum dev restart" to rebuild and restart.')
         } else {
           console.log('Developer mode: disabled')
-          console.log('  Set VIBORA_DEVELOPER=1 to enable.')
+          console.log('  Set FULCRUM_DEVELOPER=1 to enable.')
         }
       }
       break
@@ -56,7 +56,7 @@ export async function handleDevCommand(
     default:
       throw new CliError(
         'UNKNOWN_ACTION',
-        `Unknown dev action: ${action}. Use 'vibora dev restart' or 'vibora dev status'`,
+        `Unknown dev action: ${action}. Use 'fulcrum dev restart' or 'fulcrum dev status'`,
         ExitCodes.INVALID_ARGS
       )
   }

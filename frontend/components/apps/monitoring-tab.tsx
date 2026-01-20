@@ -23,7 +23,7 @@ const DISTRIBUTION_COLORS = [
 // Helper to extract service name from container name
 function extractServiceName(containerName: string): string {
   // Docker Swarm format: project_service.replica.taskid
-  // Example: "vibora-bg-qczqd_pocketbase.1.abc123" -> "pocketbase"
+  // Example: "fulcrum-bg-qczqd_pocketbase.1.abc123" -> "pocketbase"
 
   // First split by underscore to separate project from service
   const underscoreParts = containerName.split('_')
@@ -57,9 +57,9 @@ function getProjectName(appId: string, repoName?: string): string {
       .replace(/^-|-$/g, '')
       .slice(0, 20)
       .replace(/-$/, '') // Remove trailing hyphen if truncation created one
-    return `vibora-${sanitized}-${suffix}`
+    return `fulcrum-${sanitized}-${suffix}`
   }
-  return `vibora-${suffix}`
+  return `fulcrum-${suffix}`
 }
 
 // Distribution ring chart component

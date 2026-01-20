@@ -20,7 +20,7 @@ describe('doctor command', () => {
     test('outputs human-readable format by default', async () => {
       await handleDoctorCommand({})
 
-      expect(logs.some((l) => l.includes('Vibora Doctor'))).toBe(true)
+      expect(logs.some((l) => l.includes('Fulcrum Doctor'))).toBe(true)
       expect(logs.some((l) => l.includes('Required:'))).toBe(true)
       expect(logs.some((l) => l.includes('Optional:'))).toBe(true)
       expect(logs.some((l) => l.includes('Status:'))).toBe(true)

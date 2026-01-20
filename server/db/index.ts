@@ -4,7 +4,7 @@ import { Database } from 'bun:sqlite'
 import { join, dirname } from 'node:path'
 import { existsSync, readFileSync } from 'node:fs'
 import * as schema from './schema'
-import { initializeViboraDirectories, getDatabasePath } from '../lib/settings'
+import { initializeFulcrumDirectories, getDatabasePath } from '../lib/settings'
 import { log } from '../lib/logger'
 
 // Lazy-initialized database instance
@@ -15,8 +15,8 @@ let _sqlite: Database | null = null
 function initializeDatabase(): BunSQLiteDatabase<typeof schema> {
   if (_db) return _db
 
-  // Initialize all vibora directories (data dir, worktrees, etc.)
-  initializeViboraDirectories()
+  // Initialize all fulcrum directories (data dir, worktrees, etc.)
+  initializeFulcrumDirectories()
 
   const dbPath = getDatabasePath()
 
@@ -34,7 +34,7 @@ function initializeDatabase(): BunSQLiteDatabase<typeof schema> {
 }
 
 // Export a proxy that lazily initializes the database on first access
-// This allows tests to set VIBORA_DIR before the database is initialized
+// This allows tests to set FULCRUM_DIR before the database is initialized
 export const db = new Proxy({} as BunSQLiteDatabase<typeof schema>, {
   get(_, prop) {
     const instance = initializeDatabase()
@@ -65,9 +65,9 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
   // Determine migrations path based on mode
   let migrationsPath: string
 
-  if (process.env.VIBORA_PACKAGE_ROOT) {
+  if (process.env.FULCRUM_PACKAGE_ROOT) {
     // Bundled mode (CLI/desktop)
-    migrationsPath = join(process.env.VIBORA_PACKAGE_ROOT, 'drizzle')
+    migrationsPath = join(process.env.FULCRUM_PACKAGE_ROOT, 'drizzle')
   } else {
     // Source mode (development)
     const serverDir = dirname(import.meta.dir)

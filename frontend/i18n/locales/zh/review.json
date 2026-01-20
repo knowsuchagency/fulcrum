@@ -18,7 +18,7 @@
     },
     "allOrgs": "所有组织",
     "allOrganizations": "所有组织",
-    "viboraReposOnly": "仅 Vibora 仓库"
+    "fulcrumReposOnly": "仅 Fulcrum 仓库"
   },
   "github": {
     "tokenRequired": "需要 GitHub 令牌",

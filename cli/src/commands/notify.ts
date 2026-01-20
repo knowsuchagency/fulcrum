@@ -1,4 +1,4 @@
-import { ViboraClient } from '../client'
+import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 
@@ -6,7 +6,7 @@ export async function handleNotifyCommand(
   positional: string[],
   flags: Record<string, string>
 ) {
-  const client = new ViboraClient(flags.url, flags.port)
+  const client = new FulcrumClient(flags.url, flags.port)
 
   const title = flags.title || positional[0]
   const message = flags.message || positional.slice(1).join(' ') || positional[0]
@@ -14,7 +14,7 @@ export async function handleNotifyCommand(
   if (!title) {
     throw new CliError(
       'MISSING_TITLE',
-      'Title is required. Usage: vibora notify <title> [message] or --title=<title> --message=<message>',
+      'Title is required. Usage: fulcrum notify <title> [message] or --title=<title> --message=<message>',
       ExitCodes.INVALID_ARGS
     )
   }

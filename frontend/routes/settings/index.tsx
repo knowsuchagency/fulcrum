@@ -39,10 +39,10 @@ import {
   useZAiSettings,
   useUpdateZAiSettings,
   useDeveloperMode,
-  useRestartVibora,
+  useRestartFulcrum,
   useClaudeCodeLightTheme,
   useClaudeCodeDarkTheme,
-  useViboraVersion,
+  useFulcrumVersion,
   NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
@@ -93,12 +93,12 @@ function SettingsPage() {
   const { data: deploymentSettings, isLoading: deploymentLoading } = useDeploymentSettings()
   const updateDeploymentSettings = useUpdateDeploymentSettings()
   const { data: developerMode } = useDeveloperMode()
-  const restartVibora = useRestartVibora()
+  const restartFulcrum = useRestartFulcrum()
   const { savedLanguage, changeLanguage } = useLanguageSync()
   const { theme, syncClaudeCode, changeTheme } = useThemeSync()
   const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
-  const { version } = useViboraVersion()
+  const { version } = useFulcrumVersion()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -1613,7 +1613,7 @@ function SettingsPage() {
                           // Save current server start time to detect actual restart
                           const originalStartTime = developerMode?.startedAt
                           setIsRestarting(true)
-                          restartVibora.mutate(undefined, {
+                          restartFulcrum.mutate(undefined, {
                             onSuccess: () => {
                               // Poll until server restarts (new startedAt) or timeout
                               const pollForServer = async () => {
@@ -1651,10 +1651,10 @@ function SettingsPage() {
                             },
                           })
                         }}
-                        disabled={restartVibora.isPending || isRestarting}
+                        disabled={restartFulcrum.isPending || isRestarting}
                         className="shrink-0 gap-2"
                       >
-                        {(restartVibora.isPending || isRestarting) && (
+                        {(restartFulcrum.isPending || isRestarting) && (
                           <HugeiconsIcon
                             icon={Loading03Icon}
                             size={14}

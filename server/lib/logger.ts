@@ -1,5 +1,5 @@
-// Centralized logging for Vibora backend
-// Outputs JSON lines to stdout and vibora.log file
+// Centralized logging for Fulcrum backend
+// Outputs JSON lines to stdout and fulcrum.log file
 
 import { appendFileSync, statSync, renameSync, unlinkSync } from 'fs'
 import { join } from 'path'
@@ -8,7 +8,7 @@ import { join } from 'path'
 const MAX_LOG_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_LOG_BACKUPS = 2 // Keep .1 and .2 backups
 import { type LogEntry, type LogLevel, type Logger, LOG_LEVELS, formatLogEntry } from '../../shared/logger'
-import { getViboraDir, ensureViboraDir } from './settings'
+import { getFulcrumDir, ensureFulcrumDir } from './settings'
 
 // Get minimum log level from environment
 function getMinLevel(): LogLevel {
@@ -28,8 +28,8 @@ function getLogFile(): string | null {
   }
 
   try {
-    ensureViboraDir()
-    logFilePath = join(getViboraDir(), 'vibora.log')
+    ensureFulcrumDir()
+    logFilePath = join(getFulcrumDir(), 'fulcrum.log')
     return logFilePath
   } catch {
     logFilePath = '' // Mark as failed
@@ -66,7 +66,7 @@ function rotateLogIfNeeded(logFile: string): void {
 }
 
 /**
- * Core logging function - writes a log entry to stdout and vibora.log
+ * Core logging function - writes a log entry to stdout and fulcrum.log
  * Used by both the Logger class and /api/logs endpoint
  */
 export function writeEntry(entry: LogEntry): void {

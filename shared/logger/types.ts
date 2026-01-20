@@ -1,4 +1,4 @@
-// Centralized logging types for Vibora
+// Centralized logging types for Fulcrum
 // Used by both frontend and backend
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'

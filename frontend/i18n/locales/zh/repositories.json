@@ -25,7 +25,7 @@
   },
   "delete": {
     "title": "删除仓库",
-    "description": "这将从 Vibora 中移除 \"{{name}}\"。实际的仓库文件不会受到影响。",
+    "description": "这将从 Fulcrum 中移除 \"{{name}}\"。实际的仓库文件不会受到影响。",
     "button": "删除",
     "deleting": "删除中...",
     "alsoDeleteDirectory": "同时从磁盘删除目录",

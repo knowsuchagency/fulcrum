@@ -33,8 +33,8 @@ describe('Health Routes', () => {
       expect(body.uptime).toBeGreaterThanOrEqual(0)
     })
 
-    test('includes version when VIBORA_VERSION is set', async () => {
-      process.env.VIBORA_VERSION = '1.2.3'
+    test('includes version when FULCRUM_VERSION is set', async () => {
+      process.env.FULCRUM_VERSION = '1.2.3'
 
       try {
         const { get } = createTestApp()
@@ -44,12 +44,12 @@ describe('Health Routes', () => {
         expect(res.status).toBe(200)
         expect(body.version).toBe('1.2.3')
       } finally {
-        delete process.env.VIBORA_VERSION
+        delete process.env.FULCRUM_VERSION
       }
     })
 
-    test('version is null when VIBORA_VERSION not set', async () => {
-      delete process.env.VIBORA_VERSION
+    test('version is null when FULCRUM_VERSION not set', async () => {
+      delete process.env.FULCRUM_VERSION
 
       const { get } = createTestApp()
       const res = await get('/health')

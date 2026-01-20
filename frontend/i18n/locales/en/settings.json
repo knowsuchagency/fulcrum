@@ -113,7 +113,7 @@
     },
     "syncClaudeTheme": {
       "label": "Sync Claude Code",
-      "description": "Automatically update Claude Code's theme when Vibora switches between light and dark mode"
+      "description": "Automatically update Claude Code's theme when Fulcrum switches between light and dark mode"
     },
     "claudeCodeTheme": {
       "light": "Light mode",
@@ -131,7 +131,7 @@
   "notifications": {
     "enable": "Enable Notifications",
     "toast": "In-app Toast",
-    "toastDescription": "Show toast notifications in the Vibora interface",
+    "toastDescription": "Show toast notifications in the Fulcrum interface",
     "desktop": "Desktop Notifications",
     "desktopDescription": "Show native desktop or browser notifications",
     "sound": "Sound",
@@ -152,11 +152,11 @@
     "customSoundActive": "Custom sound active"
   },
   "developer": {
-    "restartButton": "Restart Vibora",
+    "restartButton": "Restart Fulcrum",
     "restarting": "Restarting...",
-    "restartDescription": "Rebuild and restart the Vibora server. If the build fails, the server will continue running.",
+    "restartDescription": "Rebuild and restart the Fulcrum server. If the build fails, the server will continue running.",
     "restartFailed": "Restart failed",
-    "checkLogs": "Build may have failed. Check journalctl --user -u vibora for details."
+    "checkLogs": "Build may have failed. Check journalctl --user -u fulcrum for details."
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",

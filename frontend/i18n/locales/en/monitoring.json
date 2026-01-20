@@ -4,7 +4,7 @@
     "claude": "AI Agents",
     "system": "System Metrics",
     "processes": "Processes",
-    "vibora": "Vibora Servers",
+    "fulcrum": "Fulcrum Servers",
     "worktrees": "Worktrees",
     "jobs": "Jobs",
     "usage": "Usage Limits"
@@ -28,11 +28,11 @@
     "killing": "Killing...",
     "killSelected": "Kill {{count}} selected",
     "source": {
-      "vibora": "Vibora: {{name}}",
+      "fulcrum": "Fulcrum: {{name}}",
       "external": "External"
     },
     "empty": "No AI agent instances running",
-    "emptyVibora": " in Vibora terminals",
+    "emptyFulcrum": " in Fulcrum terminals",
     "error": "Failed to load AI agent instances: {{message}}"
   },
   "system": {
@@ -72,8 +72,8 @@
     "containersEmpty": "No containers running",
     "containersUnavailable": "Docker/Podman not available"
   },
-  "vibora": {
-    "description": "Running Vibora dev servers",
+  "fulcrum": {
+    "description": "Running Fulcrum dev servers",
     "instanceCount": "{{count}} instance(s) running",
     "headers": {
       "port": "Port",
@@ -89,8 +89,8 @@
     "vite": "Vite",
     "kill": "Kill",
     "killing": "Killing...",
-    "empty": "No Vibora instances running",
-    "error": "Failed to load Vibora instances: {{message}}"
+    "empty": "No Fulcrum instances running",
+    "error": "Failed to load Fulcrum instances: {{message}}"
   },
   "usage": {
     "fiveHourBlock": "5-Hour Block",

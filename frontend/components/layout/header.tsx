@@ -125,7 +125,7 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
           <HugeiconsIcon icon={BrowserIcon} size={16} strokeWidth={2} />
         </Button>
         <a
-          href="https://www.vibora.dev/guide/"
+          href="https://www.fulcrum.dev/guide/"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center rounded-md p-1.5 text-foreground/60 transition-colors hover:text-foreground"

@@ -29,23 +29,23 @@ app.get('/orgs', async (c) => {
 })
 
 // GET /api/github/issues - Fetch user's open issues
-// Query params: ?filter=assigned|created|mentioned&org=orgname&viboraReposOnly=true
+// Query params: ?filter=assigned|created|mentioned&org=orgname&fulcrumReposOnly=true
 app.get('/issues', async (c) => {
   const filter = (c.req.query('filter') || 'assigned') as IssueFilter
   const org = c.req.query('org') || undefined
-  const viboraReposOnly = c.req.query('viboraReposOnly') === 'true'
+  const fulcrumReposOnly = c.req.query('fulcrumReposOnly') === 'true'
 
   let repoFilters: { owner: string; repo: string }[] | undefined
 
-  // Org filter takes precedence over viboraReposOnly
-  if (!org && viboraReposOnly) {
+  // Org filter takes precedence over fulcrumReposOnly
+  if (!org && fulcrumReposOnly) {
     const repos = db.select().from(repositories).all()
     repoFilters = repos
       .filter((r) => r.remoteUrl)
       .map((r) => parseGitHubRemoteUrl(r.remoteUrl!))
       .filter((r): r is { owner: string; repo: string } => r !== null)
 
-    // If no Vibora repos have GitHub remotes, return empty
+    // If no Fulcrum repos have GitHub remotes, return empty
     if (repoFilters.length === 0) {
       return c.json([])
     }
@@ -56,23 +56,23 @@ app.get('/issues', async (c) => {
 })
 
 // GET /api/github/prs - Fetch user's PRs
-// Query params: ?filter=all|created|assigned|review_requested|mentioned&org=orgname&viboraReposOnly=true
+// Query params: ?filter=all|created|assigned|review_requested|mentioned&org=orgname&fulcrumReposOnly=true
 app.get('/prs', async (c) => {
   const filter = (c.req.query('filter') || 'all') as PRFilter
   const org = c.req.query('org') || undefined
-  const viboraReposOnly = c.req.query('viboraReposOnly') === 'true'
+  const fulcrumReposOnly = c.req.query('fulcrumReposOnly') === 'true'
 
   let repoFilters: { owner: string; repo: string }[] | undefined
 
-  // Org filter takes precedence over viboraReposOnly
-  if (!org && viboraReposOnly) {
+  // Org filter takes precedence over fulcrumReposOnly
+  if (!org && fulcrumReposOnly) {
     const repos = db.select().from(repositories).all()
     repoFilters = repos
       .filter((r) => r.remoteUrl)
       .map((r) => parseGitHubRemoteUrl(r.remoteUrl!))
       .filter((r): r is { owner: string; repo: string } => r !== null)
 
-    // If no Vibora repos have GitHub remotes, return empty
+    // If no Fulcrum repos have GitHub remotes, return empty
     if (repoFilters.length === 0) {
       return c.json([])
     }

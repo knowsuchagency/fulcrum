@@ -8,14 +8,14 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   filter: PRFilter
-  viboraReposOnly: boolean
+  fulcrumReposOnly: boolean
   org?: string
 }
 
-export function PRsList({ filter, viboraReposOnly, org }: Props) {
+export function PRsList({ filter, fulcrumReposOnly, org }: Props) {
   const { t } = useTranslation('review')
   const { t: tc } = useTranslation('common')
-  const { data: prs, isLoading, error } = useGitHubPRs(filter, viboraReposOnly, org)
+  const { data: prs, isLoading, error } = useGitHubPRs(filter, fulcrumReposOnly, org)
 
   if (isLoading) {
     return (

@@ -52,9 +52,9 @@ describe('System Routes', () => {
       expect(typeof body.openCode.installed).toBe('boolean')
     })
 
-    test('respects VIBORA_CLAUDE_INSTALLED env var', async () => {
-      process.env.VIBORA_CLAUDE_INSTALLED = '1'
-      delete process.env.VIBORA_CLAUDE_MISSING
+    test('respects FULCRUM_CLAUDE_INSTALLED env var', async () => {
+      process.env.FULCRUM_CLAUDE_INSTALLED = '1'
+      delete process.env.FULCRUM_CLAUDE_MISSING
 
       try {
         const { get } = createTestApp()
@@ -64,13 +64,13 @@ describe('System Routes', () => {
         expect(res.status).toBe(200)
         expect(body.claudeCode.installed).toBe(true)
       } finally {
-        delete process.env.VIBORA_CLAUDE_INSTALLED
+        delete process.env.FULCRUM_CLAUDE_INSTALLED
       }
     })
 
-    test('respects VIBORA_CLAUDE_MISSING env var', async () => {
-      process.env.VIBORA_CLAUDE_MISSING = '1'
-      delete process.env.VIBORA_CLAUDE_INSTALLED
+    test('respects FULCRUM_CLAUDE_MISSING env var', async () => {
+      process.env.FULCRUM_CLAUDE_MISSING = '1'
+      delete process.env.FULCRUM_CLAUDE_INSTALLED
 
       try {
         const { get } = createTestApp()
@@ -80,13 +80,13 @@ describe('System Routes', () => {
         expect(res.status).toBe(200)
         expect(body.claudeCode.installed).toBe(false)
       } finally {
-        delete process.env.VIBORA_CLAUDE_MISSING
+        delete process.env.FULCRUM_CLAUDE_MISSING
       }
     })
 
-    test('respects VIBORA_OPENCODE_INSTALLED env var', async () => {
-      process.env.VIBORA_OPENCODE_INSTALLED = '1'
-      delete process.env.VIBORA_OPENCODE_MISSING
+    test('respects FULCRUM_OPENCODE_INSTALLED env var', async () => {
+      process.env.FULCRUM_OPENCODE_INSTALLED = '1'
+      delete process.env.FULCRUM_OPENCODE_MISSING
 
       try {
         const { get } = createTestApp()
@@ -96,13 +96,13 @@ describe('System Routes', () => {
         expect(res.status).toBe(200)
         expect(body.openCode.installed).toBe(true)
       } finally {
-        delete process.env.VIBORA_OPENCODE_INSTALLED
+        delete process.env.FULCRUM_OPENCODE_INSTALLED
       }
     })
 
-    test('respects VIBORA_OPENCODE_MISSING env var', async () => {
-      process.env.VIBORA_OPENCODE_MISSING = '1'
-      delete process.env.VIBORA_OPENCODE_INSTALLED
+    test('respects FULCRUM_OPENCODE_MISSING env var', async () => {
+      process.env.FULCRUM_OPENCODE_MISSING = '1'
+      delete process.env.FULCRUM_OPENCODE_INSTALLED
 
       try {
         const { get } = createTestApp()
@@ -112,13 +112,13 @@ describe('System Routes', () => {
         expect(res.status).toBe(200)
         expect(body.openCode.installed).toBe(false)
       } finally {
-        delete process.env.VIBORA_OPENCODE_MISSING
+        delete process.env.FULCRUM_OPENCODE_MISSING
       }
     })
 
-    test('VIBORA_CLAUDE_INSTALLED takes precedence over MISSING', async () => {
-      process.env.VIBORA_CLAUDE_INSTALLED = '1'
-      process.env.VIBORA_CLAUDE_MISSING = '1'
+    test('FULCRUM_CLAUDE_INSTALLED takes precedence over MISSING', async () => {
+      process.env.FULCRUM_CLAUDE_INSTALLED = '1'
+      process.env.FULCRUM_CLAUDE_MISSING = '1'
 
       try {
         const { get } = createTestApp()
@@ -128,14 +128,14 @@ describe('System Routes', () => {
         expect(res.status).toBe(200)
         expect(body.claudeCode.installed).toBe(true)
       } finally {
-        delete process.env.VIBORA_CLAUDE_INSTALLED
-        delete process.env.VIBORA_CLAUDE_MISSING
+        delete process.env.FULCRUM_CLAUDE_INSTALLED
+        delete process.env.FULCRUM_CLAUDE_MISSING
       }
     })
 
-    test('VIBORA_OPENCODE_INSTALLED takes precedence over MISSING', async () => {
-      process.env.VIBORA_OPENCODE_INSTALLED = '1'
-      process.env.VIBORA_OPENCODE_MISSING = '1'
+    test('FULCRUM_OPENCODE_INSTALLED takes precedence over MISSING', async () => {
+      process.env.FULCRUM_OPENCODE_INSTALLED = '1'
+      process.env.FULCRUM_OPENCODE_MISSING = '1'
 
       try {
         const { get } = createTestApp()
@@ -145,8 +145,8 @@ describe('System Routes', () => {
         expect(res.status).toBe(200)
         expect(body.openCode.installed).toBe(true)
       } finally {
-        delete process.env.VIBORA_OPENCODE_INSTALLED
-        delete process.env.VIBORA_OPENCODE_MISSING
+        delete process.env.FULCRUM_OPENCODE_INSTALLED
+        delete process.env.FULCRUM_OPENCODE_MISSING
       }
     })
 

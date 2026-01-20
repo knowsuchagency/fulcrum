@@ -212,7 +212,7 @@ describe('Projects Routes', () => {
   describe('POST /api/projects', () => {
     test('creates a project with existing repositoryId', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'existing-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'existing-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -240,7 +240,7 @@ describe('Projects Routes', () => {
     })
 
     test('creates a project with local path (creates repository)', async () => {
-      const repoPath = join(testEnv.viboraDir, 'local-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'local-repo')
       mkdirSync(repoPath, { recursive: true })
 
       const { post } = createTestApp()
@@ -294,7 +294,7 @@ describe('Projects Routes', () => {
 
     test('returns 400 for duplicate repository path', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'dup-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'dup-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -412,7 +412,7 @@ describe('Projects Routes', () => {
   describe('DELETE /api/projects/:id', () => {
     test('deletes project', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'delete-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'delete-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -458,7 +458,7 @@ describe('Projects Routes', () => {
 
     test('deletes project with cascade to app', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'cascade-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'cascade-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -526,7 +526,7 @@ describe('Projects Routes', () => {
 
     test('deletes project with directory deletion', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'dir-delete-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'dir-delete-repo')
       const gitPath = join(repoPath, '.git')
       mkdirSync(gitPath, { recursive: true })
 
@@ -581,7 +581,7 @@ describe('Projects Routes', () => {
   describe('POST /api/projects/:id/add-app', () => {
     test('adds existing app to project', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'add-app-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'add-app-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -667,7 +667,7 @@ describe('Projects Routes', () => {
   describe('POST /api/projects/:id/create-app', () => {
     test('creates app for project with compose file', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'create-app-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'create-app-repo')
       mkdirSync(repoPath, { recursive: true })
 
       // Create a compose file
@@ -739,7 +739,7 @@ describe('Projects Routes', () => {
 
     test('returns 400 if no compose file found', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'no-compose-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'no-compose-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -778,7 +778,7 @@ describe('Projects Routes', () => {
   describe('DELETE /api/projects/:id/app', () => {
     test('removes app from project without deleting', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'remove-app-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'remove-app-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -837,7 +837,7 @@ describe('Projects Routes', () => {
 
     test('removes and deletes app from project', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'delete-app-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'delete-app-repo')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)
@@ -917,10 +917,10 @@ describe('Projects Routes', () => {
 
   describe('POST /api/projects/scan', () => {
     test('scans directory for git repositories', async () => {
-      // Create test repos in viboraDir
-      const repo1 = join(testEnv.viboraDir, 'scan-repo-1')
-      const repo2 = join(testEnv.viboraDir, 'scan-repo-2')
-      const nonRepo = join(testEnv.viboraDir, 'not-a-repo')
+      // Create test repos in fulcrumDir
+      const repo1 = join(testEnv.fulcrumDir, 'scan-repo-1')
+      const repo2 = join(testEnv.fulcrumDir, 'scan-repo-2')
+      const nonRepo = join(testEnv.fulcrumDir, 'not-a-repo')
 
       mkdirSync(join(repo1, '.git'), { recursive: true })
       mkdirSync(join(repo2, '.git'), { recursive: true })
@@ -928,12 +928,12 @@ describe('Projects Routes', () => {
 
       const { post } = createTestApp()
       const res = await post('/api/projects/scan', {
-        directory: testEnv.viboraDir,
+        directory: testEnv.fulcrumDir,
       })
       const body = await res.json()
 
       expect(res.status).toBe(200)
-      expect(body.directory).toBe(testEnv.viboraDir)
+      expect(body.directory).toBe(testEnv.fulcrumDir)
       expect(body.repositories.length).toBe(2)
 
       const names = body.repositories.map((r: { name: string }) => r.name)
@@ -944,7 +944,7 @@ describe('Projects Routes', () => {
 
     test('indicates which repos have projects', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'existing-proj-repo')
+      const repoPath = join(testEnv.fulcrumDir, 'existing-proj-repo')
       mkdirSync(join(repoPath, '.git'), { recursive: true })
 
       db.insert(repositories)
@@ -970,7 +970,7 @@ describe('Projects Routes', () => {
 
       const { post } = createTestApp()
       const res = await post('/api/projects/scan', {
-        directory: testEnv.viboraDir,
+        directory: testEnv.fulcrumDir,
       })
       const body = await res.json()
 
@@ -984,8 +984,8 @@ describe('Projects Routes', () => {
 
   describe('POST /api/projects/bulk', () => {
     test('creates projects in bulk', async () => {
-      const repo1 = join(testEnv.viboraDir, 'bulk-repo-1')
-      const repo2 = join(testEnv.viboraDir, 'bulk-repo-2')
+      const repo1 = join(testEnv.fulcrumDir, 'bulk-repo-1')
+      const repo2 = join(testEnv.fulcrumDir, 'bulk-repo-2')
       mkdirSync(repo1, { recursive: true })
       mkdirSync(repo2, { recursive: true })
 
@@ -1010,7 +1010,7 @@ describe('Projects Routes', () => {
     })
 
     test('skips non-existent paths', async () => {
-      const repo1 = join(testEnv.viboraDir, 'exists-repo')
+      const repo1 = join(testEnv.fulcrumDir, 'exists-repo')
       mkdirSync(repo1, { recursive: true })
 
       const { post } = createTestApp()
@@ -1029,7 +1029,7 @@ describe('Projects Routes', () => {
 
     test('skips repositories that already have projects', async () => {
       const now = new Date().toISOString()
-      const repoPath = join(testEnv.viboraDir, 'already-has-proj')
+      const repoPath = join(testEnv.fulcrumDir, 'already-has-proj')
       mkdirSync(repoPath, { recursive: true })
 
       db.insert(repositories)

@@ -2,7 +2,7 @@ import Cloudflare from 'cloudflare'
 import { generateKeyPairSync, createSign } from 'crypto'
 import { mkdir, writeFile, readFile, access } from 'fs/promises'
 import { join } from 'path'
-import { getSettings, getViboraDir } from '../lib/settings'
+import { getSettings, getFulcrumDir } from '../lib/settings'
 import { log } from '../lib/logger'
 
 // Permission error messages for user guidance
@@ -194,7 +194,7 @@ export async function listZones(): Promise<{ name: string; id: string }[]> {
  * Get the certificate storage directory for a domain
  */
 export function getCertDir(domain: string): string {
-  return join(getViboraDir(), 'certs', domain)
+  return join(getFulcrumDir(), 'certs', domain)
 }
 
 /**

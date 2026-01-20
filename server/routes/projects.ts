@@ -7,7 +7,7 @@ import { db, projects, repositories, apps, appServices, terminalTabs, projectRep
 import { eq, desc, sql, and, or, inArray } from 'drizzle-orm'
 import type { ProjectWithDetails, ProjectRepositoryDetails, Tag, ProjectAttachment, ProjectLink } from '../../shared/types'
 import { detectLinkType } from '../lib/link-utils'
-import { getViboraDir } from '../lib/settings'
+import { getFulcrumDir } from '../lib/settings'
 import * as fs from 'fs'
 import * as path from 'path'
 import { broadcast } from '../websocket/terminal-ws'
@@ -179,8 +179,8 @@ function getProjectLinksList(projectId: string): ProjectLink[] {
 
 // Get upload directory for a project
 function getProjectUploadsDir(projectId: string): string {
-  const viboraDir = getViboraDir()
-  return path.join(viboraDir, 'uploads', 'projects', projectId)
+  const fulcrumDir = getFulcrumDir()
+  return path.join(fulcrumDir, 'uploads', 'projects', projectId)
 }
 
 // Allowed MIME types for attachments

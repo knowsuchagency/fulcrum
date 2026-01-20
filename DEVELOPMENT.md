@@ -19,7 +19,7 @@ mise run server    # Backend (uses PORT env var, with auto-reload)
 mise run client    # Frontend (port 5173, proxies to backend)
 ```
 
-Development mode defaults to `~/.vibora/dev` (port 8888) to keep development data separate from production.
+Development mode defaults to `~/.fulcrum/dev` (port 8888) to keep development data separate from production.
 
 > **Note**: Port 6666 might conflict with the 'cbt' (SSH tunnel) service on some macOS systems. If you encounter "Address already in use", you can override the port in `.env` or `mise.toml` (e.g., set `PORT=8888`).
 
@@ -74,7 +74,7 @@ mise run bump         # Bump patch version (or: bump major, bump minor)
 
 ## Database
 
-- Default location: `~/.vibora/vibora.db` (SQLite with WAL mode)
+- Default location: `~/.fulcrum/fulcrum.db` (SQLite with WAL mode)
 - Schema: `server/db/schema.ts`
 
 ### Tables
@@ -122,7 +122,7 @@ See [frontend/stores/terminal-architecture.md](frontend/stores/terminal-architec
 
 ## CLI Package
 
-The `vibora` package provides a global CLI for running Vibora as a daemon. The built CLI package includes:
+The `fulcrum` package provides a global CLI for running Fulcrum as a daemon. The built CLI package includes:
 
 - `cli/server/index.js` - Bundled server
 - `cli/dist/` - Pre-built frontend assets
@@ -138,33 +138,33 @@ mise run cli:publish  # Publish to npm (runs cli:build first)
 
 ## Developer Mode
 
-Developer mode enables additional features useful for Vibora development:
+Developer mode enables additional features useful for Fulcrum development:
 
-- **Restart Button**: A "Restart Vibora" button appears in Settings that builds and restarts the server
-- **Vibora Instances Tab**: Shows running Vibora instances in the Monitoring page
+- **Restart Button**: A "Restart Fulcrum" button appears in Settings that builds and restarts the server
+- **Fulcrum Instances Tab**: Shows running Fulcrum instances in the Monitoring page
 
 ### Enabling Developer Mode
 
-Set the `VIBORA_DEVELOPER` environment variable:
+Set the `FULCRUM_DEVELOPER` environment variable:
 
 ```bash
-VIBORA_DEVELOPER=1 bun server/index.ts
+FULCRUM_DEVELOPER=1 bun server/index.ts
 ```
 
 Or use the systemd service (see below).
 
 ## Systemd User Service
 
-For remote development scenarios (SSH + Tailscale), Vibora can be run as a systemd user service. This allows restarting the server from within Vibora itself.
+For remote development scenarios (SSH + Tailscale), Fulcrum can be run as a systemd user service. This allows restarting the server from within Fulcrum itself.
 
 ### Installation
 
-Create a systemd user service file at `~/.config/systemd/user/vibora.service`. The service should build the frontend, run migrations, and start the server. See [systemd documentation](https://www.freedesktop.org/software/systemd/man/systemd.service.html) for details.
+Create a systemd user service file at `~/.config/systemd/user/fulcrum.service`. The service should build the frontend, run migrations, and start the server. See [systemd documentation](https://www.freedesktop.org/software/systemd/man/systemd.service.html) for details.
 
 ```bash
 # After creating the service file
 systemctl --user daemon-reload
-systemctl --user enable vibora
+systemctl --user enable fulcrum
 ```
 
 ### First Start
@@ -172,10 +172,10 @@ systemctl --user enable vibora
 The service builds before stopping the old instance, so if the build fails, the old instance keeps running:
 
 ```bash
-systemctl --user start vibora
+systemctl --user start fulcrum
 ```
 
-This is safe to run even if Vibora is already running via `mise run up`.
+This is safe to run even if Fulcrum is already running via `mise run up`.
 
 ### How Restart Works
 
@@ -191,26 +191,26 @@ If any `ExecStartPre` step fails, the service won't start and the old instance k
 
 ```bash
 # Start the server
-systemctl --user start vibora
+systemctl --user start fulcrum
 
 # Stop the server
-systemctl --user stop vibora
+systemctl --user stop fulcrum
 
 # Restart (rebuild and restart)
-systemctl --user restart vibora
+systemctl --user restart fulcrum
 
 # Check status
-systemctl --user status vibora
+systemctl --user status fulcrum
 
 # View logs
-journalctl --user -u vibora -f
+journalctl --user -u fulcrum -f
 ```
 
 ### Restarting from the UI
 
-When running in developer mode, the Settings page shows a "Restart Vibora" button. Clicking it:
+When running in developer mode, the Settings page shows a "Restart Fulcrum" button. Clicking it:
 
-1. **Triggers systemctl restart**: The button calls `systemctl --user restart vibora`
+1. **Triggers systemctl restart**: The button calls `systemctl --user restart fulcrum`
 2. **Systemd handles everything**: The service builds, migrates, and restarts
 3. **Fails safely**: If build fails, old instance keeps running (check logs with `journalctl`)
 4. **Auto-reloads**: The page polls for the new server and reloads when it's back
@@ -221,10 +221,10 @@ You can also trigger a restart from the command line:
 
 ```bash
 # Check if developer mode is enabled
-vibora dev status
+fulcrum dev status
 
 # Build and restart (only works in developer mode)
-vibora dev restart
+fulcrum dev restart
 ```
 
 The CLI provides the same two-phase safety as the UI button.

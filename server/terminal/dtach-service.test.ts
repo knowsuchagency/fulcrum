@@ -25,7 +25,7 @@ describe('DtachService', () => {
   describe('constructor', () => {
     test('creates sockets directory if it does not exist', () => {
       new DtachService()
-      const socketsDir = join(testEnv.viboraDir, 'sockets')
+      const socketsDir = join(testEnv.fulcrumDir, 'sockets')
       expect(existsSync(socketsDir)).toBe(true)
     })
   })

@@ -11,20 +11,20 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { CliError, ExitCodes } from '../utils/errors'
 // @ts-expect-error - Bun text import
-import PLUGIN_CODE from '../../../plugins/vibora-opencode/index.ts' with { type: 'text' }
+import PLUGIN_CODE from '../../../plugins/fulcrum-opencode/index.ts' with { type: 'text' }
 
 // OpenCode config: ~/.opencode/opencode.json (global/root level)
 const OPENCODE_DIR = join(homedir(), '.opencode')
 const OPENCODE_CONFIG_PATH = join(OPENCODE_DIR, 'opencode.json')
 
-// Plugin location: ~/.config/opencode/plugin/vibora.ts
+// Plugin location: ~/.config/opencode/plugin/fulcrum.ts
 const PLUGIN_DIR = join(homedir(), '.config', 'opencode', 'plugin')
-const PLUGIN_PATH = join(PLUGIN_DIR, 'vibora.ts')
+const PLUGIN_PATH = join(PLUGIN_DIR, 'fulcrum.ts')
 
 // MCP server config (OpenCode format: type local with command array)
-const VIBORA_MCP_CONFIG = {
+const FULCRUM_MCP_CONFIG = {
   type: 'local',
-  command: ['vibora', 'mcp'],
+  command: ['fulcrum', 'mcp'],
   enabled: true,
 }
 
@@ -41,7 +41,7 @@ export async function handleOpenCodeCommand(action: string | undefined) {
 
   throw new CliError(
     'INVALID_ACTION',
-    'Unknown action. Usage: vibora opencode install | vibora opencode uninstall',
+    'Unknown action. Usage: fulcrum opencode install | fulcrum opencode uninstall',
     ExitCodes.INVALID_ARGS
   )
 }
@@ -118,8 +118,8 @@ function getMcpObject(config: Record<string, unknown>): Record<string, unknown> 
 }
 
 /**
- * Add vibora MCP server to opencode.json
- * Non-destructive: preserves existing config, only adds vibora entry
+ * Add fulcrum MCP server to opencode.json
+ * Non-destructive: preserves existing config, only adds fulcrum entry
  * Returns true if MCP was configured, false if skipped due to error
  */
 function addMcpServer(): boolean {
@@ -137,15 +137,15 @@ function addMcpServer(): boolean {
       console.log('⚠ Could not parse existing opencode.json, skipping MCP configuration')
       console.log('  Add manually to ~/.opencode/opencode.json:')
       console.log(
-        '    "mcp": { "vibora": { "type": "local", "command": ["vibora", "mcp"], "enabled": true } }'
+        '    "mcp": { "fulcrum": { "type": "local", "command": ["fulcrum", "mcp"], "enabled": true } }'
       )
       return false
     }
   }
 
-  // Check if vibora MCP already exists - preserve existing config
+  // Check if fulcrum MCP already exists - preserve existing config
   const mcp = getMcpObject(config)
-  if (mcp.vibora) {
+  if (mcp.fulcrum) {
     console.log('• MCP server already configured, preserving existing configuration')
     return true
   }
@@ -155,10 +155,10 @@ function addMcpServer(): boolean {
     copyFileSync(OPENCODE_CONFIG_PATH, OPENCODE_CONFIG_PATH + '.backup')
   }
 
-  // Add vibora MCP server (non-destructive merge)
+  // Add fulcrum MCP server (non-destructive merge)
   config.mcp = {
     ...mcp,
-    vibora: VIBORA_MCP_CONFIG,
+    fulcrum: FULCRUM_MCP_CONFIG,
   }
 
   // Write safely: temp file then atomic rename
@@ -183,8 +183,8 @@ function addMcpServer(): boolean {
 }
 
 /**
- * Remove vibora MCP server from opencode.json
- * Non-destructive: only removes vibora entry, preserves rest of config
+ * Remove fulcrum MCP server from opencode.json
+ * Non-destructive: only removes fulcrum entry, preserves rest of config
  */
 function removeMcpServer(): boolean {
   if (!existsSync(OPENCODE_CONFIG_PATH)) {
@@ -202,7 +202,7 @@ function removeMcpServer(): boolean {
   }
 
   const mcp = getMcpObject(config)
-  if (!mcp.vibora) {
+  if (!mcp.fulcrum) {
     console.log('• MCP server not configured (already removed)')
     return false
   }
@@ -210,8 +210,8 @@ function removeMcpServer(): boolean {
   // Create backup before modifying
   copyFileSync(OPENCODE_CONFIG_PATH, OPENCODE_CONFIG_PATH + '.backup')
 
-  // Remove only the vibora entry
-  delete mcp.vibora
+  // Remove only the fulcrum entry
+  delete mcp.fulcrum
 
   // If mcp object is now empty, remove it entirely
   if (Object.keys(mcp).length === 0) {

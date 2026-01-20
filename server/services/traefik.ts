@@ -9,7 +9,7 @@ export interface TraefikConfig {
   network: string // e.g., dokploy-network
   certResolver: string // e.g., letsencrypt
   containerName: string // e.g., dokploy-traefik
-  type: 'dokploy' | 'vibora' | 'other'
+  type: 'dokploy' | 'fulcrum' | 'other'
   certsDir?: string // e.g., /certs (mount point inside container)
 }
 
@@ -46,17 +46,17 @@ export async function detectTraefik(): Promise<TraefikConfig | null> {
       return parseTraefikContainer(container, 'dokploy')
     }
 
-    // Check for vibora-traefik
-    const viboraResult = await runDocker([
+    // Check for fulcrum-traefik
+    const fulcrumResult = await runDocker([
       'inspect',
-      'vibora-traefik',
+      'fulcrum-traefik',
       '--format',
       '{{json .}}',
     ])
 
-    if (viboraResult.exitCode === 0) {
-      const container = JSON.parse(viboraResult.stdout) as DockerContainer
-      return parseTraefikContainer(container, 'vibora')
+    if (fulcrumResult.exitCode === 0) {
+      const container = JSON.parse(fulcrumResult.stdout) as DockerContainer
+      return parseTraefikContainer(container, 'fulcrum')
     }
 
     // Search for any running traefik container
@@ -122,7 +122,7 @@ export async function detectTraefik(): Promise<TraefikConfig | null> {
  */
 function parseTraefikContainer(
   container: DockerContainer,
-  type: 'dokploy' | 'vibora' | 'other'
+  type: 'dokploy' | 'fulcrum' | 'other'
 ): TraefikConfig | null {
   // Find the dynamic config directory mount
   const dynamicMount = container.Mounts?.find(
@@ -143,7 +143,7 @@ function parseTraefikContainer(
       : join(dynamicMount.Source, 'dynamic')
   } else {
     // Default fallback - use /etc/traefik/dynamic for external Traefik
-    // (Vibora's own Traefik uses getViboraTraefikConfig() which resolves dynamically)
+    // (Fulcrum's own Traefik uses getFulcrumTraefikConfig() which resolves dynamically)
     configDir = '/etc/traefik/dynamic'
   }
 
@@ -151,7 +151,7 @@ function parseTraefikContainer(
   const networks = Object.keys(container.NetworkSettings?.Networks || {})
   const network =
     networks.find((n) => n === 'dokploy-network') ||
-    networks.find((n) => n === 'vibora-network') ||
+    networks.find((n) => n === 'fulcrum-network') ||
     networks.find((n) => !n.includes('bridge') && !n.includes('host')) ||
     'dokploy-network'
 
@@ -188,19 +188,19 @@ export async function checkConfigDirWritable(configDir: string): Promise<boolean
 
 /**
  * Generate Traefik config filename for an app
- * Format: vibora-{appName}-{appId}.yml for human readability
+ * Format: fulcrum-{appName}-{appId}.yml for human readability
  */
 function getConfigFilename(appId: string, appName?: string): string {
   if (appName) {
     // Sanitize app name for filesystem: lowercase, replace spaces/special chars with hyphens
     const sanitized = appName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    return `vibora-${sanitized}-${appId}.yml`
+    return `fulcrum-${sanitized}-${appId}.yml`
   }
-  return `vibora-${appId}.yml`
+  return `fulcrum-${appId}.yml`
 }
 
 /**
- * Check for conflicting routes in other Vibora config files
+ * Check for conflicting routes in other Fulcrum config files
  * Returns the conflicting app ID if found, null otherwise
  */
 async function checkRouteConflict(
@@ -210,19 +210,19 @@ async function checkRouteConflict(
 ): Promise<{ conflictingAppId: string; conflictingFile: string } | null> {
   try {
     const files = await readdir(configDir)
-    const viboraFiles = files.filter(
-      (f) => f.startsWith('vibora-') && f.endsWith('.yml') && f !== getConfigFilename(currentAppId)
+    const fulcrumFiles = files.filter(
+      (f) => f.startsWith('fulcrum-') && f.endsWith('.yml') && f !== getConfigFilename(currentAppId)
     )
 
-    for (const file of viboraFiles) {
+    for (const file of fulcrumFiles) {
       const filepath = join(configDir, file)
       const content = await readFile(filepath, 'utf-8')
 
       // Check if this file routes to the same domain
       // Look for Host(`domain`) pattern
       if (content.includes(`Host(\`${domain}\`)`)) {
-        // Extract app ID from filename: vibora-{appId}.yml
-        const match = file.match(/^vibora-(.+)\.yml$/)
+        // Extract app ID from filename: fulcrum-{appId}.yml
+        const match = file.match(/^fulcrum-(.+)\.yml$/)
         const conflictingAppId = match ? match[1] : 'unknown'
         return { conflictingAppId, conflictingFile: filepath }
       }
@@ -275,7 +275,7 @@ export async function addRoute(
     return { success: false, error }
   }
 
-  const routerId = `vibora-${appId}`
+  const routerId = `fulcrum-${appId}`
   const filename = getConfigFilename(appId, options?.appName)
   const filepath = join(config.configDir, filename)
 

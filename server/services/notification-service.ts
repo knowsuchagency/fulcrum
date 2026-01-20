@@ -257,7 +257,7 @@ export async function testNotificationChannel(
   const config = settings ?? getNotificationSettings()
   const testPayload: NotificationPayload = {
     title: 'Test Notification',
-    message: 'This is a test notification from Vibora.',
+    message: 'This is a test notification from Fulcrum.',
     type: 'task_status_change',
   }
 

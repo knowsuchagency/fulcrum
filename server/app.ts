@@ -32,12 +32,12 @@ import type { LogEntry } from '../shared/logger'
 
 /**
  * Gets the path to the dist directory.
- * In bundled mode (CLI), VIBORA_PACKAGE_ROOT points to the package installation.
+ * In bundled mode (CLI), FULCRUM_PACKAGE_ROOT points to the package installation.
  * In dev/source mode, uses CWD.
  */
 function getDistPath(): string {
-  if (process.env.VIBORA_PACKAGE_ROOT) {
-    return join(process.env.VIBORA_PACKAGE_ROOT, 'dist')
+  if (process.env.FULCRUM_PACKAGE_ROOT) {
+    return join(process.env.FULCRUM_PACKAGE_ROOT, 'dist')
   }
   return join(process.cwd(), 'dist')
 }
@@ -105,9 +105,9 @@ export function createApp() {
   })
 
   // Serve static files in production mode or bundled CLI mode
-  // Note: Check VIBORA_PACKAGE_ROOT in addition to NODE_ENV because bun build
+  // Note: Check FULCRUM_PACKAGE_ROOT in addition to NODE_ENV because bun build
   // inlines NODE_ENV at build time, removing this block if built without NODE_ENV=production
-  if (process.env.NODE_ENV === 'production' || process.env.VIBORA_PACKAGE_ROOT) {
+  if (process.env.NODE_ENV === 'production' || process.env.FULCRUM_PACKAGE_ROOT) {
     const distPath = getDistPath()
 
     // Helper to serve static files with proper MIME types and caching
@@ -162,7 +162,7 @@ export function createApp() {
     })
 
     // Serve specific static files
-    const staticFiles = ['vibora-icon.png', 'vibora-logo.jpeg', 'vite.svg', 'logo.png', 'goat.jpeg']
+    const staticFiles = ['fulcrum-icon.png', 'fulcrum-logo.jpeg', 'vite.svg', 'logo.png', 'goat.jpeg']
     for (const file of staticFiles) {
       app.get(`/${file}`, async () => {
         const filePath = join(distPath, file)

@@ -49,14 +49,14 @@ function readSettingsFile(path: string): Settings | null {
 }
 
 /**
- * Discovers the Vibora server URL.
+ * Discovers the Fulcrum server URL.
  * Priority:
  * 1. Explicit URL override (--url flag)
  * 2. Explicit port override (--port flag)
- * 3. VIBORA_URL environment variable
- * 4. VIBORA_DIR settings.json (read port)
- * 5. .vibora/settings.json in CWD (read port)
- * 6. ~/.vibora/settings.json (read port)
+ * 3. FULCRUM_URL environment variable
+ * 4. FULCRUM_DIR settings.json (read port)
+ * 5. .fulcrum/settings.json in CWD (read port)
+ * 6. ~/.fulcrum/settings.json (read port)
  * 7. Default: http://localhost:7777
  */
 export function discoverServerUrl(urlOverride?: string, portOverride?: string): string {
@@ -71,30 +71,30 @@ export function discoverServerUrl(urlOverride?: string, portOverride?: string): 
   }
 
   // 3. Environment variable
-  if (process.env.VIBORA_URL) {
-    return process.env.VIBORA_URL
+  if (process.env.FULCRUM_URL) {
+    return process.env.FULCRUM_URL
   }
 
-  // 4. VIBORA_DIR settings.json
-  if (process.env.VIBORA_DIR) {
-    const viboraDirSettings = join(expandPath(process.env.VIBORA_DIR), 'settings.json')
-    const settings = readSettingsFile(viboraDirSettings)
+  // 4. FULCRUM_DIR settings.json
+  if (process.env.FULCRUM_DIR) {
+    const fulcrumDirSettings = join(expandPath(process.env.FULCRUM_DIR), 'settings.json')
+    const settings = readSettingsFile(fulcrumDirSettings)
     const port = getPortFromSettings(settings)
     if (port) {
       return `http://localhost:${port}`
     }
   }
 
-  // 5. Local .vibora/settings.json
-  const cwdSettings = join(process.cwd(), '.vibora', 'settings.json')
+  // 5. Local .fulcrum/settings.json
+  const cwdSettings = join(process.cwd(), '.fulcrum', 'settings.json')
   const localSettings = readSettingsFile(cwdSettings)
   const localPort = getPortFromSettings(localSettings)
   if (localPort) {
     return `http://localhost:${localPort}`
   }
 
-  // 6. Global ~/.vibora/settings.json
-  const globalSettings = join(homedir(), '.vibora', 'settings.json')
+  // 6. Global ~/.fulcrum/settings.json
+  const globalSettings = join(homedir(), '.fulcrum', 'settings.json')
   const homeSettings = readSettingsFile(globalSettings)
   const homePort = getPortFromSettings(homeSettings)
   if (homePort) {
@@ -107,11 +107,11 @@ export function discoverServerUrl(urlOverride?: string, portOverride?: string): 
 
 /**
  * Updates the port in settings.json.
- * Used when --port is explicitly passed to vibora up.
+ * Used when --port is explicitly passed to fulcrum up.
  */
 export function updateSettingsPort(port: number): void {
-  const viboraDir = getViboraDir()
-  const settingsPath = join(viboraDir, 'settings.json')
+  const fulcrumDir = getFulcrumDir()
+  const settingsPath = join(fulcrumDir, 'settings.json')
 
   let settings: Record<string, unknown> = {}
   try {
@@ -129,27 +129,27 @@ export function updateSettingsPort(port: number): void {
   (settings.server as Record<string, unknown>).port = port
 
   // Ensure directory exists
-  if (!existsSync(viboraDir)) {
-    mkdirSync(viboraDir, { recursive: true })
+  if (!existsSync(fulcrumDir)) {
+    mkdirSync(fulcrumDir, { recursive: true })
   }
 
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
 }
 
 /**
- * Gets the .vibora directory path.
- * Priority: VIBORA_DIR env var → CWD .vibora → ~/.vibora
+ * Gets the .fulcrum directory path.
+ * Priority: FULCRUM_DIR env var → CWD .fulcrum → ~/.fulcrum
  */
-export function getViboraDir(): string {
-  // 1. VIBORA_DIR env var (explicit override)
-  if (process.env.VIBORA_DIR) {
-    return expandPath(process.env.VIBORA_DIR)
+export function getFulcrumDir(): string {
+  // 1. FULCRUM_DIR env var (explicit override)
+  if (process.env.FULCRUM_DIR) {
+    return expandPath(process.env.FULCRUM_DIR)
   }
-  // 2. CWD .vibora (per-worktree isolation)
-  const cwdViboraDir = join(process.cwd(), '.vibora')
-  if (existsSync(cwdViboraDir)) {
-    return cwdViboraDir
+  // 2. CWD .fulcrum (per-worktree isolation)
+  const cwdFulcrumDir = join(process.cwd(), '.fulcrum')
+  if (existsSync(cwdFulcrumDir)) {
+    return cwdFulcrumDir
   }
-  // 3. ~/.vibora (default)
-  return join(homedir(), '.vibora')
+  // 3. ~/.fulcrum (default)
+  return join(homedir(), '.fulcrum')
 }

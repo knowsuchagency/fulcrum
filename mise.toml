@@ -1,7 +1,7 @@
 [env]
 _.file = ".env"
-# Default VIBORA_DIR for dev - can be overridden via env var before running mise
-VIBORA_DIR = "{{ env.VIBORA_DIR | default(value='~/tmp/vibora') }}"
+# Default FULCRUM_DIR for dev - can be overridden via env var before running mise
+FULCRUM_DIR = "{{ env.FULCRUM_DIR | default(value='~/tmp/fulcrum') }}"
 
 [tools]
 bun = "latest"
@@ -43,7 +43,7 @@ if [ -f "$marketplace" ]; then
 fi
 
 # Update plugin.json
-plugin="plugins/vibora/.claude-plugin/plugin.json"
+plugin="plugins/fulcrum/.claude-plugin/plugin.json"
 if [ -f "$plugin" ]; then
   jq --arg v "$new_version" '.version = $v' "$plugin" > "${plugin}.tmp" && mv "${plugin}.tmp" "$plugin"
   echo "Updated $plugin"
@@ -98,19 +98,19 @@ DEBUG="1"
 # Pass through env vars explicitly since they may not inherit through concurrently/bunx
 # --kill-others ensures if one process dies, all are killed
 bunx concurrently --kill-others -n server,client -c blue,green \
-  "VIBORA_DIR=$VIBORA_DIR PORT=$PORT mise run server" \
+  "FULCRUM_DIR=$FULCRUM_DIR PORT=$PORT mise run server" \
   "DEBUG=$DEBUG VITE_BACKEND_PORT=$VITE_BACKEND_PORT VITE_HOST=$VITE_HOST mise run client"
 """
 
 [tasks.server]
 description = "Start backend dev server with auto-reload"
 run = """
-mkdir -p "${VIBORA_DIR:-$HOME/.vibora}"
+mkdir -p "${FULCRUM_DIR:-$HOME/.fulcrum}"
 
 # Install OpenCode plugin from source (dev mode - always fresh)
 OPENCODE_PLUGIN_DIR="$HOME/.config/opencode/plugin"
 mkdir -p "$OPENCODE_PLUGIN_DIR"
-cp plugins/vibora-opencode/index.ts "$OPENCODE_PLUGIN_DIR/vibora.ts"
+cp plugins/fulcrum-opencode/index.ts "$OPENCODE_PLUGIN_DIR/fulcrum.ts"
 echo "Installed OpenCode plugin from source" >&2
 
 bun --watch server/index.ts
@@ -198,7 +198,7 @@ VERSION=$(jq -r '.version' package.json)
 
 # Files to check
 MARKETPLACE=".claude-plugin/marketplace.json"
-PLUGIN="plugins/vibora/.claude-plugin/plugin.json"
+PLUGIN="plugins/fulcrum/.claude-plugin/plugin.json"
 NEUTRALINO="desktop/neutralino.config.json"
 
 errors=0
@@ -295,10 +295,10 @@ jq '{
   version,
   description,
   license,
-  repository: {type: "git", url: "https://github.com/knowsuchagency/vibora"},
-  homepage: "https://github.com/knowsuchagency/vibora",
+  repository: {type: "git", url: "https://github.com/knowsuchagency/fulcrum"},
+  homepage: "https://github.com/knowsuchagency/fulcrum",
   type: "module",
-  bin: {vibora: "bin/vibora.js"},
+  bin: {fulcrum: "bin/fulcrum.js"},
   files: ["bin/", "server/", "lib/", "dist/", "drizzle/", "README.md", "LICENSE"],
   engines: {bun: ">=1.0.0"}
 }' package.json > cli/package.json
@@ -310,10 +310,10 @@ bun build server/index.ts --target=bun --outfile=cli/server/index.js
 # Bundle CLI with node shebang
 echo "Bundling CLI..." >&2
 mkdir -p cli/bin
-bun build cli/src/index.ts --target=bun --outfile=cli/bin/vibora.js
+bun build cli/src/index.ts --target=bun --outfile=cli/bin/fulcrum.js
 # Replace bun shebang with node (npm requirement) - bun is still invoked at runtime
 # Use perl for cross-platform compatibility (macOS sed -i differs from GNU sed)
-perl -i -pe 's|#!/usr/bin/env bun|#!/usr/bin/env node| if $. == 1' cli/bin/vibora.js
+perl -i -pe 's|#!/usr/bin/env bun|#!/usr/bin/env node| if $. == 1' cli/bin/fulcrum.js
 
 # Copy native PTY libraries (all platforms)
 echo "Copying native PTY libraries..." >&2
@@ -362,9 +362,9 @@ usage = 'flag "--host" help="Bind to all network interfaces (0.0.0.0)"'
 run = """
 set -e
 
-VIBORA_DIR="${VIBORA_DIR:-$HOME/.vibora}"
-PID_FILE="$VIBORA_DIR/vibora.pid"
-SETTINGS_FILE="$VIBORA_DIR/settings.json"
+FULCRUM_DIR="${FULCRUM_DIR:-$HOME/.fulcrum}"
+PID_FILE="$FULCRUM_DIR/fulcrum.pid"
+SETTINGS_FILE="$FULCRUM_DIR/settings.json"
 
 # Determine host binding
 if [ "$usage_host" = "true" ]; then
@@ -386,16 +386,16 @@ fi
 if [ -f "$PID_FILE" ]; then
   PID=$(cat "$PID_FILE")
   if kill -0 "$PID" 2>/dev/null; then
-    echo "Vibora already running (PID: $PID)" >&2
+    echo "Fulcrum already running (PID: $PID)" >&2
     exit 1
   fi
 fi
 
 # Start server in background (server handles migrations on startup)
 echo "Starting server..." >&2
-mkdir -p "$VIBORA_DIR"
+mkdir -p "$FULCRUM_DIR"
 nohup env NODE_ENV=production PORT="$PORT" HOST="$HOST" bun server/index.ts \
-  > "$VIBORA_DIR/server.log" 2>&1 &
+  > "$FULCRUM_DIR/server.log" 2>&1 &
 PID=$!
 
 # Write PID file
@@ -404,18 +404,18 @@ echo "$PID" > "$PID_FILE"
 # Verify it started
 sleep 1
 if ! kill -0 "$PID" 2>/dev/null; then
-  echo "Server failed to start. Check $VIBORA_DIR/server.log" >&2
+  echo "Server failed to start. Check $FULCRUM_DIR/server.log" >&2
   rm -f "$PID_FILE"
   exit 1
 fi
 
-echo "Vibora started on http://localhost:$PORT (PID: $PID)"
+echo "Fulcrum started on http://localhost:$PORT (PID: $PID)"
 """
 
 [tasks.down]
 description = "Stop the daemon server"
 run = """
-PID_FILE="${VIBORA_DIR:-$HOME/.vibora}/vibora.pid"
+PID_FILE="${FULCRUM_DIR:-$HOME/.fulcrum}/fulcrum.pid"
 if [ ! -f "$PID_FILE" ]; then
   echo "No PID file found" >&2
   exit 1
@@ -424,7 +424,7 @@ fi
 PID=$(cat "$PID_FILE")
 if kill -0 "$PID" 2>/dev/null; then
   kill "$PID"
-  echo "Stopped Vibora (PID: $PID)"
+  echo "Stopped Fulcrum (PID: $PID)"
 else
   echo "Process not running"
 fi
@@ -432,7 +432,7 @@ rm -f "$PID_FILE"
 """
 
 [tasks.restart]
-description = "Restart vibora systemd service"
+description = "Restart fulcrum systemd service"
 depends = ["cli:build"]
 run = """
 set -e
@@ -440,14 +440,14 @@ set -e
 echo "Linking CLI..." >&2
 cd cli && bun link && cd ..
 
-echo "Restarting vibora (server handles migrations on startup)..." >&2
-systemctl --user restart vibora
+echo "Restarting fulcrum (server handles migrations on startup)..." >&2
+systemctl --user restart fulcrum
 
 echo "Done. Checking status..." >&2
-systemctl --user status vibora --no-pager
+systemctl --user status fulcrum --no-pager
 """
 
-# Desktop app tasks (client-only, connects to local or remote Vibora server)
+# Desktop app tasks (client-only, connects to local or remote Fulcrum server)
 [tasks."desktop:setup"]
 description = "Install Neutralinojs CLI and dependencies"
 run = """
@@ -481,7 +481,7 @@ echo ""
 echo "Desktop app built successfully!"
 echo "Binaries are in: desktop/dist/"
 echo ""
-echo "The app will connect to a Vibora server running locally or remotely."
+echo "The app will connect to a Fulcrum server running locally or remotely."
 """
 
 [tasks."desktop:run"]
@@ -529,8 +529,8 @@ esac
 
 # Compile server as standalone executable (includes Bun runtime)
 echo "Compiling server for ${TARGET}..." >&2
-bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/vibora-server"
-chmod +x "$BUNDLE_DIR/server/vibora-server"
+bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/fulcrum-server"
+chmod +x "$BUNDLE_DIR/server/fulcrum-server"
 
 # Copy native PTY libraries
 echo "Copying native PTY libraries..." >&2
@@ -551,7 +551,7 @@ cp -r dist/* "$BUNDLE_DIR/dist/"
 
 # Copy Claude plugin (including hidden .claude-plugin directory)
 echo "Copying Claude plugin..." >&2
-cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
+cp -r plugins/fulcrum/. "$BUNDLE_DIR/plugin/"
 
 # Copy package.json for version info (desktop app derives schema version from major version)
 echo "Copying package.json..." >&2
@@ -589,8 +589,8 @@ esac
 
 # Compile server as standalone executable (includes Bun runtime)
 echo "Compiling server for ${TARGET} (DEBUG)..." >&2
-bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/vibora-server"
-chmod +x "$BUNDLE_DIR/server/vibora-server"
+bun build server/index.ts --compile --target="${TARGET}" --outfile="$BUNDLE_DIR/server/fulcrum-server"
+chmod +x "$BUNDLE_DIR/server/fulcrum-server"
 
 # Copy native PTY libraries
 echo "Copying native PTY libraries..." >&2
@@ -611,7 +611,7 @@ cp -r dist/* "$BUNDLE_DIR/dist/"
 
 # Copy Claude plugin (including hidden .claude-plugin directory)
 echo "Copying Claude plugin..." >&2
-cp -r plugins/vibora/. "$BUNDLE_DIR/plugin/"
+cp -r plugins/fulcrum/. "$BUNDLE_DIR/plugin/"
 
 # Copy package.json for version info (desktop app derives schema version from major version)
 echo "Copying package.json..." >&2
@@ -709,19 +709,19 @@ description = "Generate update manifest.json for testing"
 run = """
 set -e
 VERSION=$(jq -r '.version' package.json)
-REPO="knowsuchagency/vibora"
+REPO="knowsuchagency/fulcrum"
 
 mkdir -p desktop/dist
 cat > desktop/dist/manifest.json << EOF
 {
-  "applicationId": "io.vibora.desktop",
+  "applicationId": "io.fulcrum.desktop",
   "version": "${VERSION}",
   "platforms": {
     "darwin-arm64": {
-      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-macos-arm64.dmg"
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Fulcrum-${VERSION}-macos-arm64.dmg"
     },
     "linux-x64": {
-      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Vibora-${VERSION}-linux-x64.AppImage"
+      "url": "https://github.com/${REPO}/releases/download/v${VERSION}/Fulcrum-${VERSION}-linux-x64.AppImage"
     }
   }
 }
@@ -736,8 +736,8 @@ description = "Install OpenCode plugin from source"
 run = """
 OPENCODE_PLUGIN_DIR="$HOME/.config/opencode/plugin"
 mkdir -p "$OPENCODE_PLUGIN_DIR"
-cp plugins/vibora-opencode/index.ts "$OPENCODE_PLUGIN_DIR/vibora.ts"
-echo "Installed OpenCode plugin at $OPENCODE_PLUGIN_DIR/vibora.ts"
+cp plugins/fulcrum-opencode/index.ts "$OPENCODE_PLUGIN_DIR/fulcrum.ts"
+echo "Installed OpenCode plugin at $OPENCODE_PLUGIN_DIR/fulcrum.ts"
 echo "Restart OpenCode to load the updated plugin."
 """
 
@@ -760,32 +760,8 @@ mise run desktop:manifest
 echo "Desktop release packages ready in desktop/dist/"
 """
 
-# Documentation tasks
-[tasks."docs:install"]
-description = "Install documentation dependencies"
-dir = "docs"
-run = "bun install"
-
-[tasks."docs:dev"]
-description = "Start documentation dev server"
-depends = ["docs:install"]
-dir = "docs"
-run = "bunx vitepress dev"
-
-[tasks."docs:build"]
-description = "Build documentation site"
-depends = ["docs:install"]
-dir = "docs"
-run = "bunx vitepress build"
-
-[tasks."docs:preview"]
-description = "Preview documentation build"
-depends = ["docs:install"]
-dir = "docs"
-run = "bunx vitepress preview"
-
 # Worker tasks
 [tasks."worker:deploy"]
-description = "Deploy vibora-utils Cloudflare worker"
-dir = "vibora-utils"
+description = "Deploy fulcrum-utils Cloudflare worker"
+dir = "fulcrum-utils"
 run = "bun run deploy"

@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
-  "applicationId": "io.vibora.desktop",
-  "version": "9.11.0",
+  "applicationId": "io.fulcrum.desktop",
+  "version": "1.0.0",
   "defaultMode": "window",
   "port": 0,
   "documentRoot": "/resources/",
@@ -25,12 +25,12 @@
     "updater.*"
   ],
   "globalVariables": {
-    "APP_NAME": "Vibora",
-    "APP_VERSION": "9.11.0"
+    "APP_NAME": "Fulcrum",
+    "APP_VERSION": "1.0.0"
   },
   "modes": {
     "window": {
-      "title": "Vibora",
+      "title": "Fulcrum",
       "width": 1400,
       "height": 900,
       "minWidth": 900,
@@ -44,11 +44,11 @@
       "hidden": false,
       "resizable": true,
       "exitProcessOnClose": true,
-      "extendUserAgentWith": "Vibora Desktop"
+      "extendUserAgentWith": "Fulcrum Desktop"
     }
   },
   "cli": {
-    "binaryName": "vibora-desktop",
+    "binaryName": "fulcrum-desktop",
     "resourcesPath": "/resources/",
     "clientLibrary": "/resources/js/neutralino.js",
     "binaryVersion": "6.4.0",

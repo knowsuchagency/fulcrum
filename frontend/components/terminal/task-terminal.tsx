@@ -374,11 +374,11 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
         serverPort: currentServerPort,
       } = pendingStartup
 
-      // 1. Run startup script first (e.g., mise trust, mkdir .vibora, export VIBORA_DIR)
+      // 1. Run startup script first (e.g., mise trust, mkdir .fulcrum, export FULCRUM_DIR)
       // Use source with heredoc so exports persist in the current shell
       if (currentStartupScript) {
         setTimeout(() => {
-          const delimiter = 'VIBORA_STARTUP_' + Date.now()
+          const delimiter = 'FULCRUM_STARTUP_' + Date.now()
           const wrappedScript = `source /dev/stdin <<'${delimiter}'\n${currentStartupScript}\n${delimiter}`
           writeToTerminalRef.current(actualTerminalId, wrappedScript + '\r')
         }, 100)
@@ -387,12 +387,12 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
       // 2. Build the agent command using the command builder abstraction
       const effectivePort = currentServerPort ?? 7777
       const portFlag = effectivePort !== 7777 ? ` --port=${effectivePort}` : ''
-      const systemPrompt = 'You are working in a Vibora task worktree. ' +
+      const systemPrompt = 'You are working in a Fulcrum task worktree. ' +
         'Commit after completing each logical unit of work (feature, fix, refactor) to preserve progress. ' +
-        `When you finish working and need user input, run: vibora current-task review${portFlag}. ` +
-        `When linking a PR: vibora current-task pr <url>${portFlag}. ` +
-        `When linking a URL: vibora current-task link <url>${portFlag}. ` +
-        `For notifications: vibora notify "Title" "Message"${portFlag}.`
+        `When you finish working and need user input, run: fulcrum current-task review${portFlag}. ` +
+        `When linking a PR: fulcrum current-task pr <url>${portFlag}. ` +
+        `When linking a URL: fulcrum current-task link <url>${portFlag}. ` +
+        `For notifications: fulcrum notify "Title" "Message"${portFlag}.`
       const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
 
       // Use the agent command builder to construct the appropriate CLI command

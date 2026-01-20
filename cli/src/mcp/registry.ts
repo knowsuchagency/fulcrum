@@ -22,7 +22,7 @@ export const toolRegistry: ToolMetadata[] = [
   // Core tools - always loaded
   {
     name: 'list_tasks',
-    description: 'List all Vibora tasks with flexible filtering (search, labels, statuses, date range, overdue)',
+    description: 'List all Fulcrum tasks with flexible filtering (search, labels, statuses, date range, overdue)',
     category: 'tasks',
     keywords: ['task', 'list', 'kanban', 'worktree', 'status', 'search', 'labels', 'due date', 'overdue', 'filter'],
     deferred: false,
@@ -80,7 +80,7 @@ export const toolRegistry: ToolMetadata[] = [
   // Project tools - deferred
   {
     name: 'list_projects',
-    description: 'List all Vibora projects with optional filtering by status',
+    description: 'List all Fulcrum projects with optional filtering by status',
     category: 'projects',
     keywords: ['project', 'list', 'repository', 'repo'],
     deferred: true,

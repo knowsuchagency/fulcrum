@@ -1,7 +1,7 @@
 export { default as SystemTab } from './system-tab'
 export { default as ProcessesTab } from './processes-tab'
 export { default as ClaudeTab } from './claude-tab'
-export { default as ViboraTab } from './vibora-tab'
+export { default as FulcrumTab } from './fulcrum-tab'
 export { default as WorktreesTab } from './worktrees-tab'
 export { default as UsageTab } from './usage-tab'
 export { default as JobsTab } from './jobs-tab'

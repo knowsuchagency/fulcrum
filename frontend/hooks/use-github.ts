@@ -66,14 +66,14 @@ export function useGitHubOrgs() {
 
 export function useGitHubIssues(
   filter: IssueFilter,
-  viboraReposOnly: boolean,
+  fulcrumReposOnly: boolean,
   org?: string
 ) {
   return useQuery({
-    queryKey: ['github-issues', filter, viboraReposOnly, org],
+    queryKey: ['github-issues', filter, fulcrumReposOnly, org],
     queryFn: async (): Promise<GitHubIssue[]> => {
       const params = new URLSearchParams({ filter })
-      if (viboraReposOnly) params.set('viboraReposOnly', 'true')
+      if (fulcrumReposOnly) params.set('fulcrumReposOnly', 'true')
       if (org) params.set('org', org)
       const res = await fetch(`${API_BASE}/api/github/issues?${params}`)
       if (!res.ok) throw new Error('Failed to fetch issues')
@@ -85,14 +85,14 @@ export function useGitHubIssues(
 
 export function useGitHubPRs(
   filter: PRFilter,
-  viboraReposOnly: boolean,
+  fulcrumReposOnly: boolean,
   org?: string
 ) {
   return useQuery({
-    queryKey: ['github-prs', filter, viboraReposOnly, org],
+    queryKey: ['github-prs', filter, fulcrumReposOnly, org],
     queryFn: async (): Promise<GitHubPR[]> => {
       const params = new URLSearchParams({ filter })
-      if (viboraReposOnly) params.set('viboraReposOnly', 'true')
+      if (fulcrumReposOnly) params.set('fulcrumReposOnly', 'true')
       if (org) params.set('org', org)
       const res = await fetch(`${API_BASE}/api/github/prs?${params}`)
       if (!res.ok) throw new Error('Failed to fetch PRs')

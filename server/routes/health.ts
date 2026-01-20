@@ -8,7 +8,7 @@ const startTime = Date.now()
 app.get('/', (c) => {
   return c.json({
     status: 'ok',
-    version: process.env.VIBORA_VERSION || null,
+    version: process.env.FULCRUM_VERSION || null,
     uptime: Date.now() - startTime,
   })
 })

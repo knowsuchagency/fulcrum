@@ -1,14 +1,14 @@
 {
-  "name": "vibora",
+  "name": "fulcrum",
   "owner": {
-    "name": "Vibora"
+    "name": "Fulcrum"
   },
   "plugins": [
     {
-      "name": "vibora",
-      "source": "./plugins/vibora",
+      "name": "fulcrum",
+      "source": "./plugins/fulcrum",
       "description": "Task orchestration for Claude Code",
-      "version": "9.11.0"
+      "version": "1.0.0"
     }
   ]
 }

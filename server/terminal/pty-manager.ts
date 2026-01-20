@@ -6,7 +6,7 @@ import { eq, ne } from 'drizzle-orm'
 import * as os from 'os'
 import type { TerminalInfo } from '../types'
 import { log } from '../lib/logger'
-import { getViboraDir } from '../lib/settings'
+import { getFulcrumDir } from '../lib/settings'
 
 import type { TerminalStatus } from '../types'
 
@@ -84,7 +84,7 @@ export class PTYManager {
           terminalId: record.id,
           name: record.name,
           socketPath: dtach.getSocketPath(record.id),
-          viboraDir: getViboraDir(),
+          fulcrumDir: getFulcrumDir(),
         })
       }
     }

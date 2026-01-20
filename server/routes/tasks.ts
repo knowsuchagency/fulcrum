@@ -7,7 +7,7 @@ import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { glob } from 'glob'
-import { getViboraDir } from '../lib/settings'
+import { getFulcrumDir } from '../lib/settings'
 import {
   getPTYManager,
   destroyTerminalAndBroadcast,
@@ -102,7 +102,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024
 
 // Get the uploads directory for a task
 function getTaskUploadsDir(taskId: string): string {
-  return path.join(getViboraDir(), 'uploads', 'tasks', taskId)
+  return path.join(getFulcrumDir(), 'uploads', 'tasks', taskId)
 }
 
 // Sanitize filename for storage

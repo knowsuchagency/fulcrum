@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { ViboraClient } from '../client'
+import type { FulcrumClient } from '../client'
 import { formatSuccess, handleToolError } from './utils'
 import { searchTools, toolRegistry } from './registry'
 
@@ -11,7 +11,7 @@ const AppStatusSchema = z.enum(['stopped', 'building', 'running', 'failed'])
 const ToolCategorySchema = z.enum(['core', 'tasks', 'projects', 'repositories', 'apps', 'filesystem', 'git', 'notifications', 'exec'])
 const AgentTypeSchema = z.enum(['claude', 'opencode'])
 
-export function registerTools(server: McpServer, client: ViboraClient) {
+export function registerTools(server: McpServer, client: FulcrumClient) {
   // ==========================================================================
   // Meta Tools
   // ==========================================================================
@@ -19,7 +19,7 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // search_tools - Meta tool for discovering available tools
   server.tool(
     'search_tools',
-    'Search for available Vibora MCP tools by keyword or category. Use this to discover tools for projects, apps, files, tasks, and more.',
+    'Search for available Fulcrum MCP tools by keyword or category. Use this to discover tools for projects, apps, files, tasks, and more.',
     {
       query: z.optional(z.string()).describe('Search query to match against tool names, descriptions, and keywords'),
       category: z.optional(ToolCategorySchema).describe('Filter by tool category'),
@@ -60,7 +60,7 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // list_tasks
   server.tool(
     'list_tasks',
-    'List all Vibora tasks with flexible filtering. Supports text search across title/tags/project, multi-tag filtering (OR logic), multi-status filtering, date range, and overdue detection.',
+    'List all Fulcrum tasks with flexible filtering. Supports text search across title/tags/project, multi-tag filtering (OR logic), multi-status filtering, date range, and overdue detection.',
     {
       status: z.optional(TaskStatusSchema).describe('Filter by single task status (use statuses for multiple)'),
       statuses: z.optional(z.array(TaskStatusSchema)).describe('Filter by multiple statuses (OR logic)'),
@@ -455,7 +455,7 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // execute_command
   server.tool(
     'execute_command',
-    'Execute a CLI command on the remote Vibora server. Supports persistent sessions for stateful workflows where environment variables, working directory, and shell state are preserved between commands.',
+    'Execute a CLI command on the remote Fulcrum server. Supports persistent sessions for stateful workflows where environment variables, working directory, and shell state are preserved between commands.',
     {
       command: z.string().describe('The shell command to execute'),
       sessionId: z
@@ -484,7 +484,7 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // list_exec_sessions
   server.tool(
     'list_exec_sessions',
-    'List all active command execution sessions on the Vibora server',
+    'List all active command execution sessions on the Fulcrum server',
     {},
     async () => {
       try {
@@ -903,7 +903,7 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   // list_projects
   server.tool(
     'list_projects',
-    'List all Vibora projects with optional filtering by status',
+    'List all Fulcrum projects with optional filtering by status',
     {
       status: z.optional(ProjectStatusSchema).describe('Filter by status (active or archived)'),
     },

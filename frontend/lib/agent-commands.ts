@@ -11,7 +11,7 @@ import { escapeForShell, escapeForShellIfNeeded } from './shell-escape'
 export interface AgentCommandOptions {
   /** The task prompt/description */
   prompt: string
-  /** System prompt to inject (Vibora context) */
+  /** System prompt to inject (Fulcrum context) */
   systemPrompt: string
   /** AI mode: default (full autonomy) or plan (restricted) */
   mode: 'default' | 'plan'

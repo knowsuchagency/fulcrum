@@ -35,7 +35,7 @@ export interface TestGitRepo {
  * Includes an initial commit with a README.
  */
 export function createTestGitRepo(): TestGitRepo {
-  const path = mkdtempSync(join(tmpdir(), 'vibora-git-test-'))
+  const path = mkdtempSync(join(tmpdir(), 'fulcrum-git-test-'))
 
   // Helper to run git commands
   const git = (args: string): string => {
@@ -45,18 +45,18 @@ export function createTestGitRepo(): TestGitRepo {
       env: {
         ...process.env,
         // Avoid GPG signing in tests
-        GIT_COMMITTER_NAME: 'Vibora Test',
-        GIT_COMMITTER_EMAIL: 'test@vibora.test',
-        GIT_AUTHOR_NAME: 'Vibora Test',
-        GIT_AUTHOR_EMAIL: 'test@vibora.test',
+        GIT_COMMITTER_NAME: 'Fulcrum Test',
+        GIT_COMMITTER_EMAIL: 'test@fulcrum.test',
+        GIT_AUTHOR_NAME: 'Fulcrum Test',
+        GIT_AUTHOR_EMAIL: 'test@fulcrum.test',
       },
     }).trim()
   }
 
   // Initialize repo with local config
   git('init')
-  git('config user.email "test@vibora.test"')
-  git('config user.name "Vibora Test"')
+  git('config user.email "test@fulcrum.test"')
+  git('config user.name "Fulcrum Test"')
   git('config commit.gpgsign false')
 
   // Create initial commit
@@ -143,7 +143,7 @@ export function createTestWorktree(
   repo: TestGitRepo,
   branchName: string
 ): { path: string; cleanup: () => void } {
-  const worktreePath = mkdtempSync(join(tmpdir(), 'vibora-wt-test-'))
+  const worktreePath = mkdtempSync(join(tmpdir(), 'fulcrum-wt-test-'))
 
   // Create new branch and worktree
   repo.git(`worktree add "${worktreePath}" -b ${branchName}`)

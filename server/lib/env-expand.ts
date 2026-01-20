@@ -8,7 +8,7 @@
  * - ${VAR:=default} - set and use default if VAR is unset or empty
  * - ${VAR=default} - set and use default if VAR is unset
  *
- * When Vibora parses compose files, it needs to extract values for things like
+ * When Fulcrum parses compose files, it needs to extract values for things like
  * ports and volume paths before passing to Docker. This module provides utilities
  * to handle that expansion.
  */

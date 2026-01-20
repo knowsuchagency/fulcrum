@@ -3,14 +3,14 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import * as path from 'path'
-import { getViboraDir } from '../lib/settings'
+import { getFulcrumDir } from '../lib/settings'
 import { log } from '../lib/logger'
 
 // 1MB total buffer size limit
 const MAX_BUFFER_BYTES = 1_000_000
 
 function getBuffersDir(): string {
-  const dir = path.join(getViboraDir(), 'buffers')
+  const dir = path.join(getFulcrumDir(), 'buffers')
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
   }

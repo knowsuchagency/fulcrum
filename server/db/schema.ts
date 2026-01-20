@@ -192,7 +192,7 @@ export const tunnels = sqliteTable('tunnels', {
   id: text('id').primaryKey(),
   appId: text('app_id').notNull().unique(), // FK to apps - one tunnel per app
   tunnelId: text('tunnel_id').notNull(), // Cloudflare tunnel UUID
-  tunnelName: text('tunnel_name').notNull(), // e.g., "vibora-app-abc123"
+  tunnelName: text('tunnel_name').notNull(), // e.g., "fulcrum-app-abc123"
   tunnelToken: text('tunnel_token').notNull(), // Token for cloudflared daemon
   status: text('status').notNull().default('inactive'), // inactive|active|failed
   createdAt: text('created_at').notNull(),

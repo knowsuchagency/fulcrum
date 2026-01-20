@@ -31,7 +31,7 @@ function ReviewPage() {
   const [activeTab, setActiveTab] = useState<'prs' | 'issues'>('prs')
   const [prFilter, setPrFilter] = useState<PRFilter>('review_requested')
   const [issueFilter, setIssueFilter] = useState<IssueFilter>('assigned')
-  const [viboraReposOnly, setViboraReposOnly] = useState(false)
+  const [fulcrumReposOnly, setFulcrumReposOnly] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState<string>('')
   const { data: user, isLoading: isUserLoading } = useGitHubUser()
   const { data: orgs = [] } = useGitHubOrgs()
@@ -60,7 +60,7 @@ function ReviewPage() {
             </div>
             <div className="flex flex-col gap-2">
               <a
-                href="https://github.com/settings/tokens/new?scopes=repo,read:user,read:org&description=Vibora"
+                href="https://github.com/settings/tokens/new?scopes=repo,read:user,read:org&description=Fulcrum"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -93,11 +93,11 @@ function ReviewPage() {
               <TabsTrigger value="issues">{t('tabs.issues')}</TabsTrigger>
             </TabsList>
 
-            {/* Vibora repos toggle - shown inline with tabs on mobile */}
-            <label className="flex cursor-pointer items-center gap-2 text-xs sm:hidden" title={t('filters.viboraReposOnly')}>
+            {/* Fulcrum repos toggle - shown inline with tabs on mobile */}
+            <label className="flex cursor-pointer items-center gap-2 text-xs sm:hidden" title={t('filters.fulcrumReposOnly')}>
               <Switch
-                checked={viboraReposOnly}
-                onCheckedChange={setViboraReposOnly}
+                checked={fulcrumReposOnly}
+                onCheckedChange={setFulcrumReposOnly}
                 disabled={!!selectedOrg}
               />
             </label>
@@ -148,13 +148,13 @@ function ReviewPage() {
             </Select>
 
             {/* Repo scope toggle - hidden on mobile, shown on desktop */}
-            <label className="hidden cursor-pointer items-center gap-2 text-xs sm:flex" title={t('filters.viboraReposOnly')}>
+            <label className="hidden cursor-pointer items-center gap-2 text-xs sm:flex" title={t('filters.fulcrumReposOnly')}>
               <Switch
-                checked={viboraReposOnly}
-                onCheckedChange={setViboraReposOnly}
+                checked={fulcrumReposOnly}
+                onCheckedChange={setFulcrumReposOnly}
                 disabled={!!selectedOrg}
               />
-              <span className="text-muted-foreground">{t('filters.viboraReposOnly')}</span>
+              <span className="text-muted-foreground">{t('filters.fulcrumReposOnly')}</span>
             </label>
           </div>
         </div>
@@ -162,7 +162,7 @@ function ReviewPage() {
         <TabsContent value="prs" className="flex-1 overflow-auto p-4">
           <PRsList
             filter={prFilter}
-            viboraReposOnly={viboraReposOnly}
+            fulcrumReposOnly={fulcrumReposOnly}
             org={selectedOrg || undefined}
           />
         </TabsContent>
@@ -170,7 +170,7 @@ function ReviewPage() {
         <TabsContent value="issues" className="flex-1 overflow-auto p-4">
           <IssuesList
             filter={issueFilter}
-            viboraReposOnly={viboraReposOnly}
+            fulcrumReposOnly={fulcrumReposOnly}
             org={selectedOrg || undefined}
           />
         </TabsContent>

@@ -8,8 +8,8 @@ import { getShellEnv } from '../lib/env'
 const DEFAULT_TIMEOUT = 30000 // 30 seconds
 
 // Unique markers for output parsing
-const START_MARKER = `<<VIBORA_CMD_START_${randomUUID().slice(0, 8)}>>`
-const END_MARKER_PREFIX = `<<VIBORA_CMD_END_${randomUUID().slice(0, 8)}:`
+const START_MARKER = `<<FULCRUM_CMD_START_${randomUUID().slice(0, 8)}>>`
+const END_MARKER_PREFIX = `<<FULCRUM_CMD_END_${randomUUID().slice(0, 8)}:`
 
 interface ShellSession {
   id: string

@@ -17,7 +17,7 @@ describe('CLI help and version', () => {
       const output = await new Response(proc.stdout).text()
       await proc.exited
 
-      expect(output).toContain('vibora CLI')
+      expect(output).toContain('fulcrum CLI')
       expect(output).toContain('USAGE')
       expect(output).toContain('COMMANDS')
       expect(output).toContain('tasks')
@@ -38,7 +38,7 @@ describe('CLI help and version', () => {
       const output = await new Response(proc.stdout).text()
       await proc.exited
 
-      expect(output).toContain('vibora CLI')
+      expect(output).toContain('fulcrum CLI')
       expect(output).toContain('USAGE')
     })
   })

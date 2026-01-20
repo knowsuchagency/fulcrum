@@ -18,7 +18,7 @@
     },
     "allOrgs": "All Orgs",
     "allOrganizations": "All Organizations",
-    "viboraReposOnly": "Vibora repos only"
+    "fulcrumReposOnly": "Fulcrum repos only"
   },
   "github": {
     "tokenRequired": "GitHub Token Required",

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { mkdir, writeFile, readFile, unlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { getViboraDir, getNotificationSettings, updateNotificationSettings } from '../lib/settings'
+import { getFulcrumDir, getNotificationSettings, updateNotificationSettings } from '../lib/settings'
 
 const mimeTypes: Record<string, string> = {
   png: 'image/png',
@@ -32,7 +32,7 @@ function generateFilename(extension: string): string {
 
 // POST /api/uploads/sound
 // Upload a custom notification sound file
-// Saves to {viboraDir}/notification-sound.{ext} and updates settings
+// Saves to {fulcrumDir}/notification-sound.{ext} and updates settings
 app.post('/sound', async (c) => {
   const body = await c.req.parseBody()
   const file = body['file']
@@ -56,14 +56,14 @@ app.post('/sound', async (c) => {
     return c.json({ error: 'File must be an audio file (mp3, wav, or ogg)' }, 400)
   }
 
-  // Save to viboraDir as notification-sound.{ext}
-  const viboraDir = getViboraDir()
+  // Save to fulcrumDir as notification-sound.{ext}
+  const fulcrumDir = getFulcrumDir()
   const filename = `notification-sound.${extension}`
-  const filePath = join(viboraDir, filename)
+  const filePath = join(fulcrumDir, filename)
 
   // Delete any existing notification sound files
   for (const ext of ['mp3', 'wav', 'ogg']) {
-    const oldPath = join(viboraDir, `notification-sound.${ext}`)
+    const oldPath = join(fulcrumDir, `notification-sound.${ext}`)
     if (existsSync(oldPath)) {
       try {
         await unlink(oldPath)
@@ -90,11 +90,11 @@ app.post('/sound', async (c) => {
 // DELETE /api/uploads/sound
 // Remove custom notification sound and revert to default
 app.delete('/sound', async (c) => {
-  const viboraDir = getViboraDir()
+  const fulcrumDir = getFulcrumDir()
 
   // Delete any existing notification sound files
   for (const ext of ['mp3', 'wav', 'ogg']) {
-    const filePath = join(viboraDir, `notification-sound.${ext}`)
+    const filePath = join(fulcrumDir, `notification-sound.${ext}`)
     if (existsSync(filePath)) {
       try {
         await unlink(filePath)
@@ -141,7 +141,7 @@ app.get('/sound', async (c) => {
 // POST /api/uploads
 // Accepts multipart form data with:
 // - file: the image file
-// Images are always saved to {viboraDir}/uploads/
+// Images are always saved to {fulcrumDir}/uploads/
 app.post('/', async (c) => {
   const body = await c.req.parseBody()
   const file = body['file']
@@ -165,8 +165,8 @@ app.post('/', async (c) => {
   }
   const extension = mimeToExt[file.type] || 'png'
 
-  // Always save to {viboraDir}/uploads/
-  const saveDir = join(getViboraDir(), 'uploads')
+  // Always save to {fulcrumDir}/uploads/
+  const saveDir = join(getFulcrumDir(), 'uploads')
 
   // Ensure directory exists
   if (!existsSync(saveDir)) {
@@ -193,7 +193,7 @@ app.get('/:filename', async (c) => {
     return c.notFound()
   }
 
-  const filePath = join(getViboraDir(), 'uploads', filename)
+  const filePath = join(getFulcrumDir(), 'uploads', filename)
 
   if (!existsSync(filePath)) {
     return c.notFound()

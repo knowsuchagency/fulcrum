@@ -82,7 +82,7 @@ export function DeploymentSetupWizard({ onComplete }: DeploymentSetupWizardProps
   const determineStep = (): Step => {
     if (!prereqs) return 'docker'
     if (!prereqs.docker.installed || !prereqs.docker.running) return 'docker'
-    // Traefik step shows detected info or offers to start Vibora's Traefik
+    // Traefik step shows detected info or offers to start Fulcrum's Traefik
     if (!prereqs.traefik.detected && prereqs.traefik.type === 'none') return 'traefik'
     return 'complete'
   }
@@ -210,8 +210,8 @@ export function DeploymentSetupWizard({ onComplete }: DeploymentSetupWizardProps
                     <p className="font-medium">
                       {prereqs.traefik.type === 'dokploy'
                         ? 'Dokploy Traefik detected'
-                        : prereqs.traefik.type === 'vibora'
-                          ? 'Vibora Traefik running'
+                        : prereqs.traefik.type === 'fulcrum'
+                          ? 'Fulcrum Traefik running'
                           : 'Traefik detected'}
                     </p>
                     <p className="text-sm text-muted-foreground">
@@ -233,7 +233,7 @@ export function DeploymentSetupWizard({ onComplete }: DeploymentSetupWizardProps
                       Traefik handles HTTPS certificates and routes traffic to your apps.
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Vibora can start its own Traefik container for you.
+                      Fulcrum can start its own Traefik container for you.
                     </p>
                   </div>
                 </>

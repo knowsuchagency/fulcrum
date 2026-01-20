@@ -1,4 +1,4 @@
-// Centralized logging for Vibora frontend
+// Centralized logging for Fulcrum frontend
 // Batches logs and sends to backend via /api/logs
 
 import type { LogEntry, LogLevel, Logger } from '../../shared/logger'
@@ -10,9 +10,9 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   error: 3,
 }
 
-// Check if logging to server is enabled (set via DEBUG=1 or VITE_VIBORA_DEBUG=1 at build time)
-// __VIBORA_DEBUG__ is replaced at build time by Vite's define config
-const DEBUG_ENABLED = __VIBORA_DEBUG__
+// Check if logging to server is enabled (set via DEBUG=1 or VITE_FULCRUM_DEBUG=1 at build time)
+// __FULCRUM_DEBUG__ is replaced at build time by Vite's define config
+const DEBUG_ENABLED = __FULCRUM_DEBUG__
 const IS_DEV = import.meta.env.DEV
 
 // Get minimum log level from environment

@@ -25,7 +25,7 @@
   },
   "delete": {
     "title": "Delete Repository",
-    "description": "This will remove \"{{name}}\" from Vibora. The actual repository files will not be affected.",
+    "description": "This will remove \"{{name}}\" from Fulcrum. The actual repository files will not be affected.",
     "button": "Delete",
     "deleting": "Deleting...",
     "alsoDeleteDirectory": "Also delete the directory from disk",

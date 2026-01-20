@@ -1,5 +1,5 @@
 #!/bin/bash
-# Package Vibora desktop app as DMG for macOS
+# Package Fulcrum desktop app as DMG for macOS
 # Usage: ./package-dmg.sh [arch]
 # arch: x64 or arm64 (default: current architecture)
 
@@ -21,10 +21,10 @@ else
 fi
 
 VERSION=$(jq -r '.version' "$PROJECT_ROOT/package.json")
-APP_NAME="Vibora"
-BUNDLE_ID="io.vibora.desktop"
+APP_NAME="Fulcrum"
+BUNDLE_ID="io.fulcrum.desktop"
 
-echo "Packaging Vibora ${VERSION} DMG for macOS ${ARCH}..."
+echo "Packaging Fulcrum ${VERSION} DMG for macOS ${ARCH}..."
 
 # Check for server bundle
 BUNDLE_DIR="$DESKTOP_DIR/bundle"
@@ -35,16 +35,16 @@ if [ ! -d "$BUNDLE_DIR/server" ]; then
 fi
 
 # Create .app bundle structure
-APP_BUNDLE="$DESKTOP_DIR/dist/Vibora.app"
+APP_BUNDLE="$DESKTOP_DIR/dist/Fulcrum.app"
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
 # Copy Neutralino binary
 if [ "$ARCH" = "arm64" ]; then
-  NL_BINARY="$DESKTOP_DIR/dist/vibora-desktop/vibora-desktop-mac_arm64"
+  NL_BINARY="$DESKTOP_DIR/dist/fulcrum-desktop/fulcrum-desktop-mac_arm64"
 else
-  NL_BINARY="$DESKTOP_DIR/dist/vibora-desktop/vibora-desktop-mac_x64"
+  NL_BINARY="$DESKTOP_DIR/dist/fulcrum-desktop/fulcrum-desktop-mac_x64"
 fi
 
 if [ ! -f "$NL_BINARY" ]; then
@@ -53,11 +53,11 @@ if [ ! -f "$NL_BINARY" ]; then
   exit 1
 fi
 
-cp "$NL_BINARY" "$APP_BUNDLE/Contents/MacOS/Vibora"
-chmod +x "$APP_BUNDLE/Contents/MacOS/Vibora"
+cp "$NL_BINARY" "$APP_BUNDLE/Contents/MacOS/Fulcrum"
+chmod +x "$APP_BUNDLE/Contents/MacOS/Fulcrum"
 
 # Copy resources.neu bundle (must be next to binary, not in Resources)
-cp "$DESKTOP_DIR/dist/vibora-desktop/resources.neu" "$APP_BUNDLE/Contents/MacOS/"
+cp "$DESKTOP_DIR/dist/fulcrum-desktop/resources.neu" "$APP_BUNDLE/Contents/MacOS/"
 
 # Copy server bundle to Resources
 echo "Copying server bundle..."
@@ -70,7 +70,7 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>vibora-launcher</string>
+    <string>fulcrum-launcher</string>
     <key>CFBundleIconFile</key>
     <string>icon.icns</string>
     <key>CFBundleIdentifier</key>
@@ -137,11 +137,11 @@ fi
 
 # Copy launcher script
 echo "Installing launcher script..."
-cp "$SCRIPT_DIR/vibora-launcher.sh" "$APP_BUNDLE/Contents/MacOS/vibora-launcher"
-chmod +x "$APP_BUNDLE/Contents/MacOS/vibora-launcher"
+cp "$SCRIPT_DIR/fulcrum-launcher.sh" "$APP_BUNDLE/Contents/MacOS/fulcrum-launcher"
+chmod +x "$APP_BUNDLE/Contents/MacOS/fulcrum-launcher"
 
 # Create DMG
-DMG_NAME="Vibora-macos-${ARCH}.dmg"
+DMG_NAME="Fulcrum-macos-${ARCH}.dmg"
 DMG_PATH="$DESKTOP_DIR/dist/$DMG_NAME"
 
 echo "Creating DMG..."
@@ -149,24 +149,24 @@ echo "Creating DMG..."
 # Check if create-dmg is available
 if command -v create-dmg &> /dev/null; then
   create-dmg \
-    --volname "Vibora ${VERSION}" \
+    --volname "Fulcrum ${VERSION}" \
     --volicon "$ICON_ICNS" \
     --window-pos 200 120 \
     --window-size 600 400 \
     --icon-size 100 \
-    --icon "Vibora.app" 150 185 \
-    --hide-extension "Vibora.app" \
+    --icon "Fulcrum.app" 150 185 \
+    --hide-extension "Fulcrum.app" \
     --app-drop-link 450 185 \
     "$DMG_PATH" \
     "$APP_BUNDLE" || {
       # Fallback to hdiutil
       echo "create-dmg failed, using hdiutil..."
-      hdiutil create -volname "Vibora ${VERSION}" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_PATH"
+      hdiutil create -volname "Fulcrum ${VERSION}" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_PATH"
     }
 else
   # Use hdiutil directly
   echo "Using hdiutil (install create-dmg for better DMGs)..."
-  hdiutil create -volname "Vibora ${VERSION}" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_PATH"
+  hdiutil create -volname "Fulcrum ${VERSION}" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_PATH"
 fi
 
 echo ""

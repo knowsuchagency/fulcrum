@@ -62,7 +62,7 @@ function toTerminalTab(tab: ITab, index: number): TerminalTab {
 const ALL_TASKS_TAB_ID = 'all-tasks'
 const ALL_REPOS_TAB_ID = 'all-repos'
 const ACTIVE_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW']
-const LAST_TAB_STORAGE_KEY = 'vibora:lastTerminalTab'
+const LAST_TAB_STORAGE_KEY = 'fulcrum:lastTerminalTab'
 
 interface TerminalsSearch {
   tab?: string

@@ -330,7 +330,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   // Listen for desktop app messages (for Cmd+K, Cmd+J, Cmd+/ from native menu)
   useEffect(() => {
     const handler = (event: MessageEvent) => {
-      if (event.data?.type === 'vibora:action') {
+      if (event.data?.type === 'fulcrum:action') {
         switch (event.data.action) {
           case 'openCommandPalette':
             setOpen(true)

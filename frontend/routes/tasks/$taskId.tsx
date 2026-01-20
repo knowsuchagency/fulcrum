@@ -441,7 +441,7 @@ function TaskView() {
         action: {
           label: 'Resolve with Claude',
           onClick: () => resolveWithClaude(
-            `Create a PR for this task. Error: "${errorMessage}". After creating, link it using: vibora current-task pr <url>. Worktree: ${task.worktreePath}.`
+            `Create a PR for this task. Error: "${errorMessage}". After creating, link it using: fulcrum current-task pr <url>. Worktree: ${task.worktreePath}.`
           ),
         },
       })

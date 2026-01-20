@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "vibora": {
-      "command": "vibora",
-      "args": ["mcp"]
-    }
-  }
-}

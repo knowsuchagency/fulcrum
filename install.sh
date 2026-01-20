@@ -1,6 +1,6 @@
 #!/bin/bash
-# Vibora Installation Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.sh | bash
+# Fulcrum Installation Script
+# Usage: curl -fsSL https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/install.sh | bash
 
 set -e
 
@@ -286,7 +286,7 @@ select_and_install_agents() {
     echo ""
     print_step "AI Agent Selection"
     echo ""
-    echo "Vibora can orchestrate these AI coding agents:"
+    echo "Fulcrum can orchestrate these AI coding agents:"
     echo "  1) Claude Code - Anthropic's AI coding assistant"
     echo "  2) OpenCode - Open-source AI coding agent"
     echo "  3) Both"
@@ -504,81 +504,81 @@ install_cloudflared() {
     return 1
 }
 
-# Install vibora CLI globally
-install_vibora() {
-    print_step "Installing vibora..."
+# Install fulcrum CLI globally
+install_fulcrum() {
+    print_step "Installing fulcrum..."
 
-    if bun install -g vibora@latest; then
-        print_success "vibora installed"
+    if bun install -g fulcrum@latest; then
+        print_success "fulcrum installed"
     else
-        print_error "Failed to install vibora"
+        print_error "Failed to install fulcrum"
         exit 1
     fi
 }
 
-# Install vibora plugin for Claude Code
-install_vibora_plugin() {
-    print_step "Installing vibora plugin for Claude Code..."
+# Install fulcrum plugin for Claude Code
+install_fulcrum_plugin() {
+    print_step "Installing fulcrum plugin for Claude Code..."
 
     if ! command -v claude &> /dev/null; then
         print_warning "Skipping plugin installation (Claude Code not available)"
         return 0
     fi
 
-    # Add the vibora marketplace
-    if claude plugin marketplace add knowsuchagency/vibora 2>/dev/null; then
-        print_success "Added vibora marketplace"
+    # Add the fulcrum marketplace
+    if claude plugin marketplace add knowsuchagency/fulcrum 2>/dev/null; then
+        print_success "Added fulcrum marketplace"
     else
-        print_warning "Could not add vibora marketplace (may already exist)"
+        print_warning "Could not add fulcrum marketplace (may already exist)"
     fi
 
     # Install the plugin globally
-    if claude plugin install vibora@vibora --scope user 2>/dev/null; then
-        print_success "Installed vibora plugin"
+    if claude plugin install fulcrum@fulcrum --scope user 2>/dev/null; then
+        print_success "Installed fulcrum plugin"
     else
-        print_warning "Could not install vibora plugin"
-        echo "  Try manually: claude plugin install vibora@vibora --scope user"
+        print_warning "Could not install fulcrum plugin"
+        echo "  Try manually: claude plugin install fulcrum@fulcrum --scope user"
     fi
 }
 
-# Install vibora plugin for OpenCode
+# Install fulcrum plugin for OpenCode
 install_opencode_plugin() {
-    print_step "Installing vibora plugin for OpenCode..."
+    print_step "Installing fulcrum plugin for OpenCode..."
 
     if ! command -v opencode &> /dev/null; then
         print_warning "Skipping plugin installation (OpenCode not available)"
         return 0
     fi
 
-    # Install the plugin globally using vibora CLI
-    if vibora opencode install; then
-        print_success "Installed vibora plugin for OpenCode"
+    # Install the plugin globally using fulcrum CLI
+    if fulcrum opencode install; then
+        print_success "Installed fulcrum plugin for OpenCode"
     else
-        print_warning "Could not install vibora plugin for OpenCode"
-        echo "  Try manually: vibora opencode install"
+        print_warning "Could not install fulcrum plugin for OpenCode"
+        echo "  Try manually: fulcrum opencode install"
     fi
 }
 
-# Start vibora server
-start_vibora() {
-    print_step "Starting vibora server..."
+# Start fulcrum server
+start_fulcrum() {
+    print_step "Starting fulcrum server..."
 
-    if vibora up; then
-        print_success "vibora server started"
+    if fulcrum up; then
+        print_success "fulcrum server started"
         echo ""
         echo -e "${GREEN}Installation complete!${NC}"
         echo ""
         echo "Open http://localhost:7777 in your browser"
         echo ""
         echo "Commands:"
-        echo "  vibora status           # Check server status"
-        echo "  vibora doctor           # Check all dependencies"
-        echo "  vibora down             # Stop server"
-        echo "  vibora up               # Start server"
-        echo "  npx vibora@latest up    # Update and start"
+        echo "  fulcrum status           # Check server status"
+        echo "  fulcrum doctor           # Check all dependencies"
+        echo "  fulcrum down             # Stop server"
+        echo "  fulcrum up               # Start server"
+        echo "  npx fulcrum@latest up    # Update and start"
     else
-        print_error "Failed to start vibora server"
-        echo "  Try: vibora up --help"
+        print_error "Failed to start fulcrum server"
+        echo "  Try: fulcrum up --help"
         exit 1
     fi
 }
@@ -587,7 +587,7 @@ start_vibora() {
 main() {
     echo ""
     echo -e "${BLUE}╔═════════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║${NC}           Vibora Installation Script            ${BLUE}║${NC}"
+    echo -e "${BLUE}║${NC}           Fulcrum Installation Script            ${BLUE}║${NC}"
     echo -e "${BLUE}║${NC}  Harness Attention. Orchestrate Agents. Ship.  ${BLUE}║${NC}"
     echo -e "${BLUE}╚═════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -600,7 +600,7 @@ main() {
     echo "  - GitHub CLI (PR creation)"
     echo "  - Docker (app deployment)"
     echo "  - cloudflared (secure tunnels)"
-    echo "  - vibora (this tool)"
+    echo "  - fulcrum (this tool)"
     echo ""
 
     if ! ask_yes_no "Proceed with installation?" "y"; then
@@ -625,12 +625,12 @@ main() {
     install_gh
     install_docker
     install_cloudflared
-    install_vibora
-    install_vibora_plugin
+    install_fulcrum
+    install_fulcrum_plugin
     install_opencode_plugin
 
     # Start the server
-    start_vibora
+    start_fulcrum
 }
 
 main "$@"

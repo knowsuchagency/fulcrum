@@ -2,7 +2,7 @@ import { checkAllDependencies, getInstallCommand, getDependency } from '../utils
 import { output } from '../utils/output'
 
 /**
- * Handle the `vibora doctor` command.
+ * Handle the `fulcrum doctor` command.
  * Shows the status of all dependencies with versions and install commands.
  */
 export async function handleDoctorCommand(flags: Record<string, string>) {
@@ -14,7 +14,7 @@ export async function handleDoctorCommand(flags: Record<string, string>) {
     return
   }
 
-  console.log('\nVibora Doctor')
+  console.log('\nFulcrum Doctor')
   console.log('=============\n')
 
   // Required dependencies
@@ -50,7 +50,7 @@ export async function handleDoctorCommand(flags: Record<string, string>) {
         console.log(`  ${dep.name}: ${getInstallCommand(fullDep)}`)
       }
     }
-    console.log('\nRun `vibora up` to install missing dependencies.')
+    console.log('\nRun `fulcrum up` to install missing dependencies.')
   } else {
     console.log('\n\u2713 All required dependencies installed!')
   }

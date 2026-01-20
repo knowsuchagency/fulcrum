@@ -1,14 +1,14 @@
-# Vibora
+# Project Fulcrum
 
 **Harness Attention. Orchestrate Agents. Ship.**
 
-![Vibora Kanban Board](./screenshots/tasks-kanban-board.png)
+![Fulcrum Kanban Board](./screenshots/tasks-kanban-board.png)
 
 ## What It Does
 
 Run multiple AI coding agent sessions in parallel across isolated git worktrees. Monitor them all from one screen. Close your laptop—they keep working. Deploy to production when ready. Self-hosted and open source.
 
-Vibora supports **Claude Code** and **OpenCode** with per-repository and per-task agent selection.
+Fulcrum supports **Claude Code** and **OpenCode** with per-repository and per-task agent selection.
 
 - **Full Development Lifecycle** — Develop features in isolated git worktrees, then deploy to production with Docker Compose. No context switching, no vendor lock-in.
 - **Parallel Agent Orchestration** — Run multiple AI agent sessions across different tasks and worktrees. See and control all sessions in one parallel view.
@@ -34,10 +34,10 @@ Vibora supports **Claude Code** and **OpenCode** with per-repository and per-tas
 ## Quick Start
 
 ```bash
-npx vibora@latest up
+npx fulcrum@latest up
 ```
 
-That's it! Vibora will:
+That's it! Fulcrum will:
 - Check for required dependencies (bun, dtach, AI agent CLI, uv)
 - Offer to install any that are missing
 - Start the server on http://localhost:7777
@@ -48,7 +48,7 @@ Open http://localhost:7777 in your browser.
 ### Check Your Setup
 
 ```bash
-vibora doctor
+fulcrum doctor
 ```
 
 Shows the status of all dependencies with versions.
@@ -59,15 +59,15 @@ Download the desktop app for a bundled experience:
 
 | Platform | Download |
 |----------|----------|
-| **macOS** (Apple Silicon) | [Download DMG](https://github.com/knowsuchagency/vibora/releases/latest/download/Vibora-macos-arm64.dmg) |
-| **Linux** | [Download AppImage](https://github.com/knowsuchagency/vibora/releases/latest/download/Vibora-linux-x64.AppImage) |
+| **macOS** (Apple Silicon) | [Download DMG](https://github.com/knowsuchagency/fulcrum/releases/latest/download/Fulcrum-macos-arm64.dmg) |
+| **Linux** | [Download AppImage](https://github.com/knowsuchagency/fulcrum/releases/latest/download/Fulcrum-linux-x64.AppImage) |
 
 The desktop app bundles everything—just install and run. It will start the server, install the Claude Code plugin, and check for updates automatically.
 
 <details>
 <summary>macOS Installation Notes</summary>
 
-1. Open the DMG and drag Vibora to Applications
+1. Open the DMG and drag Fulcrum to Applications
 2. On first launch, macOS will block the app
 3. Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**
 4. Confirm by clicking **Open Anyway** in the dialog
@@ -79,18 +79,18 @@ The desktop app bundles everything—just install and run. It will start the ser
 For remote servers or VPS, use the install script—it auto-installs all dependencies:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/knowsuchagency/vibora/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/install.sh | bash
 ```
 
-This installs bun, dtach, uv, Claude Code, OpenCode, GitHub CLI, Docker, cloudflared, and the vibora CLI + Claude Code plugin.
+This installs bun, dtach, uv, Claude Code, OpenCode, GitHub CLI, Docker, cloudflared, and the fulcrum CLI + Claude Code plugin.
 
 ### Claude Code Plugin
 
 Install the plugin for automatic status sync and task management:
 
 ```bash
-claude plugin marketplace add knowsuchagency/vibora
-claude plugin install vibora@vibora --scope user
+claude plugin marketplace add knowsuchagency/fulcrum
+claude plugin install fulcrum@fulcrum --scope user
 ```
 
 ## Features
@@ -109,7 +109,7 @@ See all your AI agent sessions across every task and worktree in a single parall
 
 ### App Deployment
 
-Deploy applications directly from Vibora with Docker Compose. Edit compose files inline, configure environment variables, and manage services with automatic Traefik routing and optional Cloudflare DNS integration.
+Deploy applications directly from Fulcrum with Docker Compose. Edit compose files inline, configure environment variables, and manage services with automatic Traefik routing and optional Cloudflare DNS integration.
 
 ![App Deployment](./screenshots/app-deployment-config.png)
 
@@ -133,7 +133,7 @@ Keep an eye on system resources while your agents work. CPU, memory, and disk us
 
 ## Supported Agents
 
-Vibora supports multiple AI coding agents:
+Fulcrum supports multiple AI coding agents:
 
 | Agent | Description |
 |-------|-------------|
@@ -144,32 +144,32 @@ Configure your default agent globally in settings, override per-repository, or s
 
 ## Claude Code Plugin
 
-The Vibora plugin for Claude Code enables seamless integration:
+The Fulcrum plugin for Claude Code enables seamless integration:
 
 - **Automatic Status Sync** — Task moves to "In Review" when Claude stops, "In Progress" when you respond
 - **Session Continuity** — Claude sessions are tied to task IDs
 - **MCP Server** — Task management tools available directly to Claude
-- **Vibora Skill** — CLI documentation for task management (see `plugins/vibora/skills/`)
+- **Fulcrum Skill** — CLI documentation for task management (see `plugins/fulcrum/skills/`)
 - **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`
 
-The plugin is automatically installed when Vibora starts. To install manually:
+The plugin is automatically installed when Fulcrum starts. To install manually:
 
 ```bash
-claude plugin marketplace add knowsuchagency/vibora
-claude plugin install vibora@vibora --scope user
+claude plugin marketplace add knowsuchagency/fulcrum
+claude plugin install fulcrum@fulcrum --scope user
 ```
 
 ## OpenCode Integration
 
-The Vibora plugin for OpenCode enables seamless integration:
+The Fulcrum plugin for OpenCode enables seamless integration:
 
 - **Automatic Status Sync** — Task moves to "In Review" when OpenCode stops, "In Progress" when you respond
 - **Session Continuity** — OpenCode sessions are tied to task IDs
 - **MCP Server** — Task management tools available directly to OpenCode
 
 ```bash
-vibora opencode install    # Install plugin + MCP server
-vibora opencode uninstall  # Remove both
+fulcrum opencode install    # Install plugin + MCP server
+fulcrum opencode uninstall  # Remove both
 ```
 
 ## MCP Tools
@@ -187,7 +187,7 @@ Both Claude Code and OpenCode plugins include an MCP server that exposes task ma
 - `send_notification` — Send notification to enabled channels
 
 **Remote Command Execution:**
-- `execute_command` — Execute shell commands on the Vibora server with persistent session support
+- `execute_command` — Execute shell commands on the Fulcrum server with persistent session support
 - `list_exec_sessions` — List active command execution sessions
 - `update_exec_session` — Rename a session
 - `destroy_exec_session` — Clean up a session
@@ -199,8 +199,8 @@ For Claude Desktop, add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "vibora": {
-      "command": "vibora",
+    "fulcrum": {
+      "command": "fulcrum",
       "args": ["mcp"]
     }
   }
@@ -223,9 +223,9 @@ ssh -L 7777:localhost:7777 your-server
 ssh -fN -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 7777:localhost:7777 your-server
 ```
 
-On the remote server, start Vibora:
+On the remote server, start Fulcrum:
 ```bash
-npx vibora@latest up
+npx fulcrum@latest up
 ```
 
 The desktop app will connect through the tunnel automatically. This approach is:
@@ -241,7 +241,7 @@ For browser-only access, you can use Tailscale or Cloudflare Tunnels to expose y
 
 1. **On the remote server:**
    ```bash
-   npx vibora@latest up
+   npx fulcrum@latest up
    ```
 
 2. **Access via browser** — Open the tunnel URL (e.g., `http://your-server.tailnet.ts.net:7777`)
@@ -249,17 +249,17 @@ For browser-only access, you can use Tailscale or Cloudflare Tunnels to expose y
 <details>
 <summary><strong>Configuration</strong></summary>
 
-Settings are stored in `.vibora/settings.json`. The vibora directory is resolved in this order:
+Settings are stored in `.fulcrum/settings.json`. The fulcrum directory is resolved in this order:
 
-1. `VIBORA_DIR` environment variable (explicit override)
-2. `.vibora` in current working directory (per-worktree isolation)
-3. `~/.vibora` (default)
+1. `FULCRUM_DIR` environment variable (explicit override)
+2. `.fulcrum` in current working directory (per-worktree isolation)
+3. `~/.fulcrum` (default)
 
 | Setting | Env Var | Default |
 |---------|---------|---------|
 | server.port | `PORT` | 7777 |
-| paths.defaultGitReposDir | `VIBORA_GIT_REPOS_DIR` | ~ |
-| editor.sshPort | `VIBORA_SSH_PORT` | 22 |
+| paths.defaultGitReposDir | `FULCRUM_GIT_REPOS_DIR` | ~ |
+| editor.sshPort | `FULCRUM_SSH_PORT` | 22 |
 | integrations.linearApiKey | `LINEAR_API_KEY` | null |
 | integrations.githubPat | `GITHUB_PAT` | null |
 | appearance.language | — | null (auto-detect) |
@@ -270,7 +270,7 @@ Precedence: environment variable → settings.json → default
 
 ### Linear Integration
 
-Vibora can sync task status with Linear tickets. Configure `linearApiKey` in settings or set `LINEAR_API_KEY`. When a task is linked to a Linear ticket, status changes in Vibora automatically update Linear.
+Fulcrum can sync task status with Linear tickets. Configure `linearApiKey` in settings or set `LINEAR_API_KEY`. When a task is linked to a Linear ticket, status changes in Fulcrum automatically update Linear.
 
 </details>
 
@@ -282,68 +282,68 @@ The CLI lets AI agents working inside task worktrees query and update task statu
 ### Server Management
 
 ```bash
-vibora up                        # Start server daemon
-vibora up -y                     # Start with auto-install (no prompts)
-vibora down                      # Stop server
-vibora status                    # Check server status
-vibora doctor                    # Check all dependencies
-vibora health                    # Check server health
-vibora mcp                       # Start MCP server (stdio)
+fulcrum up                        # Start server daemon
+fulcrum up -y                     # Start with auto-install (no prompts)
+fulcrum down                      # Stop server
+fulcrum status                    # Check server status
+fulcrum doctor                    # Check all dependencies
+fulcrum health                    # Check server health
+fulcrum mcp                       # Start MCP server (stdio)
 ```
 
 ### Current Task (auto-detected from worktree)
 
 ```bash
-vibora current-task              # Get current task info
-vibora current-task in-progress  # Mark as IN_PROGRESS
-vibora current-task review       # Mark as IN_REVIEW
-vibora current-task done         # Mark as DONE
-vibora current-task cancel       # Mark as CANCELED
-vibora current-task pr <url>     # Associate a PR with current task
-vibora current-task linear <url> # Link to a Linear ticket
+fulcrum current-task              # Get current task info
+fulcrum current-task in-progress  # Mark as IN_PROGRESS
+fulcrum current-task review       # Mark as IN_REVIEW
+fulcrum current-task done         # Mark as DONE
+fulcrum current-task cancel       # Mark as CANCELED
+fulcrum current-task pr <url>     # Associate a PR with current task
+fulcrum current-task linear <url> # Link to a Linear ticket
 ```
 
 ### Task Management
 
 ```bash
-vibora tasks list                # List all tasks
-vibora tasks get <id>            # Get task by ID
-vibora tasks create              # Create a new task
-vibora tasks update <id>         # Update a task
-vibora tasks move <id>           # Move task to different status
-vibora tasks delete <id>         # Delete a task
+fulcrum tasks list                # List all tasks
+fulcrum tasks get <id>            # Get task by ID
+fulcrum tasks create              # Create a new task
+fulcrum tasks update <id>         # Update a task
+fulcrum tasks move <id>           # Move task to different status
+fulcrum tasks delete <id>         # Delete a task
 ```
 
 ### Git Operations
 
 ```bash
-vibora git status                # Git status for current worktree
-vibora git diff                  # Git diff for current worktree
-vibora git branches              # List branches in a repo
+fulcrum git status                # Git status for current worktree
+fulcrum git diff                  # Git diff for current worktree
+fulcrum git branches              # List branches in a repo
 ```
 
 ### Worktrees
 
 ```bash
-vibora worktrees list            # List all worktrees
-vibora worktrees delete          # Delete a worktree
+fulcrum worktrees list            # List all worktrees
+fulcrum worktrees delete          # Delete a worktree
 ```
 
 ### Configuration
 
 ```bash
-vibora config get <key>          # Get a config value
-vibora config set <key> <value>  # Set a config value
+fulcrum config get <key>          # Get a config value
+fulcrum config set <key> <value>  # Set a config value
 ```
 
 ### Notifications
 
 ```bash
-vibora notifications             # Show notification settings
-vibora notifications enable      # Enable notifications
-vibora notifications disable     # Disable notifications
-vibora notifications test <ch>   # Test a channel
-vibora notify <title> [message]  # Send a notification
+fulcrum notifications             # Show notification settings
+fulcrum notifications enable      # Enable notifications
+fulcrum notifications disable     # Disable notifications
+fulcrum notifications test <ch>   # Test a channel
+fulcrum notify <title> [message]  # Send a notification
 ```
 
 ### Global Options
@@ -370,7 +370,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, architecture, and co
 
 **In plain English:**
 
-- ✅ Use Vibora for any purpose—personal or commercial
-- ✅ Build and sell software using Vibora (we have no claim over your work)
-- ❌ Resell or redistribute Vibora itself for profit
+- ✅ Use Fulcrum for any purpose—personal or commercial
+- ✅ Build and sell software using Fulcrum (we have no claim over your work)
+- ❌ Resell or redistribute Fulcrum itself for profit
 - ⚠️ The software is provided as-is

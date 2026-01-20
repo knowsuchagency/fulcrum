@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db'
 import { apps, appServices, deployments, repositories, tunnels } from '../db/schema'
 import { log } from '../lib/logger'
-import { getSettings, getViboraDir } from '../lib/settings'
+import { getSettings, getFulcrumDir } from '../lib/settings'
 import { composeBuild } from './docker-compose'
 import {
   ensureSwarmMode,
@@ -27,7 +27,7 @@ import {
   type TunnelIngress,
 } from './cloudflare-tunnel'
 import { detectTraefik, addRoute, removeRoute, type TraefikConfig, type AddRouteOptions } from './traefik'
-import { startTraefikContainer, getViboraTraefikConfig, TRAEFIK_CERTS_MOUNT } from './traefik-docker'
+import { startTraefikContainer, getFulcrumTraefikConfig, TRAEFIK_CERTS_MOUNT } from './traefik-docker'
 import { sendNotification } from './notification-service'
 import {
   registerDeployment,
@@ -195,7 +195,7 @@ async function getTraefikConfig(): Promise<TraefikConfig | null> {
 }
 
 /**
- * Ensure Traefik is available (detect existing or start Vibora's)
+ * Ensure Traefik is available (detect existing or start Fulcrum's)
  */
 async function ensureTraefik(): Promise<TraefikConfig> {
   // First try to detect existing Traefik
@@ -204,15 +204,15 @@ async function ensureTraefik(): Promise<TraefikConfig> {
     return config
   }
 
-  // No Traefik found, start Vibora's
-  log.deploy.info('No Traefik detected, starting Vibora Traefik')
+  // No Traefik found, start Fulcrum's
+  log.deploy.info('No Traefik detected, starting Fulcrum Traefik')
 
   const result = await startTraefikContainer('admin@localhost')
   if (!result.success) {
     throw new Error(`Failed to start Traefik: ${result.error}`)
   }
 
-  config = getViboraTraefikConfig()
+  config = getFulcrumTraefikConfig()
   cachedTraefikConfig = config
   return config
 }
@@ -247,9 +247,9 @@ export function getProjectName(appId: string, repoName?: string): string {
       .replace(/^-|-$/g, '')
       .slice(0, 20)
       .replace(/-$/, '') // Remove trailing hyphen if truncation created one
-    return `vibora-${sanitized}-${suffix}`
+    return `fulcrum-${sanitized}-${suffix}`
   }
-  return `vibora-${suffix}`
+  return `fulcrum-${suffix}`
 }
 
 /**
@@ -436,7 +436,7 @@ export async function deployApp(
     // Stage 2b: Generate Swarm-compatible compose file
     // This adds image fields for services with build sections
     // Also attaches services to the Traefik network for routing
-    const appDir = join(getViboraDir(), 'apps', appId)
+    const appDir = join(getFulcrumDir(), 'apps', appId)
     const swarmFileResult = await generateSwarmComposeFile(
       repo.path,
       app.composeFile,
@@ -533,7 +533,7 @@ export async function deployApp(
       // Find the swarm service for this app service
       const swarmService = serviceStatuses.find((s) => s.serviceName === service.serviceName)
 
-      // Extract root domain for certificate (e.g., vibora.dev from api.vibora.dev)
+      // Extract root domain for certificate (e.g., fulcrum.dev from api.fulcrum.dev)
       const [subdomain, ...domainParts] = service.domain!.split('.')
       const rootDomain = domainParts.join('.')
 
@@ -644,7 +644,7 @@ export async function deployApp(
 
       if (!tunnelRecord) {
         // Create new tunnel for this app
-        const tunnelName = `vibora-${projectName}`
+        const tunnelName = `fulcrum-${projectName}`
         const tunnelResult = await createTunnel(tunnelName)
 
         if (!tunnelResult.success) {

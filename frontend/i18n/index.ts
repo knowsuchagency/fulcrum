@@ -62,7 +62,7 @@ export const resources = {
 // Get initial language from localStorage or use browser detection
 function getInitialLanguage(): SupportedLanguage {
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('vibora-language')
+    const stored = localStorage.getItem('fulcrum-language')
     if (stored && supportedLanguages.includes(stored as SupportedLanguage)) {
       return stored as SupportedLanguage
     }
@@ -89,7 +89,7 @@ i18n.use(initReactI18next).init({
 // Persist language changes to localStorage
 i18n.on('languageChanged', (lng) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('vibora-language', lng)
+    localStorage.setItem('fulcrum-language', lng)
   }
 })
 

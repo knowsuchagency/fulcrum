@@ -68,7 +68,7 @@ function DesktopBridge() {
     // Only post if we're in an iframe (desktop app)
     if (window.parent !== window) {
       window.parent.postMessage(
-        { type: 'vibora:route', pathname: location.pathname, search: location.search },
+        { type: 'fulcrum:route', pathname: location.pathname, search: location.search },
         '*'
       )
     }

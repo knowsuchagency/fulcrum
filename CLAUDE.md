@@ -1,6 +1,6 @@
 ## Project Overview
 
-Vibora is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating AI coding agents across isolated git worktrees.
+Fulcrum is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating AI coding agents across isolated git worktrees.
 
 **Philosophy**:
 - Terminal-first AI agent orchestration. Agents (Claude Code, OpenCode, etc.) run in terminals as-is—no abstraction layer, no wrapper APIs.
@@ -8,8 +8,6 @@ Vibora is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating A
 - Persistent terminals organized in tabs for work that doesn't fit neatly into task worktrees.
 - App deployment via Docker Compose with automatic DNS/tunnel routing.
 - System monitoring for Claude instances and resource usage.
-
-**Documentation**: See `docs/` for comprehensive user documentation.
 
 ## Development
 
@@ -27,7 +25,6 @@ mise run db:studio    # Open Drizzle Studio GUI
 mise run cli:build    # Build CLI package for npm distribution
 mise run bump         # Bump patch version (or: bump major, bump minor)
 mise run desktop:package  # Package desktop app for current platform
-mise run docs:dev     # Start documentation dev server
 ```
 
 For type checking, just run `mise run build` - it catches type errors and is faster than running separate typecheck commands.
@@ -52,17 +49,17 @@ bun test server/routes/filesystem.test.ts
 
 ## CLI
 
-The `vibora` package provides a global CLI:
+The `fulcrum` package provides a global CLI:
 
 ```bash
-vibora up             # Start the bundled server as daemon
-vibora down           # Stop the daemon
-vibora status         # Check if server is running
-vibora doctor         # Check all dependencies and versions
-vibora mcp            # Run as MCP server (stdio transport)
-vibora tasks          # List/manage tasks
-vibora notifications  # Manage notification settings
-vibora notify <title> <message>  # Send notification
+fulcrum up             # Start the bundled server as daemon
+fulcrum down           # Stop the daemon
+fulcrum status         # Check if server is running
+fulcrum doctor         # Check all dependencies and versions
+fulcrum mcp            # Run as MCP server (stdio transport)
+fulcrum tasks          # List/manage tasks
+fulcrum notifications  # Manage notification settings
+fulcrum notify <title> <message>  # Send notification
 ```
 
 ## Architecture
@@ -107,7 +104,7 @@ vibora notify <title> <message>  # Send notification
 
 ## Database
 
-- Default location: `~/.vibora/vibora.db` (SQLite with WAL mode)
+- Default location: `~/.fulcrum/fulcrum.db` (SQLite with WAL mode)
 - Schema: `server/db/schema.ts`
 
 ### Tables
@@ -147,7 +144,7 @@ ALTER TABLE `tasks` ADD `new_column` text;
 
 ## Configuration
 
-Settings stored in `.vibora/settings.json` with nested structure (schema v7):
+Settings stored in `.fulcrum/settings.json` with nested structure (schema v7):
 
 ```json
 {
@@ -178,10 +175,10 @@ Settings stored in `.vibora/settings.json` with nested structure (schema v7):
 
 | Variable | Description |
 |----------|-------------|
-| `VIBORA_DIR` | Override vibora directory (default: ~/.vibora) |
+| `FULCRUM_DIR` | Override fulcrum directory (default: ~/.fulcrum) |
 | `PORT` | Server port (default: 7777) |
-| `VIBORA_GIT_REPOS_DIR` | Default git repos directory |
-| `VIBORA_SSH_PORT` | SSH port for editor integration |
+| `FULCRUM_GIT_REPOS_DIR` | Default git repos directory |
+| `FULCRUM_SSH_PORT` | SSH port for editor integration |
 | `LINEAR_API_KEY` | Linear API key |
 | `GITHUB_PAT` | GitHub Personal Access Token |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |
@@ -216,7 +213,7 @@ Neutralinojs-based desktop application:
 
 ## Terminal Architecture
 
-Vibora uses `dtach` for persistent terminal sessions:
+Fulcrum uses `dtach` for persistent terminal sessions:
 
 1. **Creation** (`dtach -n`): Creates socket and spawns shell, then exits immediately
 2. **Attachment** (`dtach -a`): Connects to existing socket, long-lived process
@@ -228,11 +225,11 @@ Vibora uses `dtach` for persistent terminal sessions:
 JSONL format: `{"ts":"...","lvl":"info","src":"PTYManager","msg":"...","ctx":{...}}`
 
 - Development: stdout
-- Production: `~/.vibora/server.log` + `~/.vibora/vibora.log`
+- Production: `~/.fulcrum/server.log` + `~/.fulcrum/fulcrum.log`
 
 ```bash
 # Find errors
-grep '"lvl":"error"' ~/.vibora/vibora.log | jq
+grep '"lvl":"error"' ~/.fulcrum/fulcrum.log | jq
 ```
 
 ## File Organization
@@ -252,5 +249,4 @@ server/
 shared/            # Shared types
 cli/               # CLI source and build output
 desktop/           # Neutralino desktop app
-docs/              # VitePress documentation
 ```

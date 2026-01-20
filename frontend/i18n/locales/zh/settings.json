@@ -113,7 +113,7 @@
     },
     "syncClaudeTheme": {
       "label": "同步 Claude Code",
-      "description": "当 Vibora 在浅色和深色模式之间切换时自动更新 Claude Code 的主题"
+      "description": "当 Fulcrum 在浅色和深色模式之间切换时自动更新 Claude Code 的主题"
     },
     "claudeCodeTheme": {
       "light": "浅色模式",
@@ -131,7 +131,7 @@
   "notifications": {
     "enable": "启用通知",
     "toast": "应用内提示",
-    "toastDescription": "在 Vibora 界面中显示提示通知",
+    "toastDescription": "在 Fulcrum 界面中显示提示通知",
     "desktop": "桌面通知",
     "desktopDescription": "显示原生桌面或浏览器通知",
     "sound": "声音",
@@ -152,11 +152,11 @@
     "customSoundActive": "使用自定义声音"
   },
   "developer": {
-    "restartButton": "重启 Vibora",
+    "restartButton": "重启 Fulcrum",
     "restarting": "重启中...",
-    "restartDescription": "重新构建并重启 Vibora 服务器。如果构建失败，服务器将继续运行。",
+    "restartDescription": "重新构建并重启 Fulcrum 服务器。如果构建失败，服务器将继续运行。",
     "restartFailed": "重启失败",
-    "checkLogs": "构建可能失败。运行 journalctl --user -u vibora 查看详情。"
+    "checkLogs": "构建可能失败。运行 journalctl --user -u fulcrum 查看详情。"
   },
   "unsavedChanges": {
     "title": "未保存的更改",

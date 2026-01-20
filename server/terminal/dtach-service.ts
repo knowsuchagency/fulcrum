@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'fs'
 import * as path from 'path'
 import { execSync } from 'child_process'
-import { getViboraDir } from '../lib/settings'
+import { getFulcrumDir } from '../lib/settings'
 
 // Find process IDs by matching command line arguments
 function findProcessesByArg(searchArg: string): number[] {
@@ -54,7 +54,7 @@ function getDescendantPids(pid: number): number[] {
 
 // Combined pattern for all supported AI agents (Claude Code, OpenCode)
 // Must be preceded by / or start, and followed by whitespace/null/end
-// This avoids matching directory paths like /vibora/opencode/sockets/ or /worktrees/claude-test/
+// This avoids matching directory paths like /fulcrum/opencode/sockets/ or /worktrees/claude-test/
 const AGENT_PATTERN = /(^|\/)(claude|opencode)(\s|\0|$)/i
 
 // Check if a process is an AI agent process by examining its command line
@@ -99,7 +99,7 @@ export class DtachService {
   private socketsDir: string
 
   constructor() {
-    this.socketsDir = path.join(getViboraDir(), 'sockets')
+    this.socketsDir = path.join(getFulcrumDir(), 'sockets')
     // Ensure sockets directory exists
     if (!existsSync(this.socketsDir)) {
       mkdirSync(this.socketsDir, { recursive: true })
