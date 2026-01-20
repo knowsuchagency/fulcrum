@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import pkg from '../../../package.json'
@@ -50,13 +50,30 @@ async function checkForUpdates(): Promise<VersionCheckResult> {
   return { currentVersion, latestVersion, updateAvailable }
 }
 
-function runNpxUpdate(): Promise<number> {
+function isBunAvailable(): boolean {
+  try {
+    const result = spawnSync('bun', ['--version'], { stdio: 'pipe' })
+    return result.status === 0
+  } catch {
+    return false
+  }
+}
+
+function getPackageRunner(): { command: string; execCommand: string } {
+  if (isBunAvailable()) {
+    return { command: 'bunx', execCommand: 'bunx' }
+  }
+  return { command: 'npx', execCommand: 'npx' }
+}
+
+function runUpdate(): Promise<number> {
   return new Promise((resolve) => {
-    const npxArgs = [`${NPM_PACKAGE}@latest`, 'up']
+    const { command, execCommand } = getPackageRunner()
+    const args = [`${NPM_PACKAGE}@latest`, 'up']
     
-    console.log(`\nRunning: npx ${npxArgs.join(' ')}\n`)
+    console.log(`\nRunning: ${command} ${args.join(' ')}\n`)
     
-    const child = spawn('npx', npxArgs, {
+    const child = spawn(execCommand, args, {
       stdio: 'inherit',
       shell: true,
     })
@@ -74,12 +91,13 @@ function runNpxUpdate(): Promise<number> {
 
 export async function handleUpdateCommand(flags: Record<string, string>) {
   const checkOnly = flags.check === 'true'
+  const { command } = getPackageRunner()
 
   if (isJsonOutput()) {
     const result = await checkForUpdates()
     output({
       ...result,
-      updateCommand: `npx ${NPM_PACKAGE}@latest up`,
+      updateCommand: `${command} ${NPM_PACKAGE}@latest up`,
       releaseUrl: `https://github.com/${GITHUB_REPO}/releases/latest`,
     })
     return
@@ -103,12 +121,12 @@ export async function handleUpdateCommand(flags: Record<string, string>) {
   console.log(`\n↑ Update available: ${currentVersion} → ${latestVersion}`)
 
   if (checkOnly) {
-    console.log(`\nTo update, run: npx ${NPM_PACKAGE}@latest up`)
+    console.log(`\nTo update, run: ${command} ${NPM_PACKAGE}@latest up`)
     return
   }
 
   console.log('\nUpdating Fulcrum...')
-  const exitCode = await runNpxUpdate()
+  const exitCode = await runUpdate()
   
   if (exitCode !== 0) {
     throw new CliError('Update failed', ExitCodes.GENERAL_ERROR)
