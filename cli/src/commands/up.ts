@@ -6,7 +6,7 @@ import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import { writePid, readPid, removePid, isProcessRunning, getPort } from '../utils/process'
 import { confirm } from '../utils/prompt'
-import { getFulcrumDir, updateSettingsPort } from '../utils/server'
+import { getFulcrumDir, updateSettingsPort, needsViboraMigration, migrateFromVibora, getLegacyViboraDir } from '../utils/server'
 import {
   isDtachInstalled,
   isBunInstalled,
@@ -46,6 +46,35 @@ function getPackageRoot(): string {
 
 export async function handleUpCommand(flags: Record<string, string>) {
   const autoYes = flags.yes === 'true' || flags.y === 'true'
+
+  // Check for migration from ~/.vibora (legacy Vibora installation)
+  if (needsViboraMigration()) {
+    const viboraDir = getLegacyViboraDir()
+    console.error(`\nFound existing Vibora data at ${viboraDir}`)
+    console.error('Fulcrum (formerly Vibora) now uses ~/.fulcrum for data storage.')
+    console.error('')
+    console.error('Your existing data can be copied to the new location.')
+    console.error('This is non-destructive - your ~/.vibora directory will be left untouched.')
+    console.error('')
+
+    const shouldMigrate = autoYes || (await confirm('Would you like to copy your data to ~/.fulcrum?'))
+    if (shouldMigrate) {
+      console.error('Copying data from ~/.vibora to ~/.fulcrum...')
+      const success = migrateFromVibora()
+      if (success) {
+        console.error('Migration complete! Your data has been copied to ~/.fulcrum')
+        console.error('Your original ~/.vibora directory has been preserved.')
+        console.error('')
+      } else {
+        console.error('Migration failed. You can manually copy files from ~/.vibora to ~/.fulcrum')
+        console.error('')
+      }
+    } else {
+      console.error('Skipping migration. Fulcrum will start with a fresh data directory.')
+      console.error('You can manually migrate later by copying ~/.vibora to ~/.fulcrum')
+      console.error('')
+    }
+  }
 
   // Check if bun is installed (needed to run the server)
   if (!isBunInstalled()) {
