@@ -317,6 +317,19 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
             shouldMark = true
           }
         }
+        // 0035 renames selected_project_ids to selected_repository_ids
+        else if (entry.tag.startsWith('0035')) {
+          const hasSelectedRepositoryIdsColumn = sqlite
+            .query("SELECT name FROM pragma_table_info('terminal_view_state') WHERE name='selected_repository_ids'")
+            .get()
+          const hasSelectedProjectIdsColumn = sqlite
+            .query("SELECT name FROM pragma_table_info('terminal_view_state') WHERE name='selected_project_ids'")
+            .get()
+          // Mark as applied if new column exists and old column doesn't (fresh DB or already migrated)
+          if (hasSelectedRepositoryIdsColumn && !hasSelectedProjectIdsColumn) {
+            shouldMark = true
+          }
+        }
 
         if (shouldMark) {
           migrationsToMark.push(entry)

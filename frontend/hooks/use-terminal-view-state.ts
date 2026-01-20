@@ -11,7 +11,7 @@ interface FocusedTerminalsMap {
 interface TerminalViewState {
   activeTabId: string | null
   focusedTerminals: FocusedTerminalsMap
-  selectedProjectIds: string[]
+  selectedRepositoryIds: string[]
   // View tracking for notification suppression
   currentView: string | null
   currentTaskId: string | null
@@ -22,7 +22,7 @@ interface TerminalViewState {
 interface PendingUpdates {
   activeTabId?: string | null
   focusedTerminals?: FocusedTerminalsMap
-  selectedProjectIds?: string[]
+  selectedRepositoryIds?: string[]
   currentView?: string | null
   currentTaskId?: string | null
   isTabVisible?: boolean | null
@@ -32,7 +32,7 @@ interface PendingUpdates {
 const DEFAULT_VIEW_STATE: TerminalViewState = {
   activeTabId: null, // Deprecated: tab state is now stored in URL
   focusedTerminals: {},
-  selectedProjectIds: [],
+  selectedRepositoryIds: [],
   currentView: null,
   currentTaskId: null,
   isTabVisible: null,
@@ -102,7 +102,7 @@ export function useTerminalViewState() {
             ...currentState.focusedTerminals,
             ...merged.focusedTerminals,
           },
-          selectedProjectIds: merged.selectedProjectIds !== undefined ? merged.selectedProjectIds : currentState.selectedProjectIds,
+          selectedRepositoryIds: merged.selectedRepositoryIds !== undefined ? merged.selectedRepositoryIds : currentState.selectedRepositoryIds,
           currentView: merged.currentView !== undefined ? merged.currentView : currentState.currentView,
           currentTaskId: merged.currentTaskId !== undefined ? merged.currentTaskId : currentState.currentTaskId,
           isTabVisible: merged.isTabVisible !== undefined ? merged.isTabVisible : currentState.isTabVisible,
@@ -189,10 +189,10 @@ export function useTerminalViewState() {
     [updateViewState]
   )
 
-  // Update selected projects for "All Projects" tab
-  const setSelectedProjects = useCallback(
-    (projectIds: string[]) => {
-      updateViewState({ selectedProjectIds: projectIds })
+  // Update selected repositories for "Repos" tab
+  const setSelectedRepositories = useCallback(
+    (repositoryIds: string[]) => {
+      updateViewState({ selectedRepositoryIds: repositoryIds })
     },
     [updateViewState]
   )
@@ -200,10 +200,10 @@ export function useTerminalViewState() {
   return {
     viewState,
     isLoading,
-    selectedProjectIds: viewState.selectedProjectIds,
+    selectedRepositoryIds: viewState.selectedRepositoryIds,
     getFocusedTerminal,
     setFocusedTerminal,
-    setSelectedProjects,
+    setSelectedRepositories,
     updateViewTracking,
   }
 }

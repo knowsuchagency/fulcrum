@@ -8,7 +8,7 @@ import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
 import { TabEditDialog } from '@/components/terminal/tab-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { TaskDaily01Icon, FilterIcon, ComputerTerminal01Icon, PackageIcon, Loading03Icon } from '@hugeicons/core-free-icons'
+import { TaskDaily01Icon, FilterIcon, ComputerTerminal01Icon, FolderLibraryIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,6 @@ import { useTerminalStore, useStore } from '@/stores'
 import type { ITerminal, ITab } from '@/stores'
 import { useTasks } from '@/hooks/use-tasks'
 import { useRepositories } from '@/hooks/use-repositories'
-import { useProjects } from '@/hooks/use-projects'
 import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { useHotkeys } from '@/hooks/use-hotkeys'
 import { cn } from '@/lib/utils'
@@ -61,14 +60,14 @@ function toTerminalTab(tab: ITab, index: number): TerminalTab {
 }
 
 const ALL_TASKS_TAB_ID = 'all-tasks'
-const ALL_PROJECTS_TAB_ID = 'all-projects'
+const ALL_REPOS_TAB_ID = 'all-repos'
 const ACTIVE_STATUSES: TaskStatus[] = ['IN_PROGRESS', 'IN_REVIEW']
 const LAST_TAB_STORAGE_KEY = 'vibora:lastTerminalTab'
 
 interface TerminalsSearch {
   tab?: string
-  repos?: string // comma-separated repo names for multi-select filter
-  projects?: string // comma-separated project IDs for multi-select filter
+  repos?: string // comma-separated repo names for multi-select filter (for Tasks tab)
+  repoIds?: string // comma-separated repository IDs for multi-select filter (for Repos tab)
 }
 
 /**
@@ -78,7 +77,7 @@ interface TerminalsSearch {
 const TerminalsView = observer(function TerminalsView() {
   const { t } = useTranslation('terminals')
   const navigate = useNavigate()
-  const { tab: tabFromUrl, repos: reposFilter, projects: projectsFilter } = useSearch({ from: '/terminals/' })
+  const { tab: tabFromUrl, repos: reposFilter, repoIds: repoIdsFilter } = useSearch({ from: '/terminals/' })
   const {
     terminals,
     tabs,
@@ -104,13 +103,13 @@ const TerminalsView = observer(function TerminalsView() {
   // State for tab edit dialog
   const [editingTab, setEditingTab] = useState<TerminalTab | null>(null)
 
-  // View state for tracking focused terminals and selected projects
-  const { getFocusedTerminal, selectedProjectIds: persistedProjectIds, setSelectedProjects, isLoading: isViewStateLoading } = useTerminalViewState()
+  // View state for tracking focused terminals and selected repositories
+  const { getFocusedTerminal, selectedRepositoryIds: persistedRepoIds, setSelectedRepositories, isLoading: isViewStateLoading } = useTerminalViewState()
 
   // URL is the source of truth for active tab
   // Fall back to first tab if URL doesn't specify a valid tab
   const tabIds = useMemo(() => tabs.map((t) => t.id), [tabs])
-  const isValidTab = tabFromUrl && (tabIds.includes(tabFromUrl) || tabFromUrl === ALL_TASKS_TAB_ID || tabFromUrl === ALL_PROJECTS_TAB_ID)
+  const isValidTab = tabFromUrl && (tabIds.includes(tabFromUrl) || tabFromUrl === ALL_TASKS_TAB_ID || tabFromUrl === ALL_REPOS_TAB_ID)
   const activeTabId = isValidTab ? tabFromUrl : (tabs[0]?.id ?? null)
 
   // Navigate to update URL when changing tabs
@@ -118,10 +117,10 @@ const TerminalsView = observer(function TerminalsView() {
     (tabId: string) => {
       // Preserve filters only for the relevant tab type
       const repos = tabId === ALL_TASKS_TAB_ID ? reposFilter : undefined
-      const projects = tabId === ALL_PROJECTS_TAB_ID ? projectsFilter : undefined
-      navigate({ to: '/terminals', search: { tab: tabId, repos, projects }, replace: true })
+      const repoIds = tabId === ALL_REPOS_TAB_ID ? repoIdsFilter : undefined
+      navigate({ to: '/terminals', search: { tab: tabId, repos, repoIds }, replace: true })
     },
-    [navigate, reposFilter, projectsFilter]
+    [navigate, reposFilter, repoIdsFilter]
   )
 
   // Toggle a project in the task filter multi-select
@@ -200,7 +199,7 @@ const TerminalsView = observer(function TerminalsView() {
     // Redirect to valid tab if URL is invalid
     if (!isValidTab) {
       const lastTab = localStorage.getItem(LAST_TAB_STORAGE_KEY)
-      const targetTab = lastTab && (tabs.some(t => t.id === lastTab) || lastTab === ALL_TASKS_TAB_ID || lastTab === ALL_PROJECTS_TAB_ID)
+      const targetTab = lastTab && (tabs.some(t => t.id === lastTab) || lastTab === ALL_TASKS_TAB_ID || lastTab === ALL_REPOS_TAB_ID)
         ? lastTab
         : tabs[0].id
       log.terminal.debug('Redirecting to tab', { targetTab })
@@ -217,7 +216,6 @@ const TerminalsView = observer(function TerminalsView() {
 
   const { data: tasks = [], status: tasksStatus } = useTasks()
   const { data: repositories = [] } = useRepositories()
-  const { data: allProjects = [] } = useProjects()
 
   // Map repository path to repository id for linking
   const repoIdByPath = useMemo(() => {
@@ -293,11 +291,14 @@ const TerminalsView = observer(function TerminalsView() {
         }
       }
     }
-    // Map project IDs to names for display
+    // Map project IDs to names for display (lookup from tasks)
     const options: { id: string; name: string }[] = []
-    for (const project of allProjects) {
-      if (projectIds.has(project.id)) {
-        options.push({ id: project.id, name: project.name })
+    const seenIds = new Set<string>()
+    for (const task of tasks) {
+      if (task.projectId && projectIds.has(task.projectId) && !seenIds.has(task.projectId)) {
+        seenIds.add(task.projectId)
+        // Use project name from task if available, fallback to ID
+        options.push({ id: task.projectId, name: task.projectId })
       }
     }
     // Sort by name
@@ -307,152 +308,146 @@ const TerminalsView = observer(function TerminalsView() {
       options.push({ id: 'inbox', name: 'Inbox (No Project)' })
     }
     return options
-  }, [tasks, allProjects])
+  }, [tasks])
 
   // Parse selected task project IDs from URL (reuse repos param for backwards compat)
   const selectedTaskProjectIds = useMemo(() => {
     return reposFilter?.split(',').filter(Boolean) ?? []
   }, [reposFilter])
 
-  // Map project repository path to project ID for linking terminals to projects
-  const projectRepoPaths = useMemo(() => {
+  // Map repository path to repository ID for linking terminals to repositories
+  const repoPathToId = useMemo(() => {
     const map = new Map<string, string>()
-    for (const project of allProjects) {
-      if (project.repository?.path) {
-        map.set(project.repository.path, project.id)
-      }
+    for (const repo of repositories) {
+      map.set(repo.path, repo.id)
     }
     return map
-  }, [allProjects])
+  }, [repositories])
 
-  // Map repository path to project info for navigation and display
-  const projectInfoByCwd = useMemo(() => {
+  // Map repository path to repo info for navigation and display
+  const repoInfoByCwd = useMemo(() => {
     const map = new Map<string, {
-      projectId: string
-      projectName: string
+      repoId: string
+      repoName: string
       repoPath: string
-      appStatus: string | null
     }>()
-    for (const project of allProjects) {
-      if (project.repository?.path) {
-        map.set(project.repository.path, {
-          projectId: project.id,
-          projectName: project.name,
-          repoPath: project.repository.path,
-          appStatus: project.app?.status ?? null,
-        })
-      }
+    for (const repo of repositories) {
+      map.set(repo.path, {
+        repoId: repo.id,
+        repoName: repo.displayName,
+        repoPath: repo.path,
+      })
     }
     return map
-  }, [allProjects])
+  }, [repositories])
 
-  // Parse selected project IDs from URL
-  const selectedProjectIds = useMemo(() => {
-    return projectsFilter?.split(',').filter(Boolean) ?? []
-  }, [projectsFilter])
+  // Parse selected repository IDs from URL
+  const selectedRepoIds = useMemo(() => {
+    return repoIdsFilter?.split(',').filter(Boolean) ?? []
+  }, [repoIdsFilter])
 
-  // Track which project is currently loading (single project at a time)
-  const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null)
+  // Track which repository is currently loading (single repo at a time)
+  const [loadingRepoId, setLoadingRepoId] = useState<string | null>(null)
   const loadingStartTimeRef = useRef<number>(0)
   const MIN_LOADING_DURATION = 400 // ms - minimum time to show spinner
 
-  // Toggle a project in the multi-select filter (max 6 projects)
-  const toggleProjectFilter = useCallback(
-    (projectId: string, checked: boolean) => {
-      log.projectTerminals.info('toggleProjectFilter called', { projectId, checked })
-      const currentIds = projectsFilter?.split(',').filter(Boolean) ?? []
-      // Limit to 6 projects max
+  // Toggle a repository in the multi-select filter (max 6 repos)
+  const toggleRepoFilter = useCallback(
+    (repoId: string, checked: boolean) => {
+      log.projectTerminals.info('toggleRepoFilter called', { repoId, checked })
+      const currentIds = repoIdsFilter?.split(',').filter(Boolean) ?? []
+      // Limit to 6 repos max
       if (checked && currentIds.length >= 6) return
 
-      // Set loading state when adding a project
+      // Set loading state when adding a repo
       if (checked) {
-        log.projectTerminals.info('Setting loadingProjectId', { projectId })
+        log.projectTerminals.info('Setting loadingRepoId', { repoId })
         loadingStartTimeRef.current = Date.now()
-        setLoadingProjectId(projectId)
+        setLoadingRepoId(repoId)
       }
 
       const newIds = checked
-        ? [...currentIds, projectId]
-        : currentIds.filter((id) => id !== projectId)
+        ? [...currentIds, repoId]
+        : currentIds.filter((id) => id !== repoId)
       navigate({
         to: '/terminals',
-        search: (prev) => ({ ...prev, projects: newIds.length > 0 ? newIds.join(',') : undefined }),
+        search: (prev) => ({ ...prev, repoIds: newIds.length > 0 ? newIds.join(',') : undefined }),
         replace: true,
       })
     },
-    [navigate, projectsFilter]
+    [navigate, repoIdsFilter]
   )
 
-  // Restore persisted project selection when navigating to Projects tab with no URL param
+  // Restore persisted repository selection when navigating to Repos tab with no URL param
   const hasRestoredRef = useRef(false)
   useEffect(() => {
-    if (activeTabId !== ALL_PROJECTS_TAB_ID) {
+    if (activeTabId !== ALL_REPOS_TAB_ID) {
       hasRestoredRef.current = false
       return
     }
     // Wait for view state to load before attempting restoration
     if (isViewStateLoading) return
-    // Only restore once per tab visit and only if URL has no projects param
-    if (hasRestoredRef.current || projectsFilter) return
-    if (persistedProjectIds.length === 0) return
+    // Only restore once per tab visit and only if URL has no repoIds param
+    if (hasRestoredRef.current || repoIdsFilter) return
+    if (persistedRepoIds.length === 0) return
 
     hasRestoredRef.current = true
     navigate({
       to: '/terminals',
-      search: (prev) => ({ ...prev, projects: persistedProjectIds.join(',') }),
+      search: (prev) => ({ ...prev, repoIds: persistedRepoIds.join(',') }),
       replace: true,
     })
-  }, [activeTabId, projectsFilter, persistedProjectIds, navigate, isViewStateLoading])
+  }, [activeTabId, repoIdsFilter, persistedRepoIds, navigate, isViewStateLoading])
 
-  // Persist project selection to database when it changes
+  // Persist repository selection to database when it changes
   useEffect(() => {
-    if (activeTabId !== ALL_PROJECTS_TAB_ID) return
+    if (activeTabId !== ALL_REPOS_TAB_ID) return
     // Don't persist while still loading or before restoration has had a chance to run
     if (isViewStateLoading) return
-    // Don't persist if URL has no projects param and we haven't restored yet
+    // Don't persist if URL has no repoIds param and we haven't restored yet
     // (this prevents overwriting saved data before restoration completes)
-    if (!projectsFilter && !hasRestoredRef.current && persistedProjectIds.length > 0) return
+    if (!repoIdsFilter && !hasRestoredRef.current && persistedRepoIds.length > 0) return
     // Only persist if different from what we have stored
-    const current = selectedProjectIds.join(',')
-    const persisted = persistedProjectIds.join(',')
+    const current = selectedRepoIds.join(',')
+    const persisted = persistedRepoIds.join(',')
     if (current === persisted) return
 
-    setSelectedProjects(selectedProjectIds)
-  }, [activeTabId, selectedProjectIds, persistedProjectIds, setSelectedProjects, isViewStateLoading, projectsFilter])
+    setSelectedRepositories(selectedRepoIds)
+  }, [activeTabId, selectedRepoIds, persistedRepoIds, setSelectedRepositories, isViewStateLoading, repoIdsFilter])
 
-  // Auto-create terminals for selected projects that don't have one
+  // Auto-create terminals for selected repositories that don't have one
   useEffect(() => {
-    if (activeTabId !== ALL_PROJECTS_TAB_ID) return
+    if (activeTabId !== ALL_REPOS_TAB_ID) return
     if (!connected) return
 
     log.projectTerminals.debug('Auto-create effect running', {
-      selectedProjectIds,
+      selectedRepoIds,
       terminalCount: terminals.length,
       terminalCwds: terminals.map(t => t.cwd),
     })
 
-    for (const projectId of selectedProjectIds) {
-      const project = allProjects.find((p) => p.id === projectId)
-      if (!project?.repository?.path) continue
+    for (const repoId of selectedRepoIds) {
+      const repo = repositories.find((r) => r.id === repoId)
+      if (!repo?.path) continue
 
-      const repoPath = project.repository.path
-      // Check if workspace terminal (no tabId) already exists for this project
+      const repoPath = repo.path
+      // Check if workspace terminal (no tabId) already exists for this repo
       const existingTerminal = terminals.find((t) => t.cwd === repoPath && !t.tabId)
       if (existingTerminal) {
-        log.projectTerminals.debug('Terminal already exists for project', { projectId, repoPath })
+        log.projectTerminals.debug('Terminal already exists for repo', { repoId, repoPath })
         continue
       }
 
-      // Create terminal for this project
-      log.projectTerminals.info('Creating terminal for project', { projectId, repoPath })
+      // Create terminal for this repo
+      log.projectTerminals.info('Creating terminal for repo', { repoId, repoPath })
       createTerminal({
-        name: project.name,
+        name: repo.displayName,
         cwd: repoPath,
         cols: 80,
         rows: 24,
       })
     }
-  }, [activeTabId, selectedProjectIds, allProjects, terminals, connected, createTerminal])
+  }, [activeTabId, selectedRepoIds, repositories, terminals, connected, createTerminal])
 
   const cleanupFnsRef = useRef<Map<string, () => void>>(new Map())
   const terminalCountRef = useRef(0)
@@ -483,14 +478,14 @@ const TerminalsView = observer(function TerminalsView() {
         })
         .map(toTerminalInfo)
     }
-    if (activeTabId === ALL_PROJECTS_TAB_ID) {
-      // Show workspace terminals (no tabId) for selected projects only
-      if (selectedProjectIds.length === 0) return []
+    if (activeTabId === ALL_REPOS_TAB_ID) {
+      // Show workspace terminals (no tabId) for selected repos only
+      if (selectedRepoIds.length === 0) return []
       return terminals
-        .filter((t) => t.cwd && !t.tabId && projectRepoPaths.has(t.cwd))
+        .filter((t) => t.cwd && !t.tabId && repoPathToId.has(t.cwd))
         .filter((t) => {
-          const projectId = projectRepoPaths.get(t.cwd!)
-          return projectId && selectedProjectIds.includes(projectId)
+          const repoId = repoPathToId.get(t.cwd!)
+          return repoId && selectedRepoIds.includes(repoId)
         })
         .map(toTerminalInfo)
     }
@@ -499,17 +494,17 @@ const TerminalsView = observer(function TerminalsView() {
       .filter((t) => t.tabId === activeTabId)
       .sort((a, b) => a.positionInTab - b.positionInTab)
       .map(toTerminalInfo)
-  }, [activeTabId, terminals, activeTaskWorktrees, selectedTaskProjectIds, tasks, projectRepoPaths, selectedProjectIds])
+  }, [activeTabId, terminals, activeTaskWorktrees, selectedTaskProjectIds, tasks, repoPathToId, selectedRepoIds])
 
   // Clear loading state when terminal appears (with minimum duration)
   useEffect(() => {
-    if (!loadingProjectId) return
-    const project = allProjects.find(p => p.id === loadingProjectId)
-    if (!project?.repository?.path) return
-    const repoPath = project.repository.path
+    if (!loadingRepoId) return
+    const repo = repositories.find(r => r.id === loadingRepoId)
+    if (!repo?.path) return
+    const repoPath = repo.path
     const hasTerminal = visibleTerminals.some(t => t.cwd === repoPath)
     log.projectTerminals.debug('Clear loading effect', {
-      loadingProjectId,
+      loadingRepoId,
       repoPath,
       hasTerminal,
       visibleTerminalCwds: visibleTerminals.map(t => t.cwd),
@@ -520,15 +515,15 @@ const TerminalsView = observer(function TerminalsView() {
       const remaining = MIN_LOADING_DURATION - elapsed
       if (remaining > 0) {
         const timer = setTimeout(() => {
-          log.projectTerminals.info('Clearing loadingProjectId after delay', { loadingProjectId })
-          setLoadingProjectId(null)
+          log.projectTerminals.info('Clearing loadingRepoId after delay', { loadingRepoId })
+          setLoadingRepoId(null)
         }, remaining)
         return () => clearTimeout(timer)
       }
-      log.projectTerminals.info('Clearing loadingProjectId', { loadingProjectId })
-      setLoadingProjectId(null)
+      log.projectTerminals.info('Clearing loadingRepoId', { loadingRepoId })
+      setLoadingRepoId(null)
     }
-  }, [loadingProjectId, allProjects, visibleTerminals])
+  }, [loadingRepoId, repositories, visibleTerminals])
 
   const handleTerminalAdd = useCallback(() => {
     log.terminal.info('handleTerminalAdd called', {
@@ -721,7 +716,7 @@ const TerminalsView = observer(function TerminalsView() {
   )
 
   // Keyboard shortcuts (Cmd+D/W only work on desktop - browser intercepts on web)
-  const isSystemTab = activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_PROJECTS_TAB_ID
+  const isSystemTab = activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_REPOS_TAB_ID
   useHotkeys('meta+d', handleTerminalAdd, {
     enabled: !isSystemTab && connected,
     allowInTerminal: true,
@@ -761,20 +756,20 @@ const TerminalsView = observer(function TerminalsView() {
             <HugeiconsIcon icon={TaskDaily01Icon} size={12} strokeWidth={2} />
             <span className="max-sm:hidden">{t('taskTerminals')}</span>
           </button>
-          {/* Projects system tab */}
+          {/* Repos system tab */}
           <button
-            onClick={() => setActiveTab(ALL_PROJECTS_TAB_ID)}
+            onClick={() => setActiveTab(ALL_REPOS_TAB_ID)}
             className={cn(
               'relative flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors max-sm:px-2',
-              activeTabId === ALL_PROJECTS_TAB_ID
+              activeTabId === ALL_REPOS_TAB_ID
                 ? 'bg-primary/10 text-primary'
                 : 'text-muted-foreground hover:text-primary hover:bg-primary/5',
               'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary after:transition-opacity',
-              activeTabId === ALL_PROJECTS_TAB_ID ? 'after:opacity-100' : 'after:opacity-0'
+              activeTabId === ALL_REPOS_TAB_ID ? 'after:opacity-100' : 'after:opacity-0'
             )}
           >
-            <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
-            <span className="max-sm:hidden">{t('projectTerminals')}</span>
+            <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
+            <span className="max-sm:hidden">{t('repoTerminals')}</span>
           </button>
           {/* Separator between system tabs and regular tabs */}
           <div className="mx-2 h-4 w-px shrink-0 bg-border" />
@@ -840,32 +835,32 @@ const TerminalsView = observer(function TerminalsView() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          {/* Project filter (only when Project Terminals is active) */}
-          {activeTabId === ALL_PROJECTS_TAB_ID && allProjects.length > 0 && (
+          {/* Repository filter (only when Repo Terminals is active) */}
+          {activeTabId === ALL_REPOS_TAB_ID && repositories.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="sm" className="max-sm:w-auto" />}
               >
-                {loadingProjectId ? (
+                {loadingRepoId ? (
                   <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin text-muted-foreground" />
                 ) : (
                   <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
                 )}
                 <span>
-                  {selectedProjectIds.length === 0
-                    ? t('selectProjects')
-                    : t('projectsSelected', { count: selectedProjectIds.length })}
+                  {selectedRepoIds.length === 0
+                    ? t('selectRepos')
+                    : t('reposSelected', { count: selectedRepoIds.length })}
                 </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64" align="end">
                 <div className="p-2 space-y-2">
-                  <div className="text-sm font-medium mb-2">{t('filterByProject')}</div>
-                  {allProjects.map((project) => {
-                    const isSelected = selectedProjectIds.includes(project.id)
-                    const isLoading = loadingProjectId === project.id
-                    const isDisabled = loadingProjectId !== null || (!isSelected && selectedProjectIds.length >= 6)
+                  <div className="text-sm font-medium mb-2">{t('filterByRepo')}</div>
+                  {repositories.map((repo) => {
+                    const isSelected = selectedRepoIds.includes(repo.id)
+                    const isLoading = loadingRepoId === repo.id
+                    const isDisabled = loadingRepoId !== null || (!isSelected && selectedRepoIds.length >= 6)
                     return (
-                      <div key={project.id} className="flex items-center gap-2">
+                      <div key={repo.id} className="flex items-center gap-2">
                         {isLoading ? (
                           <HugeiconsIcon
                             icon={Loading03Icon}
@@ -875,29 +870,29 @@ const TerminalsView = observer(function TerminalsView() {
                           />
                         ) : (
                           <Checkbox
-                            id={`project-filter-${project.id}`}
+                            id={`repo-filter-${repo.id}`}
                             checked={isSelected}
                             disabled={isDisabled}
-                            onCheckedChange={(checked) => toggleProjectFilter(project.id, checked === true)}
+                            onCheckedChange={(checked) => toggleRepoFilter(repo.id, checked === true)}
                           />
                         )}
                         <Label
-                          htmlFor={`project-filter-${project.id}`}
+                          htmlFor={`repo-filter-${repo.id}`}
                           className={`text-sm ${isDisabled ? 'text-muted-foreground cursor-not-allowed' : 'cursor-pointer'}`}
                         >
-                          {project.name}
+                          {repo.displayName}
                         </Label>
                       </div>
                     )
                   })}
-                  {selectedProjectIds.length > 0 && !loadingProjectId && (
+                  {selectedRepoIds.length > 0 && !loadingRepoId && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="w-full mt-2"
                       onClick={() => navigate({
                         to: '/terminals',
-                        search: (prev) => ({ ...prev, projects: undefined }),
+                        search: (prev) => ({ ...prev, repoIds: undefined }),
                         replace: true,
                       })}
                     >
@@ -912,7 +907,7 @@ const TerminalsView = observer(function TerminalsView() {
             variant="outline"
             size="sm"
             onClick={handleTerminalAdd}
-            disabled={!connected || activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_PROJECTS_TAB_ID}
+            disabled={!connected || activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_REPOS_TAB_ID}
             className="max-sm:px-2 border-transparent text-primary"
           >
             <HugeiconsIcon
@@ -930,17 +925,17 @@ const TerminalsView = observer(function TerminalsView() {
       <div className="min-w-0 flex-1 overflow-hidden">
         <TerminalGrid
           terminals={visibleTerminals}
-          onTerminalClose={activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_PROJECTS_TAB_ID ? undefined : handleTerminalClose}
-          onTerminalAdd={connected && activeTabId !== ALL_TASKS_TAB_ID && activeTabId !== ALL_PROJECTS_TAB_ID ? handleTerminalAdd : undefined}
+          onTerminalClose={activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_REPOS_TAB_ID ? undefined : handleTerminalClose}
+          onTerminalAdd={connected && activeTabId !== ALL_TASKS_TAB_ID && activeTabId !== ALL_REPOS_TAB_ID ? handleTerminalAdd : undefined}
           onTerminalReady={handleTerminalReady}
           onTerminalResize={handleTerminalResize}
-          onTerminalRename={activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_PROJECTS_TAB_ID ? undefined : handleTerminalRename}
+          onTerminalRename={activeTabId === ALL_TASKS_TAB_ID || activeTabId === ALL_REPOS_TAB_ID ? undefined : handleTerminalRename}
           setupImagePaste={setupImagePaste}
           writeToTerminal={writeToTerminal}
           sendInputToTerminal={sendInputToTerminal}
           taskInfoByCwd={activeTabId === ALL_TASKS_TAB_ID ? taskInfoByCwd : undefined}
-          projectInfoByCwd={activeTabId === ALL_PROJECTS_TAB_ID ? projectInfoByCwd : undefined}
-          emptyMessage={activeTabId === ALL_PROJECTS_TAB_ID ? t('emptyProjects') : activeTabId === ALL_TASKS_TAB_ID ? t('emptyTasks') : undefined}
+          repoInfoByCwd={activeTabId === ALL_REPOS_TAB_ID ? repoInfoByCwd : undefined}
+          emptyMessage={activeTabId === ALL_REPOS_TAB_ID ? t('emptyRepos') : activeTabId === ALL_TASKS_TAB_ID ? t('emptyTasks') : undefined}
         />
       </div>
 
@@ -966,6 +961,6 @@ export const Route = createFileRoute('/terminals/')({
   validateSearch: (search: Record<string, unknown>): TerminalsSearch => ({
     tab: typeof search.tab === 'string' ? search.tab : undefined,
     repos: typeof search.repos === 'string' ? search.repos : undefined,
-    projects: typeof search.projects === 'string' ? search.projects : undefined,
+    repoIds: typeof search.repoIds === 'string' ? search.repoIds : undefined,
   }),
 })

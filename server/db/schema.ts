@@ -111,7 +111,7 @@ export const terminalViewState = sqliteTable('terminal_view_state', {
   id: text('id').primaryKey().default('singleton'),
   activeTabId: text('active_tab_id'),
   focusedTerminals: text('focused_terminals'), // JSON: { [tabId]: terminalId }
-  selectedProjectIds: text('selected_project_ids'), // JSON array of project IDs for "All Projects" tab
+  selectedRepositoryIds: text('selected_repository_ids'), // JSON array of repository IDs for "Repos" tab
   // View tracking for notification suppression
   currentView: text('current_view'), // 'task-detail' | 'terminals' | 'other'
   currentTaskId: text('current_task_id'), // Task ID if on task detail view

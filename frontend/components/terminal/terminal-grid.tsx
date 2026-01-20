@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, PlusSignIcon, Loading03Icon, Maximize02Icon, ArrowShrink02Icon } from '@hugeicons/core-free-icons'
 import { TaskTerminalHeader } from './task-terminal-header'
-import { ProjectTerminalHeader } from './project-terminal-header'
+import { RepoTerminalHeader } from './repo-terminal-header'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import type { Terminal as XTerm } from '@xterm/xterm'
 import { useIsMobile } from '@/hooks/use-is-mobile'
@@ -35,11 +35,10 @@ interface TaskInfo {
   pinned?: boolean
 }
 
-interface ProjectInfo {
-  projectId: string
-  projectName: string
+interface RepoInfo {
+  repoId: string
+  repoName: string
   repoPath: string
-  appStatus: string | null
 }
 
 interface TerminalGridProps {
@@ -55,8 +54,8 @@ interface TerminalGridProps {
   sendInputToTerminal?: (terminalId: string, text: string) => void
   /** Map terminal cwd to task info for navigation and display */
   taskInfoByCwd?: Map<string, TaskInfo>
-  /** Map terminal cwd to project info for navigation and display */
-  projectInfoByCwd?: Map<string, ProjectInfo>
+  /** Map terminal cwd to repo info for navigation and display */
+  repoInfoByCwd?: Map<string, RepoInfo>
   /** Custom message to show when there are no terminals */
   emptyMessage?: string
 }
@@ -64,7 +63,7 @@ interface TerminalGridProps {
 interface TerminalPaneProps {
   terminal: TerminalInfo
   taskInfo?: TaskInfo
-  projectInfo?: ProjectInfo
+  repoInfo?: RepoInfo
   isMobile?: boolean
   onClose?: () => void
   onReady?: (xterm: XTerm) => void
@@ -79,7 +78,7 @@ interface TerminalPaneProps {
   canMaximize?: boolean
 }
 
-const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, projectInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal, isMaximized, onMaximize, onMinimize, canMaximize }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
+const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, repoInfo, isMobile, onClose, onReady, onResize, onRename, onContainerReady, setupImagePaste, onFocus, sendInputToTerminal, isMaximized, onMaximize, onMinimize, canMaximize }: TerminalPaneProps & { sendInputToTerminal?: (terminalId: string, text: string) => void }) {
   const store = useStore()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
@@ -115,10 +114,10 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, projec
         />
       )
     }
-    if (projectInfo) {
+    if (repoInfo) {
       return (
-        <ProjectTerminalHeader
-          projectInfo={projectInfo}
+        <RepoTerminalHeader
+          repoInfo={repoInfo}
           isMaximized={isMaximized}
           onMaximize={onMaximize}
           onMinimize={onMinimize}
@@ -228,7 +227,7 @@ export function TerminalGrid({
   writeToTerminal,
   sendInputToTerminal,
   taskInfoByCwd,
-  projectInfoByCwd,
+  repoInfoByCwd,
   emptyMessage,
 }: TerminalGridProps) {
   const isMobile = useIsMobile()
@@ -282,14 +281,14 @@ export function TerminalGrid({
 
   const renderTerminalPane = (terminal: TerminalInfo) => {
     const taskInfo = terminal.cwd ? taskInfoByCwd?.get(terminal.cwd) : undefined
-    const projectInfo = terminal.cwd ? projectInfoByCwd?.get(terminal.cwd) : undefined
-    // Regular and project terminals can be maximized when there are multiple terminals (not task terminals)
+    const repoInfo = terminal.cwd ? repoInfoByCwd?.get(terminal.cwd) : undefined
+    // Regular and repo terminals can be maximized when there are multiple terminals (not task terminals)
     const canMaximize = !taskInfo && terminals.length > 1
     return (
       <TerminalPane
         terminal={terminal}
         taskInfo={taskInfo}
-        projectInfo={projectInfo}
+        repoInfo={repoInfo}
         isMobile={isMobile}
         onClose={onTerminalClose ? () => onTerminalClose(terminal.id) : undefined}
         onReady={onTerminalReady ? (xterm) => onTerminalReady(terminal.id, xterm) : undefined}
