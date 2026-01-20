@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { db, repositories, projects } from '../db'
+import { nanoid } from 'nanoid'
+import { db, repositories, projects, projectRepositories } from '../db'
 import { eq, desc, sql } from 'drizzle-orm'
 import { getSettings, expandPath } from '../lib/settings'
 import type { Repository } from '../../../shared/types'
@@ -18,8 +19,14 @@ function toApiResponse(row: typeof repositories.$inferSelect): Repository {
 }
 
 // GET /api/repositories - List all repositories (sorted by last used, then created)
+// Query params:
+//   orphans=true - Only return repositories not linked to any project
+//   projectId=X - Only return repositories linked to the specified project
 app.get('/', (c) => {
-  const allRepos = db
+  const orphansOnly = c.req.query('orphans') === 'true'
+  const projectIdFilter = c.req.query('projectId')
+
+  let allRepos = db
     .select()
     .from(repositories)
     .orderBy(
@@ -28,6 +35,43 @@ app.get('/', (c) => {
       desc(repositories.createdAt)
     )
     .all()
+
+  // Filter based on query params
+  if (orphansOnly || projectIdFilter) {
+    // Get all project-repository links (join table)
+    const allProjectRepos = db.select().from(projects).all()
+    const linkedRepoIds = new Set<string>()
+    const repoIdsByProject = new Map<string, string[]>()
+
+    // Check legacy repositoryId links
+    for (const project of allProjectRepos) {
+      if (project.repositoryId) {
+        linkedRepoIds.add(project.repositoryId)
+        const existing = repoIdsByProject.get(project.id) ?? []
+        existing.push(project.repositoryId)
+        repoIdsByProject.set(project.id, existing)
+      }
+    }
+
+    // Check projectRepositories join table
+    const prLinks = db.select().from(projectRepositories).all()
+    for (const link of prLinks) {
+      linkedRepoIds.add(link.repositoryId)
+      const existing = repoIdsByProject.get(link.projectId) ?? []
+      existing.push(link.repositoryId)
+      repoIdsByProject.set(link.projectId, existing)
+    }
+
+    if (orphansOnly) {
+      allRepos = allRepos.filter((r) => !linkedRepoIds.has(r.id))
+    }
+
+    if (projectIdFilter) {
+      const projectRepoIds = repoIdsByProject.get(projectIdFilter) ?? []
+      allRepos = allRepos.filter((r) => projectRepoIds.includes(r.id))
+    }
+  }
+
   return c.json(allRepos.map(toApiResponse))
 })
 
@@ -41,12 +85,64 @@ app.get('/:id', (c) => {
   return c.json(toApiResponse(repo))
 })
 
-// POST /api/repositories - DEPRECATED: Use POST /api/projects instead
-// Repositories must be created through projects to maintain data integrity
-app.post('/', (c) => {
-  return c.json({
-    error: 'Standalone repository creation is not supported. Use POST /api/projects to create a project with a repository.',
-  }, 400)
+// POST /api/repositories - Create a standalone repository from a local path
+// Body: { path: string, displayName?: string }
+app.post('/', async (c) => {
+  try {
+    const body = await c.req.json<{
+      path: string
+      displayName?: string
+    }>()
+
+    if (!body.path) {
+      return c.json({ error: 'path is required' }, 400)
+    }
+
+    const repoPath = expandPath(body.path)
+
+    // Check if directory exists
+    if (!existsSync(repoPath)) {
+      return c.json({ error: `Directory does not exist: ${repoPath}` }, 400)
+    }
+
+    // Check if it's a git repo
+    const gitPath = join(repoPath, '.git')
+    if (!existsSync(gitPath)) {
+      return c.json({ error: `Directory is not a git repository: ${repoPath}` }, 400)
+    }
+
+    // Check for duplicate path
+    const existing = db.select().from(repositories).where(eq(repositories.path, repoPath)).get()
+    if (existing) {
+      return c.json({ error: 'Repository with this path already exists', existingId: existing.id }, 409)
+    }
+
+    const displayName = body.displayName || repoPath.split('/').pop() || 'repo'
+    const now = new Date().toISOString()
+    const id = nanoid()
+
+    db.insert(repositories)
+      .values({
+        id,
+        path: repoPath,
+        displayName,
+        startupScript: null,
+        copyFiles: null,
+        isCopierTemplate: false,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run()
+
+    const repo = db.select().from(repositories).where(eq(repositories.id, id)).get()
+    if (!repo) {
+      return c.json({ error: 'Failed to create repository' }, 500)
+    }
+
+    return c.json(toApiResponse(repo), 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to create repository' }, 400)
+  }
 })
 
 // POST /api/repositories/clone - DEPRECATED: Use POST /api/projects instead

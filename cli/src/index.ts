@@ -6,6 +6,7 @@ import { handleCurrentTaskCommand } from './commands/current-task'
 import { handleMcpCommand } from './commands/mcp'
 import { handleTasksCommand } from './commands/tasks'
 import { handleProjectsCommand } from './commands/projects'
+import { handleRepositoriesCommand } from './commands/repositories'
 import { handleAppsCommand } from './commands/apps'
 import { handleFsCommand } from './commands/fs'
 import { handleUpCommand } from './commands/up'
@@ -638,6 +639,208 @@ const projectsCommand = defineCommand({
     update: projectsUpdateCommand,
     delete: projectsDeleteCommand,
     scan: projectsScanCommand,
+  },
+})
+
+// ============================================================================
+// Repositories Commands
+// ============================================================================
+
+const repositoriesListCommand = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List all repositories',
+  },
+  args: {
+    ...globalArgs,
+    orphans: {
+      type: 'boolean' as const,
+      description: 'Show only orphan repositories (not linked to any project)',
+    },
+    'project-id': {
+      type: 'string' as const,
+      description: 'Filter by project ID',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleRepositoriesCommand('list', [], toFlags(args))
+  },
+})
+
+const repositoriesGetCommand = defineCommand({
+  meta: {
+    name: 'get',
+    description: 'Get a repository by ID',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Repository ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleRepositoriesCommand('get', [args.id as string], toFlags(args))
+  },
+})
+
+const repositoriesAddCommand = defineCommand({
+  meta: {
+    name: 'add',
+    description: 'Add a new repository from a local path',
+  },
+  args: {
+    ...globalArgs,
+    path: {
+      type: 'string' as const,
+      description: 'Path to the git repository',
+      required: true,
+    },
+    'display-name': {
+      type: 'string' as const,
+      description: 'Display name for the repository',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleRepositoriesCommand('add', [], toFlags(args))
+  },
+})
+
+const repositoriesUpdateCommand = defineCommand({
+  meta: {
+    name: 'update',
+    description: 'Update a repository',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Repository ID',
+      required: true,
+    },
+    'display-name': {
+      type: 'string' as const,
+      description: 'New display name',
+    },
+    'startup-script': {
+      type: 'string' as const,
+      description: 'Startup script to run when starting a task',
+    },
+    'copy-files': {
+      type: 'string' as const,
+      description: 'Files/patterns to copy to new worktrees',
+    },
+    'default-agent': {
+      type: 'string' as const,
+      description: 'Default agent (claude, opencode)',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleRepositoriesCommand('update', [args.id as string], toFlags(args))
+  },
+})
+
+const repositoriesDeleteCommand = defineCommand({
+  meta: {
+    name: 'delete',
+    description: 'Delete an orphaned repository',
+  },
+  args: {
+    ...globalArgs,
+    id: {
+      type: 'positional' as const,
+      description: 'Repository ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleRepositoriesCommand('delete', [args.id as string], toFlags(args))
+  },
+})
+
+const repositoriesLinkCommand = defineCommand({
+  meta: {
+    name: 'link',
+    description: 'Link a repository to a project',
+  },
+  args: {
+    ...globalArgs,
+    'repo-id': {
+      type: 'positional' as const,
+      description: 'Repository ID',
+      required: true,
+    },
+    'project-id': {
+      type: 'positional' as const,
+      description: 'Project ID',
+      required: true,
+    },
+    'as-primary': {
+      type: 'boolean' as const,
+      description: 'Set as primary repository for the project',
+    },
+    force: {
+      type: 'boolean' as const,
+      description: 'Move repository from existing project if already linked',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleRepositoriesCommand(
+      'link',
+      [args['repo-id'] as string, args['project-id'] as string],
+      toFlags(args)
+    )
+  },
+})
+
+const repositoriesUnlinkCommand = defineCommand({
+  meta: {
+    name: 'unlink',
+    description: 'Unlink a repository from a project',
+  },
+  args: {
+    ...globalArgs,
+    'repo-id': {
+      type: 'positional' as const,
+      description: 'Repository ID',
+      required: true,
+    },
+    'project-id': {
+      type: 'positional' as const,
+      description: 'Project ID',
+      required: true,
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleRepositoriesCommand(
+      'unlink',
+      [args['repo-id'] as string, args['project-id'] as string],
+      toFlags(args)
+    )
+  },
+})
+
+const repositoriesCommand = defineCommand({
+  meta: {
+    name: 'repositories',
+    description: 'Manage repositories',
+  },
+  subCommands: {
+    list: repositoriesListCommand,
+    get: repositoriesGetCommand,
+    add: repositoriesAddCommand,
+    update: repositoriesUpdateCommand,
+    delete: repositoriesDeleteCommand,
+    link: repositoriesLinkCommand,
+    unlink: repositoriesUnlinkCommand,
   },
 })
 
@@ -1610,6 +1813,7 @@ const main = defineCommand({
     'current-task': currentTaskCommand,
     tasks: tasksCommand,
     projects: projectsCommand,
+    repositories: repositoriesCommand,
     apps: appsCommand,
     fs: fsCommand,
     up: upCommand,

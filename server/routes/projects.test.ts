@@ -268,15 +268,16 @@ describe('Projects Routes', () => {
       expect(body.error).toContain('name is required')
     })
 
-    test('returns 400 when no repository option provided', async () => {
+    test('creates project without repository (standalone project)', async () => {
       const { post } = createTestApp()
       const res = await post('/api/projects', {
         name: 'No Repo Project',
       })
       const body = await res.json()
 
-      expect(res.status).toBe(400)
-      expect(body.error).toContain('Must provide repositoryId, path, or url')
+      expect(res.status).toBe(201)
+      expect(body.name).toBe('No Repo Project')
+      expect(body.repositories).toEqual([]) // No repositories linked
     })
 
     test('returns 400 for non-existent directory', async () => {
@@ -448,9 +449,11 @@ describe('Projects Routes', () => {
       const deleted = db.select().from(projects).where(eq(projects.id, 'delete-proj-1')).get()
       expect(deleted).toBeUndefined()
 
-      // Repository should also be deleted (projects and repos are synonymous)
-      const repoDeleted = db.select().from(repositories).where(eq(repositories.id, 'delete-repo')).get()
-      expect(repoDeleted).toBeUndefined()
+      // Repository should still exist (becomes "unlinked")
+      // Repos are not deleted with projects - they can be moved to other projects
+      const repoStillExists = db.select().from(repositories).where(eq(repositories.id, 'delete-repo')).get()
+      expect(repoStillExists).toBeDefined()
+      expect(repoStillExists?.id).toBe('delete-repo')
     })
 
     test('deletes project with cascade to app', async () => {

@@ -296,6 +296,27 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
             shouldMark = true
           }
         }
+        // 0033 adds notes column to projects and creates project_attachments table
+        else if (entry.tag.startsWith('0033')) {
+          const hasProjectNotesColumn = sqlite
+            .query("SELECT name FROM pragma_table_info('projects') WHERE name='notes'")
+            .get()
+          const hasProjectAttachmentsTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='project_attachments'")
+            .get()
+          if (hasProjectNotesColumn || hasProjectAttachmentsTable) {
+            shouldMark = true
+          }
+        }
+        // 0034 creates project_links table
+        else if (entry.tag.startsWith('0034')) {
+          const hasProjectLinksTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='project_links'")
+            .get()
+          if (hasProjectLinksTable) {
+            shouldMark = true
+          }
+        }
 
         if (shouldMark) {
           migrationsToMark.push(entry)

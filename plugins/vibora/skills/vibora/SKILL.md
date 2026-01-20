@@ -167,6 +167,41 @@ vibora projects links add <project-id> <url> --label="Custom Label"
 vibora projects links remove <project-id> <link-id>
 ```
 
+### repositories
+
+Manage repositories (code sources that can be linked to projects):
+
+```bash
+# List repositories
+vibora repositories list
+vibora repositories list --orphans          # Unlinked repos only
+vibora repositories list --project-id=<id>  # Filter by project
+
+# Get repository details
+vibora repositories get <repo-id>
+
+# Add a new repository from local path
+vibora repositories add --path=/path/to/repo
+vibora repositories add --path=/path/to/repo --display-name="My Repo"
+
+# Update repository
+vibora repositories update <repo-id> --display-name="New Name"
+vibora repositories update <repo-id> --default-agent=claude
+vibora repositories update <repo-id> --startup-script="mise run dev"
+vibora repositories update <repo-id> --copy-files=".env,.env.local"
+
+# Delete orphaned repository (fails if linked to a project)
+vibora repositories delete <repo-id>
+
+# Link repository to project (repos can only be linked to one project)
+vibora repositories link <repo-id> <project-id>
+vibora repositories link <repo-id> <project-id> --as-primary
+vibora repositories link <repo-id> <project-id> --force  # Move from existing project
+
+# Unlink repository from project
+vibora repositories unlink <repo-id> <project-id>
+```
+
 ### apps
 
 Manage Docker Compose app deployments:
@@ -302,7 +337,7 @@ Search for available tools by keyword or category:
 }
 ```
 
-**Categories:** core, tasks, projects, apps, filesystem, git, notifications, exec
+**Categories:** core, tasks, projects, repositories, apps, filesystem, git, notifications, exec
 
 **Example Usage:**
 ```
@@ -367,6 +402,16 @@ This helps handle typos and variations - search first, then use the exact label 
 - `list_project_links` - List all URL links attached to a project
 - `add_project_link` - Add a URL link to a project (auto-detects type)
 - `remove_project_link` - Remove a URL link from a project
+
+### Repository Tools
+
+- `list_repositories` - List all repositories (supports orphans filter)
+- `get_repository` - Get repository details by ID
+- `add_repository` - Add repository from local path
+- `update_repository` - Update repository metadata (name, agent, startup script)
+- `delete_repository` - Delete orphaned repository (fails if linked to project)
+- `link_repository_to_project` - Link repo to project (errors if already linked elsewhere)
+- `unlink_repository_from_project` - Unlink repo from project
 
 ### App/Deployment Tools
 

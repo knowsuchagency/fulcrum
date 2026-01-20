@@ -138,18 +138,200 @@ describe('Repositories Routes', () => {
     })
   })
 
-  describe('POST /api/repositories (deprecated)', () => {
-    test('returns 400 with deprecation message', async () => {
+  describe('POST /api/repositories', () => {
+    test('creates repository from valid path', async () => {
+      // Create a real git repo directory
+      const repoPath = join(testEnv.viboraDir, 'test-git-repo')
+      mkdirSync(repoPath, { recursive: true })
+      mkdirSync(join(repoPath, '.git'), { recursive: true })
+
       const { post } = createTestApp()
       const res = await post('/api/repositories', {
-        path: '/some/path',
-        displayName: 'New Repository',
+        path: repoPath,
+        displayName: 'Test Git Repo',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.id).toBeDefined()
+      expect(body.path).toBe(repoPath)
+      expect(body.displayName).toBe('Test Git Repo')
+    })
+
+    test('defaults displayName to folder name', async () => {
+      const repoPath = join(testEnv.viboraDir, 'my-custom-repo')
+      mkdirSync(repoPath, { recursive: true })
+      mkdirSync(join(repoPath, '.git'), { recursive: true })
+
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        path: repoPath,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(201)
+      expect(body.displayName).toBe('my-custom-repo')
+    })
+
+    test('returns 400 when path is missing', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        displayName: 'No Path',
       })
       const body = await res.json()
 
       expect(res.status).toBe(400)
-      expect(body.error).toContain('not supported')
-      expect(body.error).toContain('POST /api/projects')
+      expect(body.error).toContain('path is required')
+    })
+
+    test('returns 400 for non-existent directory', async () => {
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        path: '/nonexistent/path/to/repo',
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('does not exist')
+    })
+
+    test('returns 400 for non-git directory', async () => {
+      const nonGitPath = join(testEnv.viboraDir, 'non-git-dir')
+      mkdirSync(nonGitPath, { recursive: true })
+
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        path: nonGitPath,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(400)
+      expect(body.error).toContain('not a git repository')
+    })
+
+    test('returns 409 for duplicate path', async () => {
+      const repoPath = join(testEnv.viboraDir, 'duplicate-repo')
+      mkdirSync(repoPath, { recursive: true })
+      mkdirSync(join(repoPath, '.git'), { recursive: true })
+
+      const now = new Date().toISOString()
+      db.insert(repositories)
+        .values({
+          id: 'existing-repo',
+          path: repoPath,
+          displayName: 'Existing',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { post } = createTestApp()
+      const res = await post('/api/repositories', {
+        path: repoPath,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(409)
+      expect(body.error).toContain('already exists')
+      expect(body.existingId).toBe('existing-repo')
+    })
+  })
+
+  describe('GET /api/repositories with filters', () => {
+    test('returns orphan repositories when orphans=true', async () => {
+      const now = new Date().toISOString()
+      // Create repositories
+      db.insert(repositories)
+        .values([
+          {
+            id: 'orphan-repo',
+            path: '/path/to/orphan',
+            displayName: 'Orphan Repo',
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: 'linked-repo',
+            path: '/path/to/linked',
+            displayName: 'Linked Repo',
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run()
+
+      // Link one to a project
+      db.insert(projects)
+        .values({
+          id: 'test-project',
+          name: 'Test Project',
+          repositoryId: 'linked-repo',
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { get } = createTestApp()
+      const res = await get('/api/repositories?orphans=true')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.length).toBe(1)
+      expect(body[0].id).toBe('orphan-repo')
+    })
+
+    test('returns repositories for specific project when projectId specified', async () => {
+      const now = new Date().toISOString()
+      // Create repositories
+      db.insert(repositories)
+        .values([
+          {
+            id: 'project-a-repo',
+            path: '/path/to/project-a',
+            displayName: 'Project A Repo',
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: 'project-b-repo',
+            path: '/path/to/project-b',
+            displayName: 'Project B Repo',
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run()
+
+      // Create projects with repos
+      db.insert(projects)
+        .values([
+          {
+            id: 'project-a',
+            name: 'Project A',
+            repositoryId: 'project-a-repo',
+            status: 'active',
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: 'project-b',
+            name: 'Project B',
+            repositoryId: 'project-b-repo',
+            status: 'active',
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run()
+
+      const { get } = createTestApp()
+      const res = await get('/api/repositories?projectId=project-a')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.length).toBe(1)
+      expect(body[0].id).toBe('project-a-repo')
     })
   })
 

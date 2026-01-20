@@ -289,8 +289,69 @@ export class ViboraClient {
   }
 
   // Repositories
-  async listRepositories(): Promise<Repository[]> {
-    return this.fetch('/api/repositories')
+  async listRepositories(options?: { orphans?: boolean; projectId?: string }): Promise<Repository[]> {
+    const params = new URLSearchParams()
+    if (options?.orphans) params.set('orphans', 'true')
+    if (options?.projectId) params.set('projectId', options.projectId)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.fetch(`/api/repositories${query}`)
+  }
+
+  async getRepository(id: string): Promise<Repository> {
+    return this.fetch(`/api/repositories/${id}`)
+  }
+
+  async addRepository(path: string, displayName?: string): Promise<Repository> {
+    return this.fetch('/api/repositories', {
+      method: 'POST',
+      body: JSON.stringify({ path, displayName }),
+    })
+  }
+
+  async updateRepository(
+    id: string,
+    updates: {
+      displayName?: string
+      startupScript?: string | null
+      copyFiles?: string | null
+      defaultAgent?: 'claude' | 'opencode' | null
+      claudeOptions?: Record<string, string> | null
+      opencodeOptions?: Record<string, string> | null
+      opencodeModel?: string | null
+    }
+  ): Promise<Repository> {
+    return this.fetch(`/api/repositories/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deleteRepository(id: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/repositories/${id}`, { method: 'DELETE' })
+  }
+
+  async linkRepositoryToProject(
+    repositoryId: string,
+    projectId: string,
+    options?: { isPrimary?: boolean; force?: boolean }
+  ): Promise<{ id: string; projectId: string; repositoryId: string; isPrimary: boolean }> {
+    return this.fetch(`/api/projects/${projectId}/repositories`, {
+      method: 'POST',
+      body: JSON.stringify({
+        repositoryId,
+        isPrimary: options?.isPrimary,
+        moveFromProject: options?.force,
+      }),
+    })
+  }
+
+  async unlinkRepositoryFromProject(
+    repositoryId: string,
+    projectId: string
+  ): Promise<{ success: boolean }> {
+    return this.fetch(`/api/projects/${projectId}/repositories/${repositoryId}`, {
+      method: 'DELETE',
+    })
   }
 
   // Git

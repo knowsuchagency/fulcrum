@@ -5,7 +5,7 @@
  * Core tools are always loaded; deferred tools are loaded on-demand after search.
  */
 
-export type ToolCategory = 'core' | 'tasks' | 'projects' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec'
+export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec'
 
 export interface ToolMetadata {
   name: string
@@ -279,14 +279,58 @@ export const toolRegistry: ToolMetadata[] = [
     deferred: true,
   },
 
-  // Additional core tools
+  // Repository tools
   {
     name: 'list_repositories',
-    description: 'List all configured repositories',
-    category: 'core',
-    keywords: ['repository', 'repo', 'list', 'git'],
+    description: 'List all configured repositories (supports orphans filter)',
+    category: 'repositories',
+    keywords: ['repository', 'repo', 'list', 'git', 'orphan', 'unlinked'],
     deferred: false,
   },
+  {
+    name: 'get_repository',
+    description: 'Get details of a specific repository by ID',
+    category: 'repositories',
+    keywords: ['repository', 'repo', 'get', 'details'],
+    deferred: true,
+  },
+  {
+    name: 'add_repository',
+    description: 'Add a repository from a local path',
+    category: 'repositories',
+    keywords: ['repository', 'repo', 'add', 'create', 'register'],
+    deferred: true,
+  },
+  {
+    name: 'update_repository',
+    description: 'Update repository metadata',
+    category: 'repositories',
+    keywords: ['repository', 'repo', 'update', 'edit', 'modify', 'agent'],
+    deferred: true,
+  },
+  {
+    name: 'delete_repository',
+    description: 'Delete an orphaned repository',
+    category: 'repositories',
+    keywords: ['repository', 'repo', 'delete', 'remove', 'orphan'],
+    deferred: true,
+  },
+  {
+    name: 'link_repository_to_project',
+    description: 'Link a repository to a project',
+    category: 'repositories',
+    keywords: ['repository', 'repo', 'link', 'project', 'associate', 'connect'],
+    deferred: true,
+  },
+  {
+    name: 'unlink_repository_from_project',
+    description: 'Unlink a repository from a project',
+    category: 'repositories',
+    keywords: ['repository', 'repo', 'unlink', 'project', 'disconnect', 'detach'],
+    deferred: true,
+  },
+
+  // Additional core tools
   {
     name: 'list_exec_sessions',
     description: 'List active command execution sessions',
