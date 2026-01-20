@@ -127,9 +127,14 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
   const { data: editorSshPort } = useEditorSshPort()
 
   // Handle auto-deploy action from URL
+  const [pendingDeployAppId, setPendingDeployAppId] = useState<string | null>(null)
+
+  // Capture deploy intent when action param is present
   useEffect(() => {
-    if (searchParams.action === 'deploy' && app && !actionConsumedRef.current && !deployStore.isDeploying) {
+    if (searchParams.action === 'deploy' && app && !actionConsumedRef.current) {
       actionConsumedRef.current = true
+      setPendingDeployAppId(app.id)
+      // Clean up the URL
       const search: RepoSearchParams = {}
       if (searchParams.tab) search.tab = searchParams.tab
       if (searchParams.subtab) search.subtab = searchParams.subtab
@@ -139,10 +144,18 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
         search,
         replace: true,
       })
-      deployStore.deploy(app.id)
+    }
+  }, [searchParams.action, app, repoId, navigate, searchParams.tab, searchParams.subtab])
+
+  // Execute the pending deploy - this mimics handleDeploy exactly
+  useEffect(() => {
+    if (pendingDeployAppId) {
+      const appIdToDeploy = pendingDeployAppId
+      setPendingDeployAppId(null)
+      deployStore.deploy(appIdToDeploy)
       setShowStreamingLogs(true)
     }
-  }, [searchParams.action, app, repoId, deployStore, navigate, searchParams.tab, searchParams.subtab])
+  }, [pendingDeployAppId, deployStore])
 
   useEffect(() => {
     actionConsumedRef.current = false
@@ -468,7 +481,7 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
 
         {/* Deploy sub-tabs (shown when Deploy is active) */}
         {activeTab === 'deploy' && (
-          <div className="shrink-0 border-b border-border bg-muted/30 px-4 hidden sm:flex items-center">
+          <div className="shrink-0 border-b border-border bg-muted/50 px-4 hidden sm:flex items-center">
             <div className="flex gap-1">
               <button
                 type="button"

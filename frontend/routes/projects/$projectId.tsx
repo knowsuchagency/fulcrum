@@ -210,7 +210,7 @@ function RepositoryCard({
                 navigate({
                   to: '/repositories/$repoId',
                   params: { repoId: repository.id },
-                  search: { tab: 'deploy' },
+                  search: { tab: 'deploy', action: 'deploy' },
                 })
               }}
               className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium h-7 px-2 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground text-muted-foreground"
@@ -788,59 +788,83 @@ function ProjectDetailView() {
 
   return (
     <>
-      <ScrollArea className="h-full">
-        <div className="max-w-5xl mx-auto px-6 py-6 space-y-6 pb-12">
-          {/* Compact Header: Name, Tags, Edit, Delete */}
-          <header className="space-y-2">
-            <div className="flex items-center gap-3">
-              {isEditingName ? (
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Input
-                    ref={nameInputRef}
-                    value={editedName}
-                    onChange={(e) => setEditedName(e.target.value)}
-                    onKeyDown={handleNameKeyDown}
-                    onBlur={handleSaveName}
-                    className="text-2xl font-semibold h-10"
-                    autoFocus
-                  />
-                  <Button variant="ghost" size="sm" onClick={handleSaveName}>
-                    <HugeiconsIcon icon={Tick02Icon} size={16} />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={handleCancelEditName}>
-                    <HugeiconsIcon icon={Cancel01Icon} size={16} />
-                  </Button>
-                </div>
-              ) : (
-                <h1
-                  className="text-2xl font-semibold cursor-pointer hover:text-primary transition-colors truncate"
-                  onClick={handleStartEditName}
-                  title="Click to edit"
-                >
-                  {project.name}
-                </h1>
-              )}
-              <div className="flex-1" />
-              <InlineTags projectId={projectId} tags={project.tags || []} />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleStartEditDescription}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <HugeiconsIcon icon={Edit02Icon} size={14} data-slot="icon" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <HugeiconsIcon icon={Delete02Icon} size={18} strokeWidth={2} data-slot="icon" />
-              </Button>
-            </div>
+      <div className="flex h-full flex-col">
+        {/* Header bar - matches repo detail view pattern */}
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-4 py-2">
+          {/* Left: Project name */}
+          {isEditingName ? (
+            <Input
+              ref={nameInputRef}
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onBlur={handleSaveName}
+              onKeyDown={handleNameKeyDown}
+              className="font-medium text-sm bg-transparent border-b border-primary outline-none px-0.5 w-auto max-w-[200px] h-auto py-0"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={handleStartEditName}
+              className="font-medium text-sm hover:text-primary transition-colors cursor-pointer"
+              title="Click to edit"
+            >
+              {project.name}
+            </button>
+          )}
 
-            {/* Description (single line or editing) */}
+          {/* Middle: Actions */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => project.repositories.length > 0 && setTaskModalRepo(project.repositories[0])}
+              disabled={project.repositories.length === 0}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="hidden sm:inline">Task</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setAddRepoModalOpen(true)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={FolderAddIcon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="hidden sm:inline">Repo</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setBulkAddModalOpen(true)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <HugeiconsIcon icon={CopyLinkIcon} size={14} strokeWidth={2} data-slot="icon" />
+              <span className="hidden sm:inline">Link</span>
+            </Button>
+          </div>
+
+          {/* Right: Tags, Delete */}
+          <div className="flex items-center gap-2">
+            <InlineTags projectId={projectId} tags={project.tags || []} />
+            <div className="h-4 w-px bg-border mx-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+            </Button>
+          </div>
+        </div>
+
+        {/* Scrollable content */}
+        <ScrollArea className="flex-1">
+          <div className="max-w-5xl mx-auto px-6 py-6 space-y-6 pb-12">
+            {/* Description (below header) */}
             {isEditingDescription ? (
               <div className="flex items-start gap-2">
                 <Textarea
@@ -868,42 +892,19 @@ function ProjectDetailView() {
               </div>
             ) : project.description ? (
               <p
-                className="text-sm text-muted-foreground truncate cursor-pointer hover:text-foreground transition-colors"
+                className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={handleStartEditDescription}
-                title={project.description}
+                title="Click to edit"
               >
                 {project.description}
               </p>
             ) : null}
-          </header>
 
-          {/* Repositories Section */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
+            {/* Repositories Section */}
+            <section className="space-y-3">
               <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Repositories
               </h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAddRepoModalOpen(true)}
-                  className="h-7 text-xs"
-                >
-                  <HugeiconsIcon icon={FolderAddIcon} size={14} data-slot="icon" />
-                  Add
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setBulkAddModalOpen(true)}
-                  className="h-7 text-xs"
-                >
-                  <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
-                  Link
-                </Button>
-              </div>
-            </div>
 
             {project.repositories.length === 0 ? (
               <Card className="border-dashed">
@@ -1036,8 +1037,9 @@ function ProjectDetailView() {
               )}
             </CollapsibleContent>
           </Collapsible>
-        </div>
-      </ScrollArea>
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Task creation modal */}
       {taskModalRepo && (
