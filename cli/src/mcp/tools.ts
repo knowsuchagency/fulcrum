@@ -1026,6 +1026,64 @@ export function registerTools(server: McpServer, client: ViboraClient) {
   )
 
   // ==========================================================================
+  // Project Link Tools
+  // ==========================================================================
+
+  // list_project_links
+  server.tool(
+    'list_project_links',
+    'List all URL links attached to a project',
+    {
+      projectId: z.string().describe('Project ID'),
+    },
+    async ({ projectId }) => {
+      try {
+        const links = await client.listProjectLinks(projectId)
+        return formatSuccess(links)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // add_project_link
+  server.tool(
+    'add_project_link',
+    'Add a URL link to a project (for documentation, related PRs, design files, etc.)',
+    {
+      projectId: z.string().describe('Project ID'),
+      url: z.string().url().describe('URL to add'),
+      label: z.optional(z.string()).describe('Display label (auto-detected if not provided)'),
+    },
+    async ({ projectId, url, label }) => {
+      try {
+        const link = await client.addProjectLink(projectId, url, label)
+        return formatSuccess(link)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // remove_project_link
+  server.tool(
+    'remove_project_link',
+    'Remove a URL link from a project',
+    {
+      projectId: z.string().describe('Project ID'),
+      linkId: z.string().describe('Link ID to remove'),
+    },
+    async ({ projectId, linkId }) => {
+      try {
+        await client.removeProjectLink(projectId, linkId)
+        return formatSuccess({ removed: linkId })
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+
+  // ==========================================================================
   // App Tools
   // ==========================================================================
 

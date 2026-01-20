@@ -365,10 +365,76 @@ export async function handleProjectsCommand(
       break
     }
 
+    // Link commands
+    case 'links': {
+      const [subAction, projectId, urlOrId] = positional
+      if (!subAction) {
+        throw new CliError(
+          'MISSING_SUBACTION',
+          'Subaction required: list, add, remove',
+          ExitCodes.INVALID_ARGS
+        )
+      }
+      if (!projectId) {
+        throw new CliError('MISSING_ID', 'Project ID required', ExitCodes.INVALID_ARGS)
+      }
+
+      switch (subAction) {
+        case 'list': {
+          const links = await client.listProjectLinks(projectId)
+          if (isJsonOutput()) {
+            output(links)
+          } else if (links.length === 0) {
+            console.log('No links')
+          } else {
+            for (const link of links) {
+              console.log(`${link.label || link.url}`)
+              console.log(`  ID: ${link.id}`)
+              console.log(`  URL: ${link.url}`)
+              if (link.type) console.log(`  Type: ${link.type}`)
+            }
+          }
+          break
+        }
+        case 'add': {
+          if (!urlOrId) {
+            throw new CliError('MISSING_URL', 'URL required', ExitCodes.INVALID_ARGS)
+          }
+          const link = await client.addProjectLink(projectId, urlOrId, flags.label)
+          if (isJsonOutput()) {
+            output(link)
+          } else {
+            console.log(`Added link: ${link.label || link.url}`)
+            console.log(`  ID: ${link.id}`)
+          }
+          break
+        }
+        case 'remove': {
+          if (!urlOrId) {
+            throw new CliError('MISSING_ID', 'Link ID required', ExitCodes.INVALID_ARGS)
+          }
+          await client.removeProjectLink(projectId, urlOrId)
+          if (isJsonOutput()) {
+            output({ success: true })
+          } else {
+            console.log(`Removed link: ${urlOrId}`)
+          }
+          break
+        }
+        default:
+          throw new CliError(
+            'UNKNOWN_SUBACTION',
+            `Unknown subaction: ${subAction}. Valid: list, add, remove`,
+            ExitCodes.INVALID_ARGS
+          )
+      }
+      break
+    }
+
     default:
       throw new CliError(
         'UNKNOWN_ACTION',
-        `Unknown action: ${action}. Valid: list, get, create, update, delete, scan, tags, attachments`,
+        `Unknown action: ${action}. Valid: list, get, create, update, delete, scan, tags, attachments, links`,
         ExitCodes.INVALID_ARGS
       )
   }

@@ -8,6 +8,7 @@ import type {
   TaskLink,
   TaskAttachment,
   ProjectAttachment,
+  ProjectLink,
   Tag,
   Repository,
   ProjectWithDetails,
@@ -646,6 +647,24 @@ export class ViboraClient {
       throw new ApiError(404, `Attachment not found: ${attachmentId}`)
     }
     return { path: attachment.storedPath, filename: attachment.filename, mimeType: attachment.mimeType }
+  }
+
+  // Project links
+  async listProjectLinks(projectId: string): Promise<ProjectLink[]> {
+    return this.fetch(`/api/projects/${projectId}/links`)
+  }
+
+  async addProjectLink(projectId: string, url: string, label?: string): Promise<ProjectLink> {
+    return this.fetch(`/api/projects/${projectId}/links`, {
+      method: 'POST',
+      body: JSON.stringify({ url, label }),
+    })
+  }
+
+  async removeProjectLink(projectId: string, linkId: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/projects/${projectId}/links/${linkId}`, {
+      method: 'DELETE',
+    })
   }
 
   // Apps

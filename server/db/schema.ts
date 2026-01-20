@@ -59,6 +59,16 @@ export const taskAttachments = sqliteTable('task_attachments', {
   createdAt: text('created_at').notNull(),
 })
 
+// Project links - arbitrary URL links associated with projects
+export const projectLinks = sqliteTable('project_links', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  url: text('url').notNull(),
+  label: text('label'), // User-provided or auto-detected label
+  type: text('type'), // 'pr' | 'issue' | 'docs' | 'design' | 'other'
+  createdAt: text('created_at').notNull(),
+})
+
 // Project attachments - file uploads associated with projects
 export const projectAttachments = sqliteTable('project_attachments', {
   id: text('id').primaryKey(),
@@ -288,3 +298,5 @@ export type TaskTag = typeof taskTags.$inferSelect
 export type NewTaskTag = typeof taskTags.$inferInsert
 export type ProjectTag = typeof projectTags.$inferSelect
 export type NewProjectTag = typeof projectTags.$inferInsert
+export type ProjectLink = typeof projectLinks.$inferSelect
+export type NewProjectLink = typeof projectLinks.$inferInsert

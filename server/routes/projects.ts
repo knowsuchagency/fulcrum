@@ -3,9 +3,10 @@ import { nanoid } from 'nanoid'
 import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve, join } from 'node:path'
-import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, tags, projectTags, projectAttachments } from '../db'
+import { db, projects, repositories, apps, appServices, terminalTabs, projectRepositories, tasks, tags, projectTags, projectAttachments, projectLinks } from '../db'
 import { eq, desc, sql, and, or, inArray } from 'drizzle-orm'
-import type { ProjectWithDetails, ProjectRepositoryDetails, Tag, ProjectAttachment } from '../../shared/types'
+import type { ProjectWithDetails, ProjectRepositoryDetails, Tag, ProjectAttachment, ProjectLink } from '../../shared/types'
+import { detectLinkType } from '../lib/link-utils'
 import { getViboraDir } from '../lib/settings'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -167,6 +168,15 @@ function getProjectAttachmentsList(projectId: string): ProjectAttachment[] {
   }))
 }
 
+// Helper to get links for a project
+function getProjectLinksList(projectId: string): ProjectLink[] {
+  return db
+    .select()
+    .from(projectLinks)
+    .where(eq(projectLinks.projectId, projectId))
+    .all() as ProjectLink[]
+}
+
 // Get upload directory for a project
 function getProjectUploadsDir(projectId: string): string {
   const viboraDir = getViboraDir()
@@ -220,6 +230,7 @@ function buildProjectWithDetails(
   const taskCount = getProjectTaskCount(project.id, project.repositoryId)
   const projectTagsList = getProjectTags(project.id)
   const projectAttachmentsList = getProjectAttachmentsList(project.id)
+  const projectLinksList = getProjectLinksList(project.id)
 
   return {
     id: project.id,
@@ -291,6 +302,7 @@ function buildProjectWithDetails(
       : null,
     tags: projectTagsList,
     attachments: projectAttachmentsList,
+    links: projectLinksList,
     taskCount,
   }
 }
@@ -1854,6 +1866,96 @@ app.delete('/:id/attachments/:attachmentId', (c) => {
 
   // Delete from DB
   db.delete(projectAttachments).where(eq(projectAttachments.id, attachmentId)).run()
+  broadcast({ type: 'project:updated', payload: { projectId } })
+
+  return c.json({ success: true })
+})
+
+// ==================== LINK ROUTES ====================
+
+// GET /api/projects/:id/links - List all links for a project
+app.get('/:id/links', (c) => {
+  const projectId = c.req.param('id')
+
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  if (!project) {
+    return c.json({ error: 'Project not found' }, 404)
+  }
+
+  return c.json(getProjectLinksList(projectId))
+})
+
+// POST /api/projects/:id/links - Add a link to a project
+app.post('/:id/links', async (c) => {
+  const projectId = c.req.param('id')
+
+  try {
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+    if (!project) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    const body = await c.req.json<{ url: string; label?: string }>()
+
+    if (!body.url) {
+      return c.json({ error: 'URL is required' }, 400)
+    }
+
+    // Validate URL format
+    try {
+      new URL(body.url)
+    } catch {
+      return c.json({ error: 'Invalid URL format' }, 400)
+    }
+
+    // Auto-detect type and label
+    const detected = detectLinkType(body.url)
+
+    const now = new Date().toISOString()
+    const newLink = {
+      id: nanoid(),
+      projectId,
+      url: body.url,
+      label: body.label || detected.label,
+      type: detected.type,
+      createdAt: now,
+    }
+
+    db.insert(projectLinks).values(newLink).run()
+    broadcast({ type: 'project:updated', payload: { projectId } })
+
+    return c.json(newLink, 201)
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to add link' }, 400)
+  }
+})
+
+// DELETE /api/projects/:id/links/:linkId - Remove a link from a project
+app.delete('/:id/links/:linkId', (c) => {
+  const projectId = c.req.param('id')
+  const linkId = c.req.param('linkId')
+
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get()
+  if (!project) {
+    return c.json({ error: 'Project not found' }, 404)
+  }
+
+  const link = db
+    .select()
+    .from(projectLinks)
+    .where(
+      and(
+        eq(projectLinks.id, linkId),
+        eq(projectLinks.projectId, projectId)
+      )
+    )
+    .get()
+
+  if (!link) {
+    return c.json({ error: 'Link not found' }, 404)
+  }
+
+  db.delete(projectLinks).where(eq(projectLinks.id, linkId)).run()
   broadcast({ type: 'project:updated', payload: { projectId } })
 
   return c.json({ success: true })

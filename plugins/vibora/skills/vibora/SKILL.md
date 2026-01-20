@@ -160,6 +160,11 @@ vibora projects delete <project-id> --delete-app         # Also delete linked ap
 # Scan for git repositories
 vibora projects scan                        # Scan default directory
 vibora projects scan --directory=/path      # Scan specific directory
+
+# Manage project links (URLs)
+vibora projects links list <project-id>
+vibora projects links add <project-id> <url> --label="Custom Label"
+vibora projects links remove <project-id> <link-id>
 ```
 
 ### apps
@@ -359,6 +364,9 @@ This helps handle typos and variations - search first, then use the exact label 
 - `update_project` - Update name, description, status
 - `delete_project` - Delete project and optionally directory/app
 - `scan_projects` - Scan directory for git repos
+- `list_project_links` - List all URL links attached to a project
+- `add_project_link` - Add a URL link to a project (auto-detects type)
+- `remove_project_link` - Remove a URL link from a project
 
 ### App/Deployment Tools
 

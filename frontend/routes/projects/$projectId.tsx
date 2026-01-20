@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils'
 import { ProjectTagsManager } from '@/components/project/project-tags-manager'
 import { ProjectDescriptionEditor } from '@/components/project/project-description-editor'
 import { ProjectAttachmentsManager } from '@/components/project/project-attachments-manager'
+import { ProjectLinksManager } from '@/components/project/project-links-manager'
 import { LinkRepositoriesModal } from '@/components/projects/link-repositories-modal'
 import { AddRepositoryModal } from '@/components/projects/add-repository-modal'
 import { RemoveRepositoryDialog } from '@/components/projects/remove-repository-dialog'
@@ -540,6 +541,9 @@ function ProjectDetailView() {
 
               {/* Tags */}
               <ProjectTagsManager projectId={projectId} tags={project.tags || []} />
+
+              {/* Links */}
+              <ProjectLinksManager projectId={projectId} links={project.links || []} />
 
               {/* Notes */}
               <div className="space-y-2">

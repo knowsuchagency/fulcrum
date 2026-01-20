@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { nanoid } from 'nanoid'
 import { db, tasks, repositories, taskLinks, taskDependencies, taskAttachments, tags, taskTags, type Task, type NewTask, type TaskLink } from '../db'
 import { eq, asc, and, inArray } from 'drizzle-orm'
-import type { TaskLinkType } from '@shared/types'
+import { detectLinkType } from '../lib/link-utils'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -155,25 +155,6 @@ function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: s
 }
 
 const app = new Hono()
-
-// Helper to detect link type and generate label from URL
-function detectLinkType(url: string): { type: TaskLinkType; label: string } {
-  const prMatch = url.match(/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)/)
-  if (prMatch) return { type: 'pr', label: `PR #${prMatch[1]}` }
-
-  const issueMatch = url.match(/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/)
-  if (issueMatch) return { type: 'issue', label: `Issue #${issueMatch[1]}` }
-
-
-  if (url.includes('figma.com')) return { type: 'design', label: 'Figma' }
-  if (url.includes('notion.so')) return { type: 'docs', label: 'Notion' }
-
-  try {
-    return { type: 'other', label: new URL(url).hostname }
-  } catch {
-    return { type: 'other', label: 'Link' }
-  }
-}
 
 // Helper to get links for a task
 function getTaskLinks(taskId: string): TaskLink[] {

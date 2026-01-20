@@ -112,15 +112,27 @@ export interface TagWithUsage extends Tag {
   projectCount: number
 }
 
-// Task link types for arbitrary URL associations
-export type TaskLinkType = 'pr' | 'issue' | 'docs' | 'design' | 'other'
+// Link types for arbitrary URL associations (shared by tasks and projects)
+export type LinkType = 'pr' | 'issue' | 'docs' | 'design' | 'other'
+
+// Alias for backwards compatibility
+export type TaskLinkType = LinkType
 
 export interface TaskLink {
   id: string
   taskId: string
   url: string
   label: string | null
-  type: TaskLinkType | null
+  type: LinkType | null
+  createdAt: string
+}
+
+export interface ProjectLink {
+  id: string
+  projectId: string
+  url: string
+  label: string | null
+  type: LinkType | null
   createdAt: string
 }
 
@@ -631,5 +643,6 @@ export interface ProjectWithDetails extends Project {
   } | null
   tags: Tag[] // Project tags
   attachments: ProjectAttachment[] // Project attachments
+  links: ProjectLink[] // Project links
   taskCount: number // Number of tasks in this project
 }

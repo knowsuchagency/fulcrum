@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchJSON } from '@/lib/api'
-import type { ProjectWithDetails } from '@/types'
+import type { ProjectWithDetails, ProjectLink } from '@/types'
 
 const API_BASE = ''
 
@@ -323,6 +323,46 @@ export function useBulkCreateProjects() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['repositories'] })
+    },
+  })
+}
+
+// Project links
+export function useAddProjectLink() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      url,
+      label,
+    }: {
+      projectId: string
+      url: string
+      label?: string
+    }) =>
+      fetchJSON<ProjectLink>(`${API_BASE}/api/projects/${projectId}/links`, {
+        method: 'POST',
+        body: JSON.stringify({ url, label }),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
+    },
+  })
+}
+
+export function useRemoveProjectLink() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, linkId }: { projectId: string; linkId: string }) =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/projects/${projectId}/links/${linkId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
     },
   })
 }
