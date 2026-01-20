@@ -422,6 +422,25 @@ export function useFulcrumVersion() {
   }
 }
 
+interface VersionCheckResponse {
+  currentVersion: string | null
+  latestVersion: string | null
+  updateAvailable: boolean
+  updateCommand: string
+  releaseUrl: string
+}
+
+const VERSION_CHECK_STALE_TIME = 5 * 60 * 1000
+
+export function useVersionCheck() {
+  return useQuery({
+    queryKey: ['version-check'],
+    queryFn: () => fetchJSON<VersionCheckResponse>(`${API_BASE}/api/version/check`),
+    staleTime: VERSION_CHECK_STALE_TIME,
+    refetchOnWindowFocus: false,
+  })
+}
+
 // Legacy hook aliases for backward compatibility
 /** @deprecated Use useEditorSshPort instead */
 export const useSshPort = useEditorSshPort

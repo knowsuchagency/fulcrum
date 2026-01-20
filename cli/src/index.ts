@@ -22,6 +22,7 @@ import { handleNotificationsCommand } from './commands/notifications'
 import { handleNotifyCommand } from './commands/notify'
 import { handleDevCommand } from './commands/dev'
 import { handleDoctorCommand } from './commands/doctor'
+import { handleUpdateCommand } from './commands/update'
 import { setJsonOutput } from './utils/output'
 import pkg from '../../package.json'
 
@@ -1855,6 +1856,28 @@ const mcpCommand = defineCommand({
 })
 
 // ============================================================================
+// Update Command
+// ============================================================================
+
+const updateCommand = defineCommand({
+  meta: {
+    name: 'update',
+    description: 'Check for updates and update Fulcrum to the latest version',
+  },
+  args: {
+    ...globalArgs,
+    check: {
+      type: 'boolean' as const,
+      description: 'Only check for updates, do not install',
+    },
+  },
+  async run({ args }) {
+    if (args.json) setJsonOutput(true)
+    await handleUpdateCommand(toFlags(args))
+  },
+})
+
+// ============================================================================
 // Main Command
 // ============================================================================
 
@@ -1886,6 +1909,7 @@ const main = defineCommand({
     notify: notifyCommand,
     dev: devCommand,
     mcp: mcpCommand,
+    update: updateCommand,
   },
 })
 

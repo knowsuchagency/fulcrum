@@ -18,7 +18,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon, ArrowDown01Icon, Alert02Icon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon, ArrowDown01Icon, Alert02Icon, ArrowUp02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import {
   usePort,
@@ -43,6 +43,7 @@ import {
   useClaudeCodeLightTheme,
   useClaudeCodeDarkTheme,
   useFulcrumVersion,
+  useVersionCheck,
   NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
@@ -99,6 +100,7 @@ function SettingsPage() {
   const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
   const { version } = useFulcrumVersion()
+  const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -657,7 +659,38 @@ function SettingsPage() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <h1 className="text-sm font-medium">{t('title')}</h1>
-        {version && <span className="text-xs text-muted-foreground">v{version}</span>}
+        <div className="flex items-center gap-2">
+          {version && <span className="text-xs text-muted-foreground">v{version}</span>}
+          {versionCheckLoading && (
+            <span className="text-xs text-muted-foreground">{t('version.checkingForUpdates')}</span>
+          )}
+          {versionCheck?.updateAvailable && versionCheck.latestVersion && (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <HugeiconsIcon icon={ArrowUp02Icon} size={12} strokeWidth={2} />
+                {t('version.updateAvailable', { version: versionCheck.latestVersion })}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs"
+                onClick={() => {
+                  if (versionCheck.releaseUrl) {
+                    window.open(versionCheck.releaseUrl, '_blank')
+                  }
+                }}
+              >
+                {t('version.viewRelease')}
+              </Button>
+            </div>
+          )}
+          {!versionCheckLoading && versionCheck && !versionCheck.updateAvailable && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} className="text-green-500" />
+              {t('version.upToDate')}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-6">

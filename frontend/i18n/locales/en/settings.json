@@ -12,6 +12,14 @@
     "appearance": "Appearance",
     "developer": "Developer"
   },
+  "version": {
+    "upToDate": "Up to date",
+    "updateAvailable": "Update available: v{{version}}",
+    "checkingForUpdates": "Checking...",
+    "updateButton": "Update",
+    "updateCommand": "Run to update:",
+    "viewRelease": "View release"
+  },
   "fields": {
     "port": {
       "label": "Port",
