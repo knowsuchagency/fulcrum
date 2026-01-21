@@ -1,6 +1,6 @@
 import { types } from 'mobx-state-tree'
 import type { Instance, SnapshotIn } from 'mobx-state-tree'
-import type { Terminal as XTerm } from '@xterm/xterm'
+import type { AnyTerminal } from '@/components/terminal/terminal-types'
 
 /**
  * Terminal status enum matching server types
@@ -28,8 +28,8 @@ export const TerminalModel = types
     positionInTab: types.optional(types.number, 0),
   })
   .volatile(() => ({
-    /** The xterm.js instance for this terminal */
-    xterm: null as XTerm | null,
+    /** The terminal instance (xterm.js or Ghostty) */
+    xterm: null as AnyTerminal | null,
     /** Cleanup function for xterm attachment */
     attachCleanup: null as (() => void) | null,
     /** Whether this terminal is pending creation confirmation from server */
@@ -38,6 +38,11 @@ export const TerminalModel = types
     pendingId: null as string | null,
     /** Whether Claude Code is currently starting up in this terminal */
     isStartingUp: false,
+    /**
+     * VibeTunnel scroll management: whether to auto-scroll on new output.
+     * Disabled when user scrolls up, re-enabled when user scrolls to bottom.
+     */
+    followCursorEnabled: true,
   }))
   .views((self) => ({
     /** Whether the terminal is alive (running) */
@@ -62,9 +67,14 @@ export const TerminalModel = types
       if (data.positionInTab !== undefined) self.positionInTab = data.positionInTab
     },
 
-    /** Set the xterm instance for this terminal */
-    setXterm(xterm: XTerm | null) {
+    /** Set the terminal instance (xterm.js or Ghostty) */
+    setXterm(xterm: AnyTerminal | null) {
       self.xterm = xterm
+    },
+
+    /** Set follow cursor state for VibeTunnel scroll management */
+    setFollowCursorEnabled(enabled: boolean) {
+      self.followCursorEnabled = enabled
     },
 
     /** Set the cleanup function for xterm attachment */

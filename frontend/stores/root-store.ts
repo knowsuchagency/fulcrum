@@ -1,10 +1,11 @@
 import { types, getEnv, destroy, applyPatch, recordPatches } from 'mobx-state-tree'
 import type { Instance, SnapshotIn, IJsonPatch } from 'mobx-state-tree'
-import type { Terminal as XTerm } from '@xterm/xterm'
 import { TerminalModel, TabModel, ViewStateModel } from './models'
 import type { ITerminal, ITerminalSnapshot, ITab, ITabSnapshot } from './models'
 import { log } from '@/lib/logger'
 import { generateRequestId, generateTempId, type PendingUpdate } from './sync'
+import type { AnyTerminal } from '@/components/terminal/terminal-types'
+import { isGhosttyTerminal, USE_GHOSTTY_TERMINAL } from '@/components/terminal/terminal-types'
 
 /**
  * Environment injected into the store.
@@ -525,13 +526,13 @@ export const RootStore = types
       },
 
       /**
-       * Attach an xterm.js instance to a terminal.
+       * Attach a terminal instance (xterm.js or Ghostty) to a terminal.
        * Sets up input handlers, registers callbacks, and requests buffer from server.
        * Returns a cleanup function to detach the terminal.
        */
       attachXterm(
         terminalId: string,
-        xterm: XTerm,
+        xterm: AnyTerminal,
         options?: { onAttached?: (terminalId: string) => void }
       ): () => void {
         const terminal = self.terminals.get(terminalId)
@@ -565,31 +566,34 @@ export const RootStore = types
         terminal.setXterm(xterm)
 
         // Handle Shift+Enter to insert a newline for Claude Code multi-line input
-        xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-          if (event.type === 'keydown' && event.shiftKey && event.key === 'Enter') {
-            event.preventDefault()
-            event.stopPropagation()
-            getWs().send({
-              type: 'terminal:input',
-              payload: { terminalId, data: '\n' },
-            })
-            return false // Prevent xterm from processing (would send regular CR)
-          }
+        // Note: attachCustomKeyEventHandler is xterm.js specific - Ghostty may not have it
+        if (typeof xterm.attachCustomKeyEventHandler === 'function') {
+          xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+            if (event.type === 'keydown' && event.shiftKey && event.key === 'Enter') {
+              event.preventDefault()
+              event.stopPropagation()
+              getWs().send({
+                type: 'terminal:input',
+                payload: { terminalId, data: '\n' },
+              })
+              return false // Prevent xterm from processing (would send regular CR)
+            }
 
-          // Handle Escape key explicitly to ensure it always works
-          // Bypass xterm.js key processing which can intermittently fail
-          if (event.type === 'keydown' && event.key === 'Escape') {
-            event.preventDefault()
-            event.stopPropagation()
-            getWs().send({
-              type: 'terminal:input',
-              payload: { terminalId, data: '\x1b' },
-            })
-            return false // We handled it
-          }
+            // Handle Escape key explicitly to ensure it always works
+            // Bypass xterm.js key processing which can intermittently fail
+            if (event.type === 'keydown' && event.key === 'Escape') {
+              event.preventDefault()
+              event.stopPropagation()
+              getWs().send({
+                type: 'terminal:input',
+                payload: { terminalId, data: '\x1b' },
+              })
+              return false // We handled it
+            }
 
-          return true // Allow all other keys to be processed normally
-        })
+            return true // Allow all other keys to be processed normally
+          })
+        }
 
         // Set up input handling
         const disposable = xterm.onData((data) => {
@@ -994,14 +998,20 @@ export const RootStore = types
             const terminal = self.terminals.get(terminalId)
             if (terminal?.xterm) {
               const xterm = terminal.xterm
-              // Write data and always scroll to bottom after
-              // This counteracts xterm.js behavior that can scroll viewport to 0 during writes
-              // (seen with TUI apps like Claude Code that do rapid screen updates)
-              xterm.write(data, () => {
-                requestAnimationFrame(() => {
-                  xterm.scrollToBottom()
+
+              if (USE_GHOSTTY_TERMINAL && isGhosttyTerminal(xterm)) {
+                // Ghostty handles scrolling natively
+                xterm.write(data)
+              } else {
+                // xterm.js: always scroll to bottom after write
+                // This counteracts xterm.js behavior that can scroll viewport to 0 during writes
+                // (seen with TUI apps like Claude Code that do rapid screen updates)
+                xterm.write(data, () => {
+                  requestAnimationFrame(() => {
+                    xterm.scrollToBottom()
+                  })
                 })
-              })
+              }
             } else {
               getWs().log.ws.warn('terminal:output but no xterm', { terminalId })
             }
