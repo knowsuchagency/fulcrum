@@ -8,7 +8,7 @@ const app = new Hono()
 
 const GITHUB_REPO = 'knowsuchagency/fulcrum'
 const NPM_PACKAGE = '@knowsuchagency/fulcrum'
-const CACHE_DURATION_MS = 5 * 60 * 1000 // 5 minutes
+const CACHE_DURATION_MS = 2 * 60 * 60 * 1000
 
 interface VersionCache {
   latestVersion: string | null
@@ -58,11 +58,11 @@ async function fetchLatestVersionFromGitHub(): Promise<string | null> {
 /**
  * Get the latest version with caching
  */
-async function getLatestVersion(): Promise<string | null> {
+async function getLatestVersion({ force = false }: { force?: boolean } = {}): Promise<string | null> {
   const now = Date.now()
 
   // Return cached value if still valid
-  if (cache.latestVersion && now - cache.checkedAt < CACHE_DURATION_MS) {
+  if (!force && cache.latestVersion && now - cache.checkedAt < CACHE_DURATION_MS) {
     return cache.latestVersion
   }
 
@@ -83,23 +83,81 @@ async function getLatestVersion(): Promise<string | null> {
  * Compare two semantic versions
  * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
  */
-function compareVersions(v1: string, v2: string): number {
-  const parts1 = v1.split('.').map(Number)
-  const parts2 = v2.split('.').map(Number)
+function parseSemver(version: string): {
+  major: number
+  minor: number
+  patch: number
+  preRelease: Array<string | number>
+} | null {
+  const cleaned = version.trim().replace(/^v/, '')
+  const [mainAndPre] = cleaned.split('+', 1)
+  const [main, preReleaseRaw] = mainAndPre.split('-', 2)
+  const parts = main.split('.')
+  if (parts.length > 3 || parts.length === 0) return null
 
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0
-    const p2 = parts2[i] || 0
-    if (p1 > p2) return 1
-    if (p1 < p2) return -1
+  if (parts.some((part) => part.length > 1 && part.startsWith('0'))) return null
+
+  const major = Number(parts[0])
+  const minor = Number(parts[1] ?? '0')
+  const patch = Number(parts[2] ?? '0')
+  if (!Number.isFinite(major) || !Number.isFinite(minor) || !Number.isFinite(patch)) return null
+  if (major < 0 || minor < 0 || patch < 0) return null
+
+  if (preReleaseRaw) {
+    const preReleaseParts = preReleaseRaw.split('.')
+    if (preReleaseParts.some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith('0'))) {
+      return null
+    }
   }
+
+  const preRelease = preReleaseRaw
+    ? preReleaseRaw.split('.').map((part) => (/^\d+$/.test(part) ? Number(part) : part))
+    : []
+
+  return { major, minor, patch, preRelease }
+}
+
+function compareIdentifiers(a: string | number, b: string | number): number {
+  if (typeof a === 'number' && typeof b === 'number') return a - b
+  if (typeof a === 'number') return -1
+  if (typeof b === 'number') return 1
+  return a.localeCompare(b)
+}
+
+function compareVersions(v1: string, v2: string): number {
+  const parsed1 = parseSemver(v1)
+  const parsed2 = parseSemver(v2)
+  if (!parsed1 || !parsed2) return 0
+
+  if (parsed1.major !== parsed2.major) return parsed1.major - parsed2.major
+  if (parsed1.minor !== parsed2.minor) return parsed1.minor - parsed2.minor
+  if (parsed1.patch !== parsed2.patch) return parsed1.patch - parsed2.patch
+
+  const pre1 = parsed1.preRelease
+  const pre2 = parsed2.preRelease
+  if (pre1.length === 0 && pre2.length === 0) return 0
+  if (pre1.length === 0) return 1
+  if (pre2.length === 0) return -1
+
+  const maxLen = Math.max(pre1.length, pre2.length)
+  for (let i = 0; i < maxLen; i++) {
+    const id1 = pre1[i]
+    const id2 = pre2[i]
+    if (id1 === undefined) return -1
+    if (id2 === undefined) return 1
+    const diff = compareIdentifiers(id1, id2)
+    if (diff !== 0) return diff
+  }
+
   return 0
 }
 
 // GET /api/version/check - Check for updates
 app.get('/check', async (c) => {
   const currentVersion = process.env.FULCRUM_VERSION || null
-  const latestVersion = await getLatestVersion()
+  const forceParam = c.req.query('force')
+  const force = forceParam === '1' || forceParam === 'true'
+  const latestVersion = await getLatestVersion({ force })
 
   let updateAvailable = false
   if (currentVersion && latestVersion) {
@@ -132,6 +190,7 @@ function spawnDetachedUpdateScript(): void {
   const command = getPackageRunner()
   const scriptPath = join(tmpdir(), `fulcrum-update-${Date.now()}.sh`)
   
+  const installArgs = command === 'bunx' ? '--bun' : '--yes --ignore-scripts'
   const script = `#!/bin/bash
 # Fulcrum self-update script - runs independently of parent process
 
@@ -142,7 +201,7 @@ sleep 2
 ${command} ${NPM_PACKAGE}@latest down 2>/dev/null || true
 
 # Install latest version (cache it)
-${command} ${command === 'bunx' ? '--bun' : '--yes'} ${NPM_PACKAGE}@latest --version
+${command} ${installArgs} ${NPM_PACKAGE}@latest --version
 
 # Start new server
 ${command} ${NPM_PACKAGE}@latest up
@@ -166,7 +225,7 @@ rm -f "${scriptPath}"
 // POST /api/version/update - Trigger update (spawns detached process and returns immediately)
 app.post('/update', async (c) => {
   const currentVersion = process.env.FULCRUM_VERSION || null
-  const latestVersion = await getLatestVersion()
+  const latestVersion = await getLatestVersion({ force: true })
 
   if (!latestVersion) {
     return c.json({ success: false, error: 'Could not fetch latest version' }, 503)
