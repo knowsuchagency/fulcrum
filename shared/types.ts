@@ -73,9 +73,9 @@ export interface Task {
   description: string | null
   status: TaskStatus
   position: number
-  repoPath: string | null // Nullable for non-code tasks
-  repoName: string | null // Nullable for non-code tasks
-  baseBranch: string | null // Nullable for non-code tasks
+  repoPath: string | null // Nullable for non-worktree tasks
+  repoName: string | null // Nullable for non-worktree tasks
+  baseBranch: string | null // Nullable for non-worktree tasks
   branch: string | null
   worktreePath: string | null
   viewState: ViewState | null
@@ -88,7 +88,7 @@ export interface Task {
   pinned: boolean
   // Generalized task management fields
   projectId: string | null // FK to project (null = orphan/inbox)
-  repositoryId: string | null // FK to repository for code tasks
+  repositoryId: string | null // FK to repository for worktree tasks
   tags: string[] // Array of tag strings
   startedAt: string | null // Timestamp when moved out of TO_DO
   dueDate: string | null // YYYY-MM-DD format

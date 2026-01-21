@@ -16,7 +16,7 @@ import ReactFlow, {
 import dagre from '@dagrejs/dagre'
 import { useTaskDependencyGraph, useTasks, type TaskGraphNode } from '@/hooks/use-tasks'
 import type { Task, TaskStatus } from '@/types'
-import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
+import { NonWorktreeTaskModal } from '@/components/task/non-worktree-task-modal'
 import 'reactflow/dist/style.css'
 
 const STATUS_COLORS: Record<TaskStatus, { bg: string; border: string; text: string }> = {
@@ -367,9 +367,9 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
         </ReactFlow>
       </div>
 
-      {/* Non-code task modal */}
+      {/* Non-worktree task modal */}
       {selectedTask && !selectedTask.worktreePath && (
-        <NonCodeTaskModal
+        <NonWorktreeTaskModal
           task={selectedTask}
           open={modalOpen}
           onOpenChange={(open) => {

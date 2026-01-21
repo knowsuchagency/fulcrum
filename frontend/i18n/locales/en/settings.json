@@ -99,13 +99,13 @@
         "label": "Default Type",
         "description": "Type to select by default when creating new tasks",
         "options": {
-          "code": "Code Task",
-          "nonCode": "Non-Code Task"
+          "worktree": "Worktree Task",
+          "nonWorktree": "Non-Worktree Task"
         }
       },
       "startImmediately": {
         "label": "Start Immediately",
-        "description": "When enabled, code tasks start work immediately and create a git worktree. When disabled, tasks go to To Do."
+        "description": "When enabled, worktree tasks start work immediately and create a git worktree. When disabled, tasks go to To Do."
       }
     },
     "language": {

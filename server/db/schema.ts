@@ -6,9 +6,9 @@ export const tasks = sqliteTable('tasks', {
   description: text('description'),
   status: text('status').notNull().default('IN_PROGRESS'),
   position: integer('position').notNull(),
-  repoPath: text('repo_path'), // Now nullable for non-code tasks
-  repoName: text('repo_name'), // Now nullable for non-code tasks
-  baseBranch: text('base_branch'), // Now nullable for non-code tasks
+  repoPath: text('repo_path'), // Now nullable for non-worktree tasks
+  repoName: text('repo_name'), // Now nullable for non-worktree tasks
+  baseBranch: text('base_branch'), // Now nullable for non-worktree tasks
   branch: text('branch'),
   worktreePath: text('worktree_path'),
   viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
@@ -21,7 +21,7 @@ export const tasks = sqliteTable('tasks', {
   pinned: integer('pinned', { mode: 'boolean' }).default(false), // Prevent cleanup from deleting this task's worktree
   // Generalized task management fields
   projectId: text('project_id'), // FK to projects (nullable - null = orphan/inbox)
-  repositoryId: text('repository_id'), // FK to repositories for code tasks
+  repositoryId: text('repository_id'), // FK to repositories for worktree tasks
   tags: text('tags'), // JSON array: ["bug", "urgent"]
   startedAt: text('started_at'), // Timestamp when moved out of TO_DO
   dueDate: text('due_date'), // YYYY-MM-DD format

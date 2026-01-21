@@ -44,7 +44,7 @@ import {
   useClaudeCodeDarkTheme,
   useFulcrumVersion,
   useDefaultTaskType,
-  useStartCodeTasksImmediately,
+  useStartWorktreeTasksImmediately,
   NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
@@ -102,7 +102,7 @@ function SettingsPage() {
   const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
   const { data: defaultTaskType, isLoading: taskTypeLoading } = useDefaultTaskType()
-  const { data: startCodeTasksImmediately, isLoading: startImmediatelyLoading } = useStartCodeTasksImmediately()
+  const { data: startWorktreeTasksImmediately, isLoading: startImmediatelyLoading } = useStartWorktreeTasksImmediately()
   const { version } = useFulcrumVersion()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
@@ -154,8 +154,8 @@ function SettingsPage() {
   const [localClaudeCodeDarkTheme, setLocalClaudeCodeDarkTheme] = useState<ClaudeCodeTheme>('dark-ansi')
 
   // Task defaults local state
-  const [localDefaultTaskType, setLocalDefaultTaskType] = useState<TaskType>('code')
-  const [localStartCodeTasksImmediately, setLocalStartCodeTasksImmediately] = useState(true)
+  const [localDefaultTaskType, setLocalDefaultTaskType] = useState<TaskType>('worktree')
+  const [localStartWorktreeTasksImmediately, setLocalStartWorktreeTasksImmediately] = useState(true)
 
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
@@ -230,8 +230,8 @@ function SettingsPage() {
   // Sync task defaults
   useEffect(() => {
     if (defaultTaskType !== undefined) setLocalDefaultTaskType(defaultTaskType)
-    if (startCodeTasksImmediately !== undefined) setLocalStartCodeTasksImmediately(startCodeTasksImmediately)
-  }, [defaultTaskType, startCodeTasksImmediately])
+    if (startWorktreeTasksImmediately !== undefined) setLocalStartWorktreeTasksImmediately(startWorktreeTasksImmediately)
+  }, [defaultTaskType, startWorktreeTasksImmediately])
 
   const isLoading =
     portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading
@@ -251,7 +251,7 @@ function SettingsPage() {
 
   const hasTaskDefaultsChanges =
     localDefaultTaskType !== defaultTaskType ||
-    localStartCodeTasksImmediately !== startCodeTasksImmediately
+    localStartWorktreeTasksImmediately !== startWorktreeTasksImmediately
 
   // Check if deployment settings have changed
   // We compare local state against server values
@@ -514,11 +514,11 @@ function SettingsPage() {
           })
         )
       }
-      if (localStartCodeTasksImmediately !== startCodeTasksImmediately) {
+      if (localStartWorktreeTasksImmediately !== startWorktreeTasksImmediately) {
         promises.push(
           new Promise((resolve) => {
             updateConfig.mutate(
-              { key: CONFIG_KEYS.START_CODE_TASKS_IMMEDIATELY, value: localStartCodeTasksImmediately },
+              { key: CONFIG_KEYS.START_WORKTREE_TASKS_IMMEDIATELY, value: localStartWorktreeTasksImmediately },
               { onSettled: resolve }
             )
           })
@@ -1273,8 +1273,8 @@ function SettingsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="code">{t('fields.tasks.defaultType.options.code')}</SelectItem>
-                          <SelectItem value="non-code">{t('fields.tasks.defaultType.options.nonCode')}</SelectItem>
+                          <SelectItem value="worktree">{t('fields.tasks.defaultType.options.worktree')}</SelectItem>
+                          <SelectItem value="non-worktree">{t('fields.tasks.defaultType.options.nonWorktree')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1283,15 +1283,15 @@ function SettingsPage() {
                     </p>
                   </div>
 
-                  {/* Start code tasks immediately */}
+                  {/* Start worktree tasks immediately */}
                   <div className="space-y-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
                         {t('fields.tasks.startImmediately.label')}
                       </label>
                       <Switch
-                        checked={localStartCodeTasksImmediately}
-                        onCheckedChange={setLocalStartCodeTasksImmediately}
+                        checked={localStartWorktreeTasksImmediately}
+                        onCheckedChange={setLocalStartWorktreeTasksImmediately}
                         disabled={isLoading}
                       />
                     </div>

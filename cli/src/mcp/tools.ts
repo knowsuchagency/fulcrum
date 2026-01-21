@@ -190,10 +190,10 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
   // create_task
   server.tool(
     'create_task',
-    'Create a new task. For code tasks, provide repoPath to create a git worktree. For non-code tasks, omit repoPath. When tags are provided, returns all existing tags for reference.',
+    'Create a new task. For worktree tasks, provide repoPath to create a git worktree. For non-worktree tasks, omit repoPath. When tags are provided, returns all existing tags for reference.',
     {
       title: z.string().describe('Task title'),
-      repoPath: z.optional(z.string()).describe('Absolute path to the git repository (optional for non-code tasks)'),
+      repoPath: z.optional(z.string()).describe('Absolute path to the git repository (optional for non-worktree tasks)'),
       baseBranch: z.string().default('main').describe('Base branch for the worktree'),
       branch: z.optional(z.string()).describe('Branch name for the task worktree (auto-generated if omitted)'),
       description: z.optional(z.string()).describe('Task description'),

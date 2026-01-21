@@ -39,7 +39,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Switch } from '@/components/ui/switch'
 import { useCreateTask, useAddTaskLink } from '@/hooks/use-tasks'
 import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
-import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel, useDefaultTaskType, useStartCodeTasksImmediately } from '@/hooks/use-config'
+import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel, useDefaultTaskType, useStartWorktreeTasksImmediately } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useProjects } from '@/hooks/use-projects'
@@ -48,7 +48,7 @@ import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { ModelPicker } from '@/components/opencode/model-picker'
 import { useUploadAttachment } from '@/hooks/use-task-attachments'
 
-type TaskType = 'code' | 'non-code'
+type TaskType = 'worktree' | 'non-worktree'
 
 function slugify(text: string): string {
   return text
@@ -97,7 +97,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [browserOpen, setBrowserOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [taskType, setTaskType] = useState<TaskType>('code')
+  const [taskType, setTaskType] = useState<TaskType>('worktree')
   const [startImmediately, setStartImmediately] = useState(true)
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
@@ -133,7 +133,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const { data: defaultAgent } = useDefaultAgent()
   const { data: globalOpencodeModel } = useOpencodeModel()
   const { data: defaultTaskType } = useDefaultTaskType()
-  const { data: defaultStartImmediately } = useStartCodeTasksImmediately()
+  const { data: defaultStartImmediately } = useStartWorktreeTasksImmediately()
   const { data: repositories } = useRepositories()
   const { data: projects } = useProjects()
   const { data: branchData, isLoading: branchesLoading } = useBranches(
@@ -283,10 +283,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     if (!title.trim()) return
 
     // For code tasks, repo is required
-    if (taskType === 'code' && !repoPath) return
+    if (taskType === 'worktree' && !repoPath) return
 
     // Build the task payload based on type
-    const isCodeTask = taskType === 'code'
+    const isCodeTask = taskType === 'worktree'
     // Code tasks that don't start immediately go to TO_DO and don't create worktree yet
     const shouldStartWork = isCodeTask && startImmediately
 
@@ -372,7 +372,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const resetForm = () => {
     setTitle('')
     setDescription('')
-    setTaskType('code')
+    setTaskType('worktree')
     setStartImmediately(true)
     setTags([])
     setTagInput('')
@@ -463,7 +463,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   }
 
   // Cmd+Enter to submit form when modal is open
-  const canSubmit = !createTask.isPending && !!title.trim() && (taskType === 'non-code' || !!repoPath)
+  const canSubmit = !createTask.isPending && !!title.trim() && (taskType === 'non-worktree' || !!repoPath)
   useHotkeys('meta+enter', () => {
     if (formRef.current) {
       formRef.current.requestSubmit()
@@ -491,27 +491,27 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         )}
         <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col overflow-hidden">
           <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-            <DialogHeader className="shrink-0">
+            <DialogHeader className="shrink-0 px-3">
               <div className="flex items-center gap-2">
                 <DialogTitle>{t('createModal.title')}</DialogTitle>
                 <Select value={taskType} onValueChange={(value) => setTaskType(value as TaskType)}>
                   <SelectTrigger className="h-6 w-auto gap-1 rounded-full border-border/50 bg-muted/50 px-2.5 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="code">{t('createModal.taskTypes.code')}</SelectItem>
-                    <SelectItem value="non-code">{t('createModal.taskTypes.nonCode')}</SelectItem>
+                  <SelectContent className="min-w-max">
+                    <SelectItem value="worktree">{t('createModal.taskTypes.worktree')}</SelectItem>
+                    <SelectItem value="non-worktree">{t('createModal.taskTypes.nonWorktree')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <DialogDescription>
-                {taskType === 'code'
-                  ? t('createModal.taskDescriptions.code')
-                  : t('createModal.taskDescriptions.nonCode')}
+                {taskType === 'worktree'
+                  ? t('createModal.taskDescriptions.worktree')
+                  : t('createModal.taskDescriptions.nonWorktree')}
               </DialogDescription>
             </DialogHeader>
 
-            <FieldGroup className="mt-4 pb-4 overflow-y-auto min-h-0 flex-1">
+            <FieldGroup className="mt-4 py-4 px-3 overflow-y-auto min-h-0 flex-1">
               <Field>
                 <FieldLabel htmlFor="title">{t('createModal.fields.title')}</FieldLabel>
                 <Input
@@ -532,7 +532,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                   onValueChange={(value) => {
                     setDescription(value)
                     // Auto-switch AI mode based on description content (unless manually set)
-                    if (!aiModeManuallySet && taskType === 'code') {
+                    if (!aiModeManuallySet && taskType === 'worktree') {
                       setAiMode(value.trim() ? 'plan' : 'default')
                     }
                   }}
@@ -542,7 +542,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
               </Field>
 
               {/* AI Mode - only for code tasks */}
-              {taskType === 'code' && (
+              {taskType === 'worktree' && (
                 <Field>
                   <FieldLabel>{t('createModal.fields.aiMode')}</FieldLabel>
                   <ToggleGroup
@@ -564,7 +564,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
               )}
 
               {/* Project selector for non-code tasks */}
-              {taskType === 'non-code' && (
+              {taskType === 'non-worktree' && (
                 <Field>
                   <FieldLabel>{t('createModal.fields.project')}</FieldLabel>
                   <Select
@@ -593,7 +593,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                 </Field>
               )}
 
-              {taskType === 'code' && (
+              {taskType === 'worktree' && (
                 <>
               <Field>
                 <FieldLabel>{t('createModal.fields.agent')}</FieldLabel>
@@ -939,8 +939,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
               </Field>
             </FieldGroup>
 
-            <DialogFooter className="mt-4 shrink-0">
-              {taskType === 'code' && (
+            <DialogFooter className="mt-4 shrink-0 px-3">
+              {taskType === 'worktree' && (
                 <label className="flex items-center gap-2 mr-auto cursor-pointer">
                   <Switch
                     checked={startImmediately}

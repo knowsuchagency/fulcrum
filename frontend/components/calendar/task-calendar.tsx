@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
-import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
+import { NonWorktreeTaskModal } from '@/components/task/non-worktree-task-modal'
 
 const STATUS_COLORS: Record<TaskStatus, { bg: string; border: string; text: string }> = {
   TO_DO: { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-700' },
@@ -196,9 +196,9 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
         </div>
       </div>
 
-      {/* Non-code task modal */}
+      {/* Non-worktree task modal */}
       {selectedTask && !selectedTask.worktreePath && (
-        <NonCodeTaskModal
+        <NonWorktreeTaskModal
           task={selectedTask}
           open={modalOpen}
           onOpenChange={(open) => {

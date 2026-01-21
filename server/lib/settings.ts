@@ -79,7 +79,7 @@ export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'li
 
 // Nested settings interface
 // Task type for defaults
-export type TaskType = 'code' | 'non-code'
+export type TaskType = 'worktree' | 'non-worktree'
 
 export interface Settings {
   _schemaVersion?: number
@@ -107,7 +107,7 @@ export interface Settings {
   }
   tasks: {
     defaultTaskType: TaskType
-    startCodeTasksImmediately: boolean
+    startWorktreeTasksImmediately: boolean
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -144,8 +144,8 @@ const DEFAULT_SETTINGS: Settings = {
     opencodePlanAgent: 'plan',
   },
   tasks: {
-    defaultTaskType: 'code',
-    startCodeTasksImmediately: true,
+    defaultTaskType: 'worktree',
+    startWorktreeTasksImmediately: true,
   },
   appearance: {
     language: null,
@@ -350,6 +350,14 @@ export function initializeFulcrumDirectories(): void {
   ensureWorktreesDir()
 }
 
+// Migrate old task type values ('code' -> 'worktree', 'non-code' -> 'non-worktree')
+function migrateTaskType(value: string | undefined): TaskType | undefined {
+  if (!value) return undefined
+  if (value === 'code') return 'worktree'
+  if (value === 'non-code') return 'non-worktree'
+  return value as TaskType
+}
+
 // Get settings (with defaults, running migration if needed)
 // Precedence: env var → settings.json → default
 export function getSettings(): Settings {
@@ -412,8 +420,9 @@ export function getSettings(): Settings {
       opencodePlanAgent: ((parsed.agent as Record<string, unknown>)?.opencodePlanAgent as string) ?? DEFAULT_SETTINGS.agent.opencodePlanAgent,
     },
     tasks: {
-      defaultTaskType: ((parsed.tasks as Record<string, unknown>)?.defaultTaskType as TaskType) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
-      startCodeTasksImmediately: ((parsed.tasks as Record<string, unknown>)?.startCodeTasksImmediately as boolean) ?? DEFAULT_SETTINGS.tasks.startCodeTasksImmediately,
+      // Migrate old 'code'/'non-code' values to 'worktree'/'non-worktree'
+      defaultTaskType: migrateTaskType((parsed.tasks as Record<string, unknown>)?.defaultTaskType as string) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
+      startWorktreeTasksImmediately: ((parsed.tasks as Record<string, unknown>)?.startWorktreeTasksImmediately as boolean) ?? ((parsed.tasks as Record<string, unknown>)?.startCodeTasksImmediately as boolean) ?? DEFAULT_SETTINGS.tasks.startWorktreeTasksImmediately,
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,

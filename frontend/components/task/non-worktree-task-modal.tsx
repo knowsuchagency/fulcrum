@@ -5,13 +5,13 @@ import {
 import { TaskContent } from '@/components/task/task-content'
 import type { Task } from '@/types'
 
-interface NonCodeTaskModalProps {
+interface NonWorktreeTaskModalProps {
   task: Task
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function NonCodeTaskModal({ task, open, onOpenChange }: NonCodeTaskModalProps) {
+export function NonWorktreeTaskModal({ task, open, onOpenChange }: NonWorktreeTaskModalProps) {
   const handleDeleted = () => {
     onOpenChange(false)
   }

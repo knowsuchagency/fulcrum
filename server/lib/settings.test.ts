@@ -713,11 +713,31 @@ describe('Settings', () => {
       ensureFulcrumDir()
       const settings = getSettings()
 
-      expect(settings.tasks.defaultTaskType).toBe('code')
-      expect(settings.tasks.startCodeTasksImmediately).toBe(true)
+      expect(settings.tasks.defaultTaskType).toBe('worktree')
+      expect(settings.tasks.startWorktreeTasksImmediately).toBe(true)
     })
 
     test('reads task settings from file', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 1,
+          tasks: {
+            defaultTaskType: 'non-worktree',
+            startWorktreeTasksImmediately: false,
+          },
+        })
+      )
+
+      const { getSettings } = await import('./settings')
+      const settings = getSettings()
+
+      expect(settings.tasks.defaultTaskType).toBe('non-worktree')
+      expect(settings.tasks.startWorktreeTasksImmediately).toBe(false)
+    })
+
+    test('migrates old code/non-code terminology to worktree/non-worktree', async () => {
       const settingsPath = join(tempDir, 'settings.json')
       writeFileSync(
         settingsPath,
@@ -733,8 +753,9 @@ describe('Settings', () => {
       const { getSettings } = await import('./settings')
       const settings = getSettings()
 
-      expect(settings.tasks.defaultTaskType).toBe('non-code')
-      expect(settings.tasks.startCodeTasksImmediately).toBe(false)
+      // Old values should be migrated
+      expect(settings.tasks.defaultTaskType).toBe('non-worktree')
+      expect(settings.tasks.startWorktreeTasksImmediately).toBe(false)
     })
 
     test('updates task settings via updateSettingByPath', async () => {
@@ -744,26 +765,26 @@ describe('Settings', () => {
         JSON.stringify({
           _schemaVersion: 1,
           tasks: {
-            defaultTaskType: 'code',
-            startCodeTasksImmediately: true,
+            defaultTaskType: 'worktree',
+            startWorktreeTasksImmediately: true,
           },
         })
       )
 
       const { updateSettingByPath, getSettings } = await import('./settings')
 
-      updateSettingByPath('tasks.defaultTaskType', 'non-code')
+      updateSettingByPath('tasks.defaultTaskType', 'non-worktree')
       let settings = getSettings()
-      expect(settings.tasks.defaultTaskType).toBe('non-code')
+      expect(settings.tasks.defaultTaskType).toBe('non-worktree')
 
-      updateSettingByPath('tasks.startCodeTasksImmediately', false)
+      updateSettingByPath('tasks.startWorktreeTasksImmediately', false)
       settings = getSettings()
-      expect(settings.tasks.startCodeTasksImmediately).toBe(false)
+      expect(settings.tasks.startWorktreeTasksImmediately).toBe(false)
 
       // Verify persistence
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(file.tasks.defaultTaskType).toBe('non-code')
-      expect(file.tasks.startCodeTasksImmediately).toBe(false)
+      expect(file.tasks.defaultTaskType).toBe('non-worktree')
+      expect(file.tasks.startWorktreeTasksImmediately).toBe(false)
     })
 
     test('ensureLatestSettings adds missing tasks section', async () => {
@@ -785,8 +806,8 @@ describe('Settings', () => {
 
       // Tasks section should be added with defaults
       expect(file.tasks).toBeDefined()
-      expect(file.tasks.defaultTaskType).toBe('code')
-      expect(file.tasks.startCodeTasksImmediately).toBe(true)
+      expect(file.tasks.defaultTaskType).toBe('worktree')
+      expect(file.tasks.startWorktreeTasksImmediately).toBe(true)
     })
 
     test('preserves existing task settings in ensureLatestSettings', async () => {
@@ -797,8 +818,8 @@ describe('Settings', () => {
           _schemaVersion: 1,
           server: { port: 7777 },
           tasks: {
-            defaultTaskType: 'non-code',
-            // Missing startCodeTasksImmediately
+            defaultTaskType: 'non-worktree',
+            // Missing startWorktreeTasksImmediately
           },
         })
       )
@@ -810,9 +831,9 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // User value preserved
-      expect(file.tasks.defaultTaskType).toBe('non-code')
+      expect(file.tasks.defaultTaskType).toBe('non-worktree')
       // Missing key added with default
-      expect(file.tasks.startCodeTasksImmediately).toBe(true)
+      expect(file.tasks.startWorktreeTasksImmediately).toBe(true)
     })
   })
 

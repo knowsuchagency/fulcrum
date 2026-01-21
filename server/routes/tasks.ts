@@ -393,8 +393,8 @@ app.get('/:id', (c) => {
   return c.json(toApiResponse(task, true))
 })
 
-// POST /api/tasks/:id/initialize-code - Initialize a non-code task as a code task
-app.post('/:id/initialize-code', async (c) => {
+// POST /api/tasks/:id/initialize-worktree - Initialize a non-worktree task as a worktree task
+app.post('/:id/initialize-worktree', async (c) => {
   const id = c.req.param('id')
 
   try {
@@ -403,9 +403,9 @@ app.post('/:id/initialize-code', async (c) => {
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    // Check if task already has code context
+    // Check if task already has worktree context
     if (existing.worktreePath) {
-      return c.json({ error: 'Task already has code context' }, 400)
+      return c.json({ error: 'Task already has worktree context' }, 400)
     }
 
     const body = await c.req.json<{
@@ -437,14 +437,14 @@ app.post('/:id/initialize-code', async (c) => {
       try {
         copyFilesToWorktree(body.repoPath, body.worktreePath, body.copyFiles)
       } catch (err) {
-        log.api.error('Failed to copy files during code initialization', { error: String(err) })
+        log.api.error('Failed to copy files during worktree initialization', { error: String(err) })
         // Non-fatal: continue with task update
       }
     }
 
     const now = new Date().toISOString()
 
-    // Update the task with code fields and change status to IN_PROGRESS
+    // Update the task with worktree fields and change status to IN_PROGRESS
     db.update(tasks)
       .set({
         agent: body.agent || 'claude',
@@ -474,7 +474,7 @@ app.post('/:id/initialize-code', async (c) => {
     broadcast({ type: 'task:updated', payload: { taskId: id } })
     return c.json(updated ? toApiResponse(updated, true) : null)
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Failed to initialize code task' }, 400)
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to initialize worktree task' }, 400)
   }
 })
 

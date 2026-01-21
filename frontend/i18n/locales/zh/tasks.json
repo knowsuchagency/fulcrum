@@ -7,12 +7,12 @@
     "title": "创建新任务",
     "description": "创建一个带有 Git 工作树的新任务，用于隔离开发。",
     "taskTypes": {
-      "code": "代码任务",
-      "nonCode": "非代码任务"
+      "worktree": "工作树任务",
+      "nonWorktree": "非工作树任务"
     },
     "taskDescriptions": {
-      "code": "创建 Git 工作树并打开 AI 编程代理。",
-      "nonCode": "无需 Git 工作树或 AI 代理的通用任务。"
+      "worktree": "创建 Git 工作树并打开 AI 编程代理。",
+      "nonWorktree": "无需 Git 工作树或 AI 代理的通用任务。"
     },
     "fields": {
       "title": "标题",

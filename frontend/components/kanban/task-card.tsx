@@ -14,7 +14,7 @@ import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FolderLibraryIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
-import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
+import { NonWorktreeTaskModal } from '@/components/task/non-worktree-task-modal'
 import { useRepositories } from '@/hooks/use-repositories'
 
 interface TaskCardProps {
@@ -39,7 +39,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
 
   // Determine if this is a code task (has worktree or is configured with a repository)
   const isCodeTask = !!(task.worktreePath || task.repositoryId)
-  const isActiveCodeTask = !!task.worktreePath
+  const isActiveWorktreeTask = !!task.worktreePath
   const isPendingCodeTask = !task.worktreePath && !!task.repositoryId
 
   // Get repository info for pending code tasks
@@ -131,7 +131,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
 
     // For active code tasks (has worktree), navigate to detail page
     // For non-code tasks and pending code tasks, open the modal
-    if (isActiveCodeTask) {
+    if (isActiveWorktreeTask) {
       navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
     } else {
       setTaskModalOpen(true)
@@ -235,7 +235,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
             </>
           )}
           {/* Code task metadata - active (has worktree) */}
-          {isActiveCodeTask && (
+          {isActiveWorktreeTask && (
             <span className="inline-flex items-center gap-1 whitespace-nowrap">
               <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
               <span className="truncate max-w-24">{task.repoName}</span>
@@ -288,8 +288,8 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
         </div>,
         previewContainer
       )}
-      {!isActiveCodeTask && (
-        <NonCodeTaskModal
+      {!isActiveWorktreeTask && (
+        <NonWorktreeTaskModal
           task={task}
           open={taskModalOpen}
           onOpenChange={setTaskModalOpen}

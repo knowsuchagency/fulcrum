@@ -7,12 +7,12 @@
     "title": "Create New Task",
     "description": "Create a new task with a git worktree for isolated development.",
     "taskTypes": {
-      "code": "Code Task",
-      "nonCode": "Non-Code Task"
+      "worktree": "Worktree Task",
+      "nonWorktree": "Non-Worktree Task"
     },
     "taskDescriptions": {
-      "code": "Creates a git worktree and opens an AI coding agent.",
-      "nonCode": "A general task without a git worktree or AI agent."
+      "worktree": "Creates a git worktree and opens an AI coding agent.",
+      "nonWorktree": "A general task without a git worktree or AI agent."
     },
     "fields": {
       "title": "Title",

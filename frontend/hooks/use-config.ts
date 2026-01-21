@@ -30,7 +30,7 @@ export const CONFIG_KEYS = {
   CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
   CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
   DEFAULT_TASK_TYPE: 'tasks.defaultTaskType',
-  START_CODE_TASKS_IMMEDIATELY: 'tasks.startCodeTasksImmediately',
+  START_WORKTREE_TASKS_IMMEDIATELY: 'tasks.startWorktreeTasksImmediately',
 } as const
 
 // Default values (client-side fallbacks)
@@ -228,20 +228,20 @@ export function useClaudeCodeDarkTheme() {
 }
 
 // Task defaults
-export type TaskType = 'code' | 'non-code'
+export type TaskType = 'worktree' | 'non-worktree'
 
 export function useDefaultTaskType() {
   const query = useConfig(CONFIG_KEYS.DEFAULT_TASK_TYPE)
 
   return {
     ...query,
-    data: (query.data?.value as TaskType) ?? 'code',
+    data: (query.data?.value as TaskType) ?? 'worktree',
     isDefault: query.data?.isDefault ?? true,
   }
 }
 
-export function useStartCodeTasksImmediately() {
-  const query = useConfig(CONFIG_KEYS.START_CODE_TASKS_IMMEDIATELY)
+export function useStartWorktreeTasksImmediately() {
+  const query = useConfig(CONFIG_KEYS.START_WORKTREE_TASKS_IMMEDIATELY)
 
   return {
     ...query,
@@ -250,6 +250,9 @@ export function useStartCodeTasksImmediately() {
     isDefault: query.data?.isDefault ?? true,
   }
 }
+
+/** @deprecated Use useStartWorktreeTasksImmediately instead */
+export const useStartCodeTasksImmediately = useStartWorktreeTasksImmediately
 
 export function useUpdateConfig() {
   const queryClient = useQueryClient()

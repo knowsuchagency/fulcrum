@@ -21,18 +21,18 @@ import { useUpdateTask } from '@/hooks/use-tasks'
 import { useDefaultAgent } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType, type Task } from '@/types'
 
-interface CodeTaskSettingsProps {
+interface WorktreeTaskSettingsProps {
   task: Task
   compact?: boolean
 }
 
-export function CodeTaskSettings({ task, compact }: CodeTaskSettingsProps) {
+export function WorktreeTaskSettings({ task, compact }: WorktreeTaskSettingsProps) {
   const { data: repositories } = useRepositories()
   const { data: defaultAgent } = useDefaultAgent()
   const updateTask = useUpdateTask()
 
   // Local state for the toggle
-  const [isCodeTask, setIsCodeTask] = useState(!!task.repositoryId)
+  const [isWorktreeTask, setIsWorktreeTask] = useState(!!task.repositoryId)
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(task.repositoryId || null)
   const [repoSearchQuery, setRepoSearchQuery] = useState('')
   const [agent, setAgent] = useState<AgentType>((task.agent as AgentType) || defaultAgent || 'claude')
@@ -74,7 +74,7 @@ export function CodeTaskSettings({ task, compact }: CodeTaskSettingsProps) {
 
   // Handle toggle change
   const handleToggleChange = (checked: boolean) => {
-    setIsCodeTask(checked)
+    setIsWorktreeTask(checked)
     if (!checked) {
       // Clear repository selection when toggling off
       setSelectedRepoId(null)
@@ -136,20 +136,20 @@ export function CodeTaskSettings({ task, compact }: CodeTaskSettingsProps) {
   return (
     <div className={`rounded-lg border bg-card ${paddingClass}`}>
       <div className={`flex items-center justify-between ${marginClass}`}>
-        <h2 className={`${headingClass} font-medium text-muted-foreground`}>Code Task</h2>
+        <h2 className={`${headingClass} font-medium text-muted-foreground`}>Worktree Task</h2>
         <label className="flex items-center gap-2 cursor-pointer">
           <span className="text-xs text-muted-foreground">
-            {isCodeTask ? 'Enabled' : 'Disabled'}
+            {isWorktreeTask ? 'Enabled' : 'Disabled'}
           </span>
           <Switch
-            checked={isCodeTask}
+            checked={isWorktreeTask}
             onCheckedChange={handleToggleChange}
             size="sm"
           />
         </label>
       </div>
 
-      {isCodeTask && (
+      {isWorktreeTask && (
         <div className="space-y-3">
           {/* Repository selector */}
           <div>
@@ -251,7 +251,7 @@ export function CodeTaskSettings({ task, compact }: CodeTaskSettingsProps) {
         </div>
       )}
 
-      {!isCodeTask && (
+      {!isWorktreeTask && (
         <p className={`text-muted-foreground italic ${compact ? 'text-xs' : 'text-sm'}`}>
           Enable to associate a repository and create a worktree when work starts.
         </p>

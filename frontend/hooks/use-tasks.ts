@@ -30,7 +30,7 @@ export function useCreateTask() {
       agent?: string
       aiMode?: 'default' | 'plan'
       status?: TaskStatus
-      // Git-related fields - optional for non-code tasks
+      // Git-related fields - optional for non-worktree tasks
       repoPath?: string | null
       repoName?: string | null
       baseBranch?: string | null

@@ -27,7 +27,7 @@ import { DiffViewer } from '@/components/viewer/diff-viewer'
 import { BrowserPreview } from '@/components/viewer/browser-preview'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
-import { NonCodeTaskView } from '@/components/task/non-code-task-view'
+import { NonWorktreeTaskView } from '@/components/task/non-worktree-task-view'
 import { TaskDetailsPanel } from '@/components/task/task-details-panel'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -159,8 +159,8 @@ function TaskView() {
   const [pendingRetryTerminalId, setPendingRetryTerminalId] = useState<string | null>(null)
   const isMobile = useIsMobile()
 
-  // Determine if this is a code task (has worktree path)
-  const isCodeTask = !!task?.worktreePath
+  // Determine if this is a worktree task (has worktree path)
+  const isWorktreeTask = !!task?.worktreePath
 
   // Determine the active tab - URL takes precedence, then database state
   const activeTab = searchParams.tab ?? viewState.activeTab
@@ -475,9 +475,9 @@ function TaskView() {
     )
   }
 
-  // Non-code task view
-  if (!isCodeTask) {
-    return <NonCodeTaskView task={task} />
+  // Non-worktree task view
+  if (!isWorktreeTask) {
+    return <NonWorktreeTaskView task={task} />
   }
 
   return (

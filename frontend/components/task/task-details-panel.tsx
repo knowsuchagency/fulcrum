@@ -27,7 +27,7 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const [prUrlInput, setPrUrlInput] = useState(task.prUrl || '')
   const [isEditingPrUrl, setIsEditingPrUrl] = useState(false)
 
-  const isCodeTask = !!task.worktreePath
+  const isWorktreeTask = !!task.worktreePath
 
   const handleSaveDescription = () => {
     if (editedDescription !== (task.description || '')) {
@@ -209,7 +209,7 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
         </div>
 
         {/* Pull Request URL - only for code tasks */}
-        {isCodeTask && (
+        {isWorktreeTask && (
           <div className="rounded-lg border bg-card p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-muted-foreground">Pull Request</h3>
@@ -261,7 +261,7 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
         )}
 
         {/* Pin Worktree - only for code tasks */}
-        {isCodeTask && (
+        {isWorktreeTask && (
           <div className="rounded-lg border bg-card p-4">
             <div className="flex items-center gap-3">
               <Checkbox

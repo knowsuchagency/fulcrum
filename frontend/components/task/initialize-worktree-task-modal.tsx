@@ -58,13 +58,13 @@ function generateBranchName(text: string): string {
   return `${slug}-${suffix}`
 }
 
-interface InitializeCodeTaskModalProps {
+interface InitializeWorktreeTaskModalProps {
   task: Task
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function InitializeCodeTaskModal({ task, open, onOpenChange }: InitializeCodeTaskModalProps) {
+export function InitializeWorktreeTaskModal({ task, open, onOpenChange }: InitializeWorktreeTaskModalProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [browserOpen, setBrowserOpen] = useState(false)
@@ -228,8 +228,8 @@ export function InitializeCodeTaskModal({ task, open, onOpenChange }: Initialize
         ? (selectedRepo?.claudeOptions ?? selectedRepoProject?.claudeOptions)
         : (selectedRepo?.opencodeOptions ?? selectedRepoProject?.opencodeOptions)
 
-      // Initialize the task as a code task by updating it with git fields
-      await fetchJSON<Task>(`/api/tasks/${task.id}/initialize-code`, {
+      // Initialize the task as a worktree task by updating it with git fields
+      await fetchJSON<Task>(`/api/tasks/${task.id}/initialize-worktree`, {
         method: 'POST',
         body: JSON.stringify({
           agent,
@@ -263,7 +263,7 @@ export function InitializeCodeTaskModal({ task, open, onOpenChange }: Initialize
         replace: true,
       })
     } catch (error) {
-      toast.error('Failed to initialize code task', {
+      toast.error('Failed to initialize worktree task', {
         description: error instanceof Error ? error.message : String(error),
       })
     } finally {
@@ -284,7 +284,7 @@ export function InitializeCodeTaskModal({ task, open, onOpenChange }: Initialize
         <DialogContent className="sm:max-w-md max-h-[80dvh] flex flex-col overflow-hidden">
           <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
             <DialogHeader className="shrink-0">
-              <DialogTitle>Initialize as Code Task</DialogTitle>
+              <DialogTitle>Initialize as Worktree Task</DialogTitle>
               <DialogDescription>
                 Create a git worktree and start a coding session for "{task.title}"
               </DialogDescription>

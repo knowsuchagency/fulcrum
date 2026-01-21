@@ -6,7 +6,7 @@ import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { LinksManager } from '@/components/task/links-manager'
 import { DependencyManager } from '@/components/task/dependency-manager'
 import { AttachmentsManager } from '@/components/task/attachments-manager'
-import { CodeTaskSettings } from '@/components/task/code-task-settings'
+import { WorktreeTaskSettings } from '@/components/task/worktree-task-settings'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
@@ -368,9 +368,9 @@ export function TaskContent({ task, onDeleted, compact }: TaskContentProps) {
             <AttachmentsManager taskId={task.id} />
           </div>
 
-          {/* Code Task Settings - only shown when task doesn't have a worktree yet */}
+          {/* Worktree Task Settings - only shown when task doesn't have a worktree yet */}
           {!task.worktreePath && (
-            <CodeTaskSettings task={task} compact={compact} />
+            <WorktreeTaskSettings task={task} compact={compact} />
           )}
         </div>
       </div>

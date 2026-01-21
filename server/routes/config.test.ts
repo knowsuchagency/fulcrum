@@ -204,42 +204,42 @@ describe('Config Routes', () => {
       const { put, get } = createTestApp()
 
       // Valid task types
-      const res1 = await put('/api/config/tasks.defaultTaskType', { value: 'code' })
+      const res1 = await put('/api/config/tasks.defaultTaskType', { value: 'worktree' })
       expect(res1.status).toBe(200)
 
-      const res2 = await put('/api/config/tasks.defaultTaskType', { value: 'non-code' })
+      const res2 = await put('/api/config/tasks.defaultTaskType', { value: 'non-worktree' })
       expect(res2.status).toBe(200)
 
       // Verify persistence
       const checkRes = await get('/api/config/tasks.defaultTaskType')
       const checkBody = await checkRes.json()
-      expect(checkBody.value).toBe('non-code')
+      expect(checkBody.value).toBe('non-worktree')
 
-      // Invalid task type
-      const res3 = await put('/api/config/tasks.defaultTaskType', { value: 'invalid' })
+      // Invalid task type (old values are no longer valid)
+      const res3 = await put('/api/config/tasks.defaultTaskType', { value: 'code' })
       expect(res3.status).toBe(400)
       const body3 = await res3.json()
       expect(body3.error).toContain('must be one of')
     })
 
-    test('validates start code tasks immediately', async () => {
+    test('validates start worktree tasks immediately', async () => {
       const { put, get } = createTestApp()
 
       // Valid boolean value
-      const res1 = await put('/api/config/tasks.startCodeTasksImmediately', { value: false })
+      const res1 = await put('/api/config/tasks.startWorktreeTasksImmediately', { value: false })
       expect(res1.status).toBe(200)
 
       // Verify persistence
-      const checkRes = await get('/api/config/tasks.startCodeTasksImmediately')
+      const checkRes = await get('/api/config/tasks.startWorktreeTasksImmediately')
       const checkBody = await checkRes.json()
       expect(checkBody.value).toBe(false)
 
       // Set back to true
-      const res2 = await put('/api/config/tasks.startCodeTasksImmediately', { value: true })
+      const res2 = await put('/api/config/tasks.startWorktreeTasksImmediately', { value: true })
       expect(res2.status).toBe(200)
 
       // Invalid non-boolean value
-      const res3 = await put('/api/config/tasks.startCodeTasksImmediately', { value: 'yes' })
+      const res3 = await put('/api/config/tasks.startWorktreeTasksImmediately', { value: 'yes' })
       expect(res3.status).toBe(400)
       const body3 = await res3.json()
       expect(body3.error).toContain('must be a boolean')

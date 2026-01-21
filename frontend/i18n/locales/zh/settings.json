@@ -99,13 +99,13 @@
         "label": "默认类型",
         "description": "创建新任务时默认选择的类型",
         "options": {
-          "code": "代码任务",
-          "nonCode": "非代码任务"
+          "worktree": "工作树任务",
+          "nonWorktree": "非工作树任务"
         }
       },
       "startImmediately": {
         "label": "立即开始",
-        "description": "启用后，代码任务会立即开始工作并创建 git 工作树。禁用后，任务会进入待办事项。"
+        "description": "启用后，工作树任务会立即开始工作并创建 git 工作树。禁用后，任务会进入待办事项。"
       }
     },
     "language": {

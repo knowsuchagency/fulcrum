@@ -37,7 +37,7 @@ export const CONFIG_KEYS = {
   OPENCODE_DEFAULT_AGENT: 'agent.opencodeDefaultAgent',
   OPENCODE_PLAN_AGENT: 'agent.opencodePlanAgent',
   DEFAULT_TASK_TYPE: 'tasks.defaultTaskType',
-  START_CODE_TASKS_IMMEDIATELY: 'tasks.startCodeTasksImmediately',
+  START_WORKTREE_TASKS_IMMEDIATELY: 'tasks.startWorktreeTasksImmediately',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
@@ -379,13 +379,13 @@ app.put('/:key', async (c) => {
       }
       value = value.trim()
     } else if (path === CONFIG_KEYS.DEFAULT_TASK_TYPE) {
-      const validTaskTypes = ['code', 'non-code']
+      const validTaskTypes = ['worktree', 'non-worktree']
       if (!validTaskTypes.includes(value as string)) {
         return c.json({ error: `Default task type must be one of: ${validTaskTypes.join(', ')}` }, 400)
       }
-    } else if (path === CONFIG_KEYS.START_CODE_TASKS_IMMEDIATELY) {
+    } else if (path === CONFIG_KEYS.START_WORKTREE_TASKS_IMMEDIATELY) {
       if (typeof value !== 'boolean') {
-        return c.json({ error: 'Start code tasks immediately must be a boolean' }, 400)
+        return c.json({ error: 'Start worktree tasks immediately must be a boolean' }, 400)
       }
     } else if (typeof value === 'string' && value === '') {
       // Convert empty strings to null for nullable fields
