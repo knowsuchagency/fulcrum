@@ -430,7 +430,7 @@ interface VersionCheckResponse {
   releaseUrl: string
 }
 
-const VERSION_CHECK_STALE_TIME = 5 * 60 * 1000
+const VERSION_CHECK_STALE_TIME = 2 * 60 * 60 * 1000
 
 export function useVersionCheck() {
   return useQuery({
@@ -438,6 +438,17 @@ export function useVersionCheck() {
     queryFn: () => fetchJSON<VersionCheckResponse>(`${API_BASE}/api/version/check`),
     staleTime: VERSION_CHECK_STALE_TIME,
     refetchOnWindowFocus: false,
+  })
+}
+
+export function useRefreshVersionCheck() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => fetchJSON<VersionCheckResponse>(`${API_BASE}/api/version/check?force=1`),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['version-check'], data)
+    },
   })
 }
 

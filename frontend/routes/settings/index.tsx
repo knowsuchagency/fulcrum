@@ -18,7 +18,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon, ArrowDown01Icon, Alert02Icon, ArrowUp02Icon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon, ArrowDown01Icon, Alert02Icon, ArrowUp02Icon, RefreshIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import {
   usePort,
@@ -45,6 +45,7 @@ import {
   useClaudeCodeDarkTheme,
   useFulcrumVersion,
   useVersionCheck,
+  useRefreshVersionCheck,
   NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
@@ -102,6 +103,7 @@ function SettingsPage() {
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
   const { version } = useFulcrumVersion()
   const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
+  const refreshVersionCheck = useRefreshVersionCheck()
   const triggerUpdate = useTriggerUpdate()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
@@ -675,6 +677,23 @@ function SettingsPage() {
         <div className="flex items-center gap-2">
           {version && <span className="text-xs font-mono text-muted-foreground">v{version}</span>}
           
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            onClick={() => refreshVersionCheck.mutate()}
+            disabled={versionCheckLoading || refreshVersionCheck.isPending}
+            title={t('version.refresh')}
+            aria-label={t('version.refresh')}
+          >
+            <HugeiconsIcon 
+              icon={RefreshIcon} 
+              size={14} 
+              strokeWidth={2} 
+              className={refreshVersionCheck.isPending ? "animate-spin" : ""}
+            />
+          </Button>
+
           {versionCheckLoading && (
             <div className="flex h-6 items-center gap-1.5 rounded-full bg-muted/50 px-2.5 text-xs text-muted-foreground">
               <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
