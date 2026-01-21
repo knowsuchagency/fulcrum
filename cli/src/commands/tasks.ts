@@ -1,8 +1,10 @@
 import { basename } from 'node:path'
+import { defineCommand } from 'citty'
 import { FulcrumClient, type TaskDependenciesResponse } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { TaskStatus, Task, TaskAttachment } from '@shared/types'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 // DONE is intentionally excluded - tasks complete automatically when PRs merge
 const VALID_STATUSES: TaskStatus[] = ['TO_DO', 'IN_PROGRESS', 'IN_REVIEW', 'CANCELED']
@@ -603,3 +605,222 @@ export async function handleTasksCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const tasksListCommand = defineCommand({
+  meta: { name: 'list', description: 'List tasks' },
+  args: {
+    ...globalArgs,
+    status: { type: 'string' as const, description: 'Filter by status' },
+    repo: { type: 'string' as const, description: 'Filter by repo name/path' },
+    'project-id': { type: 'string' as const, description: 'Filter by project ID' },
+    orphans: { type: 'boolean' as const, description: 'Show only orphan tasks' },
+    label: { type: 'string' as const, description: 'Filter by label' },
+    search: { type: 'string' as const, description: 'Search in title and labels' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('list', [], toFlags(args))
+  },
+})
+
+const tasksGetCommand = defineCommand({
+  meta: { name: 'get', description: 'Get task details' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('get', [args.id as string], toFlags(args))
+  },
+})
+
+const tasksCreateCommand = defineCommand({
+  meta: { name: 'create', description: 'Create a task' },
+  args: {
+    ...globalArgs,
+    title: { type: 'string' as const, description: 'Task title', required: true },
+    repo: { type: 'string' as const, alias: 'repo-path', description: 'Repository path' },
+    'base-branch': { type: 'string' as const, description: 'Base branch (default: main)' },
+    branch: { type: 'string' as const, description: 'Branch name' },
+    description: { type: 'string' as const, description: 'Task description' },
+    'project-id': { type: 'string' as const, description: 'Project ID' },
+    'repository-id': { type: 'string' as const, description: 'Repository ID' },
+    labels: { type: 'string' as const, description: 'Comma-separated labels' },
+    'due-date': { type: 'string' as const, description: 'Due date (YYYY-MM-DD)' },
+    status: { type: 'string' as const, description: 'Initial status (default: IN_PROGRESS)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('create', [], toFlags(args))
+  },
+})
+
+const tasksUpdateCommand = defineCommand({
+  meta: { name: 'update', description: 'Update task metadata' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    title: { type: 'string' as const, description: 'New title' },
+    description: { type: 'string' as const, description: 'New description' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('update', [args.id as string], toFlags(args))
+  },
+})
+
+const tasksMoveCommand = defineCommand({
+  meta: { name: 'move', description: 'Move task to a status' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    status: { type: 'string' as const, description: 'Target status', required: true },
+    position: { type: 'string' as const, description: 'Position in column' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('move', [args.id as string], toFlags(args))
+  },
+})
+
+const tasksDeleteCommand = defineCommand({
+  meta: { name: 'delete', description: 'Delete a task' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    'delete-worktree': { type: 'boolean' as const, description: 'Also delete the worktree' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('delete', [args.id as string], toFlags(args))
+  },
+})
+
+const tasksAddLabelCommand = defineCommand({
+  meta: { name: 'add-label', description: 'Add a label to a task' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    label: { type: 'positional' as const, description: 'Label to add', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('add-label', [args.id as string, args.label as string], toFlags(args))
+  },
+})
+
+const tasksRemoveLabelCommand = defineCommand({
+  meta: { name: 'remove-label', description: 'Remove a label from a task' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    label: { type: 'positional' as const, description: 'Label to remove', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('remove-label', [args.id as string, args.label as string], toFlags(args))
+  },
+})
+
+const tasksSetDueDateCommand = defineCommand({
+  meta: { name: 'set-due-date', description: 'Set or clear due date' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    date: { type: 'positional' as const, description: 'Due date (YYYY-MM-DD or null)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('set-due-date', [args.id as string, args.date as string], toFlags(args))
+  },
+})
+
+const tasksAddDependencyCommand = defineCommand({
+  meta: { name: 'add-dependency', description: 'Add a task dependency' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    dependsOn: { type: 'positional' as const, description: 'Task ID to depend on', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('add-dependency', [args.id as string, args.dependsOn as string], toFlags(args))
+  },
+})
+
+const tasksRemoveDependencyCommand = defineCommand({
+  meta: { name: 'remove-dependency', description: 'Remove a task dependency' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+    depId: { type: 'positional' as const, description: 'Dependency ID to remove', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('remove-dependency', [args.id as string, args.depId as string], toFlags(args))
+  },
+})
+
+const tasksListDependenciesCommand = defineCommand({
+  meta: { name: 'list-dependencies', description: 'List task dependencies' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Task ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('list-dependencies', [args.id as string], toFlags(args))
+  },
+})
+
+const tasksLabelsCommand = defineCommand({
+  meta: { name: 'labels', description: 'List all labels' },
+  args: {
+    ...globalArgs,
+    search: { type: 'string' as const, description: 'Search filter' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleTasksCommand('labels', [], toFlags(args))
+  },
+})
+
+const tasksAttachmentsCommand = defineCommand({
+  meta: { name: 'attachments', description: 'Manage task attachments' },
+  args: {
+    ...globalArgs,
+    action: { type: 'positional' as const, description: 'Action: list, upload, delete, path' },
+    taskId: { type: 'positional' as const, description: 'Task ID' },
+    fileOrId: { type: 'positional' as const, description: 'File path or attachment ID' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    const positional = [args.action as string, args.taskId as string, args.fileOrId as string].filter(Boolean)
+    await handleTasksCommand('attachments', positional, toFlags(args))
+  },
+})
+
+export const tasksCommand = defineCommand({
+  meta: { name: 'tasks', description: 'Manage tasks' },
+  subCommands: {
+    list: tasksListCommand,
+    get: tasksGetCommand,
+    create: tasksCreateCommand,
+    update: tasksUpdateCommand,
+    move: tasksMoveCommand,
+    delete: tasksDeleteCommand,
+    'add-label': tasksAddLabelCommand,
+    'remove-label': tasksRemoveLabelCommand,
+    'set-due-date': tasksSetDueDateCommand,
+    'add-dependency': tasksAddDependencyCommand,
+    'remove-dependency': tasksRemoveDependencyCommand,
+    'list-dependencies': tasksListDependenciesCommand,
+    labels: tasksLabelsCommand,
+    attachments: tasksAttachmentsCommand,
+  },
+})

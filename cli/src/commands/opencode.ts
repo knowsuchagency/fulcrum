@@ -9,7 +9,9 @@ import {
 } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { defineCommand } from 'citty'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs } from './shared'
 // @ts-expect-error - Bun text import
 import PLUGIN_CODE from '../../../plugins/fulcrum-opencode/index.ts' with { type: 'text' }
 
@@ -28,7 +30,7 @@ const FULCRUM_MCP_CONFIG = {
   enabled: true,
 }
 
-export async function handleOpenCodeCommand(action: string | undefined) {
+async function handleOpenCodeCommand(action: string | undefined) {
   if (action === 'install') {
     await installOpenCodeIntegration()
     return
@@ -240,3 +242,31 @@ function removeMcpServer(): boolean {
   console.log('✓ Removed MCP server from ' + OPENCODE_CONFIG_PATH)
   return true
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const opencodeInstallCommand = defineCommand({
+  meta: { name: 'install', description: 'Install OpenCode integration' },
+  args: globalArgs,
+  async run() {
+    await handleOpenCodeCommand('install')
+  },
+})
+
+const opencodeUninstallCommand = defineCommand({
+  meta: { name: 'uninstall', description: 'Uninstall OpenCode integration' },
+  args: globalArgs,
+  async run() {
+    await handleOpenCodeCommand('uninstall')
+  },
+})
+
+export const opencodeCommand = defineCommand({
+  meta: { name: 'opencode', description: 'OpenCode integration' },
+  subCommands: {
+    install: opencodeInstallCommand,
+    uninstall: opencodeUninstallCommand,
+  },
+})

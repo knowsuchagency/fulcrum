@@ -1,6 +1,8 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 export async function handleGitCommand(
   action: string | undefined,
@@ -69,3 +71,55 @@ export async function handleGitCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const gitStatusCommand = defineCommand({
+  meta: { name: 'status', description: 'Get git status for a worktree' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Repository path (default: current directory)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleGitCommand('status', toFlags(args))
+  },
+})
+
+const gitDiffCommand = defineCommand({
+  meta: { name: 'diff', description: 'Get git diff for a worktree' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Repository path (default: current directory)' },
+    staged: { type: 'boolean' as const, description: 'Show staged changes only' },
+    'ignore-whitespace': { type: 'boolean' as const, description: 'Ignore whitespace changes' },
+    'include-untracked': { type: 'boolean' as const, description: 'Include untracked files' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleGitCommand('diff', toFlags(args))
+  },
+})
+
+const gitBranchesCommand = defineCommand({
+  meta: { name: 'branches', description: 'List branches in a repository' },
+  args: {
+    ...globalArgs,
+    repo: { type: 'string' as const, description: 'Repository path', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleGitCommand('branches', toFlags(args))
+  },
+})
+
+export const gitCommand = defineCommand({
+  meta: { name: 'git', description: 'Git operations' },
+  subCommands: {
+    status: gitStatusCommand,
+    diff: gitDiffCommand,
+    branches: gitBranchesCommand,
+  },
+})

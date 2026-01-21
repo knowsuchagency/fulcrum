@@ -1,8 +1,10 @@
+import { defineCommand } from 'citty'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import { readPid, removePid, isProcessRunning } from '../utils/process'
+import { globalArgs, setupJsonOutput } from './shared'
 
-export async function handleDownCommand() {
+async function handleDownCommand() {
   const pid = readPid()
 
   if (!pid) {
@@ -60,3 +62,16 @@ export async function handleDownCommand() {
     console.log(`Fulcrum stopped (PID: ${pid})`)
   }
 }
+
+// ============================================================================
+// Command Definition
+// ============================================================================
+
+export const downCommand = defineCommand({
+  meta: { name: 'down', description: 'Stop the Fulcrum server' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleDownCommand()
+  },
+})

@@ -1,7 +1,9 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { ProjectWithDetails } from '@shared/types'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 const VALID_STATUSES = ['active', 'archived'] as const
 
@@ -439,3 +441,152 @@ export async function handleProjectsCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const projectsListCommand = defineCommand({
+  meta: { name: 'list', description: 'List projects' },
+  args: {
+    ...globalArgs,
+    status: { type: 'string' as const, description: 'Filter by status (active/archived)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleProjectsCommand('list', [], toFlags(args))
+  },
+})
+
+const projectsGetCommand = defineCommand({
+  meta: { name: 'get', description: 'Get project details' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Project ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleProjectsCommand('get', [args.id as string], toFlags(args))
+  },
+})
+
+const projectsCreateCommand = defineCommand({
+  meta: { name: 'create', description: 'Create a project' },
+  args: {
+    ...globalArgs,
+    name: { type: 'string' as const, description: 'Project name', required: true },
+    description: { type: 'string' as const, description: 'Project description' },
+    'repository-id': { type: 'string' as const, description: 'Use existing repository' },
+    path: { type: 'string' as const, description: 'Local path to repository' },
+    url: { type: 'string' as const, description: 'Git URL to clone' },
+    'target-dir': { type: 'string' as const, description: 'Clone target directory' },
+    'folder-name': { type: 'string' as const, description: 'Clone folder name' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleProjectsCommand('create', [], toFlags(args))
+  },
+})
+
+const projectsUpdateCommand = defineCommand({
+  meta: { name: 'update', description: 'Update project metadata' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Project ID', required: true },
+    name: { type: 'string' as const, description: 'New name' },
+    description: { type: 'string' as const, description: 'New description' },
+    notes: { type: 'string' as const, description: 'New notes' },
+    status: { type: 'string' as const, description: 'New status (active/archived)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleProjectsCommand('update', [args.id as string], toFlags(args))
+  },
+})
+
+const projectsDeleteCommand = defineCommand({
+  meta: { name: 'delete', description: 'Delete a project' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'Project ID', required: true },
+    'delete-directory': { type: 'boolean' as const, description: 'Also delete the directory' },
+    'delete-app': { type: 'boolean' as const, description: 'Also delete the app' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleProjectsCommand('delete', [args.id as string], toFlags(args))
+  },
+})
+
+const projectsScanCommand = defineCommand({
+  meta: { name: 'scan', description: 'Scan directory for git repos' },
+  args: {
+    ...globalArgs,
+    directory: { type: 'string' as const, alias: 'path', description: 'Directory to scan' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleProjectsCommand('scan', [], toFlags(args))
+  },
+})
+
+const projectsTagsCommand = defineCommand({
+  meta: { name: 'tags', description: 'Manage project tags' },
+  args: {
+    ...globalArgs,
+    action: { type: 'positional' as const, description: 'Action: add, remove' },
+    projectId: { type: 'positional' as const, description: 'Project ID' },
+    tag: { type: 'positional' as const, description: 'Tag name or ID' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    const positional = [args.action as string, args.projectId as string, args.tag as string].filter(Boolean)
+    await handleProjectsCommand('tags', positional, toFlags(args))
+  },
+})
+
+const projectsAttachmentsCommand = defineCommand({
+  meta: { name: 'attachments', description: 'Manage project attachments' },
+  args: {
+    ...globalArgs,
+    action: { type: 'positional' as const, description: 'Action: list, upload, download, delete' },
+    projectId: { type: 'positional' as const, description: 'Project ID' },
+    fileOrId: { type: 'positional' as const, description: 'File path or attachment ID' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    const positional = [args.action as string, args.projectId as string, args.fileOrId as string].filter(Boolean)
+    await handleProjectsCommand('attachments', positional, toFlags(args))
+  },
+})
+
+const projectsLinksCommand = defineCommand({
+  meta: { name: 'links', description: 'Manage project links' },
+  args: {
+    ...globalArgs,
+    action: { type: 'positional' as const, description: 'Action: list, add, remove' },
+    projectId: { type: 'positional' as const, description: 'Project ID' },
+    urlOrId: { type: 'positional' as const, description: 'URL or link ID' },
+    label: { type: 'string' as const, description: 'Link label (for add)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    const positional = [args.action as string, args.projectId as string, args.urlOrId as string].filter(Boolean)
+    await handleProjectsCommand('links', positional, toFlags(args))
+  },
+})
+
+export const projectsCommand = defineCommand({
+  meta: { name: 'projects', description: 'Manage projects' },
+  subCommands: {
+    list: projectsListCommand,
+    get: projectsGetCommand,
+    create: projectsCreateCommand,
+    update: projectsUpdateCommand,
+    delete: projectsDeleteCommand,
+    scan: projectsScanCommand,
+    tags: projectsTagsCommand,
+    attachments: projectsAttachmentsCommand,
+    links: projectsLinksCommand,
+  },
+})

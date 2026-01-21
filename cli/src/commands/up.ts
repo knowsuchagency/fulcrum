@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { defineCommand } from 'citty'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import { writePid, readPid, removePid, isProcessRunning, getPort } from '../utils/process'
@@ -20,6 +21,7 @@ import {
 import { getDependency, getInstallMethod, getInstallCommand } from '../utils/dependencies'
 import { installClaudePlugin, needsPluginUpdate } from './claude'
 import pkg from '../../../package.json'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 /**
  * Gets the package root directory (where the CLI is installed).
@@ -45,7 +47,7 @@ function getPackageRoot(): string {
   return dirname(dirname(dirname(currentFile)))
 }
 
-export async function handleUpCommand(flags: Record<string, string>) {
+async function handleUpCommand(flags: Record<string, string>) {
   const autoYes = flags.yes === 'true' || flags.y === 'true'
 
   // Check for migration from ~/.vibora (legacy Vibora installation)
@@ -271,3 +273,20 @@ Commands:
 `)
   }
 }
+
+// ============================================================================
+// Command Definition
+// ============================================================================
+
+export const upCommand = defineCommand({
+  meta: { name: 'up', description: 'Start the Fulcrum server' },
+  args: {
+    ...globalArgs,
+    yes: { type: 'boolean' as const, alias: 'y', description: 'Auto-answer yes to prompts' },
+    host: { type: 'boolean' as const, description: 'Bind to 0.0.0.0 (expose to network)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleUpCommand(toFlags(args))
+  },
+})

@@ -1,7 +1,9 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { FileTreeEntry } from '@shared/types'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 function formatDirectoryEntry(entry: { name: string; type: string; isGitRepo?: boolean }): string {
   const icon = entry.type === 'directory' ? (entry.isGitRepo ? '📁' : '📂') : '📄'
@@ -193,3 +195,111 @@ export async function handleFsCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const fsListCommand = defineCommand({
+  meta: { name: 'list', description: 'List directory contents' },
+  args: {
+    ...globalArgs,
+    path: { type: 'positional' as const, description: 'Directory path' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleFsCommand('list', args.path ? [args.path as string] : [], toFlags(args))
+  },
+})
+
+const fsTreeCommand = defineCommand({
+  meta: { name: 'tree', description: 'Get file tree' },
+  args: {
+    ...globalArgs,
+    root: { type: 'positional' as const, description: 'Root directory path', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleFsCommand('tree', args.root ? [args.root as string] : [], toFlags(args))
+  },
+})
+
+const fsReadCommand = defineCommand({
+  meta: { name: 'read', description: 'Read file contents' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'File path', required: true },
+    root: { type: 'string' as const, description: 'Root directory', required: true },
+    'max-lines': { type: 'string' as const, description: 'Maximum lines to read' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleFsCommand('read', [], toFlags(args))
+  },
+})
+
+const fsWriteCommand = defineCommand({
+  meta: { name: 'write', description: 'Write file contents' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'File path', required: true },
+    root: { type: 'string' as const, description: 'Root directory', required: true },
+    content: { type: 'string' as const, description: 'Content to write', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleFsCommand('write', [], toFlags(args))
+  },
+})
+
+const fsEditCommand = defineCommand({
+  meta: { name: 'edit', description: 'Edit file by string replacement' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'File path', required: true },
+    root: { type: 'string' as const, description: 'Root directory', required: true },
+    'old-string': { type: 'string' as const, description: 'String to replace', required: true },
+    'new-string': { type: 'string' as const, description: 'Replacement string', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleFsCommand('edit', [], toFlags(args))
+  },
+})
+
+const fsStatCommand = defineCommand({
+  meta: { name: 'stat', description: 'Get file/directory metadata' },
+  args: {
+    ...globalArgs,
+    path: { type: 'positional' as const, description: 'Path to check', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleFsCommand('stat', args.path ? [args.path as string] : [], toFlags(args))
+  },
+})
+
+const fsIsGitRepoCommand = defineCommand({
+  meta: { name: 'is-git-repo', description: 'Check if path is a git repo' },
+  args: {
+    ...globalArgs,
+    path: { type: 'positional' as const, description: 'Path to check', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleFsCommand('is-git-repo', args.path ? [args.path as string] : [], toFlags(args))
+  },
+})
+
+export const fsCommand = defineCommand({
+  meta: { name: 'fs', description: 'Filesystem operations' },
+  subCommands: {
+    list: fsListCommand,
+    tree: fsTreeCommand,
+    read: fsReadCommand,
+    write: fsWriteCommand,
+    edit: fsEditCommand,
+    stat: fsStatCommand,
+    'is-git-repo': fsIsGitRepoCommand,
+  },
+})

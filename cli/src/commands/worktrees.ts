@@ -1,6 +1,8 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 export async function handleWorktreesCommand(
   action: string | undefined,
@@ -50,3 +52,40 @@ export async function handleWorktreesCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const worktreesListCommand = defineCommand({
+  meta: { name: 'list', description: 'List all worktrees' },
+  args: {
+    ...globalArgs,
+    repo: { type: 'string' as const, description: 'Repository path' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleWorktreesCommand('list', toFlags(args))
+  },
+})
+
+const worktreesDeleteCommand = defineCommand({
+  meta: { name: 'delete', description: 'Delete a worktree' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Worktree path', required: true },
+    force: { type: 'boolean' as const, description: 'Force deletion' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleWorktreesCommand('delete', toFlags(args))
+  },
+})
+
+export const worktreesCommand = defineCommand({
+  meta: { name: 'worktrees', description: 'Manage git worktrees' },
+  subCommands: {
+    list: worktreesListCommand,
+    delete: worktreesDeleteCommand,
+  },
+})

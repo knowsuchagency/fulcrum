@@ -1,6 +1,8 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 export async function handleConfigCommand(
   action: string | undefined,
@@ -80,3 +82,63 @@ export async function handleConfigCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const configListCommand = defineCommand({
+  meta: { name: 'list', description: 'List all config values' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleConfigCommand('list', [], toFlags(args))
+  },
+})
+
+const configGetCommand = defineCommand({
+  meta: { name: 'get', description: 'Get a config value' },
+  args: {
+    ...globalArgs,
+    key: { type: 'positional' as const, description: 'Config key', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleConfigCommand('get', [args.key as string], toFlags(args))
+  },
+})
+
+const configSetCommand = defineCommand({
+  meta: { name: 'set', description: 'Set a config value' },
+  args: {
+    ...globalArgs,
+    key: { type: 'positional' as const, description: 'Config key', required: true },
+    value: { type: 'positional' as const, description: 'Config value', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleConfigCommand('set', [args.key as string, args.value as string], toFlags(args))
+  },
+})
+
+const configResetCommand = defineCommand({
+  meta: { name: 'reset', description: 'Reset a config value to default' },
+  args: {
+    ...globalArgs,
+    key: { type: 'positional' as const, description: 'Config key', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleConfigCommand('reset', [args.key as string], toFlags(args))
+  },
+})
+
+export const configCommand = defineCommand({
+  meta: { name: 'config', description: 'Manage configuration' },
+  subCommands: {
+    list: configListCommand,
+    get: configGetCommand,
+    set: configSetCommand,
+    reset: configResetCommand,
+  },
+})

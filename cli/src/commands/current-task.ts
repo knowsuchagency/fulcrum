@@ -1,7 +1,9 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient, type TaskDependenciesResponse } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { TaskStatus, Task, TaskAttachment } from '@shared/types'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 const STATUS_MAP: Record<string, TaskStatus> = {
   review: 'IN_REVIEW',
@@ -122,7 +124,7 @@ async function findCurrentTask(client: FulcrumClient, pathOverride?: string) {
   return task
 }
 
-export async function handleCurrentTaskCommand(
+async function handleCurrentTaskCommand(
   action: string | undefined,
   rest: string[],
   flags: Record<string, string>
@@ -254,3 +256,110 @@ export async function handleCurrentTaskCommand(
     console.log(`Moved task to ${newStatus}: ${updatedTask.title}`)
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const currentTaskInfoCommand = defineCommand({
+  meta: { name: 'info', description: 'Show current task info' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand(undefined, [], toFlags(args))
+  },
+})
+
+const currentTaskPrCommand = defineCommand({
+  meta: { name: 'pr', description: 'Link a PR to current task' },
+  args: {
+    ...globalArgs,
+    url: { type: 'positional' as const, description: 'PR URL', required: true },
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('pr', [args.url as string], toFlags(args))
+  },
+})
+
+const currentTaskLinkCommand = defineCommand({
+  meta: { name: 'link', description: 'Manage task links' },
+  args: {
+    ...globalArgs,
+    url: { type: 'positional' as const, description: 'URL to add (or --remove <id>)' },
+    label: { type: 'string' as const, description: 'Display label for the link' },
+    remove: { type: 'string' as const, alias: 'r', description: 'Remove link by URL or ID' },
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    const rest: string[] = []
+    if (args.remove) {
+      rest.push('--remove', args.remove as string)
+    } else if (args.url) {
+      rest.push(args.url as string)
+    }
+    await handleCurrentTaskCommand('link', rest, toFlags(args))
+  },
+})
+
+const currentTaskReviewCommand = defineCommand({
+  meta: { name: 'review', description: 'Move task to IN_REVIEW' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('review', [], toFlags(args))
+  },
+})
+
+const currentTaskDoneCommand = defineCommand({
+  meta: { name: 'done', description: 'Move task to DONE' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('done', [], toFlags(args))
+  },
+})
+
+const currentTaskCancelCommand = defineCommand({
+  meta: { name: 'cancel', description: 'Move task to CANCELED' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('cancel', [], toFlags(args))
+  },
+})
+
+export const currentTaskCommand = defineCommand({
+  meta: { name: 'current-task', description: 'Manage the current worktree task' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  subCommands: {
+    info: currentTaskInfoCommand,
+    pr: currentTaskPrCommand,
+    link: currentTaskLinkCommand,
+    review: currentTaskReviewCommand,
+    done: currentTaskDoneCommand,
+    cancel: currentTaskCancelCommand,
+  },
+  async run({ args }) {
+    // Default: show current task info
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand(undefined, [], toFlags(args))
+  },
+})

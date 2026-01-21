@@ -1,7 +1,9 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import type { App, Deployment } from '@shared/types'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 const VALID_STATUSES = ['stopped', 'building', 'running', 'failed'] as const
 
@@ -311,3 +313,138 @@ export async function handleAppsCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const appsListCommand = defineCommand({
+  meta: { name: 'list', description: 'List apps' },
+  args: {
+    ...globalArgs,
+    status: { type: 'string' as const, description: 'Filter by status' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('list', [], toFlags(args))
+  },
+})
+
+const appsGetCommand = defineCommand({
+  meta: { name: 'get', description: 'Get app details' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'App ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('get', [args.id as string], toFlags(args))
+  },
+})
+
+const appsCreateCommand = defineCommand({
+  meta: { name: 'create', description: 'Create an app' },
+  args: {
+    ...globalArgs,
+    name: { type: 'string' as const, description: 'App name', required: true },
+    'repository-id': { type: 'string' as const, description: 'Repository ID', required: true },
+    branch: { type: 'string' as const, description: 'Branch to deploy' },
+    'compose-file': { type: 'string' as const, description: 'Docker Compose file path' },
+    'auto-deploy': { type: 'boolean' as const, description: 'Enable auto-deploy' },
+    'no-cache': { type: 'boolean' as const, description: 'Build without cache' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('create', [], toFlags(args))
+  },
+})
+
+const appsDeleteCommand = defineCommand({
+  meta: { name: 'delete', description: 'Delete an app' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'App ID', required: true },
+    'keep-containers': { type: 'boolean' as const, description: 'Keep running containers' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('delete', [args.id as string], toFlags(args))
+  },
+})
+
+const appsDeployCommand = defineCommand({
+  meta: { name: 'deploy', description: 'Deploy an app' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'App ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('deploy', [args.id as string], toFlags(args))
+  },
+})
+
+const appsStopCommand = defineCommand({
+  meta: { name: 'stop', description: 'Stop an app' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'App ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('stop', [args.id as string], toFlags(args))
+  },
+})
+
+const appsLogsCommand = defineCommand({
+  meta: { name: 'logs', description: 'Get app logs' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'App ID', required: true },
+    service: { type: 'string' as const, description: 'Specific service' },
+    tail: { type: 'string' as const, description: 'Number of lines' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('logs', [args.id as string], toFlags(args))
+  },
+})
+
+const appsStatusCommand = defineCommand({
+  meta: { name: 'status', description: 'Get app container status' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'App ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('status', [args.id as string], toFlags(args))
+  },
+})
+
+const appsDeploymentsCommand = defineCommand({
+  meta: { name: 'deployments', description: 'List deployment history' },
+  args: {
+    ...globalArgs,
+    id: { type: 'positional' as const, description: 'App ID', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleAppsCommand('deployments', [args.id as string], toFlags(args))
+  },
+})
+
+export const appsCommand = defineCommand({
+  meta: { name: 'apps', description: 'Manage apps' },
+  subCommands: {
+    list: appsListCommand,
+    get: appsGetCommand,
+    create: appsCreateCommand,
+    delete: appsDeleteCommand,
+    deploy: appsDeployCommand,
+    stop: appsStopCommand,
+    logs: appsLogsCommand,
+    status: appsStatusCommand,
+    deployments: appsDeploymentsCommand,
+  },
+})

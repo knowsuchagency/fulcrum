@@ -2,7 +2,9 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { defineCommand } from 'citty'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs } from './shared'
 
 // Plugin bundle: import all files as text using Bun
 // @ts-expect-error - Bun text import
@@ -72,7 +74,7 @@ function getInstalledVersion(): string | null {
   }
 }
 
-export async function handleClaudeCommand(action: string | undefined) {
+async function handleClaudeCommand(action: string | undefined) {
   if (action === 'install') {
     await installClaudePlugin()
     return
@@ -190,3 +192,31 @@ function cleanupLegacyPaths(log: (msg: string) => void): void {
     }
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const claudeInstallCommand = defineCommand({
+  meta: { name: 'install', description: 'Install Claude Code plugin' },
+  args: globalArgs,
+  async run() {
+    await handleClaudeCommand('install')
+  },
+})
+
+const claudeUninstallCommand = defineCommand({
+  meta: { name: 'uninstall', description: 'Uninstall Claude Code plugin' },
+  args: globalArgs,
+  async run() {
+    await handleClaudeCommand('uninstall')
+  },
+})
+
+export const claudeCommand = defineCommand({
+  meta: { name: 'claude', description: 'Claude Code integration' },
+  subCommands: {
+    install: claudeInstallCommand,
+    uninstall: claudeUninstallCommand,
+  },
+})
