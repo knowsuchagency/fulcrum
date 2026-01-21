@@ -159,6 +159,13 @@ function TaskView() {
   const [pendingRetryTerminalId, setPendingRetryTerminalId] = useState<string | null>(null)
   const isMobile = useIsMobile()
 
+  // Inline title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editedTitle, setEditedTitle] = useState('')
+  const [titleWidth, setTitleWidth] = useState<number | null>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const titleTextRef = useRef<HTMLHeadingElement>(null)
+
   // Determine if this is a worktree task (has worktree path)
   const isWorktreeTask = !!task?.worktreePath
 
@@ -254,6 +261,52 @@ function TaskView() {
 
     return dispose
   }, [pendingRetryTerminalId, store])
+
+  // Focus title input when entering edit mode
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [isEditingTitle])
+
+  const handleStartEditTitle = () => {
+    if (task) {
+      // Capture the width of the title text before switching to edit mode
+      if (titleTextRef.current) {
+        setTitleWidth(titleTextRef.current.offsetWidth)
+      }
+      setEditedTitle(task.title)
+      setIsEditingTitle(true)
+    }
+  }
+
+  const handleSaveTitle = () => {
+    if (!task) return
+    const trimmedTitle = editedTitle.trim()
+    if (trimmedTitle && trimmedTitle !== task.title) {
+      updateTask.mutate({
+        taskId: task.id,
+        updates: { title: trimmedTitle },
+      })
+    }
+    setIsEditingTitle(false)
+  }
+
+  const handleCancelEditTitle = () => {
+    setIsEditingTitle(false)
+    setEditedTitle('')
+  }
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSaveTitle()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      handleCancelEditTitle()
+    }
+  }
 
   // Restart task terminal - destroys existing and forces TaskTerminal remount
   const handleRetry = () => {
@@ -488,9 +541,27 @@ function TaskView() {
         <div className="flex flex-col gap-1 sm:hidden">
           {/* Row 1: Title + status + operations + delete */}
           <div className="flex items-center gap-2">
-            <h1 className="min-w-0 flex-1 truncate text-sm font-medium">
-              {task.title}
-            </h1>
+            {isEditingTitle ? (
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onKeyDown={handleTitleKeyDown}
+                onBlur={handleSaveTitle}
+                className="min-w-0 flex-1 truncate text-sm font-medium bg-transparent border-b border-primary outline-none"
+                style={{ minWidth: titleWidth ? `${titleWidth}px` : undefined }}
+              />
+            ) : (
+              <h1
+                ref={titleTextRef}
+                className="min-w-0 flex-1 truncate text-sm font-medium cursor-pointer hover:text-primary transition-colors"
+                onClick={handleStartEditTitle}
+                title="Click to edit title"
+              >
+                {task.title}
+              </h1>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
@@ -601,9 +672,27 @@ function TaskView() {
         <div className="hidden items-center gap-3 sm:flex">
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm font-medium">
-                {task.title}
-              </h1>
+              {isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  onBlur={handleSaveTitle}
+                  className="text-sm font-medium bg-transparent border-b border-primary outline-none"
+                  style={{ minWidth: titleWidth ? `${titleWidth}px` : 200 }}
+                />
+              ) : (
+                <h1
+                  ref={titleTextRef}
+                  className="text-sm font-medium cursor-pointer hover:text-primary transition-colors"
+                  onClick={handleStartEditTitle}
+                  title="Click to edit title"
+                >
+                  {task.title}
+                </h1>
+              )}
               <button
                 type="button"
                 className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"

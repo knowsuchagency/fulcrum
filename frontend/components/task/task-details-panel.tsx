@@ -19,6 +19,8 @@ interface TaskDetailsPanelProps {
 
 export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const updateTask = useUpdateTask()
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editedTitle, setEditedTitle] = useState(task.title)
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [editedDescription, setEditedDescription] = useState(task.description || '')
   const [isEditingNotes, setIsEditingNotes] = useState(false)
@@ -109,11 +111,90 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
     })
   }
 
+  const handleSaveTitle = () => {
+    const trimmedTitle = editedTitle.trim()
+    if (trimmedTitle && trimmedTitle !== task.title) {
+      updateTask.mutate({
+        taskId: task.id,
+        updates: { title: trimmedTitle },
+      })
+    }
+    setIsEditingTitle(false)
+  }
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSaveTitle()
+    } else if (e.key === 'Escape') {
+      setEditedTitle(task.title)
+      setIsEditingTitle(false)
+    }
+  }
+
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE' && task.status !== 'CANCELED'
 
   return (
     <div className="h-full overflow-auto p-4">
       <div className="max-w-2xl space-y-4">
+        {/* Title */}
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Title</h3>
+            {!isEditingTitle && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditedTitle(task.title)
+                  setIsEditingTitle(true)
+                }}
+                className="text-xs h-7"
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+          {isEditingTitle ? (
+            <div className="space-y-2">
+              <Input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onKeyDown={handleTitleKeyDown}
+                onBlur={handleSaveTitle}
+                placeholder="Task title"
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditedTitle(task.title)
+                    setIsEditingTitle(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveTitle}>
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p
+              className="text-sm font-medium cursor-pointer hover:text-primary transition-colors"
+              onClick={() => {
+                setEditedTitle(task.title)
+                setIsEditingTitle(true)
+              }}
+              title="Click to edit title"
+            >
+              {task.title}
+            </p>
+          )}
+        </div>
+
         {/* Description */}
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-2">
