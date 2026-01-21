@@ -707,6 +707,115 @@ describe('Settings', () => {
     })
   })
 
+  describe('task settings', () => {
+    test('returns default task settings when not configured', async () => {
+      const { getSettings, ensureFulcrumDir } = await import('./settings')
+      ensureFulcrumDir()
+      const settings = getSettings()
+
+      expect(settings.tasks.defaultTaskType).toBe('code')
+      expect(settings.tasks.startCodeTasksImmediately).toBe(true)
+    })
+
+    test('reads task settings from file', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 1,
+          tasks: {
+            defaultTaskType: 'non-code',
+            startCodeTasksImmediately: false,
+          },
+        })
+      )
+
+      const { getSettings } = await import('./settings')
+      const settings = getSettings()
+
+      expect(settings.tasks.defaultTaskType).toBe('non-code')
+      expect(settings.tasks.startCodeTasksImmediately).toBe(false)
+    })
+
+    test('updates task settings via updateSettingByPath', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 1,
+          tasks: {
+            defaultTaskType: 'code',
+            startCodeTasksImmediately: true,
+          },
+        })
+      )
+
+      const { updateSettingByPath, getSettings } = await import('./settings')
+
+      updateSettingByPath('tasks.defaultTaskType', 'non-code')
+      let settings = getSettings()
+      expect(settings.tasks.defaultTaskType).toBe('non-code')
+
+      updateSettingByPath('tasks.startCodeTasksImmediately', false)
+      settings = getSettings()
+      expect(settings.tasks.startCodeTasksImmediately).toBe(false)
+
+      // Verify persistence
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+      expect(file.tasks.defaultTaskType).toBe('non-code')
+      expect(file.tasks.startCodeTasksImmediately).toBe(false)
+    })
+
+    test('ensureLatestSettings adds missing tasks section', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 1,
+          server: { port: 7777 },
+          // No tasks section
+        })
+      )
+
+      const { ensureLatestSettings, ensureFulcrumDir } = await import('./settings')
+      ensureFulcrumDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // Tasks section should be added with defaults
+      expect(file.tasks).toBeDefined()
+      expect(file.tasks.defaultTaskType).toBe('code')
+      expect(file.tasks.startCodeTasksImmediately).toBe(true)
+    })
+
+    test('preserves existing task settings in ensureLatestSettings', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(
+        settingsPath,
+        JSON.stringify({
+          _schemaVersion: 1,
+          server: { port: 7777 },
+          tasks: {
+            defaultTaskType: 'non-code',
+            // Missing startCodeTasksImmediately
+          },
+        })
+      )
+
+      const { ensureLatestSettings, ensureFulcrumDir } = await import('./settings')
+      ensureFulcrumDir()
+      ensureLatestSettings()
+
+      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+
+      // User value preserved
+      expect(file.tasks.defaultTaskType).toBe('non-code')
+      // Missing key added with default
+      expect(file.tasks.startCodeTasksImmediately).toBe(true)
+    })
+  })
+
   describe('helper functions', () => {
     test('getNestedValue retrieves nested values', async () => {
       const { getNestedValue } = await import('./settings')

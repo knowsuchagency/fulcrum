@@ -17,6 +17,9 @@ export type ClaudeCodeTheme = 'light' | 'light-ansi' | 'light-daltonized' | 'dar
 export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'light-daltonized', 'dark', 'dark-ansi', 'dark-daltonized']
 
 // Nested settings interface
+// Task type for defaults
+export type TaskType = 'code' | 'non-code'
+
 export interface Settings {
   _schemaVersion?: number
   server: {
@@ -40,6 +43,10 @@ export interface Settings {
     opencodeModel: string | null
     opencodeDefaultAgent: string
     opencodePlanAgent: string
+  }
+  tasks: {
+    defaultTaskType: TaskType
+    startCodeTasksImmediately: boolean
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -74,6 +81,10 @@ const DEFAULT_SETTINGS: Settings = {
     opencodeModel: null,
     opencodeDefaultAgent: 'build',
     opencodePlanAgent: 'plan',
+  },
+  tasks: {
+    defaultTaskType: 'code',
+    startCodeTasksImmediately: true,
   },
   appearance: {
     language: null,
@@ -333,6 +344,10 @@ export function getSettings(): Settings {
       opencodeDefaultAgent: ((parsed.agent as Record<string, unknown>)?.opencodeDefaultAgent as string) ?? DEFAULT_SETTINGS.agent.opencodeDefaultAgent,
       opencodePlanAgent: ((parsed.agent as Record<string, unknown>)?.opencodePlanAgent as string) ?? DEFAULT_SETTINGS.agent.opencodePlanAgent,
     },
+    tasks: {
+      defaultTaskType: ((parsed.tasks as Record<string, unknown>)?.defaultTaskType as TaskType) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
+      startCodeTasksImmediately: ((parsed.tasks as Record<string, unknown>)?.startCodeTasksImmediately as boolean) ?? DEFAULT_SETTINGS.tasks.startCodeTasksImmediately,
+    },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
       theme: ((parsed.appearance as Record<string, unknown>)?.theme as 'system' | 'light' | 'dark' | null) ?? null,
@@ -367,6 +382,7 @@ export function getSettings(): Settings {
       cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? fileSettings.integrations.cloudflareAccountId,
     },
     agent: fileSettings.agent,
+    tasks: fileSettings.tasks,
     appearance: fileSettings.appearance,
   }
 }

@@ -6,11 +6,11 @@ import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { LinksManager } from '@/components/task/links-manager'
 import { DependencyManager } from '@/components/task/dependency-manager'
 import { AttachmentsManager } from '@/components/task/attachments-manager'
+import { CodeTaskSettings } from '@/components/task/code-task-settings'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
   Cancel01Icon,
-  Settings05Icon,
 } from '@hugeicons/core-free-icons'
 import {
   DropdownMenu,
@@ -41,13 +41,12 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 
 interface TaskContentProps {
   task: Task
-  onInitializeAsCodeTask?: () => void
   onDeleted?: () => void
   /** If true, uses compact styling for modal */
   compact?: boolean
 }
 
-export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }: TaskContentProps) {
+export function TaskContent({ task, onDeleted, compact }: TaskContentProps) {
   const updateTask = useUpdateTask()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -369,22 +368,9 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
             <AttachmentsManager taskId={task.id} />
           </div>
 
-          {/* Initialize as Code Task */}
-          {onInitializeAsCodeTask && (
-            <div className={`rounded-lg border border-dashed bg-muted/30 ${compact ? 'p-4' : 'p-6'} text-center`}>
-              <p className={`${compact ? 'text-xs' : 'text-sm'} text-muted-foreground ${compact ? 'mb-3' : 'mb-4'}`}>
-                This task doesn't have a code context yet.
-              </p>
-              <Button size={compact ? 'sm' : 'default'} onClick={onInitializeAsCodeTask}>
-                <HugeiconsIcon icon={Settings05Icon} size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} />
-                Initialize as Code Task
-              </Button>
-              {!compact && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Creates a git worktree and opens an AI coding agent.
-                </p>
-              )}
-            </div>
+          {/* Code Task Settings - only shown when task doesn't have a worktree yet */}
+          {!task.worktreePath && (
+            <CodeTaskSettings task={task} compact={compact} />
           )}
         </div>
       </div>

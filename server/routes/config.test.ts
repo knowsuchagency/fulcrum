@@ -199,6 +199,51 @@ describe('Config Routes', () => {
       const res3 = await put('/api/config/agent.defaultAgent', { value: 'invalid' })
       expect(res3.status).toBe(400)
     })
+
+    test('validates default task type', async () => {
+      const { put, get } = createTestApp()
+
+      // Valid task types
+      const res1 = await put('/api/config/tasks.defaultTaskType', { value: 'code' })
+      expect(res1.status).toBe(200)
+
+      const res2 = await put('/api/config/tasks.defaultTaskType', { value: 'non-code' })
+      expect(res2.status).toBe(200)
+
+      // Verify persistence
+      const checkRes = await get('/api/config/tasks.defaultTaskType')
+      const checkBody = await checkRes.json()
+      expect(checkBody.value).toBe('non-code')
+
+      // Invalid task type
+      const res3 = await put('/api/config/tasks.defaultTaskType', { value: 'invalid' })
+      expect(res3.status).toBe(400)
+      const body3 = await res3.json()
+      expect(body3.error).toContain('must be one of')
+    })
+
+    test('validates start code tasks immediately', async () => {
+      const { put, get } = createTestApp()
+
+      // Valid boolean value
+      const res1 = await put('/api/config/tasks.startCodeTasksImmediately', { value: false })
+      expect(res1.status).toBe(200)
+
+      // Verify persistence
+      const checkRes = await get('/api/config/tasks.startCodeTasksImmediately')
+      const checkBody = await checkRes.json()
+      expect(checkBody.value).toBe(false)
+
+      // Set back to true
+      const res2 = await put('/api/config/tasks.startCodeTasksImmediately', { value: true })
+      expect(res2.status).toBe(200)
+
+      // Invalid non-boolean value
+      const res3 = await put('/api/config/tasks.startCodeTasksImmediately', { value: 'yes' })
+      expect(res3.status).toBe(400)
+      const body3 = await res3.json()
+      expect(body3.error).toContain('must be a boolean')
+    })
   })
 
   describe('DELETE /api/config/:key', () => {

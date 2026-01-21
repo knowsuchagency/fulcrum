@@ -8,6 +8,7 @@
     "integrations": "集成",
     "zai": "z.ai",
     "agent": "AI 代理",
+    "tasks": "任务默认值",
     "notifications": "通知",
     "appearance": "外观",
     "developer": "开发者"
@@ -91,6 +92,20 @@
       "opencodePlanAgent": {
         "label": "计划模式",
         "description": "受限/计划模式的代理名称。oh-my-opencode 使用 'Planner-Sisyphus'，原版 OpenCode 使用 'plan'。注意：Planner-Sisyphus 从 OpenCode 的 plan 代理配置继承模型，因此上述模型覆盖可能不适用。请在 ~/.config/opencode/oh-my-opencode.json 中配置模型。"
+      }
+    },
+    "tasks": {
+      "defaultType": {
+        "label": "默认类型",
+        "description": "创建新任务时默认选择的类型",
+        "options": {
+          "code": "代码任务",
+          "nonCode": "非代码任务"
+        }
+      },
+      "startImmediately": {
+        "label": "立即开始",
+        "description": "启用后，代码任务会立即开始工作并创建 git 工作树。禁用后，任务会进入待办事项。"
       }
     },
     "language": {

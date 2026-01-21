@@ -29,6 +29,8 @@ export const CONFIG_KEYS = {
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
   CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
   CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
+  DEFAULT_TASK_TYPE: 'tasks.defaultTaskType',
+  START_CODE_TASKS_IMMEDIATELY: 'tasks.startCodeTasksImmediately',
 } as const
 
 // Default values (client-side fallbacks)
@@ -221,6 +223,30 @@ export function useClaudeCodeDarkTheme() {
   return {
     ...query,
     data: (query.data?.value as ClaudeCodeTheme) ?? 'dark-ansi',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+// Task defaults
+export type TaskType = 'code' | 'non-code'
+
+export function useDefaultTaskType() {
+  const query = useConfig(CONFIG_KEYS.DEFAULT_TASK_TYPE)
+
+  return {
+    ...query,
+    data: (query.data?.value as TaskType) ?? 'code',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useStartCodeTasksImmediately() {
+  const query = useConfig(CONFIG_KEYS.START_CODE_TASKS_IMMEDIATELY)
+
+  return {
+    ...query,
+    // Default to true when value is undefined
+    data: query.data?.value === undefined ? true : Boolean(query.data.value),
     isDefault: query.data?.isDefault ?? true,
   }
 }

@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FolderLibraryIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
 import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
+import { useRepositories } from '@/hooks/use-repositories'
 
 interface TaskCardProps {
   task: Task
@@ -27,6 +28,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
   const { setActiveTask } = useDrag()
   const { isSelected, toggleSelection } = useSelection()
   const navigate = useNavigate()
+  const { data: repositories } = useRepositories()
   const selected = isSelected(task.id)
 
   const ref = useRef<HTMLDivElement>(null)
@@ -35,8 +37,15 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
   const [previewContainer, setPreviewContainer] = useState<HTMLElement | null>(null)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
 
-  // Determine if this is a code task (has worktree) or non-code task
-  const isCodeTask = !!task.worktreePath
+  // Determine if this is a code task (has worktree or is configured with a repository)
+  const isCodeTask = !!(task.worktreePath || task.repositoryId)
+  const isActiveCodeTask = !!task.worktreePath
+  const isPendingCodeTask = !task.worktreePath && !!task.repositoryId
+
+  // Get repository info for pending code tasks
+  const pendingRepo = isPendingCodeTask
+    ? repositories?.find((r) => r.id === task.repositoryId)
+    : null
 
   // Track if drag occurred to distinguish from click
   const hasDragged = useRef(false)
@@ -120,9 +129,9 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
       return
     }
 
-    // For code tasks, navigate to detail page
-    // For non-code tasks, open the modal
-    if (isCodeTask) {
+    // For active code tasks (has worktree), navigate to detail page
+    // For non-code tasks and pending code tasks, open the modal
+    if (isActiveCodeTask) {
       navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
     } else {
       setTaskModalOpen(true)
@@ -225,8 +234,8 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
               <span className="text-muted-foreground/30">•</span>
             </>
           )}
-          {/* Code task metadata */}
-          {isCodeTask && (
+          {/* Code task metadata - active (has worktree) */}
+          {isActiveCodeTask && (
             <span className="inline-flex items-center gap-1 whitespace-nowrap">
               <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
               <span className="truncate max-w-24">{task.repoName}</span>
@@ -236,6 +245,13 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
                   <HugeiconsIcon icon={GitPullRequestIcon} size={12} strokeWidth={2} className="text-foreground" />
                 </>
               )}
+            </span>
+          )}
+          {/* Code task metadata - pending (has repositoryId but no worktree yet) */}
+          {isPendingCodeTask && pendingRepo && (
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
+              <span className="truncate max-w-24">{pendingRepo.displayName}</span>
             </span>
           )}
           {/* Due date - shown for all tasks */}
@@ -255,7 +271,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
           )}
           {/* Fallback for non-code tasks with no metadata */}
           {!isCodeTask && !isBlocked && !isBlocking && task.labels.length === 0 && !task.dueDate && (
-            <span className="italic">Quick task</span>
+            <span className="italic">Non-code task</span>
           )}
         </div>
       </CardContent>
@@ -272,7 +288,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
         </div>,
         previewContainer
       )}
-      {!isCodeTask && (
+      {!isActiveCodeTask && (
         <NonCodeTaskModal
           task={task}
           open={taskModalOpen}
