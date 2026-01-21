@@ -5,13 +5,6 @@ import { consola } from 'consola'
 
 // Import command definitions
 import { currentTaskCommand } from './commands/current-task'
-import { tasksCommand } from './commands/tasks'
-import { projectsCommand } from './commands/projects'
-import { repositoriesCommand } from './commands/repositories'
-import { appsCommand } from './commands/apps'
-import { fsCommand } from './commands/fs'
-import { gitCommand } from './commands/git'
-import { worktreesCommand } from './commands/worktrees'
 import { configCommand } from './commands/config'
 import { opencodeCommand } from './commands/opencode'
 import { claudeCommand } from './commands/claude'
@@ -58,29 +51,8 @@ const main = defineCommand({
     description: 'Fulcrum - Terminal-first AI agent orchestration',
   },
   subCommands: {
-    // Current task commands (for working in a task worktree)
+    // Context-aware task operations (for working in a task worktree)
     'current-task': currentTaskCommand,
-
-    // Task management
-    tasks: tasksCommand,
-
-    // Project management
-    projects: projectsCommand,
-
-    // Repository management
-    repositories: repositoriesCommand,
-
-    // App deployment
-    apps: appsCommand,
-
-    // Filesystem operations
-    fs: fsCommand,
-
-    // Git operations
-    git: gitCommand,
-
-    // Worktree management
-    worktrees: worktreesCommand,
 
     // Configuration
     config: configCommand,
