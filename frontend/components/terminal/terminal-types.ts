@@ -7,7 +7,7 @@ import type { Terminal as GhosttyTerminal } from 'ghostty-web'
  * Set to true to use Ghostty with VibeTunnel's scroll management pattern.
  * Set to false to use the original xterm.js implementation.
  */
-export const USE_GHOSTTY_TERMINAL = true
+export const USE_GHOSTTY_TERMINAL = false
 
 /**
  * Union type for terminal instances that can be either xterm.js or Ghostty.
