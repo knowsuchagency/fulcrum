@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Collapsible,
   CollapsibleContent,
@@ -68,6 +67,7 @@ import {
   getProjectAttachmentDownloadUrl,
 } from '@/hooks/use-project-attachments'
 import { openExternalUrl } from '@/lib/editor-url'
+import { ProjectAgentSettings } from '@/components/project/project-agent-settings'
 
 export const Route = createFileRoute('/projects/$projectId')({
   component: ProjectDetailView,
@@ -84,6 +84,8 @@ const SPARKLINE_COLORS: Record<TaskStatus, string> = {
 
 // Task sparkline component - shows 8 dots representing recent task status distribution
 function TaskSparkline({ tasks }: { tasks: Task[] }) {
+  const { t } = useTranslation('projects')
+
   // Get up to 8 most recent active tasks for the sparkline
   const activeTasks = tasks
     .filter((t) => t.status !== 'DONE' && t.status !== 'CANCELED')
@@ -111,7 +113,8 @@ function TaskSparkline({ tasks }: { tasks: Task[] }) {
         )}
       </div>
       <span>
-        {activeCount} active{doneCount > 0 && ` · ${doneCount} done`}
+        {t('repoCard.activeCount', { count: activeCount })}
+        {doneCount > 0 && ` · ${t('repoCard.doneCount', { count: doneCount })}`}
       </span>
     </div>
   )
@@ -140,7 +143,7 @@ function RepositoryCard({
 
   return (
     <Card
-      className="group transition-colors hover:border-foreground/20 cursor-pointer"
+      className="group transition-colors hover:border-foreground/20 cursor-pointer bg-card"
       onClick={handleCardClick}
     >
       <CardContent className="py-3 px-4">
@@ -249,6 +252,7 @@ function InlineTags({
   projectId: string
   tags: Tag[]
 }) {
+  const { t } = useTranslation('projects')
   const [isAdding, setIsAdding] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -333,7 +337,7 @@ function InlineTags({
             }}
             onFocus={() => setShowDropdown(true)}
             onKeyDown={handleKeyDown}
-            placeholder="Add tag..."
+            placeholder={t('detail.addTag')}
             className="h-6 w-24 text-xs"
             autoFocus
           />
@@ -354,7 +358,7 @@ function InlineTags({
                   onClick={() => handleAddTag(searchQuery.trim())}
                 >
                   <HugeiconsIcon icon={Add01Icon} size={12} />
-                  Create "{searchQuery.trim()}"
+                  {t('detail.createTag', { tag: searchQuery.trim() })}
                 </button>
               )}
             </div>
@@ -383,6 +387,7 @@ function InlineLinks({
   projectId: string
   links: ProjectLink[]
 }) {
+  const { t } = useTranslation('projects')
   const [isAdding, setIsAdding] = useState(false)
   const [newUrl, setNewUrl] = useState('')
   const [newLabel, setNewLabel] = useState('')
@@ -396,8 +401,8 @@ function InlineLinks({
     try {
       new URL(trimmedUrl)
     } catch {
-      toast.error('Invalid URL', {
-        description: 'Please enter a valid URL including the scheme (e.g., https://)',
+      toast.error(t('detail.errors.invalidUrl', { defaultValue: 'Invalid URL' }), {
+        description: t('detail.errors.invalidUrlDescription', { defaultValue: 'Please enter a valid URL including the scheme (e.g., https://)' }),
       })
       return
     }
@@ -427,7 +432,7 @@ function InlineLinks({
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Links</h3>
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('detail.sections.links')}</h3>
       <div className="flex items-center gap-2 flex-wrap">
         {links.map((link) => (
           <div key={link.id} className="group/link flex items-center">
@@ -453,7 +458,7 @@ function InlineLinks({
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="https://..."
+              placeholder={t('detail.urlPlaceholder')}
               className="h-6 w-32 text-xs"
               autoFocus
             />
@@ -462,11 +467,11 @@ function InlineLinks({
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Label"
+              placeholder={t('detail.labelPlaceholder')}
               className="h-6 w-20 text-xs"
             />
             <Button size="sm" className="h-6 px-2 text-xs" onClick={handleAddLink}>
-              Add
+              {t('detail.add')}
             </Button>
             <Button
               variant="ghost"
@@ -487,7 +492,7 @@ function InlineLinks({
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <HugeiconsIcon icon={Add01Icon} size={12} />
-            <span>Add</span>
+            <span>{t('detail.add')}</span>
           </button>
         )}
       </div>
@@ -497,6 +502,7 @@ function InlineLinks({
 
 // Inline attachments component
 function InlineAttachments({ projectId }: { projectId: string }) {
+  const { t } = useTranslation('projects')
   const { data: attachments = [], isLoading } = useProjectAttachments(projectId)
   const uploadMutation = useUploadProjectAttachment()
   const deleteMutation = useDeleteProjectAttachment()
@@ -554,15 +560,15 @@ function InlineAttachments({ projectId }: { projectId: string }) {
   if (isLoading) {
     return (
       <div className="space-y-2">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Attachments</h3>
-        <span className="text-xs text-muted-foreground">Loading...</span>
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('detail.sections.attachments')}</h3>
+        <span className="text-xs text-muted-foreground">{t('detail.loading')}</span>
       </div>
     )
   }
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Attachments</h3>
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('detail.sections.attachments')}</h3>
       <div className="flex items-center gap-2 flex-wrap">
         {attachments.map((attachment) => {
           const FileIcon = getFileIcon(attachment.mimeType)
@@ -605,7 +611,7 @@ function InlineAttachments({ projectId }: { projectId: string }) {
           )}
         >
           <HugeiconsIcon icon={uploadMutation.isPending ? Loading03Icon : Upload02Icon} size={12} className={uploadMutation.isPending ? 'animate-spin' : ''} />
-          <span>{uploadMutation.isPending ? 'Uploading...' : 'Drop or click'}</span>
+          <span>{uploadMutation.isPending ? t('detail.uploading') : t('detail.dropOrClickShort')}</span>
         </button>
       </div>
     </div>
@@ -819,7 +825,7 @@ function ProjectDetailView() {
               type="button"
               onClick={handleStartEditName}
               className="font-medium text-sm hover:text-primary transition-colors cursor-pointer"
-              title="Click to edit"
+              title={t('detail.clickToEdit')}
             >
               {project.name}
             </button>
@@ -835,7 +841,7 @@ function ProjectDetailView() {
               className="text-muted-foreground hover:text-foreground"
             >
               <HugeiconsIcon icon={TaskAdd01Icon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="hidden sm:inline">Task</span>
+              <span className="hidden sm:inline">{t('detail.actions.task')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -844,7 +850,7 @@ function ProjectDetailView() {
               className="text-muted-foreground hover:text-foreground"
             >
               <HugeiconsIcon icon={FolderAddIcon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="hidden sm:inline">Repo</span>
+              <span className="hidden sm:inline">{t('detail.actions.repo')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -853,7 +859,7 @@ function ProjectDetailView() {
               className="text-muted-foreground hover:text-foreground"
             >
               <HugeiconsIcon icon={CopyLinkIcon} size={14} strokeWidth={2} data-slot="icon" />
-              <span className="hidden sm:inline">Link</span>
+              <span className="hidden sm:inline">{t('detail.actions.link')}</span>
             </Button>
           </div>
 
@@ -871,15 +877,15 @@ function ProjectDetailView() {
         </div>
 
         {/* Scrollable content */}
-        <ScrollArea className="flex-1">
-          <div className="max-w-5xl mx-auto px-6 py-6 space-y-6 pb-12">
+        <div className="flex-1 overflow-auto p-6">
+          <div className="mx-auto max-w-5xl space-y-6 pb-6">
             {/* Description (below header) */}
             {isEditingDescription ? (
               <div className="flex items-start gap-2">
                 <Textarea
                   value={editedDescription}
                   onChange={(e) => setEditedDescription(e.target.value)}
-                  placeholder="Add a description..."
+                  placeholder={t('detail.addDescription')}
                   className="min-h-[60px] text-sm flex-1"
                   autoFocus
                   onKeyDown={(e) => {
@@ -892,10 +898,10 @@ function ProjectDetailView() {
                 />
                 <div className="flex flex-col gap-1">
                   <Button size="sm" className="h-7" onClick={handleSaveDescription}>
-                    Save
+                    {t('detail.save')}
                   </Button>
                   <Button variant="ghost" size="sm" className="h-7" onClick={() => setIsEditingDescription(false)}>
-                    Cancel
+                    {t('detail.cancel')}
                   </Button>
                 </div>
               </div>
@@ -903,22 +909,22 @@ function ProjectDetailView() {
               <p
                 className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                 onClick={handleStartEditDescription}
-                title="Click to edit"
+                title={t('detail.clickToEdit')}
               >
                 {project.description}
               </p>
             ) : null}
 
             {/* Repositories Section */}
-            <section className="space-y-3">
+            <section className="rounded-lg border bg-card p-4 space-y-3">
               <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Repositories
+                {t('detail.sections.repositories')}
               </h2>
 
             {project.repositories.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-6 text-center text-muted-foreground">
-                  <p className="text-sm">No repositories linked to this project.</p>
+                  <p className="text-sm">{t('detail.noRepositories')}</p>
                   <div className="mt-3 flex justify-center gap-2">
                     <Button
                       variant="outline"
@@ -926,7 +932,7 @@ function ProjectDetailView() {
                       onClick={() => setAddRepoModalOpen(true)}
                     >
                       <HugeiconsIcon icon={FolderAddIcon} size={14} data-slot="icon" />
-                      Add Repo
+                      {t('addRepo')}
                     </Button>
                     <Button
                       variant="outline"
@@ -934,7 +940,7 @@ function ProjectDetailView() {
                       onClick={() => setBulkAddModalOpen(true)}
                     >
                       <HugeiconsIcon icon={CopyLinkIcon} size={14} data-slot="icon" />
-                      Link Existing
+                      {t('detail.linkExisting')}
                     </Button>
                   </div>
                 </CardContent>
@@ -956,20 +962,24 @@ function ProjectDetailView() {
 
           {/* Links and Attachments - Two column grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InlineLinks projectId={projectId} links={project.links || []} />
-            <InlineAttachments projectId={projectId} />
+            <div className="rounded-lg border bg-card p-4">
+              <InlineLinks projectId={projectId} links={project.links || []} />
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <InlineAttachments projectId={projectId} />
+            </div>
           </div>
 
           {/* Tags and Notes - Two column grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tags */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</h3>
+            <div className="rounded-lg border bg-card p-4 space-y-2">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('detail.sections.tags')}</h3>
               <InlineTags projectId={projectId} tags={project.tags || []} />
             </div>
 
             {/* Notes - Collapsible */}
-            <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
+            <Collapsible open={notesOpen} onOpenChange={setNotesOpen} className="rounded-lg border bg-card p-4">
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-left group">
                 <HugeiconsIcon
                   icon={notesOpen ? ArrowDown01Icon : ArrowRight01Icon}
@@ -977,7 +987,7 @@ function ProjectDetailView() {
                   className="text-muted-foreground"
                 />
                 <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
-                  Notes
+                  {t('detail.sections.notes')}
                 </h2>
                 {!notesOpen && project.notes && (
                   <span className="text-xs text-muted-foreground truncate max-w-xs">
@@ -992,7 +1002,7 @@ function ProjectDetailView() {
                       ref={notesTextareaRef}
                       value={editedNotes}
                       onChange={(e) => setEditedNotes(e.target.value)}
-                      placeholder="Add notes about this project..."
+                      placeholder={t('detail.addNotes')}
                       className="min-h-[100px] text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && e.metaKey) {
@@ -1005,10 +1015,10 @@ function ProjectDetailView() {
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleSaveNotes}>
                         <HugeiconsIcon icon={Tick02Icon} size={12} data-slot="icon" />
-                        Save
+                        {t('detail.save')}
                       </Button>
                       <Button variant="ghost" size="sm" onClick={handleCancelEditNotes}>
-                        Cancel
+                        {t('detail.cancel')}
                       </Button>
                     </div>
                   </div>
@@ -1019,7 +1029,7 @@ function ProjectDetailView() {
                         {project.notes}
                       </p>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">No notes</p>
+                      <p className="text-sm text-muted-foreground italic">{t('detail.noNotes')}</p>
                     )}
                     <Button
                       variant="ghost"
@@ -1028,7 +1038,7 @@ function ProjectDetailView() {
                       onClick={handleStartEditNotes}
                     >
                       <HugeiconsIcon icon={Edit02Icon} size={12} data-slot="icon" />
-                      Edit
+                      {t('detail.edit')}
                     </Button>
                   </div>
                 )}
@@ -1036,13 +1046,16 @@ function ProjectDetailView() {
             </Collapsible>
           </div>
 
+          {/* Agent Settings - Collapsible */}
+          <ProjectAgentSettings project={project} />
+
           {/* Active Tasks Section */}
-          <section className="space-y-3">
+          <section className="rounded-lg border bg-card p-4 space-y-3">
             <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Active Tasks
+              {t('detail.sections.activeTasks')}
             </h2>
             {activeTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No active tasks</p>
+              <p className="text-sm text-muted-foreground">{t('detail.noActiveTasks')}</p>
             ) : (
               <div className="space-y-2">
                 {activeTasks.map((task) => (
@@ -1076,7 +1089,7 @@ function ProjectDetailView() {
             )}
           </section>
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Task creation modal */}

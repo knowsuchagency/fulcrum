@@ -1,8 +1,8 @@
 # Project Fulcrum
 
-**Harness Attention. Orchestrate Agents. Ship.**
+**Harness Attention. Orchestrate Agents. Leverage Your Time Wisely.**
 
-![Fulcrum Kanban Board](./screenshots/tasks-kanban-board.png)
+![Fulcrum Kanban Board](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/tasks-kanban-board.png)
 
 ## What It Does
 
@@ -25,10 +25,13 @@ Fulcrum supports **Claude Code** and **OpenCode** with per-repository and per-ta
 - **Work From Anywhere** — Run on a remote server; agents continue working when you disconnect
 - **Git Worktree Isolation** — Safe experimentation without touching your main branch
 - **Claude Code Plugin** — Skill for task management, automatic status sync, session continuity
-- **MCP Server** — Let Claude manage tasks, list repositories, and send notifications
+- **MCP Server** — 60+ tools for tasks, projects, apps, and remote execution
 - **Kanban Task Management** — Visual task tracking from planning to done
+- **Task Dependencies** — Define prerequisite tasks; visualize with dependency graph
+- **Task & Project Context** — Attach files, add reference links, set due dates, organize with labels
 - **PR Monitoring** — Track pull requests across repositories
 - **Linear Integration** — Sync task status with Linear tickets
+- **Job Scheduling** — Create and manage systemd/launchd timers from the UI
 - **Cross-Platform** — Desktop app (Mac, Linux) or web application
 
 ## Quick Start
@@ -99,37 +102,37 @@ claude plugin install fulcrum@fulcrum --scope user
 
 Track tasks from planning to done. Create tasks that automatically spin up isolated git worktrees, and watch their status update in real-time as you work with your AI agents.
 
-![Kanban Board](./screenshots/tasks-kanban-board.png)
+![Kanban Board](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/tasks-kanban-board.png)
 
 ### Task Terminals View
 
-See all your AI agent sessions across every task and worktree in a single parallel view. Each task runs in an isolated git worktree, and you can monitor and interact with all of them simultaneously.
+See all your AI agent sessions across every task in a single parallel view. Each task creates an isolated git worktree on-demand, and you can monitor and interact with all sessions simultaneously.
 
-![Task Terminals View](./screenshots/terminals-view-with-tests.png)
+![Task Terminals View](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/terminals-view-with-tests.png)
 
 ### App Deployment
 
 Deploy applications directly from Fulcrum with Docker Compose. Edit compose files inline, configure environment variables, and manage services with automatic Traefik routing and optional Cloudflare DNS integration.
 
-![App Deployment](./screenshots/app-deployment-config.png)
+![App Deployment](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/app-deployment-config.png)
 
 ### Projects
 
 Projects unify your code repositories and app deployments into a single entity. Manage workspace terminals, task settings, and deployment configuration from one place.
 
-![Projects](./screenshots/repositories-view.png)
+![Projects](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/repositories-view.png)
 
 ### Browser Preview
 
 Preview your app alongside the agent terminal in a split-pane view. Watch changes in real-time as your AI agent iterates on your code.
 
-![Browser Preview](./screenshots/browser-preview-split-view.png)
+![Browser Preview](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/browser-preview-split-view.png)
 
 ### System Monitoring
 
-Keep an eye on system resources while your agents work. CPU, memory, and disk usage at a glance.
+Keep an eye on system resources while your agents work. CPU, memory, and disk usage at a glance. The Jobs tab lets you create and manage systemd (Linux) or launchd (macOS) timers.
 
-![System Monitoring](./screenshots/monitoring-system-metrics.png)
+![System Monitoring](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/monitoring-system-metrics.png)
 
 ## Supported Agents
 
@@ -174,25 +177,20 @@ fulcrum opencode uninstall  # Remove both
 
 ## MCP Tools
 
-Both Claude Code and OpenCode plugins include an MCP server that exposes task management and remote execution tools:
+Both Claude Code and OpenCode plugins include an MCP server with 60+ tools for task management, project organization, app deployment, and remote execution:
 
-**Task Management:**
-- `list_tasks` — List all tasks with optional status/repo filter
-- `get_task` — Get task details by ID
-- `create_task` — Create a new task with git worktree
-- `update_task` — Update task title/description
-- `delete_task` — Delete a task
-- `move_task` — Change task status
-- `list_repositories` — List configured repositories
-- `send_notification` — Send notification to enabled channels
+| Category | Description |
+|----------|-------------|
+| **Tasks** | Create, update, move tasks; manage links, labels, attachments, due dates |
+| **Task Dependencies** | Define prerequisite tasks; visualize with dependency graph |
+| **Projects** | Manage projects with tags, notes, and file attachments |
+| **Repositories** | Add, configure, and link repositories to projects |
+| **Apps** | Deploy, stop, and monitor Docker Compose applications |
+| **Filesystem** | Browse directories, read/write files on the Fulcrum server |
+| **Execution** | Run shell commands with persistent session support |
+| **Notifications** | Send notifications to enabled channels |
 
-**Remote Command Execution:**
-- `execute_command` — Execute shell commands on the Fulcrum server with persistent session support
-- `list_exec_sessions` — List active command execution sessions
-- `update_exec_session` — Rename a session
-- `destroy_exec_session` — Clean up a session
-
-The `execute_command` tool supports persistent sessions where environment variables, working directory, and shell state are preserved between commands. Sessions can be given optional names for identification and persist until manually destroyed.
+Use `search_tools` to discover available tools by keyword or category.
 
 For Claude Desktop, add to your `claude_desktop_config.json`:
 
@@ -287,46 +285,29 @@ fulcrum up -y                     # Start with auto-install (no prompts)
 fulcrum down                      # Stop server
 fulcrum status                    # Check server status
 fulcrum doctor                    # Check all dependencies
-fulcrum health                    # Check server health
 fulcrum mcp                       # Start MCP server (stdio)
 ```
 
 ### Current Task (auto-detected from worktree)
 
 ```bash
-fulcrum current-task              # Get current task info
-fulcrum current-task in-progress  # Mark as IN_PROGRESS
+fulcrum current-task info         # Get current task info (default)
 fulcrum current-task review       # Mark as IN_REVIEW
 fulcrum current-task done         # Mark as DONE
 fulcrum current-task cancel       # Mark as CANCELED
 fulcrum current-task pr <url>     # Associate a PR with current task
-fulcrum current-task linear <url> # Link to a Linear ticket
+fulcrum current-task link <url>   # Add a reference link to the task
+fulcrum current-task link         # List all links
+fulcrum current-task link -r <id> # Remove a link
 ```
 
-### Task Management
+### Agent Integration
 
 ```bash
-fulcrum tasks list                # List all tasks
-fulcrum tasks get <id>            # Get task by ID
-fulcrum tasks create              # Create a new task
-fulcrum tasks update <id>         # Update a task
-fulcrum tasks move <id>           # Move task to different status
-fulcrum tasks delete <id>         # Delete a task
-```
-
-### Git Operations
-
-```bash
-fulcrum git status                # Git status for current worktree
-fulcrum git diff                  # Git diff for current worktree
-fulcrum git branches              # List branches in a repo
-```
-
-### Worktrees
-
-```bash
-fulcrum worktrees list            # List all worktrees
-fulcrum worktrees delete          # Delete a worktree
+fulcrum claude install            # Install Claude Code plugin + MCP server
+fulcrum claude uninstall          # Remove plugin + MCP server
+fulcrum opencode install          # Install OpenCode plugin + MCP server
+fulcrum opencode uninstall        # Remove plugin + MCP server
 ```
 
 ### Configuration

@@ -6,6 +6,14 @@
   "createModal": {
     "title": "Create New Task",
     "description": "Create a new task with a git worktree for isolated development.",
+    "taskTypes": {
+      "code": "Code Task",
+      "nonCode": "Non-Code Task"
+    },
+    "taskDescriptions": {
+      "code": "Creates a git worktree and opens an AI coding agent.",
+      "nonCode": "A general task without a git worktree or AI agent."
+    },
     "fields": {
       "title": "Title",
       "titlePlaceholder": "Add user authentication",
@@ -18,7 +26,20 @@
       "repository": "Repository",
       "baseBranch": "Base Branch",
       "branchName": "Branch Name",
-      "branchPlaceholder": "auto-generated-from-title"
+      "branchPlaceholder": "auto-generated-from-title",
+      "project": "Project (optional)",
+      "tags": "Tags",
+      "tagsPlaceholder": "Add tag...",
+      "dueDate": "Due Date",
+      "dueDatePlaceholder": "Set date",
+      "notes": "Notes",
+      "notesPlaceholder": "Add notes...",
+      "links": "Links",
+      "urlPlaceholder": "https://...",
+      "linkLabelPlaceholder": "Label (optional)",
+      "attachments": "Attachments",
+      "addAttachments": "Add attachments...",
+      "addMoreFiles": "Add more files..."
     },
     "aiModes": {
       "plan": "Plan",
@@ -38,10 +59,15 @@
     "selectBranch": "Select branch",
     "current": "(current)",
     "createTask": "Create Task",
+    "noProject": "No project (Inbox)",
+    "projectHint": "Tasks without a project appear in the Inbox.",
+    "startImmediately": "Start work immediately",
     "errors": {
       "notGitRepo": "Selected folder is not a git repository",
       "validationFailed": "Failed to validate repository",
-      "createFailed": "Failed to create task"
+      "createFailed": "Failed to create task",
+      "invalidUrl": "Invalid URL",
+      "invalidUrlDescription": "Please enter a valid URL including the scheme (e.g., https://)"
     }
   }
 }

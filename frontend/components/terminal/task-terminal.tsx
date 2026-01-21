@@ -2,6 +2,8 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { init as initGhostty, Terminal as GhosttyTerminal, FitAddon as GhosttyFitAddon } from 'ghostty-web'
+import type { ITheme as GhosttyTheme } from 'ghostty-web'
 
 import '@xterm/xterm/css/xterm.css'
 import { cn } from '@/lib/utils'
@@ -17,6 +19,49 @@ import { lightTheme, darkTheme } from './terminal-theme'
 import { buildAgentCommand, matchesAgentNotFound } from '@/lib/agent-commands'
 import { AGENT_DISPLAY_NAMES, AGENT_INSTALL_COMMANDS, AGENT_DOC_URLS, type AgentType } from '@/types'
 import { useOpencodeDefaultAgent, useOpencodePlanAgent } from '@/hooks/use-config'
+import { USE_GHOSTTY_TERMINAL, type AnyTerminal } from './terminal-types'
+
+// Convert xterm theme to Ghostty format
+function toGhosttyTheme(xtermTheme: typeof lightTheme): GhosttyTheme {
+  return {
+    background: xtermTheme.background,
+    foreground: xtermTheme.foreground,
+    cursor: xtermTheme.cursor,
+    cursorAccent: xtermTheme.cursorAccent,
+    selectionBackground: xtermTheme.selectionBackground,
+    black: xtermTheme.black,
+    red: xtermTheme.red,
+    green: xtermTheme.green,
+    yellow: xtermTheme.yellow,
+    blue: xtermTheme.blue,
+    magenta: xtermTheme.magenta,
+    cyan: xtermTheme.cyan,
+    white: xtermTheme.white,
+    brightBlack: xtermTheme.brightBlack,
+    brightRed: xtermTheme.brightRed,
+    brightGreen: xtermTheme.brightGreen,
+    brightYellow: xtermTheme.brightYellow,
+    brightBlue: xtermTheme.brightBlue,
+    brightMagenta: xtermTheme.brightMagenta,
+    brightCyan: xtermTheme.brightCyan,
+    brightWhite: xtermTheme.brightWhite,
+  }
+}
+
+// WASM initialization state (singleton)
+let wasmInitPromise: Promise<void> | null = null
+let wasmInitialized = false
+
+async function ensureWasmInitialized(): Promise<void> {
+  if (wasmInitialized) return
+  if (!wasmInitPromise) {
+    wasmInitPromise = initGhostty().then(() => {
+      wasmInitialized = true
+      log.taskTerminal.info('Ghostty WASM initialized')
+    })
+  }
+  return wasmInitPromise
+}
 
 interface TaskTerminalProps {
   taskName: string
@@ -35,10 +80,10 @@ interface TaskTerminalProps {
 
 export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude', aiMode, description, startupScript, agentOptions, opencodeModel, serverPort = 7777, autoFocus = false }: TaskTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const termRef = useRef<XTerm | null>(null)
+  const termRef = useRef<AnyTerminal | null>(null)
   const hasFocusedRef = useRef(false)
   const autoFocusRef = useRef(autoFocus)
-  const fitAddonRef = useRef<FitAddon | null>(null)
+  const fitAddonRef = useRef<FitAddon | GhosttyFitAddon | null>(null)
   const createdTerminalRef = useRef(false)
   const attachedRef = useRef(false)
   const [terminalId, setTerminalId] = useState<string | null>(null)
@@ -103,72 +148,138 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
   const currentTerminal = terminalId ? terminals.find((t) => t.id === terminalId) : null
   const terminalStatus = currentTerminal?.status
 
-  // Initialize xterm first
+  // Initialize terminal (xterm.js or Ghostty based on feature flag)
   useEffect(() => {
     if (!containerRef.current || termRef.current) return
 
-    const term = new XTerm({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: 'monospace',
-      theme: terminalTheme,
-      scrollback: 10000,
-      rightClickSelectsWord: true,
-      scrollOnUserInput: false,
-    })
-
-    const fitAddon = new FitAddon()
-    const webLinksAddon = new WebLinksAddon()
-
-    term.loadAddon(fitAddon)
-    term.loadAddon(webLinksAddon)
-    term.open(containerRef.current)
-
-    const osc52Cleanup = registerOsc52Handler(term)
-
-    termRef.current = term
-    fitAddonRef.current = fitAddon
-
-    // Mark xterm as opened synchronously - this gates terminal creation
-    // We can get cols/rows immediately after open(), no need to wait for rAF
-    setXtermOpened(true)
-
-    // Initial fit after container is sized
-    requestAnimationFrame(() => {
-      fitAddon.fit()
-    })
-
-    // Schedule additional fit to catch async layout (ResizablePanel timing)
-    const refitTimeout = setTimeout(() => {
-      fitAddon.fit()
-      term.refresh(0, term.rows - 1)
-    }, 100)
+    let mounted = true
 
     // Track terminal focus for keyboard shortcuts
     const handleTerminalFocus = () => setTerminalFocused(true)
     const handleTerminalBlur = () => setTerminalFocused(false)
 
-    // xterm creates a hidden textarea for keyboard input - track its focus
-    if (term.textarea) {
-      term.textarea.addEventListener('focus', handleTerminalFocus)
-      term.textarea.addEventListener('blur', handleTerminalBlur)
-    }
+    if (USE_GHOSTTY_TERMINAL) {
+      // Initialize Ghostty terminal
+      ensureWasmInitialized()
+        .then(() => {
+          if (!mounted || !containerRef.current) return
 
-    return () => {
-      clearTimeout(refitTimeout)
-      osc52Cleanup()
-      if (term.textarea) {
-        term.textarea.removeEventListener('focus', handleTerminalFocus)
-        term.textarea.removeEventListener('blur', handleTerminalBlur)
+          const term = new GhosttyTerminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: 'monospace',
+            theme: toGhosttyTheme(terminalTheme),
+            scrollback: 10000,
+          })
+
+          const fitAddon = new GhosttyFitAddon()
+          term.loadAddon(fitAddon)
+          term.open(containerRef.current)
+
+          termRef.current = term
+          fitAddonRef.current = fitAddon
+
+          // Mark terminal as opened - this gates terminal creation
+          setXtermOpened(true)
+
+          // Initial fit after container is sized
+          requestAnimationFrame(() => {
+            fitAddon.fit()
+          })
+
+          // Schedule additional fit to catch async layout
+          setTimeout(() => {
+            fitAddon.fit()
+          }, 100)
+
+          // Track terminal focus
+          if (term.textarea) {
+            term.textarea.addEventListener('focus', handleTerminalFocus)
+            term.textarea.addEventListener('blur', handleTerminalBlur)
+          }
+
+          log.taskTerminal.info('Ghostty terminal initialized', { cwd })
+        })
+        .catch((err) => {
+          log.taskTerminal.error('Failed to initialize Ghostty terminal', { error: err })
+        })
+
+      return () => {
+        mounted = false
+        const term = termRef.current
+        if (term) {
+          if (term.textarea) {
+            term.textarea.removeEventListener('focus', handleTerminalFocus)
+            term.textarea.removeEventListener('blur', handleTerminalBlur)
+          }
+          setTerminalFocused(false)
+          term.dispose()
+          termRef.current = null
+          fitAddonRef.current = null
+          setXtermOpened(false)
+        }
       }
-      setTerminalFocused(false)
-      term.dispose()
-      termRef.current = null
-      fitAddonRef.current = null
-      setXtermOpened(false)
+    } else {
+      // Initialize xterm.js terminal
+      const term = new XTerm({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: 'monospace',
+        theme: terminalTheme,
+        scrollback: 10000,
+        rightClickSelectsWord: true,
+        scrollOnUserInput: false,
+      })
+
+      const fitAddon = new FitAddon()
+      const webLinksAddon = new WebLinksAddon()
+
+      term.loadAddon(fitAddon)
+      term.loadAddon(webLinksAddon)
+      term.open(containerRef.current)
+
+      const osc52Cleanup = registerOsc52Handler(term)
+
+      termRef.current = term
+      fitAddonRef.current = fitAddon
+
+      // Mark xterm as opened synchronously - this gates terminal creation
+      // We can get cols/rows immediately after open(), no need to wait for rAF
+      setXtermOpened(true)
+
+      // Initial fit after container is sized
+      requestAnimationFrame(() => {
+        fitAddon.fit()
+      })
+
+      // Schedule additional fit to catch async layout (ResizablePanel timing)
+      const refitTimeout = setTimeout(() => {
+        fitAddon.fit()
+        term.refresh(0, term.rows - 1)
+      }, 100)
+
+      // xterm creates a hidden textarea for keyboard input - track its focus
+      if (term.textarea) {
+        term.textarea.addEventListener('focus', handleTerminalFocus)
+        term.textarea.addEventListener('blur', handleTerminalBlur)
+      }
+
+      return () => {
+        clearTimeout(refitTimeout)
+        osc52Cleanup()
+        if (term.textarea) {
+          term.textarea.removeEventListener('focus', handleTerminalFocus)
+          term.textarea.removeEventListener('blur', handleTerminalBlur)
+        }
+        setTerminalFocused(false)
+        term.dispose()
+        termRef.current = null
+        fitAddonRef.current = null
+        setXtermOpened(false)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- terminalTheme excluded: theme updates handled by separate effect
-  }, [setTerminalFocused])
+  }, [setTerminalFocused, cwd])
 
   // Handle resize
   const doFit = useCallback(() => {
@@ -197,8 +308,10 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
       if (document.visibilityState === 'visible') {
         requestAnimationFrame(() => {
           doFit()
-          if (termRef.current) {
-            termRef.current.refresh(0, termRef.current.rows - 1)
+          // Refresh is xterm.js specific, Ghostty doesn't need it
+          const term = termRef.current
+          if (term && 'refresh' in term && typeof term.refresh === 'function') {
+            term.refresh(0, term.rows - 1)
           }
         })
       }
@@ -214,8 +327,10 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
         if (entries[0]?.isIntersecting) {
           requestAnimationFrame(() => {
             doFit()
-            if (termRef.current) {
-              termRef.current.refresh(0, termRef.current.rows - 1)
+            // Refresh is xterm.js specific, Ghostty doesn't need it
+            const term = termRef.current
+            if (term && 'refresh' in term && typeof term.refresh === 'function') {
+              term.refresh(0, term.rows - 1)
             }
           })
         }
@@ -424,6 +539,7 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
       const effectivePort = currentServerPort ?? 7777
       const portFlag = effectivePort !== 7777 ? ` --port=${effectivePort}` : ''
       const systemPrompt = 'You are working in a Fulcrum task worktree. ' +
+        'Reference the fulcrum skill for complete CLI documentation (attachments, dependencies, notifications, etc.). ' +
         'Commit after completing each logical unit of work (feature, fix, refactor) to preserve progress. ' +
         `When you finish working and need user input, run: fulcrum current-task review${portFlag}. ` +
         `When linking a PR: fulcrum current-task pr <url>${portFlag}. ` +
@@ -487,9 +603,20 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
   // Update terminal theme when system theme changes
   useEffect(() => {
     if (!termRef.current) return
-    termRef.current.options.theme = terminalTheme
-    // Refresh to re-render existing content with new theme colors
-    termRef.current.refresh(0, termRef.current.rows - 1)
+    const term = termRef.current
+
+    if (USE_GHOSTTY_TERMINAL) {
+      // Ghostty uses the same options.theme API but with its theme format
+      term.options.theme = toGhosttyTheme(terminalTheme)
+    } else {
+      // xterm.js theme update
+      term.options.theme = terminalTheme
+      // Refresh to re-render existing content with new theme colors
+      // Note: Only xterm.js has the refresh method
+      if ('refresh' in term && typeof term.refresh === 'function') {
+        term.refresh(0, term.rows - 1)
+      }
+    }
   }, [terminalTheme])
 
   // Auto-focus terminal when ready - try multiple times to be aggressive
@@ -523,10 +650,13 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
 
   // Detect "command not found" for any AI agent CLI
   // This helps users who haven't installed the required agent yet
+  // Note: Only enabled for xterm.js as Ghostty doesn't have onLineFeed event
   useEffect(() => {
     if (!termRef.current || agentNotFound) return
+    // Skip for Ghostty - it doesn't have onLineFeed event
+    if (USE_GHOSTTY_TERMINAL) return
 
-    const term = termRef.current
+    const term = termRef.current as XTerm
     const checkForAgentNotFound = () => {
       const buffer = term.buffer.active
       // Check the last few lines of the terminal buffer

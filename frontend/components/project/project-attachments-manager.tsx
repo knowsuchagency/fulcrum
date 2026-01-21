@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -39,6 +40,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export function ProjectAttachmentsManager({ projectId }: ProjectAttachmentsManagerProps) {
+  const { t } = useTranslation('projects')
   const { data: attachments = [], isLoading } = useProjectAttachments(projectId)
   const uploadMutation = useUploadProjectAttachment()
   const deleteMutation = useDeleteProjectAttachment()
@@ -99,14 +101,14 @@ export function ProjectAttachmentsManager({ projectId }: ProjectAttachmentsManag
   }
 
   if (isLoading) {
-    return <div className="text-xs text-muted-foreground">Loading attachments...</div>
+    return <div className="text-xs text-muted-foreground">{t('detail.loadingAttachments')}</div>
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Attachments
+          {t('detail.sections.attachments')}
         </h3>
       </div>
 
@@ -131,10 +133,10 @@ export function ProjectAttachmentsManager({ projectId }: ProjectAttachmentsManag
         />
         <HugeiconsIcon icon={Upload02Icon} size={20} className="mx-auto text-muted-foreground mb-1" />
         <p className="text-xs text-muted-foreground">
-          {uploadMutation.isPending ? 'Uploading...' : 'Drop files here or click to upload'}
+          {uploadMutation.isPending ? t('detail.uploading') : t('detail.dropOrClick')}
         </p>
         <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-          PDF, images, documents, archives (max 10MB)
+          {t('detail.attachmentTypes')}
         </p>
       </div>
 
@@ -183,7 +185,7 @@ export function ProjectAttachmentsManager({ projectId }: ProjectAttachmentsManag
       )}
 
       {attachments.length === 0 && !isLoading && (
-        <p className="text-xs text-muted-foreground italic">No attachments</p>
+        <p className="text-xs text-muted-foreground italic">{t('detail.noAttachments')}</p>
       )}
     </div>
   )

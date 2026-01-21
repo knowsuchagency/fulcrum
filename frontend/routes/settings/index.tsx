@@ -46,11 +46,14 @@ import {
   useFulcrumVersion,
   useVersionCheck,
   useRefreshVersionCheck,
+  useDefaultTaskType,
+  useStartCodeTasksImmediately,
   NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
   type EditorApp,
   type ClaudeCodeTheme,
+  type TaskType,
 } from '@/hooks/use-config'
 import { useQueryClient } from '@tanstack/react-query'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
@@ -101,6 +104,8 @@ function SettingsPage() {
   const { theme, syncClaudeCode, changeTheme } = useThemeSync()
   const { data: claudeCodeLightTheme } = useClaudeCodeLightTheme()
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
+  const { data: defaultTaskType, isLoading: taskTypeLoading } = useDefaultTaskType()
+  const { data: startCodeTasksImmediately, isLoading: startImmediatelyLoading } = useStartCodeTasksImmediately()
   const { version } = useFulcrumVersion()
   const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
   const refreshVersionCheck = useRefreshVersionCheck()
@@ -153,6 +158,10 @@ function SettingsPage() {
   const [localSyncClaudeCode, setLocalSyncClaudeCode] = useState(false)
   const [localClaudeCodeLightTheme, setLocalClaudeCodeLightTheme] = useState<ClaudeCodeTheme>('light-ansi')
   const [localClaudeCodeDarkTheme, setLocalClaudeCodeDarkTheme] = useState<ClaudeCodeTheme>('dark-ansi')
+
+  // Task defaults local state
+  const [localDefaultTaskType, setLocalDefaultTaskType] = useState<TaskType>('code')
+  const [localStartCodeTasksImmediately, setLocalStartCodeTasksImmediately] = useState(true)
 
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
@@ -224,8 +233,14 @@ function SettingsPage() {
     if (claudeCodeDarkTheme !== undefined) setLocalClaudeCodeDarkTheme(claudeCodeDarkTheme)
   }, [syncClaudeCode, claudeCodeLightTheme, claudeCodeDarkTheme])
 
+  // Sync task defaults
+  useEffect(() => {
+    if (defaultTaskType !== undefined) setLocalDefaultTaskType(defaultTaskType)
+    if (startCodeTasksImmediately !== undefined) setLocalStartCodeTasksImmediately(startCodeTasksImmediately)
+  }, [defaultTaskType, startCodeTasksImmediately])
+
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -239,6 +254,10 @@ function SettingsPage() {
     localSyncClaudeCode !== (syncClaudeCode ?? false) ||
     localClaudeCodeLightTheme !== claudeCodeLightTheme ||
     localClaudeCodeDarkTheme !== claudeCodeDarkTheme
+
+  const hasTaskDefaultsChanges =
+    localDefaultTaskType !== defaultTaskType ||
+    localStartCodeTasksImmediately !== startCodeTasksImmediately
 
   // Check if deployment settings have changed
   // We compare local state against server values
@@ -286,7 +305,8 @@ function SettingsPage() {
     hasNotificationChanges ||
     hasZAiChanges ||
     hasClaudeCodeChanges ||
-    hasDeploymentChanges
+    hasDeploymentChanges ||
+    hasTaskDefaultsChanges
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -488,6 +508,30 @@ function SettingsPage() {
       }
     }
 
+    // Save task defaults
+    if (hasTaskDefaultsChanges) {
+      if (localDefaultTaskType !== defaultTaskType) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.DEFAULT_TASK_TYPE, value: localDefaultTaskType },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localStartCodeTasksImmediately !== startCodeTasksImmediately) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.START_CODE_TASKS_IMMEDIATELY, value: localStartCodeTasksImmediately },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+    }
+
     // Save deployment settings (cloudflare token/account ID)
     // Only send values that were actually changed by the user (not masked placeholders)
     if (hasDeploymentChanges) {
@@ -672,7 +716,7 @@ function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
+      <div className="flex shrink-0 items-center border-b border-border bg-background px-4 py-2">
         <h1 className="text-sm font-medium">{t('title')}</h1>
         <div className="flex items-center gap-2">
           {version && <span className="text-xs font-mono text-muted-foreground">v{version}</span>}
@@ -1302,6 +1346,52 @@ function SettingsPage() {
                 </Collapsible>
               </SettingsSection>
 
+              {/* Task Defaults */}
+              <SettingsSection title={t('sections.tasks')}>
+                <div className="space-y-4">
+                  {/* Default task type */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.tasks.defaultType.label')}
+                      </label>
+                      <Select
+                        value={localDefaultTaskType}
+                        onValueChange={(v) => setLocalDefaultTaskType(v as TaskType)}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="code">{t('fields.tasks.defaultType.options.code')}</SelectItem>
+                          <SelectItem value="non-code">{t('fields.tasks.defaultType.options.nonCode')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.tasks.defaultType.description')}
+                    </p>
+                  </div>
+
+                  {/* Start code tasks immediately */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.tasks.startImmediately.label')}
+                      </label>
+                      <Switch
+                        checked={localStartCodeTasksImmediately}
+                        onCheckedChange={setLocalStartCodeTasksImmediately}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.tasks.startImmediately.description')}
+                    </p>
+                  </div>
+                </div>
+              </SettingsSection>
+
               {/* Notifications */}
               <SettingsSection title={t('sections.notifications')}>
                 <div className="space-y-4">
@@ -1762,20 +1852,25 @@ function SettingsPage() {
 
       {/* Sticky Save Button Footer */}
       <div className="shrink-0 border-t border-border bg-background px-6 py-3">
-        <div className={`mx-auto flex max-w-5xl items-center gap-2 ${isDesktop ? 'justify-start' : 'justify-end'}`}>
-          {saved && (
-            <span className="flex items-center gap-1 text-xs text-accent">
-              <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-              {tc('status.saved')}
-            </span>
-          )}
-          <Button
-            size="sm"
-            onClick={handleSaveAll}
-            disabled={!hasChanges || isLoading || updateConfig.isPending || updateNotifications.isPending || updateZAi.isPending || updateDeploymentSettings.isPending}
-          >
-            {tc('buttons.save')}
-          </Button>
+        <div className="mx-auto flex max-w-5xl items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            Fulcrum {version ? `v${version}` : '(dev)'}
+          </span>
+          <div className={`flex items-center gap-2 ${isDesktop ? 'flex-row-reverse' : ''}`}>
+            {saved && (
+              <span className="flex items-center gap-1 text-xs text-accent">
+                <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
+                {tc('status.saved')}
+              </span>
+            )}
+            <Button
+              size="sm"
+              onClick={handleSaveAll}
+              disabled={!hasChanges || isLoading || updateConfig.isPending || updateNotifications.isPending || updateZAi.isPending || updateDeploymentSettings.isPending}
+            >
+              {tc('buttons.save')}
+            </Button>
+          </div>
         </div>
       </div>
 

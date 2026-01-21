@@ -22,6 +22,14 @@ function getMinLevel(): LogLevel {
 // Cached log file path (initialized lazily)
 let logFilePath: string | null = null
 
+/**
+ * Reset the cached log file path.
+ * Called during test cleanup to ensure the next log uses the new FULCRUM_DIR.
+ */
+export function resetLogFilePath(): void {
+  logFilePath = null
+}
+
 function getLogFile(): string | null {
   if (logFilePath !== null) {
     return logFilePath || null

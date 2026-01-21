@@ -197,12 +197,12 @@ function getTaskTagsFromJoinTable(taskId: string, legacyTagsJson: string | null)
 function toApiResponse(
   task: Task,
   includeLinks = false
-): Task & { viewState: unknown; agentOptions: Record<string, string> | null; labels: string[]; links?: TaskLink[] } {
-  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; labels: string[]; links?: TaskLink[] } = {
+): Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[] } {
+  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[] } = {
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
     agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
-    labels: getTaskTagsFromJoinTable(task.id, task.labels),
+    tags: getTaskTagsFromJoinTable(task.id, task.tags),
   }
   if (includeLinks) {
     response.links = getTaskLinks(task.id)
@@ -230,7 +230,7 @@ app.get('/', (c) => {
   // Filter by tag if specified
   if (tag) {
     allTasks = allTasks.filter((t) => {
-      const taskTags = getTaskTagsFromJoinTable(t.id, t.labels)
+      const taskTags = getTaskTagsFromJoinTable(t.id, t.tags)
       return taskTags.includes(tag)
     })
   }
@@ -248,7 +248,7 @@ app.post('/', async (c) => {
         agent?: string
         agentOptions?: Record<string, string> | null
         opencodeModel?: string | null
-        labels?: string[]
+        tags?: string[]
       }
     >()
 
@@ -284,7 +284,7 @@ app.post('/', async (c) => {
       // New generalized task fields
       projectId: body.projectId || null,
       repositoryId: body.repositoryId || null,
-      labels: body.labels && body.labels.length > 0 ? JSON.stringify(body.labels) : null,
+      tags: body.tags && body.tags.length > 0 ? JSON.stringify(body.tags) : null,
       startedAt,
       dueDate: body.dueDate || null,
       createdAt: now,
@@ -503,9 +503,9 @@ app.patch('/:id', async (c) => {
     if (body.viewState !== undefined) {
       updates.viewState = body.viewState ? JSON.stringify(body.viewState) : null
     }
-    // Serialize labels array to JSON string
-    if (body.labels !== undefined) {
-      updates.labels = body.labels && body.labels.length > 0 ? JSON.stringify(body.labels) : null
+    // Serialize tags array to JSON string
+    if (body.tags !== undefined) {
+      updates.tags = body.tags && body.tags.length > 0 ? JSON.stringify(body.tags) : null
     }
 
     // Only do additional db update if there are other fields to update
@@ -836,7 +836,7 @@ app.delete('/:id/tags/:tag', (c) => {
 
   if (!tag) {
     // Tag doesn't exist, nothing to remove
-    const currentTags = getTaskTagsFromJoinTable(taskId, task.labels)
+    const currentTags = getTaskTagsFromJoinTable(taskId, task.tags)
     return c.json({ tags: currentTags })
   }
 

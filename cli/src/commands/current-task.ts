@@ -1,7 +1,9 @@
-import { FulcrumClient } from '../client'
+import { defineCommand } from 'citty'
+import { FulcrumClient, type TaskDependenciesResponse } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
-import type { TaskStatus, Task } from '@shared/types'
+import type { TaskStatus, Task, TaskAttachment } from '@shared/types'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 const STATUS_MAP: Record<string, TaskStatus> = {
   review: 'IN_REVIEW',
@@ -10,13 +12,78 @@ const STATUS_MAP: Record<string, TaskStatus> = {
   'in-progress': 'IN_PROGRESS',
 }
 
-function formatTask(task: Task): void {
+function formatTask(
+  task: Task,
+  dependencies?: TaskDependenciesResponse,
+  attachments?: TaskAttachment[]
+): void {
   console.log(`${task.title}`)
-  console.log(`  ID:       ${task.id}`)
-  console.log(`  Status:   ${task.status}`)
-  console.log(`  Repo:     ${task.repoName}`)
-  if (task.branch) console.log(`  Branch:   ${task.branch}`)
-  if (task.prUrl) console.log(`  PR:       ${task.prUrl}`)
+  console.log(`  ID:         ${task.id}`)
+  console.log(`  Status:     ${task.status}`)
+
+  // Description
+  if (task.description) {
+    console.log(`  Description: ${task.description}`)
+  }
+
+  // Repository info
+  if (task.repoName) console.log(`  Repo:       ${task.repoName}`)
+  if (task.branch) console.log(`  Branch:     ${task.branch}`)
+  if (task.worktreePath) console.log(`  Worktree:   ${task.worktreePath}`)
+
+  // Links
+  if (task.prUrl) console.log(`  PR:         ${task.prUrl}`)
+  if (task.links && task.links.length > 0) {
+    console.log(`  Links:      ${task.links.map((l) => l.label || l.url).join(', ')}`)
+  }
+
+  // Tags and due date
+  if (task.tags && task.tags.length > 0) {
+    console.log(`  Tags:       ${task.tags.join(', ')}`)
+  }
+  if (task.dueDate) console.log(`  Due:        ${task.dueDate}`)
+
+  // Project
+  if (task.projectId) console.log(`  Project:    ${task.projectId}`)
+
+  // Agent info
+  console.log(`  Agent:      ${task.agent}`)
+  if (task.aiMode) console.log(`  AI Mode:    ${task.aiMode}`)
+  if (task.agentOptions && Object.keys(task.agentOptions).length > 0) {
+    console.log(`  Options:    ${JSON.stringify(task.agentOptions)}`)
+  }
+
+  // Dependencies
+  if (dependencies) {
+    if (dependencies.isBlocked) {
+      console.log(`  Blocked:    Yes`)
+    }
+    if (dependencies.dependsOn.length > 0) {
+      console.log(`  Depends on: ${dependencies.dependsOn.length} task(s)`)
+      for (const dep of dependencies.dependsOn) {
+        if (dep.task) {
+          console.log(`    - ${dep.task.title} [${dep.task.status}]`)
+        }
+      }
+    }
+    if (dependencies.dependents.length > 0) {
+      console.log(`  Blocking:   ${dependencies.dependents.length} task(s)`)
+    }
+  }
+
+  // Attachments
+  if (attachments && attachments.length > 0) {
+    console.log(`  Attachments: ${attachments.length} file(s)`)
+  }
+
+  // Notes
+  if (task.notes) {
+    console.log(`  Notes:      ${task.notes}`)
+  }
+
+  // Timestamps
+  console.log(`  Created:    ${task.createdAt}`)
+  if (task.startedAt) console.log(`  Started:    ${task.startedAt}`)
 }
 
 /**
@@ -57,7 +124,7 @@ async function findCurrentTask(client: FulcrumClient, pathOverride?: string) {
   return task
 }
 
-export async function handleCurrentTaskCommand(
+async function handleCurrentTaskCommand(
   action: string | undefined,
   rest: string[],
   flags: Record<string, string>
@@ -69,9 +136,19 @@ export async function handleCurrentTaskCommand(
   if (!action) {
     const task = await findCurrentTask(client, pathOverride)
     if (isJsonOutput()) {
-      output(task)
+      // For JSON output, include dependencies and attachments
+      const [dependencies, attachments] = await Promise.all([
+        client.getTaskDependencies(task.id),
+        client.listTaskAttachments(task.id),
+      ])
+      output({ ...task, dependencies, attachments })
     } else {
-      formatTask(task)
+      // For human-readable output, fetch extra data
+      const [dependencies, attachments] = await Promise.all([
+        client.getTaskDependencies(task.id),
+        client.listTaskAttachments(task.id),
+      ])
+      formatTask(task, dependencies, attachments)
     }
     return
   }
@@ -179,3 +256,110 @@ export async function handleCurrentTaskCommand(
     console.log(`Moved task to ${newStatus}: ${updatedTask.title}`)
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const currentTaskInfoCommand = defineCommand({
+  meta: { name: 'info', description: 'Show current task info' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand(undefined, [], toFlags(args))
+  },
+})
+
+const currentTaskPrCommand = defineCommand({
+  meta: { name: 'pr', description: 'Link a PR to current task' },
+  args: {
+    ...globalArgs,
+    url: { type: 'positional' as const, description: 'PR URL', required: true },
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('pr', [args.url as string], toFlags(args))
+  },
+})
+
+const currentTaskLinkCommand = defineCommand({
+  meta: { name: 'link', description: 'Manage task links' },
+  args: {
+    ...globalArgs,
+    url: { type: 'positional' as const, description: 'URL to add (or --remove <id>)' },
+    label: { type: 'string' as const, description: 'Display label for the link' },
+    remove: { type: 'string' as const, alias: 'r', description: 'Remove link by URL or ID' },
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    const rest: string[] = []
+    if (args.remove) {
+      rest.push('--remove', args.remove as string)
+    } else if (args.url) {
+      rest.push(args.url as string)
+    }
+    await handleCurrentTaskCommand('link', rest, toFlags(args))
+  },
+})
+
+const currentTaskReviewCommand = defineCommand({
+  meta: { name: 'review', description: 'Move task to IN_REVIEW' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('review', [], toFlags(args))
+  },
+})
+
+const currentTaskDoneCommand = defineCommand({
+  meta: { name: 'done', description: 'Move task to DONE' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('done', [], toFlags(args))
+  },
+})
+
+const currentTaskCancelCommand = defineCommand({
+  meta: { name: 'cancel', description: 'Move task to CANCELED' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand('cancel', [], toFlags(args))
+  },
+})
+
+export const currentTaskCommand = defineCommand({
+  meta: { name: 'current-task', description: 'Manage the current worktree task' },
+  args: {
+    ...globalArgs,
+    path: { type: 'string' as const, description: 'Path override (default: cwd)' },
+  },
+  subCommands: {
+    info: currentTaskInfoCommand,
+    pr: currentTaskPrCommand,
+    link: currentTaskLinkCommand,
+    review: currentTaskReviewCommand,
+    done: currentTaskDoneCommand,
+    cancel: currentTaskCancelCommand,
+  },
+  async run({ args }) {
+    // Default: show current task info
+    setupJsonOutput(args)
+    await handleCurrentTaskCommand(undefined, [], toFlags(args))
+  },
+})

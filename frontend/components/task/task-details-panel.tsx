@@ -23,7 +23,7 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const [editedDescription, setEditedDescription] = useState(task.description || '')
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [editedNotes, setEditedNotes] = useState(task.notes || '')
-  const [labelInput, setLabelInput] = useState('')
+  const [tagInput, setTagInput] = useState('')
   const [prUrlInput, setPrUrlInput] = useState(task.prUrl || '')
   const [isEditingPrUrl, setIsEditingPrUrl] = useState(false)
 
@@ -56,28 +56,28 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
     })
   }
 
-  const handleAddLabel = () => {
-    const trimmed = labelInput.trim()
-    if (trimmed && !task.labels.includes(trimmed)) {
+  const handleAddTag = () => {
+    const trimmed = tagInput.trim()
+    if (trimmed && !task.tags.includes(trimmed)) {
       updateTask.mutate({
         taskId: task.id,
-        updates: { labels: [...task.labels, trimmed] } as Partial<Task>,
+        updates: { tags: [...task.tags, trimmed] } as Partial<Task>,
       })
-      setLabelInput('')
+      setTagInput('')
     }
   }
 
-  const handleRemoveLabel = (label: string) => {
+  const handleRemoveTag = (tag: string) => {
     updateTask.mutate({
       taskId: task.id,
-      updates: { labels: task.labels.filter((l) => l !== label) } as Partial<Task>,
+      updates: { tags: task.tags.filter((t) => t !== tag) } as Partial<Task>,
     })
   }
 
-  const handleLabelKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      handleAddLabel()
+      handleAddTag()
     }
   }
 
@@ -164,21 +164,21 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
           )}
         </div>
 
-        {/* Labels and Due Date */}
+        {/* Tags and Due Date */}
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Labels */}
+          {/* Tags */}
           <div className="rounded-lg border bg-card p-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Labels</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
             <div className="flex flex-wrap items-center gap-1.5">
-              {task.labels.map((label) => (
+              {task.tags.map((tag) => (
                 <span
-                  key={label}
+                  key={tag}
                   className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium"
                 >
-                  {label}
+                  {tag}
                   <button
                     type="button"
-                    onClick={() => handleRemoveLabel(label)}
+                    onClick={() => handleRemoveTag(tag)}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <HugeiconsIcon icon={Cancel01Icon} size={10} />
@@ -187,11 +187,11 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
               ))}
               <input
                 type="text"
-                value={labelInput}
-                onChange={(e) => setLabelInput(e.target.value)}
-                onKeyDown={handleLabelKeyDown}
-                onBlur={handleAddLabel}
-                placeholder={task.labels.length === 0 ? 'Add label...' : '+'}
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={handleAddTag}
+                placeholder={task.tags.length === 0 ? 'Add tag...' : '+'}
                 className="w-16 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
               />
             </div>

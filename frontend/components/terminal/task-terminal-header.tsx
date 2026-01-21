@@ -92,7 +92,7 @@ export function TaskTerminalHeader({
     opencodeModel: null,
     projectId: null,
     repositoryId: null,
-    labels: [],
+    tags: [],
     startedAt: null,
     dueDate: null,
     notes: null,

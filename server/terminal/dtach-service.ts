@@ -251,3 +251,11 @@ export function getDtachService(): DtachService {
   }
   return dtachService
 }
+
+/**
+ * Reset the dtach service singleton.
+ * Called during test cleanup to ensure the next getDtachService() uses the new FULCRUM_DIR.
+ */
+export function resetDtachService(): void {
+  dtachService = null
+}

@@ -1,0 +1,27 @@
+{
+  "name": "fulcrum",
+  "owner": {
+    "name": "Fulcrum"
+  },
+  "plugins": [
+    {
+      "name": "fulcrum",
+      "source": "./",
+      "description": "Task orchestration for Claude Code",
+      "version": "1.10.0",
+      "skills": [
+        "./skills/fulcrum"
+      ],
+      "keywords": [
+        "fulcrum",
+        "task",
+        "orchestration",
+        "worktree"
+      ]
+    }
+  ],
+  "metadata": {
+    "description": "Fulcrum task orchestration plugin marketplace",
+    "version": "1.0.0"
+  }
+}

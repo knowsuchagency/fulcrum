@@ -1,6 +1,8 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 const VALID_CHANNELS = ['sound', 'slack', 'discord', 'pushover'] as const
 type NotificationChannel = (typeof VALID_CHANNELS)[number]
@@ -142,3 +144,77 @@ function buildChannelUpdate(
 
   return { [channel]: channelConfig }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const notificationsStatusCommand = defineCommand({
+  meta: { name: 'status', description: 'Show notification settings' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleNotificationsCommand('status', [], toFlags(args))
+  },
+})
+
+const notificationsEnableCommand = defineCommand({
+  meta: { name: 'enable', description: 'Enable notifications' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleNotificationsCommand('enable', [], toFlags(args))
+  },
+})
+
+const notificationsDisableCommand = defineCommand({
+  meta: { name: 'disable', description: 'Disable notifications' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleNotificationsCommand('disable', [], toFlags(args))
+  },
+})
+
+const notificationsTestCommand = defineCommand({
+  meta: { name: 'test', description: 'Test a notification channel' },
+  args: {
+    ...globalArgs,
+    channel: { type: 'positional' as const, description: 'Channel to test (sound, slack, discord, pushover)', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleNotificationsCommand('test', [args.channel as string], toFlags(args))
+  },
+})
+
+const notificationsSetCommand = defineCommand({
+  meta: { name: 'set', description: 'Set a notification channel config' },
+  args: {
+    ...globalArgs,
+    channel: { type: 'positional' as const, description: 'Channel (sound, slack, discord, pushover)', required: true },
+    key: { type: 'positional' as const, description: 'Config key', required: true },
+    value: { type: 'positional' as const, description: 'Config value', required: true },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleNotificationsCommand('set', [args.channel as string, args.key as string, args.value as string], toFlags(args))
+  },
+})
+
+export const notificationsCommand = defineCommand({
+  meta: { name: 'notifications', description: 'Manage notification settings' },
+  args: globalArgs,
+  subCommands: {
+    status: notificationsStatusCommand,
+    enable: notificationsEnableCommand,
+    disable: notificationsDisableCommand,
+    test: notificationsTestCommand,
+    set: notificationsSetCommand,
+  },
+  async run({ args }) {
+    // Default to status when no subcommand
+    setupJsonOutput(args)
+    await handleNotificationsCommand(undefined, [], toFlags(args))
+  },
+})

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
@@ -64,6 +65,7 @@ interface KanbanBoardProps {
 
 function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
   const { t } = useTranslation('common')
+  const navigate = useNavigate()
   const { data: allTasks = [], isLoading } = useTasks()
   const { data: projects = [] } = useProjects()
   const { data: dependencyGraph } = useTaskDependencyGraph()
@@ -165,7 +167,7 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
             fuzzyScore(t.description || '', searchQuery),
             fuzzyScore(t.branch || '', searchQuery),
             fuzzyScore(t.prUrl || '', searchQuery),
-            fuzzyScore(t.labels.join(' '), searchQuery)
+            fuzzyScore(t.tags.join(' '), searchQuery)
           ),
         }))
         .filter(({ score }) => score > 0)
@@ -212,16 +214,40 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
         const target = dropTargets[0]
         const targetData = target.data as { type: string; status?: TaskStatus; taskId?: string }
 
+        // Helper to check if we should navigate after status change
+        // (TO_DO → IN_PROGRESS for code tasks that will create a worktree)
+        const shouldNavigateAfterStatusChange = (newStatus: TaskStatus) => {
+          const isCodeTask = !!(task.repositoryId || task.repoPath)
+          return task.status === 'TO_DO' && newStatus === 'IN_PROGRESS' && isCodeTask
+        }
+
+        // Helper to create onSuccess callback for navigation
+        const createOnSuccess = (newStatus: TaskStatus) => {
+          if (shouldNavigateAfterStatusChange(newStatus)) {
+            return () => {
+              navigate({
+                to: '/tasks/$taskId',
+                params: { taskId },
+                state: { focusTerminal: true } as Record<string, unknown>,
+              })
+            }
+          }
+          return undefined
+        }
+
         if (targetData.type === 'column') {
           // Dropped on empty column area
           const newStatus = targetData.status as TaskStatus
           if (newStatus !== task.status) {
             const tasksInColumn = tasks.filter(t => t.status === newStatus)
-            updateStatus.mutate({
-              taskId,
-              status: newStatus,
-              position: tasksInColumn.length,
-            })
+            updateStatus.mutate(
+              {
+                taskId,
+                status: newStatus,
+                position: tasksInColumn.length,
+              },
+              { onSuccess: createOnSuccess(newStatus) }
+            )
           }
         } else if (targetData.type === 'task') {
           // Dropped on another task - check edge
@@ -247,16 +273,19 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
           }
 
           if (task.status !== newStatus || newPosition !== task.position) {
-            updateStatus.mutate({
-              taskId,
-              status: newStatus,
-              position: newPosition,
-            })
+            updateStatus.mutate(
+              {
+                taskId,
+                status: newStatus,
+                position: newPosition,
+              },
+              { onSuccess: createOnSuccess(newStatus) }
+            )
           }
         }
       },
     })
-  }, [tasks, updateStatus])
+  }, [tasks, updateStatus, navigate])
 
   if (isLoading) {
     return (

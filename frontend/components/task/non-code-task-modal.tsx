@@ -1,4 +1,3 @@
-import { useNavigate } from '@tanstack/react-router'
 import {
   Dialog,
   DialogContent,
@@ -13,13 +12,6 @@ interface NonCodeTaskModalProps {
 }
 
 export function NonCodeTaskModal({ task, open, onOpenChange }: NonCodeTaskModalProps) {
-  const navigate = useNavigate()
-
-  const handleInitializeAsCodeTask = () => {
-    onOpenChange(false)
-    navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
-  }
-
   const handleDeleted = () => {
     onOpenChange(false)
   }
@@ -29,7 +21,6 @@ export function NonCodeTaskModal({ task, open, onOpenChange }: NonCodeTaskModalP
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto p-0" showCloseButton={false}>
         <TaskContent
           task={task}
-          onInitializeAsCodeTask={handleInitializeAsCodeTask}
           onDeleted={handleDeleted}
           compact
         />

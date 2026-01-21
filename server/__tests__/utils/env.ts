@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execSync } from 'node:child_process'
 import { resetDatabase } from '../../db'
+import { resetLogFilePath } from '../../lib/logger'
+import { resetDtachService } from '../../terminal/dtach-service'
 
 /**
  * Creates an isolated test environment with its own FULCRUM_DIR.
@@ -47,12 +49,21 @@ export function setupTestEnv(): TestEnv {
       // Reset database first (closes connections)
       resetDatabase()
 
+      // Reset cached paths in singletons so they pick up new FULCRUM_DIR
+      resetLogFilePath()
+      resetDtachService()
+
       // Restore original env values
+      // IMPORTANT: Always restore FULCRUM_DIR, never delete it.
+      // Deleting FULCRUM_DIR causes getFulcrumDir() to fall back to ~/.fulcrum (production)
+      // which would corrupt production settings during subsequent test operations.
       if (originalFulcrumDir !== undefined) {
         process.env.FULCRUM_DIR = originalFulcrumDir
-      } else {
-        delete process.env.FULCRUM_DIR
       }
+      // Note: We intentionally do NOT delete FULCRUM_DIR even if it was originally undefined.
+      // In test mode, getFulcrumDir() will throw if FULCRUM_DIR is not set, which is safer
+      // than silently falling back to production paths.
+
       if (originalPort !== undefined) {
         process.env.PORT = originalPort
       }

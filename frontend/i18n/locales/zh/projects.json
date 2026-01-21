@@ -126,5 +126,66 @@
     "noApp": "无应用",
     "running": "运行中",
     "archived": "已归档"
+  },
+  "agentSettings": {
+    "summaryDefault": "默认",
+    "inherit": "继承",
+    "summaryClaudeOptions_one": "Claude: {{count}} 个选项",
+    "summaryClaudeOptions_other": "Claude: {{count}} 个选项",
+    "summaryOpencodeOptions_one": "OpenCode: {{count}} 个选项",
+    "summaryOpencodeOptions_other": "OpenCode: {{count}} 个选项",
+    "summaryModel": "模型",
+    "description": "配置此项目的默认代理设置。仓库可以覆盖这些设置。",
+    "useGlobalDefault": "使用全局默认"
+  },
+  "repoCard": {
+    "activeCount_one": "{{count}} 个进行中",
+    "activeCount_other": "{{count}} 个进行中",
+    "doneCount_one": "{{count}} 个已完成",
+    "doneCount_other": "{{count}} 个已完成"
+  },
+  "detail": {
+    "clickToEdit": "点击编辑",
+    "actions": {
+      "task": "任务",
+      "repo": "仓库",
+      "link": "链接"
+    },
+    "sections": {
+      "repositories": "仓库",
+      "links": "链接",
+      "attachments": "附件",
+      "tags": "标签",
+      "notes": "备注",
+      "activeTasks": "进行中的任务"
+    },
+    "addDescription": "添加描述...",
+    "save": "保存",
+    "edit": "编辑",
+    "done": "完成",
+    "add": "添加",
+    "cancel": "取消",
+    "noRepositories": "该项目未关联任何仓库。",
+    "linkExisting": "关联现有仓库",
+    "urlPlaceholder": "https://...",
+    "linkLabelPlaceholder": "标签（可选）",
+    "labelPlaceholder": "标签",
+    "removeLink": "移除链接",
+    "addLink": "添加链接",
+    "addTag": "添加标签...",
+    "loadingAttachments": "加载附件中...",
+    "uploading": "上传中...",
+    "dropOrClick": "拖放文件到此处或点击上传",
+    "dropOrClickShort": "拖放或点击",
+    "attachmentTypes": "PDF、图片、文档、压缩包（最大 10MB）",
+    "noAttachments": "暂无附件",
+    "noTags": "暂无标签",
+    "searchOrCreateTag": "搜索或创建标签...",
+    "createTag": "创建 \"{{tag}}\"",
+    "noMatchingTags": "无匹配的标签",
+    "addNotes": "添加项目备注...",
+    "noNotes": "暂无备注",
+    "noActiveTasks": "暂无进行中的任务",
+    "loading": "加载中..."
   }
 }

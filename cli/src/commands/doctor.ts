@@ -1,5 +1,7 @@
+import { defineCommand } from 'citty'
 import { checkAllDependencies, getInstallCommand, getDependency } from '../utils/dependencies'
 import { output } from '../utils/output'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
 /**
  * Handle the `fulcrum doctor` command.
@@ -69,3 +71,16 @@ export async function handleDoctorCommand(flags: Record<string, string>) {
 
   console.log('')
 }
+
+// ============================================================================
+// Command Definition
+// ============================================================================
+
+export const doctorCommand = defineCommand({
+  meta: { name: 'doctor', description: 'Check dependencies and system status' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleDoctorCommand(toFlags(args))
+  },
+})

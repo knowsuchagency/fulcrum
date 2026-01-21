@@ -94,8 +94,8 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
           tasks = tasks.filter((t) => {
             // Check title
             if (t.title.toLowerCase().includes(searchLower)) return true
-            // Check tags (stored as 'labels' field)
-            if (t.labels && t.labels.some((tg) => tg.toLowerCase().includes(searchLower))) return true
+            // Check tags
+            if (t.tags && t.tags.some((tg) => tg.toLowerCase().includes(searchLower))) return true
             // Check project name
             if (t.projectId && projectsMap) {
               const projectName = projectsMap.get(t.projectId)
@@ -133,13 +133,13 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
         // Single tag filter (legacy)
         if (tag) {
           const tagLower = tag.toLowerCase()
-          tasks = tasks.filter((t) => t.labels && t.labels.some((tg) => tg.toLowerCase() === tagLower))
+          tasks = tasks.filter((t) => t.tags && t.tags.some((tg) => tg.toLowerCase() === tagLower))
         }
 
         // Multi-tag filter (OR logic)
         if (tags && tags.length > 0) {
           const tagsLower = tags.map((tg) => tg.toLowerCase())
-          tasks = tasks.filter((t) => t.labels && t.labels.some((tg) => tagsLower.includes(tg.toLowerCase())))
+          tasks = tasks.filter((t) => t.tags && t.tags.some((tg) => tagsLower.includes(tg.toLowerCase())))
         }
 
         // Date range filters
@@ -168,14 +168,19 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
   // get_task
   server.tool(
     'get_task',
-    'Get details of a specific task by ID',
+    'Get details of a specific task by ID, including dependencies and attachments',
     {
       id: z.string().describe('Task ID (UUID)'),
     },
     async ({ id }) => {
       try {
-        const task = await client.getTask(id)
-        return formatSuccess(task)
+        // Fetch task with dependencies and attachments for comprehensive output
+        const [task, dependencies, attachments] = await Promise.all([
+          client.getTask(id),
+          client.getTaskDependencies(id),
+          client.listTaskAttachments(id),
+        ])
+        return formatSuccess({ ...task, dependencies, attachments })
       } catch (err) {
         return handleToolError(err)
       }
@@ -212,7 +217,7 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
           status: status ?? 'IN_PROGRESS',
           projectId: projectId ?? null,
           repositoryId: repositoryId ?? null,
-          labels: tags, // API still uses 'labels' field name
+          tags,
           dueDate: dueDate ?? null,
         })
 
@@ -221,8 +226,8 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
           const allTasks = await client.listTasks()
           const existingTags = new Set<string>()
           for (const t of allTasks) {
-            if (t.labels) {
-              for (const tg of t.labels) {
+            if (t.tags) {
+              for (const tg of t.tags) {
                 existingTags.add(tg)
               }
             }
@@ -601,8 +606,8 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
         const allTasks = await client.listTasks()
         const existingTags = new Set<string>()
         for (const t of allTasks) {
-          if (t.labels) {
-            for (const tg of t.labels) {
+          if (t.tags) {
+            for (const tg of t.tags) {
               existingTags.add(tg)
             }
           }
@@ -816,7 +821,7 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
       try {
         let tasks = await client.listTasks()
         const tagLower = tag.toLowerCase()
-        tasks = tasks.filter((t) => t.labels && t.labels.some((tg) => tg.toLowerCase() === tagLower))
+        tasks = tasks.filter((t) => t.tags && t.tags.some((tg) => tg.toLowerCase() === tagLower))
         return formatSuccess(tasks)
       } catch (err) {
         return handleToolError(err)
@@ -837,8 +842,8 @@ export function registerTools(server: McpServer, client: FulcrumClient) {
         const tagCounts = new Map<string, number>()
 
         for (const task of tasks) {
-          if (task.labels) {
-            for (const tag of task.labels) {
+          if (task.tags) {
+            for (const tag of task.tags) {
               tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1)
             }
           }

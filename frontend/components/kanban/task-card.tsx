@@ -13,8 +13,9 @@ import { useSelection } from './selection-context'
 import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PackageIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
+import { FolderLibraryIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
 import { NonCodeTaskModal } from '@/components/task/non-code-task-modal'
+import { useRepositories } from '@/hooks/use-repositories'
 
 interface TaskCardProps {
   task: Task
@@ -27,6 +28,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
   const { setActiveTask } = useDrag()
   const { isSelected, toggleSelection } = useSelection()
   const navigate = useNavigate()
+  const { data: repositories } = useRepositories()
   const selected = isSelected(task.id)
 
   const ref = useRef<HTMLDivElement>(null)
@@ -35,8 +37,15 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
   const [previewContainer, setPreviewContainer] = useState<HTMLElement | null>(null)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
 
-  // Determine if this is a code task (has worktree) or non-code task
-  const isCodeTask = !!task.worktreePath
+  // Determine if this is a code task (has worktree or is configured with a repository)
+  const isCodeTask = !!(task.worktreePath || task.repositoryId)
+  const isActiveCodeTask = !!task.worktreePath
+  const isPendingCodeTask = !task.worktreePath && !!task.repositoryId
+
+  // Get repository info for pending code tasks
+  const pendingRepo = isPendingCodeTask
+    ? repositories?.find((r) => r.id === task.repositoryId)
+    : null
 
   // Track if drag occurred to distinguish from click
   const hasDragged = useRef(false)
@@ -120,9 +129,9 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
       return
     }
 
-    // For code tasks, navigate to detail page
-    // For non-code tasks, open the modal
-    if (isCodeTask) {
+    // For active code tasks (has worktree), navigate to detail page
+    // For non-code tasks and pending code tasks, open the modal
+    if (isActiveCodeTask) {
       navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
     } else {
       setTaskModalOpen(true)
@@ -184,26 +193,26 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
             {task.description}
           </p>
         )}
-        {/* Labels row */}
-        {task.labels.length > 0 && (
+        {/* Tags row */}
+        {task.tags.length > 0 && (
           <div className="mt-2 flex items-center gap-1 flex-wrap">
-            {task.labels.slice(0, 3).map((label) => (
+            {task.tags.slice(0, 3).map((tag) => (
               <span
-                key={label}
+                key={tag}
                 className="rounded-full border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium"
               >
-                {label}
+                {tag}
               </span>
             ))}
-            {task.labels.length > 3 && (
-              <span className="text-[10px] text-muted-foreground">+{task.labels.length - 3}</span>
+            {task.tags.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{task.tags.length - 3}</span>
             )}
           </div>
         )}
         {/* Metadata row */}
         <div className={cn(
           'flex items-center gap-1 text-xs text-muted-foreground/70 flex-wrap',
-          task.labels.length > 0 ? 'mt-1.5' : 'mt-2'
+          task.tags.length > 0 ? 'mt-1.5' : 'mt-2'
         )}>
           {/* Blocked indicator (red) */}
           {isBlocked && (
@@ -225,10 +234,10 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
               <span className="text-muted-foreground/30">•</span>
             </>
           )}
-          {/* Code task metadata */}
-          {isCodeTask && (
+          {/* Code task metadata - active (has worktree) */}
+          {isActiveCodeTask && (
             <span className="inline-flex items-center gap-1 whitespace-nowrap">
-              <HugeiconsIcon icon={PackageIcon} size={12} strokeWidth={2} />
+              <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
               <span className="truncate max-w-24">{task.repoName}</span>
               {task.prUrl && (
                 <>
@@ -236,6 +245,13 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
                   <HugeiconsIcon icon={GitPullRequestIcon} size={12} strokeWidth={2} className="text-foreground" />
                 </>
               )}
+            </span>
+          )}
+          {/* Code task metadata - pending (has repositoryId but no worktree yet) */}
+          {isPendingCodeTask && pendingRepo && (
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <HugeiconsIcon icon={FolderLibraryIcon} size={12} strokeWidth={2} />
+              <span className="truncate max-w-24">{pendingRepo.displayName}</span>
             </span>
           )}
           {/* Due date - shown for all tasks */}
@@ -254,8 +270,8 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
             </>
           )}
           {/* Fallback for non-code tasks with no metadata */}
-          {!isCodeTask && !isBlocked && !isBlocking && task.labels.length === 0 && !task.dueDate && (
-            <span className="italic">Quick task</span>
+          {!isCodeTask && !isBlocked && !isBlocking && task.tags.length === 0 && !task.dueDate && (
+            <span className="italic">Non-code task</span>
           )}
         </div>
       </CardContent>
@@ -272,7 +288,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
         </div>,
         previewContainer
       )}
-      {!isCodeTask && (
+      {!isActiveCodeTask && (
         <NonCodeTaskModal
           task={task}
           open={taskModalOpen}

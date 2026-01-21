@@ -1,8 +1,10 @@
+import { defineCommand } from 'citty'
 import { FulcrumClient } from '../client'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
-export async function handleDevCommand(
+async function handleDevCommand(
   action: string | undefined,
   flags: Record<string, string>
 ) {
@@ -61,3 +63,33 @@ export async function handleDevCommand(
       )
   }
 }
+
+// ============================================================================
+// Command Definitions
+// ============================================================================
+
+const devRestartCommand = defineCommand({
+  meta: { name: 'restart', description: 'Rebuild and restart Fulcrum server' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleDevCommand('restart', toFlags(args))
+  },
+})
+
+const devStatusCommand = defineCommand({
+  meta: { name: 'status', description: 'Show developer mode status' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleDevCommand('status', toFlags(args))
+  },
+})
+
+export const devCommand = defineCommand({
+  meta: { name: 'dev', description: 'Developer mode commands' },
+  subCommands: {
+    restart: devRestartCommand,
+    status: devStatusCommand,
+  },
+})

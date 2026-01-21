@@ -6,6 +6,14 @@
   "createModal": {
     "title": "创建新任务",
     "description": "创建一个带有 Git 工作树的新任务，用于隔离开发。",
+    "taskTypes": {
+      "code": "代码任务",
+      "nonCode": "非代码任务"
+    },
+    "taskDescriptions": {
+      "code": "创建 Git 工作树并打开 AI 编程代理。",
+      "nonCode": "无需 Git 工作树或 AI 代理的通用任务。"
+    },
     "fields": {
       "title": "标题",
       "titlePlaceholder": "添加用户认证",
@@ -18,7 +26,20 @@
       "repository": "仓库",
       "baseBranch": "基础分支",
       "branchName": "分支名称",
-      "branchPlaceholder": "自动生成分支名"
+      "branchPlaceholder": "自动生成分支名",
+      "project": "项目（可选）",
+      "tags": "标签",
+      "tagsPlaceholder": "添加标签...",
+      "dueDate": "截止日期",
+      "dueDatePlaceholder": "设置日期",
+      "notes": "备注",
+      "notesPlaceholder": "添加备注...",
+      "links": "链接",
+      "urlPlaceholder": "https://...",
+      "linkLabelPlaceholder": "标签（可选）",
+      "attachments": "附件",
+      "addAttachments": "添加附件...",
+      "addMoreFiles": "添加更多文件..."
     },
     "aiModes": {
       "plan": "计划",
@@ -38,10 +59,15 @@
     "selectBranch": "选择分支",
     "current": "（当前）",
     "createTask": "创建任务",
+    "noProject": "无项目（收件箱）",
+    "projectHint": "无项目的任务将显示在收件箱中。",
+    "startImmediately": "立即开始工作",
     "errors": {
       "notGitRepo": "所选文件夹不是 Git 仓库",
       "validationFailed": "验证仓库失败",
-      "createFailed": "创建任务失败"
+      "createFailed": "创建任务失败",
+      "invalidUrl": "无效的 URL",
+      "invalidUrlDescription": "请输入包含协议的有效 URL（例如：https://）"
     }
   }
 }

@@ -1,0 +1,9 @@
+# Bun configuration for test isolation
+#
+# The preload script enables test mode which prevents tests from
+# accidentally accessing production paths (~/.fulcrum, ~/.claude).
+# If any test code tries to access production paths, it will throw
+# a TEST ISOLATION VIOLATION error.
+
+[test]
+preload = ["./server/__tests__/preload.ts"]

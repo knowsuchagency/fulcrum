@@ -49,6 +49,13 @@ if [ -f "$plugin" ]; then
   echo "Updated $plugin"
 fi
 
+# Update plugin marketplace.json (installed plugin)
+plugin_marketplace="plugins/fulcrum/.claude-plugin/marketplace.json"
+if [ -f "$plugin_marketplace" ]; then
+  jq --arg v "$new_version" '.plugins[0].version = $v' "$plugin_marketplace" > "${plugin_marketplace}.tmp" && mv "${plugin_marketplace}.tmp" "$plugin_marketplace"
+  echo "Updated $plugin_marketplace"
+fi
+
 # Update neutralino.config.json
 neutralino_config="desktop/neutralino.config.json"
 if [ -f "$neutralino_config" ]; then
@@ -168,6 +175,10 @@ bunx eslint . || exit 1
 # This is critical because Bun caches os.homedir() at process startup,
 # before any JavaScript runs (including preload scripts).
 # Setting HOME here ensures the cached value is the temp directory.
+#
+# HOME_BACKUP preserves the original HOME so test isolation code can
+# detect and block access to production paths (~/.fulcrum, ~/.claude).
+export HOME_BACKUP="$HOME"
 export HOME=$(mktemp -d -t fulcrum-test-home-XXXXXX)
 export FULCRUM_DIR=$(mktemp -d -t fulcrum-test-dir-XXXXXX)
 echo "[test] Isolated environment: HOME=$HOME FULCRUM_DIR=$FULCRUM_DIR" >&2
@@ -190,6 +201,8 @@ run = """
 set -e
 
 # Create isolated test directories before bun starts
+# HOME_BACKUP preserves the original HOME for test isolation checks
+export HOME_BACKUP="$HOME"
 export HOME=$(mktemp -d -t fulcrum-test-home-XXXXXX)
 export FULCRUM_DIR=$(mktemp -d -t fulcrum-test-dir-XXXXXX)
 echo "[test:file] Isolated environment: HOME=$HOME FULCRUM_DIR=$FULCRUM_DIR" >&2
@@ -204,6 +217,8 @@ run = """
 set -e
 
 # Create isolated test directories before bun starts
+# HOME_BACKUP preserves the original HOME for test isolation checks
+export HOME_BACKUP="$HOME"
 export HOME=$(mktemp -d -t fulcrum-test-home-XXXXXX)
 export FULCRUM_DIR=$(mktemp -d -t fulcrum-test-dir-XXXXXX)
 echo "[test:watch] Isolated environment: HOME=$HOME FULCRUM_DIR=$FULCRUM_DIR" >&2
@@ -253,6 +268,16 @@ if [ -f "$PLUGIN" ]; then
   PLUGIN_VERSION=$(jq -r '.version' "$PLUGIN")
   if [ "$PLUGIN_VERSION" != "$VERSION" ]; then
     echo "ERROR: $PLUGIN version ($PLUGIN_VERSION) != package.json ($VERSION)" >&2
+    errors=$((errors + 1))
+  fi
+fi
+
+# Check plugin marketplace.json
+PLUGIN_MARKETPLACE="plugins/fulcrum/.claude-plugin/marketplace.json"
+if [ -f "$PLUGIN_MARKETPLACE" ]; then
+  PLUGIN_MARKETPLACE_VERSION=$(jq -r '.plugins[0].version' "$PLUGIN_MARKETPLACE")
+  if [ "$PLUGIN_MARKETPLACE_VERSION" != "$VERSION" ]; then
+    echo "ERROR: $PLUGIN_MARKETPLACE version ($PLUGIN_MARKETPLACE_VERSION) != package.json ($VERSION)" >&2
     errors=$((errors + 1))
   fi
 fi

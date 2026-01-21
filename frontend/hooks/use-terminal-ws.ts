@@ -6,9 +6,9 @@
  *
  * For new code, prefer using `useTerminalStore` from '@/stores' directly.
  */
-import type { Terminal as XTerm } from '@xterm/xterm'
 import { useTerminalStore } from '@/stores'
 import type { ITerminal, ITab } from '@/stores'
+import type { AnyTerminal } from '@/components/terminal/terminal-types'
 
 // Types matching server/types.ts - exported for backward compatibility
 export type TerminalStatus = 'running' | 'exited' | 'error'
@@ -106,7 +106,7 @@ interface UseTerminalWSReturn {
   updateTab: (tabId: string, updates: { name?: string; directory?: string | null }) => void
   deleteTab: (tabId: string) => void
   reorderTab: (tabId: string, position: number) => void
-  attachXterm: (terminalId: string, xterm: XTerm, options?: AttachXtermOptions) => () => void
+  attachXterm: (terminalId: string, xterm: AnyTerminal, options?: AttachXtermOptions) => () => void
   setupImagePaste: (container: HTMLElement, terminalId: string) => () => void
   consumePendingStartup: (terminalId: string) => PendingStartupInfo | undefined
   clearStartingUp: (terminalId: string) => void
@@ -186,7 +186,7 @@ export function useTerminalWS(_options: UseTerminalWSOptions = {}): UseTerminalW
     updateTab: store.updateTab,
     deleteTab: store.deleteTab,
     reorderTab: store.reorderTab,
-    attachXterm: store.attachXterm,
+    attachXterm: store.attachXterm as (terminalId: string, xterm: AnyTerminal, options?: AttachXtermOptions) => () => void,
     setupImagePaste: store.setupImagePaste,
     consumePendingStartup: store.consumePendingStartup,
     clearStartingUp: store.clearStartingUp,

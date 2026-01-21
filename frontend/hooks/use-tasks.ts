@@ -41,8 +41,10 @@ export function useCreateTask() {
       startupScript?: string
       agentOptions?: Record<string, string> | null
       opencodeModel?: string | null
+      // Repository reference for deferred worktree creation
+      repositoryId?: string | null
       // New generalized task fields
-      labels?: string[]
+      tags?: string[]
       dueDate?: string | null
       notes?: string | null
       projectId?: string | null
@@ -92,7 +94,7 @@ export function useUpdateTask() {
       updates,
     }: {
       taskId: string
-      updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'viewState' | 'prUrl' | 'labels' | 'dueDate'>>
+      updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'viewState' | 'prUrl' | 'tags' | 'dueDate' | 'repositoryId' | 'agent' | 'aiMode' | 'baseBranch'>>
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks/${taskId}`, {
         method: 'PATCH',
@@ -211,7 +213,7 @@ export interface TaskGraphNode {
   title: string
   status: TaskStatus
   projectId: string | null
-  labels: string[]
+  tags: string[]
   dueDate: string | null
 }
 

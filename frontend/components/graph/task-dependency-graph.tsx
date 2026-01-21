@@ -83,19 +83,19 @@ function TaskNode({ data }: { data: TaskNodeData }) {
             </span>
           )}
         </div>
-        {task.labels.length > 0 && (
+        {task.tags.length > 0 && (
           <div className="flex gap-1 flex-wrap mt-0.5">
-            {task.labels.slice(0, 3).map((label) => (
+            {task.tags.slice(0, 3).map((tag) => (
               <span
-                key={label}
+                key={tag}
                 className="text-[9px] px-1 py-0.5 rounded bg-gray-200 text-gray-600"
               >
-                {label}
+                {tag}
               </span>
             ))}
-            {task.labels.length > 3 && (
+            {task.tags.length > 3 && (
               <span className="text-[9px] px-1 py-0.5 rounded bg-gray-200 text-gray-600">
-                +{task.labels.length - 3}
+                +{task.tags.length - 3}
               </span>
             )}
           </div>
@@ -352,6 +352,7 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
           defaultEdgeOptions={{
             type: 'smoothstep',
           }}
+          proOptions={{ hideAttribution: true }}
         >
           <Background color="#e5e7eb" gap={20} size={1} />
           <Controls showInteractive={false} />

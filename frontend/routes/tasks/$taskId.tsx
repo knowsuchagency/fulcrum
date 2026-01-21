@@ -28,7 +28,6 @@ import { BrowserPreview } from '@/components/viewer/browser-preview'
 import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { NonCodeTaskView } from '@/components/task/non-code-task-view'
-import { InitializeCodeTaskModal } from '@/components/task/initialize-code-task-modal'
 import { TaskDetailsPanel } from '@/components/task/task-details-panel'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -155,7 +154,6 @@ function TaskView() {
   const shouldAutoFocus = initialFocusTerminalRef.current ?? false
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [initCodeModalOpen, setInitCodeModalOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'terminal' | 'details'>('terminal')
   const [terminalKey, setTerminalKey] = useState(0)
   const [pendingRetryTerminalId, setPendingRetryTerminalId] = useState<string | null>(null)
@@ -479,19 +477,7 @@ function TaskView() {
 
   // Non-code task view
   if (!isCodeTask) {
-    return (
-      <>
-        <NonCodeTaskView
-          task={task}
-          onInitializeAsCodeTask={() => setInitCodeModalOpen(true)}
-        />
-        <InitializeCodeTaskModal
-          task={task}
-          open={initCodeModalOpen}
-          onOpenChange={setInitCodeModalOpen}
-        />
-      </>
-    )
+    return <NonCodeTaskView task={task} />
   }
 
   return (

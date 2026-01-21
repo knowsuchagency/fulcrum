@@ -1,18 +1,21 @@
 ---
 name: fulcrum
-description: Fulcrum is a terminal-first tool for orchestrating AI coding agents across isolated git worktrees. Use this skill when working in a Fulcrum task worktree or managing tasks.
+description: AI orchestration and task management platform. Use this skill when working in a Fulcrum task worktree, managing tasks/projects, or interacting with the Fulcrum server.
 ---
 
-# Fulcrum - AI Agent Orchestration
+# Fulcrum - AI Orchestration Platform
 
 ## Overview
 
-Fulcrum is a terminal-first tool for orchestrating AI coding agents (like Claude Code) across isolated git worktrees. Each task runs in its own worktree, enabling parallel work on multiple features or fixes without branch switching.
+Fulcrum is an AI orchestration and task management platform. It provides task tracking, project management, and tools for AI agents to work autonomously across isolated git worktrees.
 
-**Philosophy:**
-- Agents run natively in terminals - no abstraction layer or wrapper APIs
-- Tasks create isolated git worktrees for clean separation
-- Persistent terminals organized in tabs across tasks
+**Key Features:**
+- Task management with kanban boards and status tracking
+- Project and repository organization
+- Git worktree isolation for parallel development
+- Docker Compose app deployment
+- Multi-channel notifications
+- MCP tools for AI agent integration
 
 ## When to Use This Skill
 
@@ -20,11 +23,15 @@ Use the Fulcrum CLI when:
 - **Working in a task worktree** - Use `current-task` commands to manage your current task
 - **Updating task status** - Mark tasks as in-progress, ready for review, done, or canceled
 - **Linking PRs** - Associate a GitHub PR with the current task
-- **Linking Linear tickets** - Connect a Linear issue to the current task
 - **Linking URLs** - Attach any relevant URLs (design docs, specs, external resources) to the task
 - **Sending notifications** - Alert the user when work is complete or needs attention
+- **Server management** - Start, stop, and check server status
 
 Use the Fulcrum MCP tools when:
+- **Task CRUD operations** - Create, list, update, delete tasks
+- **Project/repository management** - Create, organize, and manage projects and repositories
+- **App deployment** - Deploy, stop, and monitor Docker Compose applications
+- **Filesystem operations** - Read, write, and edit files on the Fulcrum server
 - **Executing commands remotely** - Run shell commands on the Fulcrum server from Claude Desktop
 - **Stateful workflows** - Use persistent sessions to maintain environment variables and working directory across commands
 
@@ -35,7 +42,7 @@ Use the Fulcrum MCP tools when:
 When running inside a Fulcrum task worktree, use these commands to manage the current task:
 
 ```bash
-# Get current task info (JSON output)
+# Get current task info (comprehensive output with dependencies, attachments, etc.)
 fulcrum current-task
 
 # Update task status
@@ -55,38 +62,6 @@ fulcrum current-task link <url>                  # Add link (auto-detects type/l
 fulcrum current-task link <url> --label "Docs"   # Add link with custom label
 fulcrum current-task link                        # List all links
 fulcrum current-task link --remove <url-or-id>   # Remove a link
-```
-
-### tasks
-
-Manage tasks across the system:
-
-```bash
-# List all tasks
-fulcrum tasks list
-fulcrum tasks list --status=IN_PROGRESS   # Filter by status
-fulcrum tasks list --search="ocai"        # Search by title, labels
-fulcrum tasks list --label="bug"          # Filter by label
-
-# List all labels in use
-fulcrum tasks labels                      # Show all labels with counts
-fulcrum tasks labels --search="comm"      # Find labels matching substring
-
-# Get a specific task
-fulcrum tasks get <task-id>
-
-# Create a new task
-fulcrum tasks create --title="My Task" --repo=/path/to/repo
-
-# Update task metadata
-fulcrum tasks update <task-id> --title="New Title"
-
-# Move task to different status
-fulcrum tasks move <task-id> --status=IN_REVIEW
-
-# Delete a task
-fulcrum tasks delete <task-id>
-fulcrum tasks delete <task-id> --delete-worktree   # Also delete worktree
 ```
 
 ### notifications
@@ -120,155 +95,28 @@ fulcrum notifications set slack webhookUrl <url>
 fulcrum up          # Start Fulcrum server daemon
 fulcrum down        # Stop Fulcrum server
 fulcrum status      # Check if server is running
-fulcrum health      # Check server health
+fulcrum doctor      # Check all dependencies and versions
 ```
 
-### Git Operations
+### Configuration
 
 ```bash
-fulcrum git status              # Git status for current worktree
-fulcrum git diff                # Git diff for current worktree
-fulcrum worktrees list          # List all worktrees
+fulcrum config list              # List all config values
+fulcrum config get <key>         # Get a specific value
+fulcrum config set <key> <value> # Set a value
+fulcrum config reset <key>       # Reset to default
 ```
 
-### projects
-
-Manage projects (repositories with metadata):
+### Agent Plugin Installation
 
 ```bash
-# List all projects
-fulcrum projects list
-fulcrum projects list --status=active    # Filter by status (active, archived)
+# Claude Code integration
+fulcrum claude install       # Install Fulcrum plugin for Claude Code
+fulcrum claude uninstall     # Uninstall plugin
 
-# Get project details
-fulcrum projects get <project-id>
-
-# Create a new project
-fulcrum projects create --name="My Project" --path=/path/to/repo          # From local path
-fulcrum projects create --name="My Project" --url=https://github.com/...  # Clone from URL
-fulcrum projects create --name="My Project" --repository-id=<repo-id>     # Link existing repo
-
-# Update project
-fulcrum projects update <project-id> --name="New Name"
-fulcrum projects update <project-id> --status=archived
-
-# Delete project
-fulcrum projects delete <project-id>
-fulcrum projects delete <project-id> --delete-directory   # Also delete directory
-fulcrum projects delete <project-id> --delete-app         # Also delete linked app
-
-# Scan for git repositories
-fulcrum projects scan                        # Scan default directory
-fulcrum projects scan --directory=/path      # Scan specific directory
-
-# Manage project links (URLs)
-fulcrum projects links list <project-id>
-fulcrum projects links add <project-id> <url> --label="Custom Label"
-fulcrum projects links remove <project-id> <link-id>
-```
-
-### repositories
-
-Manage repositories (code sources that can be linked to projects):
-
-```bash
-# List repositories
-fulcrum repositories list
-fulcrum repositories list --orphans          # Unlinked repos only
-fulcrum repositories list --project-id=<id>  # Filter by project
-
-# Get repository details
-fulcrum repositories get <repo-id>
-
-# Add a new repository from local path
-fulcrum repositories add --path=/path/to/repo
-fulcrum repositories add --path=/path/to/repo --display-name="My Repo"
-
-# Update repository
-fulcrum repositories update <repo-id> --display-name="New Name"
-fulcrum repositories update <repo-id> --default-agent=claude
-fulcrum repositories update <repo-id> --startup-script="mise run dev"
-fulcrum repositories update <repo-id> --copy-files=".env,.env.local"
-
-# Delete orphaned repository (fails if linked to a project)
-fulcrum repositories delete <repo-id>
-
-# Link repository to project (repos can only be linked to one project)
-fulcrum repositories link <repo-id> <project-id>
-fulcrum repositories link <repo-id> <project-id> --as-primary
-fulcrum repositories link <repo-id> <project-id> --force  # Move from existing project
-
-# Unlink repository from project
-fulcrum repositories unlink <repo-id> <project-id>
-```
-
-### apps
-
-Manage Docker Compose app deployments:
-
-```bash
-# List all apps
-fulcrum apps list
-fulcrum apps list --status=running   # Filter by status (stopped, building, running, failed)
-
-# Get app details
-fulcrum apps get <app-id>
-
-# Create a new app
-fulcrum apps create --name="My App" --repository-id=<repo-id>
-fulcrum apps create --name="My App" --repository-id=<repo-id> --branch=develop --auto-deploy
-
-# Update app
-fulcrum apps update <app-id> --name="New Name"
-fulcrum apps update <app-id> --auto-deploy      # Enable auto-deploy
-fulcrum apps update <app-id> --no-cache         # Enable no-cache builds
-
-# Deploy an app
-fulcrum apps deploy <app-id>
-
-# Stop an app
-fulcrum apps stop <app-id>
-
-# Get logs
-fulcrum apps logs <app-id>                     # All services
-fulcrum apps logs <app-id> --service=web       # Specific service
-fulcrum apps logs <app-id> --tail=200          # Last 200 lines
-
-# Get container status
-fulcrum apps status <app-id>
-
-# Get deployment history
-fulcrum apps deployments <app-id>
-
-# Delete an app
-fulcrum apps delete <app-id>
-fulcrum apps delete <app-id> --keep-containers   # Keep containers running
-```
-
-### fs (Filesystem)
-
-Remote filesystem operations for reading/writing files on the Fulcrum server. These tools are designed for working with a **remote Fulcrum instance** - they allow AI agents to read/write files on the server's filesystem through the API, which is useful when the agent runs on a different machine than the Fulcrum server.
-
-```bash
-# List directory contents
-fulcrum fs list                     # Home directory
-fulcrum fs list --path=/path/to/dir
-
-# Get file tree
-fulcrum fs tree --root=/path/to/worktree
-
-# Read a file (with path traversal protection)
-fulcrum fs read --path=src/index.ts --root=/path/to/worktree
-fulcrum fs read --path=src/index.ts --root=/path/to/worktree --max-lines=100
-
-# Write to a file (replaces entire content)
-fulcrum fs write --path=src/index.ts --root=/path/to/worktree --content="..."
-
-# Edit a file (replace a unique string)
-fulcrum fs edit --path=src/index.ts --root=/path/to/worktree --old-string="foo" --new-string="bar"
-
-# Get file/directory info
-fulcrum fs stat --path=/path/to/check
+# OpenCode integration
+fulcrum opencode install     # Install Fulcrum plugin for OpenCode
+fulcrum opencode uninstall   # Uninstall plugin
 ```
 
 ## Agent Workflow Patterns
@@ -311,10 +159,11 @@ These flags work with most commands:
 
 - `--port=<port>` - Server port (default: 7777)
 - `--url=<url>` - Override full server URL
-- `--pretty` - Pretty-print JSON output for human readability
+- `--json` - Output as JSON for programmatic use
 
 ## Task Statuses
 
+- `TO_DO` - Task not yet started
 - `IN_PROGRESS` - Task is being worked on
 - `IN_REVIEW` - Task is complete and awaiting review
 - `DONE` - Task is finished
@@ -350,8 +199,8 @@ search_tools { category: "filesystem" }
 
 ### Task Tools
 
-- `list_tasks` - List tasks with flexible filtering (search, labels, statuses, date range, overdue)
-- `get_task` - Get task details by ID
+- `list_tasks` - List tasks with flexible filtering (search, tags, statuses, date range, overdue)
+- `get_task` - Get task details by ID (includes dependencies and attachments)
 - `create_task` - Create a new task with worktree
 - `update_task` - Update task metadata
 - `delete_task` - Delete a task
@@ -359,10 +208,24 @@ search_tools { category: "filesystem" }
 - `add_task_link` - Add URL link to task
 - `remove_task_link` - Remove link from task
 - `list_task_links` - List all task links
-- `add_task_label` - Add a label to a task (returns similar labels to catch typos)
-- `remove_task_label` - Remove a label from a task
+- `add_task_tag` - Add a tag to a task (returns similar tags to catch typos)
+- `remove_task_tag` - Remove a tag from a task
 - `set_task_due_date` - Set or clear task due date
-- `list_labels` - List all unique labels in use with optional search
+- `list_tags` - List all unique tags in use with optional search
+
+#### Task Dependencies
+
+- `get_task_dependencies` - Get dependencies and dependents of a task, and whether it is blocked
+- `add_task_dependency` - Add a dependency (task cannot start until dependency is done)
+- `remove_task_dependency` - Remove a dependency
+- `get_task_dependency_graph` - Get all tasks and dependencies as a graph for visualization
+
+#### Task Attachments
+
+- `list_task_attachments` - List all file attachments for a task
+- `upload_task_attachment` - Upload a file to a task from a local path
+- `delete_task_attachment` - Delete a file attachment from a task
+- `get_task_attachment_path` - Get the local file path for a task attachment
 
 #### Task Search and Filtering
 
@@ -370,8 +233,8 @@ The `list_tasks` tool supports powerful filtering for AI agents:
 
 ```json
 {
-  "search": "ocai",                              // Text search across title, labels, project name
-  "labels": ["bug", "urgent"],                   // Filter by multiple labels (OR logic)
+  "search": "ocai",                              // Text search across title, tags, project name
+  "tags": ["bug", "urgent"],                     // Filter by multiple tags (OR logic)
   "statuses": ["TO_DO", "IN_PROGRESS"],          // Filter by multiple statuses (OR logic)
   "dueDateStart": "2026-01-18",                  // Start of date range
   "dueDateEnd": "2026-01-25",                    // End of date range
@@ -379,17 +242,17 @@ The `list_tasks` tool supports powerful filtering for AI agents:
 }
 ```
 
-#### Label Discovery
+#### Tag Discovery
 
-Use `list_labels` to discover exact label names before filtering:
+Use `list_tags` to discover exact tag names before filtering:
 
 ```json
-// Find labels matching "communication"
+// Find tags matching "communication"
 { "search": "communication" }
 // Returns: [{ "name": "communication required", "count": 5 }]
 ```
 
-This helps handle typos and variations - search first, then use the exact label name.
+This helps handle typos and variations - search first, then use the exact tag name.
 
 ### Project Tools
 
@@ -399,6 +262,21 @@ This helps handle typos and variations - search first, then use the exact label 
 - `update_project` - Update name, description, status
 - `delete_project` - Delete project and optionally directory/app
 - `scan_projects` - Scan directory for git repos
+
+#### Project Tags
+
+- `add_project_tag` - Add a tag to a project (creates new if needed)
+- `remove_project_tag` - Remove a tag from a project
+
+#### Project Attachments
+
+- `list_project_attachments` - List all file attachments for a project
+- `upload_project_attachment` - Upload a file to a project from a local path
+- `delete_project_attachment` - Delete a file attachment from a project
+- `get_project_attachment_path` - Get the local file path for a project attachment
+
+#### Project Links
+
 - `list_project_links` - List all URL links attached to a project
 - `add_project_link` - Add a URL link to a project (auto-detects type)
 - `remove_project_link` - Remove a URL link from a project

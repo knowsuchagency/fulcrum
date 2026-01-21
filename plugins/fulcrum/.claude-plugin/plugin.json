@@ -1,9 +1,12 @@
 {
   "name": "fulcrum",
   "description": "Fulcrum task orchestration for Claude Code",
-  "version": "1.2.0",
+  "version": "1.10.0",
   "author": {
     "name": "Fulcrum"
   },
-  "hooks": "./hooks/hooks.json"
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "commands": "./commands/"
 }

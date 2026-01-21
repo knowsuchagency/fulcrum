@@ -6,11 +6,11 @@ import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { LinksManager } from '@/components/task/links-manager'
 import { DependencyManager } from '@/components/task/dependency-manager'
 import { AttachmentsManager } from '@/components/task/attachments-manager'
+import { CodeTaskSettings } from '@/components/task/code-task-settings'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Delete02Icon,
   Cancel01Icon,
-  Settings05Icon,
 } from '@hugeicons/core-free-icons'
 import {
   DropdownMenu,
@@ -41,13 +41,12 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 
 interface TaskContentProps {
   task: Task
-  onInitializeAsCodeTask?: () => void
   onDeleted?: () => void
   /** If true, uses compact styling for modal */
   compact?: boolean
 }
 
-export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }: TaskContentProps) {
+export function TaskContent({ task, onDeleted, compact }: TaskContentProps) {
   const updateTask = useUpdateTask()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -56,7 +55,7 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
   const [editedDescription, setEditedDescription] = useState(task.description || '')
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [editedNotes, setEditedNotes] = useState(task.notes || '')
-  const [labelInput, setLabelInput] = useState('')
+  const [tagInput, setTagInput] = useState('')
 
   const handleStatusChange = (status: string) => {
     updateTask.mutate({
@@ -102,28 +101,28 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
     })
   }
 
-  const handleAddLabel = () => {
-    const trimmed = labelInput.trim()
-    if (trimmed && !task.labels.includes(trimmed)) {
+  const handleAddTag = () => {
+    const trimmed = tagInput.trim()
+    if (trimmed && !task.tags.includes(trimmed)) {
       updateTask.mutate({
         taskId: task.id,
-        updates: { labels: [...task.labels, trimmed] } as Partial<Task>,
+        updates: { tags: [...task.tags, trimmed] } as Partial<Task>,
       })
-      setLabelInput('')
+      setTagInput('')
     }
   }
 
-  const handleRemoveLabel = (label: string) => {
+  const handleRemoveTag = (tag: string) => {
     updateTask.mutate({
       taskId: task.id,
-      updates: { labels: task.labels.filter((l) => l !== label) } as Partial<Task>,
+      updates: { tags: task.tags.filter((t) => t !== tag) } as Partial<Task>,
     })
   }
 
-  const handleLabelKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      handleAddLabel()
+      handleAddTag()
     }
   }
 
@@ -257,19 +256,19 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
 
           {/* Metadata Grid */}
           <div className={`grid ${gapClass} sm:grid-cols-2`}>
-            {/* Labels */}
+            {/* Tags */}
             <div className={`rounded-lg border bg-card ${paddingClass}`}>
-              <h2 className={`${headingClass} font-medium text-muted-foreground ${marginClass}`}>Labels</h2>
+              <h2 className={`${headingClass} font-medium text-muted-foreground ${marginClass}`}>Tags</h2>
               <div className="flex flex-wrap items-center gap-1.5">
-                {task.labels.map((label) => (
+                {task.tags.map((tag) => (
                   <span
-                    key={label}
+                    key={tag}
                     className={`inline-flex items-center gap-1 rounded-full border border-border bg-card ${compact ? 'px-2 py-0.5' : 'px-2.5 py-1'} text-xs font-medium`}
                   >
-                    {label}
+                    {tag}
                     <button
                       type="button"
-                      onClick={() => handleRemoveLabel(label)}
+                      onClick={() => handleRemoveTag(tag)}
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <HugeiconsIcon icon={Cancel01Icon} size={10} />
@@ -278,11 +277,11 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
                 ))}
                 <input
                   type="text"
-                  value={labelInput}
-                  onChange={(e) => setLabelInput(e.target.value)}
-                  onKeyDown={handleLabelKeyDown}
-                  onBlur={handleAddLabel}
-                  placeholder={task.labels.length === 0 ? 'Add label...' : '+'}
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  onBlur={handleAddTag}
+                  placeholder={task.tags.length === 0 ? 'Add tag...' : '+'}
                   className="w-16 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
                 />
               </div>
@@ -369,22 +368,9 @@ export function TaskContent({ task, onInitializeAsCodeTask, onDeleted, compact }
             <AttachmentsManager taskId={task.id} />
           </div>
 
-          {/* Initialize as Code Task */}
-          {onInitializeAsCodeTask && (
-            <div className={`rounded-lg border border-dashed bg-muted/30 ${compact ? 'p-4' : 'p-6'} text-center`}>
-              <p className={`${compact ? 'text-xs' : 'text-sm'} text-muted-foreground ${compact ? 'mb-3' : 'mb-4'}`}>
-                This task doesn't have a code context yet.
-              </p>
-              <Button size={compact ? 'sm' : 'default'} onClick={onInitializeAsCodeTask}>
-                <HugeiconsIcon icon={Settings05Icon} size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} />
-                Initialize as Code Task
-              </Button>
-              {!compact && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Creates a git worktree and opens an AI coding agent.
-                </p>
-              )}
-            </div>
+          {/* Code Task Settings - only shown when task doesn't have a worktree yet */}
+          {!task.worktreePath && (
+            <CodeTaskSettings task={task} compact={compact} />
           )}
         </div>
       </div>

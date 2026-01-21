@@ -40,7 +40,7 @@ export interface CreateTaskInput {
   worktreePath?: string | null
   projectId?: string | null
   repositoryId?: string | null
-  labels?: string[]
+  tags?: string[]
   dueDate?: string | null
 }
 
@@ -586,7 +586,7 @@ export class FulcrumClient {
 
   // Task dependency graph
   async getTaskDependencyGraph(): Promise<{
-    nodes: Array<{ id: string; title: string; status: TaskStatus; projectId: string | null; labels: string[]; dueDate: string | null }>
+    nodes: Array<{ id: string; title: string; status: TaskStatus; projectId: string | null; tags: string[]; dueDate: string | null }>
     edges: Array<{ id: string; source: string; target: string }>
   }> {
     return this.fetch('/api/task-dependencies/graph')

@@ -8,6 +8,7 @@
     "integrations": "Integrations",
     "zai": "z.ai",
     "agent": "Agent",
+    "tasks": "Task Defaults",
     "notifications": "Notifications",
     "appearance": "Appearance",
     "developer": "Developer"
@@ -104,6 +105,20 @@
       "opencodePlanAgent": {
         "label": "Plan Mode",
         "description": "Agent name for restricted/planning mode. Use 'Planner-Sisyphus' for oh-my-opencode, or 'plan' for vanilla OpenCode. Note: Planner-Sisyphus inherits its model from OpenCode's plan agent config, so the model override above may not apply. Configure the model in ~/.config/opencode/oh-my-opencode.json instead."
+      }
+    },
+    "tasks": {
+      "defaultType": {
+        "label": "Default Type",
+        "description": "Type to select by default when creating new tasks",
+        "options": {
+          "code": "Code Task",
+          "nonCode": "Non-Code Task"
+        }
+      },
+      "startImmediately": {
+        "label": "Start Immediately",
+        "description": "When enabled, code tasks start work immediately and create a git worktree. When disabled, tasks go to To Do."
       }
     },
     "language": {

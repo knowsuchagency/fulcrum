@@ -24,6 +24,7 @@ import { handleDevCommand } from './commands/dev'
 import { handleDoctorCommand } from './commands/doctor'
 import { handleUpdateCommand } from './commands/update'
 import { setJsonOutput } from './utils/output'
+import { globalArgs, toFlags } from './commands/shared'
 import pkg from '../../package.json'
 
 const VERSION = pkg.version
@@ -44,37 +45,6 @@ if (!process.argv.includes('--debug')) {
       },
     },
   ]
-}
-
-// Global args shared across commands
-const globalArgs = {
-  port: {
-    type: 'string' as const,
-    description: 'Server port (default: 7777)',
-  },
-  url: {
-    type: 'string' as const,
-    description: 'Override full server URL',
-  },
-  json: {
-    type: 'boolean' as const,
-    description: 'Output as JSON',
-  },
-  debug: {
-    type: 'boolean' as const,
-    description: 'Show detailed error stack traces',
-  },
-}
-
-// Helper to extract flags from Citty args
-function toFlags(args: Record<string, unknown>): Record<string, string> {
-  const flags: Record<string, string> = {}
-  for (const [key, value] of Object.entries(args)) {
-    if (value !== undefined && value !== false) {
-      flags[key] = String(value)
-    }
-  }
-  return flags
 }
 
 // ============================================================================
@@ -1885,31 +1855,32 @@ const main = defineCommand({
   meta: {
     name: 'fulcrum',
     version: VERSION,
-    description: 'fulcrum CLI - Terminal-first AI agent orchestration',
+    description: 'Fulcrum - Terminal-first AI agent orchestration',
   },
-  args: globalArgs,
   subCommands: {
+    // Context-aware task operations (for working in a task worktree)
     'current-task': currentTaskCommand,
-    tasks: tasksCommand,
-    projects: projectsCommand,
-    repositories: repositoriesCommand,
-    apps: appsCommand,
-    fs: fsCommand,
-    up: upCommand,
-    down: downCommand,
-    'migrate-from-vibora': migrateFromViboraCommand,
-    status: statusCommand,
-    doctor: doctorCommand,
-    git: gitCommand,
-    worktrees: worktreesCommand,
+
+    // Configuration
     config: configCommand,
+
+    // Agent integrations
     opencode: opencodeCommand,
     claude: claudeCommand,
+
+    // Notifications
     notifications: notificationsCommand,
     notify: notifyCommand,
+
+    // Server management
+    up: upCommand,
+    down: downCommand,
+    status: statusCommand,
+    doctor: doctorCommand,
     dev: devCommand,
     mcp: mcpCommand,
     update: updateCommand,
+    'migrate-from-vibora': migrateFromViboraCommand,
   },
 })
 

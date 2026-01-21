@@ -36,9 +36,10 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import { TaskAdd01Icon, Folder01Icon, Cancel01Icon, Attachment01Icon, Link01Icon, Add01Icon } from '@hugeicons/core-free-icons'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Switch } from '@/components/ui/switch'
 import { useCreateTask, useAddTaskLink } from '@/hooks/use-tasks'
 import { useBranches, checkIsGitRepo } from '@/hooks/use-filesystem'
-import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel } from '@/hooks/use-config'
+import { useWorktreeBasePath, useDefaultGitReposDir, useDefaultAgent, useOpencodeModel, useDefaultTaskType, useStartCodeTasksImmediately } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useProjects } from '@/hooks/use-projects'
@@ -47,7 +48,7 @@ import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { ModelPicker } from '@/components/opencode/model-picker'
 import { useUploadAttachment } from '@/hooks/use-task-attachments'
 
-type TaskType = 'code' | 'quick'
+type TaskType = 'code' | 'non-code'
 
 function slugify(text: string): string {
   return text
@@ -97,8 +98,9 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [taskType, setTaskType] = useState<TaskType>('code')
-  const [labels, setLabels] = useState<string[]>([])
-  const [labelInput, setLabelInput] = useState('')
+  const [startImmediately, setStartImmediately] = useState(true)
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [repoPath, setRepoPath] = useState('')
@@ -130,6 +132,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const { data: defaultGitReposDir } = useDefaultGitReposDir()
   const { data: defaultAgent } = useDefaultAgent()
   const { data: globalOpencodeModel } = useOpencodeModel()
+  const { data: defaultTaskType } = useDefaultTaskType()
+  const { data: defaultStartImmediately } = useStartCodeTasksImmediately()
   const { data: repositories } = useRepositories()
   const { data: projects } = useProjects()
   const { data: branchData, isLoading: branchesLoading } = useBranches(
@@ -138,6 +142,12 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
   // Get the selected repository object
   const selectedRepo = selectedRepoId ? repositories?.find((r) => r.id === selectedRepoId) : null
+
+  // Find the project that contains the selected repository (for config fallback)
+  const selectedRepoProject = useMemo(() => {
+    if (!selectedRepoId || !projects) return null
+    return projects.find((p) => p.repositories.some((r) => r.id === selectedRepoId)) ?? null
+  }, [selectedRepoId, projects])
 
   // Filter repositories based on search query (case-insensitive fuzzy match)
   const filteredRepositories = useMemo(() => {
@@ -167,19 +177,36 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   // Initialize with default repository when modal opens, or auto-select most recently used
   useEffect(() => {
     if (open) {
+      // Set task defaults from settings
+      if (defaultTaskType) {
+        setTaskType(defaultTaskType)
+      }
+      if (defaultStartImmediately !== undefined) {
+        setStartImmediately(defaultStartImmediately)
+      }
+
       // Determine which repository will be selected
       const selectedRepo = defaultRepository ?? (repositories && repositories.length > 0 ? repositories[0] : null)
 
-      // Set agent priority: repository default > global default > 'claude'
+      // Find the project for this repository (for config fallback)
+      const repoProject = selectedRepo && projects
+        ? projects.find((p) => p.repositories.some((r) => r.id === selectedRepo.id))
+        : null
+
+      // Set agent priority: repo -> project -> global -> 'claude'
       if (selectedRepo?.defaultAgent) {
         setAgent(selectedRepo.defaultAgent)
+      } else if (repoProject?.defaultAgent) {
+        setAgent(repoProject.defaultAgent)
       } else if (defaultAgent) {
         setAgent(defaultAgent)
       }
 
-      // Set OpenCode model: repository default > global default > null
+      // Set OpenCode model: repo -> project -> global -> null
       if (selectedRepo?.opencodeModel) {
         setOpencodeModel(selectedRepo.opencodeModel)
+      } else if (repoProject?.opencodeModel) {
+        setOpencodeModel(repoProject.opencodeModel)
       } else if (globalOpencodeModel) {
         setOpencodeModel(globalOpencodeModel)
       } else {
@@ -201,7 +228,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         setRepoTab('saved')
       }
     }
-  }, [open, defaultRepository, repositories, defaultAgent, globalOpencodeModel])
+  }, [open, defaultRepository, repositories, projects, defaultAgent, globalOpencodeModel, defaultTaskType, defaultStartImmediately])
 
   // Set default base branch when branches are loaded, reset when repo changes
   useEffect(() => {
@@ -260,36 +287,40 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
     // Build the task payload based on type
     const isCodeTask = taskType === 'code'
+    // Code tasks that don't start immediately go to TO_DO and don't create worktree yet
+    const shouldStartWork = isCodeTask && startImmediately
 
-    // Code task specific fields
-    const repoName = isCodeTask ? (repoPath.split('/').pop() || 'repo') : null
-    const effectiveBranch = isCodeTask ? (branch.trim() || autoGeneratedBranch) : null
-    const worktreePath = isCodeTask && effectiveBranch ? `${worktreeBasePath}/${effectiveBranch}` : null
+    // Code task specific fields - only set when starting work immediately
+    const repoName = shouldStartWork ? (repoPath.split('/').pop() || 'repo') : null
+    const effectiveBranch = shouldStartWork ? (branch.trim() || autoGeneratedBranch) : null
+    const worktreePath = shouldStartWork && effectiveBranch ? `${worktreeBasePath}/${effectiveBranch}` : null
 
-    // Select the appropriate agent options based on selected agent
+    // Select the appropriate agent options: repo -> project -> (global is handled by backend)
     const agentOptions = agent === 'claude'
-      ? selectedRepo?.claudeOptions
-      : selectedRepo?.opencodeOptions
+      ? (selectedRepo?.claudeOptions ?? selectedRepoProject?.claudeOptions)
+      : (selectedRepo?.opencodeOptions ?? selectedRepoProject?.opencodeOptions)
 
     createTask.mutate(
       {
         title: title.trim(),
         description: description.trim() || undefined,
-        status: isCodeTask ? 'IN_PROGRESS' : 'TO_DO',
+        status: shouldStartWork ? 'IN_PROGRESS' : 'TO_DO',
         agent,
         aiMode: isCodeTask ? aiMode : undefined,
-        // Git fields - only for code tasks
-        repoPath: isCodeTask ? repoPath : null,
-        repoName: isCodeTask ? repoName : null,
+        // Git fields - only fully populated when starting work immediately
+        repoPath: shouldStartWork ? repoPath : null,
+        repoName: shouldStartWork ? repoName : null,
         baseBranch: isCodeTask ? (baseBranch || 'main') : null,
-        branch: isCodeTask ? effectiveBranch : null,
-        worktreePath: isCodeTask ? worktreePath : null,
+        branch: shouldStartWork ? effectiveBranch : null,
+        worktreePath: shouldStartWork ? worktreePath : null,
+        // Repository reference for deferred worktree creation
+        repositoryId: isCodeTask && !startImmediately ? selectedRepoId : undefined,
         copyFiles: isCodeTask ? (selectedRepo?.copyFiles || undefined) : undefined,
         startupScript: isCodeTask ? (selectedRepo?.startupScript || undefined) : undefined,
         agentOptions: isCodeTask ? (agentOptions || undefined) : undefined,
         opencodeModel: isCodeTask && agent === 'opencode' ? opencodeModel : undefined,
         // Generalized task fields
-        labels: labels.length > 0 ? labels : undefined,
+        tags: tags.length > 0 ? tags : undefined,
         dueDate: dueDate || null,
         notes: notes.trim() || null,
         projectId: !isCodeTask ? selectedProjectId : undefined,
@@ -318,14 +349,16 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
             }
           }
 
-          const navState = isCodeTask && description.trim()
-            ? { aiMode, description: description.trim(), focusTerminal: true }
-            : isCodeTask
-            ? { aiMode, focusTerminal: true }
-            : undefined
           setOpen(false)
           resetForm()
-          navigate({ to: '/tasks/$taskId', params: { taskId: task.id }, state: navState as Record<string, unknown> })
+
+          // Navigate to task detail page only when starting work immediately
+          if (shouldStartWork) {
+            const navState = description.trim()
+              ? { aiMode, description: description.trim(), focusTerminal: true }
+              : { aiMode, focusTerminal: true }
+            navigate({ to: '/tasks/$taskId', params: { taskId: task.id }, state: navState as Record<string, unknown> })
+          }
         },
         onError: (error) => {
           toast.error(t('createModal.errors.createFailed'), {
@@ -340,8 +373,9 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     setTitle('')
     setDescription('')
     setTaskType('code')
-    setLabels([])
-    setLabelInput('')
+    setStartImmediately(true)
+    setTags([])
+    setTagInput('')
     setDueDate('')
     setNotes('')
     setPendingFiles([])
@@ -364,25 +398,25 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     setRepoTab(repositories && repositories.length > 0 ? 'saved' : 'browse')
   }
 
-  const handleAddLabel = () => {
-    const trimmed = labelInput.trim()
-    if (trimmed && !labels.includes(trimmed)) {
-      setLabels([...labels, trimmed])
-      setLabelInput('')
+  const handleAddTag = () => {
+    const trimmed = tagInput.trim()
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags([...tags, trimmed])
+      setTagInput('')
     }
   }
 
-  const handleRemoveLabel = (label: string) => {
-    setLabels(labels.filter((l) => l !== label))
+  const handleRemoveTag = (tag: string) => {
+    setTags(tags.filter((t) => t !== tag))
   }
 
-  const handleLabelKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      handleAddLabel()
-    } else if (e.key === 'Backspace' && !labelInput && labels.length > 0) {
-      // Remove last label on backspace when input is empty
-      setLabels(labels.slice(0, -1))
+      handleAddTag()
+    } else if (e.key === 'Backspace' && !tagInput && tags.length > 0) {
+      // Remove last tag on backspace when input is empty
+      setTags(tags.slice(0, -1))
     }
   }
 
@@ -406,8 +440,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     try {
       new URL(trimmedUrl)
     } catch {
-      toast.error('Invalid URL', {
-        description: 'Please enter a valid URL including the scheme (e.g., https://)',
+      toast.error(t('createModal.errors.invalidUrl'), {
+        description: t('createModal.errors.invalidUrlDescription'),
       })
       return
     }
@@ -429,7 +463,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   }
 
   // Cmd+Enter to submit form when modal is open
-  const canSubmit = !createTask.isPending && !!title.trim() && (taskType === 'quick' || !!repoPath)
+  const canSubmit = !createTask.isPending && !!title.trim() && (taskType === 'non-code' || !!repoPath)
   useHotkeys('meta+enter', () => {
     if (formRef.current) {
       formRef.current.requestSubmit()
@@ -465,15 +499,15 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="code">Code Task</SelectItem>
-                    <SelectItem value="quick">Quick Task</SelectItem>
+                    <SelectItem value="code">{t('createModal.taskTypes.code')}</SelectItem>
+                    <SelectItem value="non-code">{t('createModal.taskTypes.nonCode')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <DialogDescription>
                 {taskType === 'code'
-                  ? 'Creates a git worktree and opens an AI coding agent.'
-                  : 'Creates a task without code context.'}
+                  ? t('createModal.taskDescriptions.code')
+                  : t('createModal.taskDescriptions.nonCode')}
               </DialogDescription>
             </DialogHeader>
 
@@ -486,6 +520,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder={t('createModal.fields.titlePlaceholder')}
                   required
+                  autoFocus
                 />
               </Field>
 
@@ -528,10 +563,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                 </Field>
               )}
 
-              {/* Project selector for quick tasks */}
-              {taskType === 'quick' && (
+              {/* Project selector for non-code tasks */}
+              {taskType === 'non-code' && (
                 <Field>
-                  <FieldLabel>Project (optional)</FieldLabel>
+                  <FieldLabel>{t('createModal.fields.project')}</FieldLabel>
                   <Select
                     value={selectedProjectId || '_none'}
                     onValueChange={(value) => setSelectedProjectId(value === '_none' ? null : value)}
@@ -540,11 +575,11 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                       <SelectValue>
                         {selectedProjectId
                           ? projects?.find((p) => p.id === selectedProjectId)?.name || 'Select project'
-                          : 'No project (Inbox)'}
+                          : t('createModal.noProject')}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">No project (Inbox)</SelectItem>
+                      <SelectItem value="_none">{t('createModal.noProject')}</SelectItem>
                       {projects?.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.name}
@@ -553,7 +588,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                     </SelectContent>
                   </Select>
                   <FieldDescription>
-                    Tasks without a project appear in the Inbox.
+                    {t('createModal.projectHint')}
                   </FieldDescription>
                 </Field>
               )}
@@ -613,12 +648,19 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                           setRepoPath(repo.path)
                           setRepoSearchQuery(repo.displayName)
                           setRepoError(null)
-                          // Update agent if repository has a default configured
+
+                          // Find the project for this repository (for config fallback)
+                          const repoProject = projects?.find((p) => p.repositories.some((r) => r.id === id))
+
+                          // Update agent: repo -> project -> global
                           if (repo.defaultAgent) {
                             setAgent(repo.defaultAgent)
+                          } else if (repoProject?.defaultAgent) {
+                            setAgent(repoProject.defaultAgent)
                           }
-                          // Update OpenCode model: repo default > global default
-                          setOpencodeModel(repo.opencodeModel ?? globalOpencodeModel ?? null)
+
+                          // Update OpenCode model: repo -> project -> global
+                          setOpencodeModel(repo.opencodeModel ?? repoProject?.opencodeModel ?? globalOpencodeModel ?? null)
                         }
                       }}
                       inputValue={repoSearchQuery}
@@ -739,20 +781,20 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                 </>
               )}
 
-              {/* Labels and Due Date row - always at bottom */}
+              {/* Tags and Due Date row - always at bottom */}
               <div className="flex gap-3">
                 <Field className="flex-1">
-                  <FieldLabel htmlFor="labels">Labels</FieldLabel>
+                  <FieldLabel htmlFor="tags">{t('createModal.fields.tags')}</FieldLabel>
                   <div className="flex flex-wrap items-center gap-1 rounded-md border border-input bg-background px-2 py-1.5 min-h-[36px]">
-                    {labels.map((label) => (
+                    {tags.map((tag) => (
                       <span
-                        key={label}
+                        key={tag}
                         className="inline-flex items-center gap-0.5 rounded border border-border bg-card px-1.5 py-0.5 text-xs font-medium"
                       >
-                        {label}
+                        {tag}
                         <button
                           type="button"
-                          onClick={() => handleRemoveLabel(label)}
+                          onClick={() => handleRemoveTag(tag)}
                           className="text-muted-foreground hover:text-foreground"
                         >
                           <HugeiconsIcon icon={Cancel01Icon} size={10} />
@@ -760,24 +802,24 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                       </span>
                     ))}
                     <input
-                      id="labels"
+                      id="tags"
                       type="text"
-                      value={labelInput}
-                      onChange={(e) => setLabelInput(e.target.value)}
-                      onKeyDown={handleLabelKeyDown}
-                      onBlur={handleAddLabel}
-                      placeholder={labels.length === 0 ? 'Add labels...' : ''}
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
+                      onBlur={handleAddTag}
+                      placeholder={tags.length === 0 ? t('createModal.fields.tagsPlaceholder') : ''}
                       className="flex-1 min-w-[60px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                     />
                   </div>
                 </Field>
 
                 <Field className="w-40">
-                  <FieldLabel>Due Date</FieldLabel>
+                  <FieldLabel>{t('createModal.fields.dueDate')}</FieldLabel>
                   <DatePickerPopover
                     value={dueDate || null}
                     onChange={(date) => setDueDate(date || '')}
-                    placeholder="Set date"
+                    placeholder={t('createModal.fields.dueDatePlaceholder')}
                     showClear
                     className="border border-input rounded-md px-3 py-2 w-full justify-start"
                   />
@@ -786,12 +828,12 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
               {/* Notes */}
               <Field>
-                <FieldLabel htmlFor="notes">Notes</FieldLabel>
+                <FieldLabel htmlFor="notes">{t('createModal.fields.notes')}</FieldLabel>
                 <textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add notes..."
+                  placeholder={t('createModal.fields.notesPlaceholder')}
                   rows={2}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                 />
@@ -799,7 +841,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
               {/* Links */}
               <Field>
-                <FieldLabel>Links</FieldLabel>
+                <FieldLabel>{t('createModal.fields.links')}</FieldLabel>
                 <div className="space-y-2">
                   {pendingLinks.length > 0 && (
                     <div className="flex flex-wrap gap-1">
@@ -827,7 +869,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                       value={linkUrlInput}
                       onChange={(e) => setLinkUrlInput(e.target.value)}
                       onKeyDown={handleLinkKeyDown}
-                      placeholder="https://..."
+                      placeholder={t('createModal.fields.urlPlaceholder')}
                       className="flex-1 h-8 text-sm"
                     />
                     <Input
@@ -835,7 +877,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                       value={linkLabelInput}
                       onChange={(e) => setLinkLabelInput(e.target.value)}
                       onKeyDown={handleLinkKeyDown}
-                      placeholder="Label (optional)"
+                      placeholder={t('createModal.fields.linkLabelPlaceholder')}
                       className="w-28 h-8 text-sm"
                     />
                     <Button
@@ -854,7 +896,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
               {/* Attachments */}
               <Field>
-                <FieldLabel>Attachments</FieldLabel>
+                <FieldLabel>{t('createModal.fields.attachments')}</FieldLabel>
                 <div className="space-y-2">
                   <input
                     ref={attachmentInputRef}
@@ -872,7 +914,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                     onClick={() => attachmentInputRef.current?.click()}
                   >
                     <HugeiconsIcon icon={Attachment01Icon} size={14} className="mr-2" />
-                    {pendingFiles.length === 0 ? 'Add attachments...' : 'Add more files...'}
+                    {pendingFiles.length === 0 ? t('createModal.fields.addAttachments') : t('createModal.fields.addMoreFiles')}
                   </Button>
                   {pendingFiles.length > 0 && (
                     <div className="flex flex-wrap gap-1">
@@ -898,6 +940,16 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
             </FieldGroup>
 
             <DialogFooter className="mt-4 shrink-0">
+              {taskType === 'code' && (
+                <label className="flex items-center gap-2 mr-auto cursor-pointer">
+                  <Switch
+                    checked={startImmediately}
+                    onCheckedChange={setStartImmediately}
+                    size="sm"
+                  />
+                  <span className="text-sm text-muted-foreground">{t('createModal.startImmediately')}</span>
+                </label>
+              )}
               <DialogClose render={<Button variant="outline" type="button" className="border-destructive text-destructive hover:bg-destructive hover:text-white" />}>
                 {tc('buttons.cancel')}
               </DialogClose>

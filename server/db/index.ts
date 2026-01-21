@@ -330,6 +330,38 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
             shouldMark = true
           }
         }
+        // 0036 adds unique constraint on repository_id in project_repositories
+        else if (entry.tag.startsWith('0036')) {
+          // Check if project_repositories table exists (the migration recreates it with the constraint)
+          const hasProjectRepositoriesTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='project_repositories'")
+            .get()
+          if (hasProjectRepositoriesTable) {
+            shouldMark = true
+          }
+        }
+        // 0037 adds agent configuration to projects table
+        else if (entry.tag.startsWith('0037')) {
+          const hasProjectDefaultAgentColumn = sqlite
+            .query("SELECT name FROM pragma_table_info('projects') WHERE name='default_agent'")
+            .get()
+          if (hasProjectDefaultAgentColumn) {
+            shouldMark = true
+          }
+        }
+        // 0038 renames tasks.labels to tasks.tags
+        else if (entry.tag.startsWith('0038')) {
+          const hasTagsColumn = sqlite
+            .query("SELECT name FROM pragma_table_info('tasks') WHERE name='tags'")
+            .get()
+          const hasLabelsColumn = sqlite
+            .query("SELECT name FROM pragma_table_info('tasks') WHERE name='labels'")
+            .get()
+          // Mark as applied if tags column exists and labels column doesn't (fresh DB or already migrated)
+          if (hasTagsColumn && !hasLabelsColumn) {
+            shouldMark = true
+          }
+        }
 
         if (shouldMark) {
           migrationsToMark.push(entry)
@@ -391,12 +423,16 @@ function migrateRepositoriesToProjects(sqlite: Database): void {
   if (!hasProjectsTable) return
 
   // Check if any repositories exist without projects
+  // Must check both legacy repository_id field AND the project_repositories join table
   const orphanedRepos = sqlite
     .query(`
       SELECT r.id, r.display_name, r.path, r.last_used_at
       FROM repositories r
       WHERE NOT EXISTS (
         SELECT 1 FROM projects p WHERE p.repository_id = r.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM project_repositories pr WHERE pr.repository_id = r.id
       )
     `)
     .all() as Array<{ id: string; display_name: string; path: string; last_used_at: string | null }>
@@ -482,19 +518,19 @@ function migrateTaskTagsToJoinTable(sqlite: Database): void {
 
   if (!hasTagsTable) return
 
-  // Check if any tasks have labels in the JSON column that haven't been migrated
+  // Check if any tasks have tags in the JSON column that haven't been migrated
   const tasksWithTags = sqlite
     .query(`
-      SELECT t.id, t.labels
+      SELECT t.id, t.tags
       FROM tasks t
-      WHERE t.labels IS NOT NULL
-        AND t.labels != '[]'
-        AND t.labels != ''
+      WHERE t.tags IS NOT NULL
+        AND t.tags != '[]'
+        AND t.tags != ''
         AND NOT EXISTS (
           SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id
         )
     `)
-    .all() as Array<{ id: string; labels: string }>
+    .all() as Array<{ id: string; tags: string }>
 
   if (tasksWithTags.length === 0) return
 
@@ -508,7 +544,7 @@ function migrateTaskTagsToJoinTable(sqlite: Database): void {
   const allTagNames = new Set<string>()
   for (const task of tasksWithTags) {
     try {
-      const tags = JSON.parse(task.labels) as string[]
+      const tags = JSON.parse(task.tags) as string[]
       for (const tag of tags) {
         if (tag && typeof tag === 'string') {
           allTagNames.add(tag)
@@ -544,7 +580,7 @@ function migrateTaskTagsToJoinTable(sqlite: Database): void {
   // Create task_tags entries
   for (const task of tasksWithTags) {
     try {
-      const tags = JSON.parse(task.labels) as string[]
+      const tags = JSON.parse(task.tags) as string[]
       for (const tag of tags) {
         const tagId = tagNameToId.get(tag)
         if (tagId) {

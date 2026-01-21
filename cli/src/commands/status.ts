@@ -1,8 +1,10 @@
+import { defineCommand } from 'citty'
 import { output, isJsonOutput } from '../utils/output'
 import { readPid, isProcessRunning, getPort } from '../utils/process'
 import { discoverServerUrl } from '../utils/server'
+import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
-export async function handleStatusCommand(flags: Record<string, string>) {
+async function handleStatusCommand(flags: Record<string, string>) {
   const pid = readPid()
   const port = getPort(flags.port)
   const serverUrl = discoverServerUrl(flags.url, flags.port)
@@ -54,3 +56,16 @@ export async function handleStatusCommand(flags: Record<string, string>) {
     }
   }
 }
+
+// ============================================================================
+// Command Definition
+// ============================================================================
+
+export const statusCommand = defineCommand({
+  meta: { name: 'status', description: 'Show server status' },
+  args: globalArgs,
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleStatusCommand(toFlags(args))
+  },
+})

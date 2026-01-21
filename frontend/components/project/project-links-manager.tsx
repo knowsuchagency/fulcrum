@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -18,6 +19,7 @@ interface ProjectLinksManagerProps {
 }
 
 export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerProps) {
+  const { t } = useTranslation('projects')
   const [isAdding, setIsAdding] = useState(false)
   const [newUrl, setNewUrl] = useState('')
   const [newLabel, setNewLabel] = useState('')
@@ -32,8 +34,8 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
     try {
       new URL(trimmedUrl)
     } catch {
-      toast.error('Invalid URL', {
-        description: 'Please enter a valid URL including the scheme (e.g., https://)',
+      toast.error(t('detail.errors.invalidUrl', { defaultValue: 'Invalid URL' }), {
+        description: t('detail.errors.invalidUrlDescription', { defaultValue: 'Please enter a valid URL including the scheme (e.g., https://)' }),
       })
       return
     }
@@ -71,7 +73,7 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Links</h3>
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('detail.sections.links')}</h3>
 
       {/* Existing links */}
       {links.length > 0 && (
@@ -93,7 +95,7 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
                 type="button"
                 onClick={() => handleRemoveLink(link.id)}
                 className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
-                title="Remove link"
+                title={t('detail.removeLink')}
               >
                 <HugeiconsIcon icon={Delete02Icon} size={14} />
               </button>
@@ -110,7 +112,7 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="https://..."
+            placeholder={t('detail.urlPlaceholder')}
             className="h-8 text-sm"
             autoFocus
           />
@@ -119,7 +121,7 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Label (optional)"
+            placeholder={t('detail.linkLabelPlaceholder')}
             className="h-8 text-sm"
           />
           <div className="flex gap-2">
@@ -129,7 +131,7 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
               onClick={handleAddLink}
               disabled={!newUrl.trim() || addLink.isPending}
             >
-              Add
+              {t('detail.add')}
             </Button>
             <Button
               variant="outline"
@@ -141,7 +143,7 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
                 setNewLabel('')
               }}
             >
-              Cancel
+              {t('detail.cancel')}
             </Button>
           </div>
         </div>
@@ -152,7 +154,7 @@ export function ProjectLinksManager({ projectId, links }: ProjectLinksManagerPro
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <HugeiconsIcon icon={Add01Icon} size={14} />
-          <span>Add link</span>
+          <span>{t('detail.addLink')}</span>
         </button>
       )}
     </div>

@@ -16,7 +16,7 @@ app.get('/graph', (c) => {
       title: t.title,
       status: t.status,
       projectId: t.projectId,
-      labels: t.labels ? JSON.parse(t.labels) : [],
+      tags: t.tags ? JSON.parse(t.tags) : [],
       dueDate: t.dueDate,
     })),
     edges: allDeps.map((d) => ({

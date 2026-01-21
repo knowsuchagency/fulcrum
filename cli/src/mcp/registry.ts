@@ -22,9 +22,9 @@ export const toolRegistry: ToolMetadata[] = [
   // Core tools - always loaded
   {
     name: 'list_tasks',
-    description: 'List all Fulcrum tasks with flexible filtering (search, labels, statuses, date range, overdue)',
+    description: 'List all Fulcrum tasks with flexible filtering (search, tags, statuses, date range, overdue)',
     category: 'tasks',
-    keywords: ['task', 'list', 'kanban', 'worktree', 'status', 'search', 'labels', 'due date', 'overdue', 'filter'],
+    keywords: ['task', 'list', 'kanban', 'worktree', 'status', 'search', 'tags', 'due date', 'overdue', 'filter'],
     deferred: false,
   },
   {
@@ -374,17 +374,17 @@ export const toolRegistry: ToolMetadata[] = [
     deferred: false,
   },
   {
-    name: 'add_task_label',
-    description: 'Add a label to a task',
+    name: 'add_task_tag',
+    description: 'Add a tag to a task',
     category: 'tasks',
-    keywords: ['task', 'label', 'add', 'tag', 'categorize'],
+    keywords: ['task', 'tag', 'add', 'categorize'],
     deferred: false,
   },
   {
-    name: 'remove_task_label',
-    description: 'Remove a label from a task',
+    name: 'remove_task_tag',
+    description: 'Remove a tag from a task',
     category: 'tasks',
-    keywords: ['task', 'label', 'remove', 'delete', 'tag'],
+    keywords: ['task', 'tag', 'remove', 'delete'],
     deferred: false,
   },
   {
@@ -423,10 +423,10 @@ export const toolRegistry: ToolMetadata[] = [
     deferred: false,
   },
   {
-    name: 'list_tasks_by_label',
-    description: 'List tasks filtered by a specific label',
+    name: 'list_tasks_by_tag',
+    description: 'List tasks filtered by a specific tag',
     category: 'tasks',
-    keywords: ['task', 'label', 'filter', 'search', 'tag'],
+    keywords: ['task', 'tag', 'filter', 'search'],
     deferred: false,
   },
   {
@@ -437,10 +437,10 @@ export const toolRegistry: ToolMetadata[] = [
     deferred: false,
   },
   {
-    name: 'list_labels',
-    description: 'List all unique labels in use across tasks with optional search',
+    name: 'list_tags',
+    description: 'List all unique tags in use across tasks with optional search',
     category: 'tasks',
-    keywords: ['labels', 'tags', 'categories', 'filter', 'search', 'discover'],
+    keywords: ['tags', 'categories', 'filter', 'search', 'discover'],
     deferred: false,
   },
   {

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ interface ProjectTagsManagerProps {
 }
 
 export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps) {
+  const { t } = useTranslation('projects')
   const [isEditing, setIsEditing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -88,7 +90,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</h3>
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('detail.sections.tags')}</h3>
           <Button
             variant="ghost"
             size="sm"
@@ -98,7 +100,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
               setTimeout(() => inputRef.current?.focus(), 0)
             }}
           >
-            Edit
+            {t('detail.edit')}
           </Button>
         </div>
         {tags.length > 0 ? (
@@ -110,7 +112,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground italic">No tags</p>
+          <p className="text-xs text-muted-foreground italic">{t('detail.noTags')}</p>
         )}
       </div>
     )
@@ -119,7 +121,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
   return (
     <div className="space-y-2" ref={containerRef}>
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tags</h3>
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('detail.sections.tags')}</h3>
         <Button
           variant="ghost"
           size="sm"
@@ -131,7 +133,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
           }}
         >
           <HugeiconsIcon icon={Tick02Icon} size={12} data-slot="icon" />
-          Done
+          {t('detail.done')}
         </Button>
       </div>
 
@@ -164,7 +166,7 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
           }}
           onFocus={() => setShowDropdown(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search or create tag..."
+          placeholder={t('detail.searchOrCreateTag')}
           className="h-8 text-sm"
         />
 
@@ -192,12 +194,12 @@ export function ProjectTagsManager({ projectId, tags }: ProjectTagsManagerProps)
                 onClick={() => handleAddTag(searchQuery.trim())}
               >
                 <HugeiconsIcon icon={Add01Icon} size={14} />
-                <span>Create "{searchQuery.trim()}"</span>
+                <span>{t('detail.createTag', { tag: searchQuery.trim() })}</span>
               </button>
             )}
             {!showCreateOption && availableTags.length === 0 && searchQuery && (
               <div className="px-3 py-2 text-sm text-muted-foreground">
-                No matching tags
+                {t('detail.noMatchingTags')}
               </div>
             )}
           </div>

@@ -241,6 +241,11 @@ function buildProjectWithDetails(
     appId: project.appId,
     terminalTabId: project.terminalTabId,
     status: project.status as 'active' | 'archived',
+    // Agent configuration
+    defaultAgent: project.defaultAgent as 'claude' | 'opencode' | null,
+    claudeOptions: project.claudeOptions ? JSON.parse(project.claudeOptions) : null,
+    opencodeOptions: project.opencodeOptions ? JSON.parse(project.opencodeOptions) : null,
+    opencodeModel: project.opencodeModel ?? null,
     lastAccessedAt: project.lastAccessedAt,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
@@ -669,6 +674,11 @@ app.patch('/:id', async (c) => {
       description?: string | null
       notes?: string | null
       status?: 'active' | 'archived'
+      // Agent configuration
+      defaultAgent?: 'claude' | 'opencode' | null
+      claudeOptions?: Record<string, string> | null
+      opencodeOptions?: Record<string, string> | null
+      opencodeModel?: string | null
     }>()
 
     const now = new Date().toISOString()
@@ -678,6 +688,15 @@ app.patch('/:id', async (c) => {
     if (body.description !== undefined) updateData.description = body.description
     if (body.notes !== undefined) updateData.notes = body.notes
     if (body.status !== undefined) updateData.status = body.status
+    // Agent configuration updates
+    if (body.defaultAgent !== undefined) updateData.defaultAgent = body.defaultAgent
+    if (body.claudeOptions !== undefined) {
+      updateData.claudeOptions = body.claudeOptions ? JSON.stringify(body.claudeOptions) : null
+    }
+    if (body.opencodeOptions !== undefined) {
+      updateData.opencodeOptions = body.opencodeOptions ? JSON.stringify(body.opencodeOptions) : null
+    }
+    if (body.opencodeModel !== undefined) updateData.opencodeModel = body.opencodeModel
 
     db.update(projects).set(updateData).where(eq(projects.id, id)).run()
 

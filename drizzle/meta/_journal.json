@@ -260,6 +260,20 @@
       "when": 1769252000000,
       "tag": "0036_unique_repository_per_project",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1769338400000,
+      "tag": "0037_project_agent_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1769424800000,
+      "tag": "0038_rename_tasks_labels_to_tags",
+      "breakpoints": true
     }
   ]
 }

@@ -22,7 +22,7 @@ export const tasks = sqliteTable('tasks', {
   // Generalized task management fields
   projectId: text('project_id'), // FK to projects (nullable - null = orphan/inbox)
   repositoryId: text('repository_id'), // FK to repositories for code tasks
-  labels: text('labels'), // JSON array: ["bug", "urgent"]
+  tags: text('tags'), // JSON array: ["bug", "urgent"]
   startedAt: text('started_at'), // Timestamp when moved out of TO_DO
   dueDate: text('due_date'), // YYYY-MM-DD format
   notes: text('notes'), // Free-form notes/comments
@@ -209,6 +209,11 @@ export const projects = sqliteTable('projects', {
   appId: text('app_id').unique(), // FK to apps (nullable, 1:1)
   terminalTabId: text('terminal_tab_id').unique(), // FK to terminalTabs (dedicated)
   status: text('status').notNull().default('active'), // 'active' | 'archived'
+  // Agent configuration - inherited by repositories unless overridden
+  defaultAgent: text('default_agent'), // 'claude' | 'opencode' | null - null means use global default
+  claudeOptions: text('claude_options'), // JSON: { [flag]: value } - CLI options for Claude Code
+  opencodeOptions: text('opencode_options'), // JSON: { [flag]: value } - CLI options for OpenCode
+  opencodeModel: text('opencode_model'), // OpenCode model in format 'provider/model' - null means use global default
   lastAccessedAt: text('last_accessed_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

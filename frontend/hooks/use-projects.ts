@@ -152,6 +152,11 @@ export function useUpdateProject() {
         description?: string | null
         notes?: string | null
         status?: 'active' | 'archived'
+        // Agent configuration
+        defaultAgent?: 'claude' | 'opencode' | null
+        claudeOptions?: Record<string, string> | null
+        opencodeOptions?: Record<string, string> | null
+        opencodeModel?: string | null
       }
     }) =>
       fetchJSON<ProjectWithDetails>(`${API_BASE}/api/projects/${id}`, {
