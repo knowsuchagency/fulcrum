@@ -1,9 +1,11 @@
+import { defineCommand } from 'citty'
 import { spawn, spawnSync } from 'node:child_process'
 import { writeFileSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
+import { globalArgs, setupJsonOutput, toFlags } from './shared'
 import pkg from '../../../package.json'
 
 const GITHUB_REPO = 'knowsuchagency/fulcrum'
@@ -128,12 +130,12 @@ function getPackageRunner(): { command: string; execCommand: string } {
 function stopServer(): void {
   const { execCommand } = getPackageRunner()
   console.log('Stopping current server...')
-  
+
   const result = spawnSync(execCommand, [`${NPM_PACKAGE}@latest`, 'down'], {
     stdio: 'inherit',
     shell: true,
   })
-  
+
   if (result.status === 0) {
     console.log('Server stopped.')
   } else {
@@ -144,32 +146,31 @@ function stopServer(): void {
 function installLatestVersion(): boolean {
   const { execCommand, command } = getPackageRunner()
   console.log(`\nInstalling latest version via ${command}...`)
-  
+
   const args = command === 'bunx'
     ? ['--bun', `${NPM_PACKAGE}@latest`, '--version']
     : ['--yes', '--ignore-scripts', `${NPM_PACKAGE}@latest`, '--version']
-  
+
   const result = spawnSync(execCommand, args, {
     stdio: 'inherit',
     shell: true,
   })
-  
+
   if (result.status === 0) {
     console.log('Latest version installed.')
     return true
-  } else {
-    console.error('Failed to install latest version.')
-    return false
   }
+  console.error('Failed to install latest version.')
+  return false
 }
 
 function startServer(): Promise<number> {
   return new Promise((resolve) => {
     const { command, execCommand } = getPackageRunner()
     const args = [`${NPM_PACKAGE}@latest`, 'up']
-    
+
     console.log(`\nStarting server: ${command} ${args.join(' ')}\n`)
-    
+
     const child = spawn(execCommand, args, {
       stdio: 'inherit',
       shell: true,
@@ -193,7 +194,7 @@ function startServer(): Promise<number> {
 function spawnDetachedUpdate(): void {
   const { command } = getPackageRunner()
   const scriptPath = join(tmpdir(), `fulcrum-update-${Date.now()}.sh`)
-  
+
   const installArgs = command === 'bunx' ? '--bun' : '--yes --ignore-scripts'
   const script = `#!/bin/bash
 # Fulcrum self-update script - runs independently of parent process
@@ -216,29 +217,29 @@ rm -f "${scriptPath}"
 
   writeFileSync(scriptPath, script)
   chmodSync(scriptPath, 0o755)
-  
+
   const child = spawn('nohup', [scriptPath], {
     detached: true,
     stdio: 'ignore',
     shell: false,
   })
-  
+
   child.unref()
-  
+
   console.log('Update process spawned in background.')
   console.log('The server will restart momentarily with the new version.')
 }
 
 async function runUpdate(): Promise<number> {
   stopServer()
-  
+
   const installed = installLatestVersion()
   if (!installed) {
     console.error('\nUpdate failed during installation. Your previous version may still work.')
     console.log('Try running: fulcrum up')
     return 1
   }
-  
+
   console.log('\nStarting updated server...')
   return await startServer()
 }
@@ -289,12 +290,38 @@ export async function handleUpdateCommand(flags: Record<string, string>) {
 
   console.log('\nUpdating Fulcrum...')
   console.log('This will stop the current server, install the update, and restart.\n')
-  
+
   const exitCode = await runUpdate()
-  
+
   if (exitCode !== 0) {
     throw new CliError('GENERAL_ERROR', 'Update failed', ExitCodes.GENERAL_ERROR)
   }
-  
+
   console.log('\n✓ Fulcrum has been updated and restarted.')
 }
+
+// ============================================================================
+// Command Definition
+// ============================================================================
+
+export const updateCommand = defineCommand({
+  meta: {
+    name: 'update',
+    description: 'Check for updates and update Fulcrum to the latest version',
+  },
+  args: {
+    ...globalArgs,
+    check: {
+      type: 'boolean' as const,
+      description: 'Only check for updates, do not install',
+    },
+    background: {
+      type: 'boolean' as const,
+      description: 'Run update in background (for UI-triggered updates)',
+    },
+  },
+  async run({ args }) {
+    setupJsonOutput(args)
+    await handleUpdateCommand(toFlags(args))
+  },
+})
