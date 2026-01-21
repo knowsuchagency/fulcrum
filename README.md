@@ -1,6 +1,6 @@
 # Project Fulcrum
 
-**Harness Attention. Orchestrate Agents. Ship.**
+**Harness Attention. Orchestrate Agents. Leverage Your Time Wisely.**
 
 ![Fulcrum Kanban Board](./screenshots/tasks-kanban-board.png)
 
