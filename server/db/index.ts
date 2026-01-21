@@ -391,12 +391,16 @@ function migrateRepositoriesToProjects(sqlite: Database): void {
   if (!hasProjectsTable) return
 
   // Check if any repositories exist without projects
+  // Must check both legacy repository_id field AND the project_repositories join table
   const orphanedRepos = sqlite
     .query(`
       SELECT r.id, r.display_name, r.path, r.last_used_at
       FROM repositories r
       WHERE NOT EXISTS (
         SELECT 1 FROM projects p WHERE p.repository_id = r.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM project_repositories pr WHERE pr.repository_id = r.id
       )
     `)
     .all() as Array<{ id: string; display_name: string; path: string; last_used_at: string | null }>
