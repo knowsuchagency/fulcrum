@@ -352,6 +352,7 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
           defaultEdgeOptions={{
             type: 'smoothstep',
           }}
+          proOptions={{ hideAttribution: true }}
         >
           <Background color="#e5e7eb" gap={20} size={1} />
           <Controls showInteractive={false} />
