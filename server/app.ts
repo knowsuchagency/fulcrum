@@ -28,6 +28,7 @@ import projectsRoutes from './routes/projects'
 import taskDependenciesRoutes from './routes/task-dependencies'
 import tagsRoutes from './routes/tags'
 import versionRoutes from './routes/version'
+import mcpRoutes from './routes/mcp'
 import { writeEntry } from './lib/logger'
 import type { LogEntry } from '../shared/logger'
 
@@ -53,7 +54,8 @@ export function createApp() {
     cors({
       origin: '*',
       allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type'],
+      allowHeaders: ['Content-Type', 'mcp-session-id', 'Last-Event-ID', 'mcp-protocol-version'],
+      exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
     })
   )
 
@@ -81,6 +83,9 @@ export function createApp() {
   app.route('/api/task-dependencies', taskDependenciesRoutes)
   app.route('/api/tags', tagsRoutes)
   app.route('/api/version', versionRoutes)
+
+  // MCP HTTP transport endpoint
+  app.route('/mcp', mcpRoutes)
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {
