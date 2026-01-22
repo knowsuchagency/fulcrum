@@ -15,6 +15,7 @@ import ReactFlow, {
 } from 'reactflow'
 import dagre from '@dagrejs/dagre'
 import { useTaskDependencyGraph, useTasks, type TaskGraphNode } from '@/hooks/use-tasks'
+import { useProjects } from '@/hooks/use-projects'
 import type { Task, TaskStatus } from '@/types'
 import { NonWorktreeTaskModal } from '@/components/task/non-worktree-task-modal'
 import 'reactflow/dist/style.css'
@@ -164,14 +165,17 @@ function getLayoutedElements(
 
 interface TaskDependencyGraphProps {
   className?: string
+  projectFilter?: string | null
+  tagsFilter?: string[]
 }
 
 const MOBILE_BREAKPOINT = 768
 
-export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
+export function TaskDependencyGraph({ className, projectFilter, tagsFilter }: TaskDependencyGraphProps) {
   const navigate = useNavigate()
   const { data: graphData, isLoading } = useTaskDependencyGraph()
   const { data: allTasks = [] } = useTasks()
+  const { data: projects = [] } = useProjects()
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -179,6 +183,34 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
   const taskMap = useMemo(() => {
     return new Map(allTasks.map((t) => [t.id, t]))
   }, [allTasks])
+
+  // Build sets of all repository IDs and paths that belong to projects (for inbox filtering)
+  const { projectRepoIds, projectRepoPaths } = useMemo(() => {
+    const ids = new Set<string>()
+    const paths = new Set<string>()
+    for (const project of projects) {
+      for (const repo of project.repositories) {
+        ids.add(repo.id)
+        paths.add(repo.path)
+      }
+    }
+    return { projectRepoIds: ids, projectRepoPaths: paths }
+  }, [projects])
+
+  // Get repository IDs and paths for the selected project filter
+  const { selectedProjectRepoIds, selectedProjectRepoPaths } = useMemo(() => {
+    if (!projectFilter || projectFilter === 'inbox') {
+      return { selectedProjectRepoIds: new Set<string>(), selectedProjectRepoPaths: new Set<string>() }
+    }
+    const project = projects.find((p) => p.id === projectFilter)
+    if (!project) {
+      return { selectedProjectRepoIds: new Set<string>(), selectedProjectRepoPaths: new Set<string>() }
+    }
+    return {
+      selectedProjectRepoIds: new Set(project.repositories.map((r) => r.id)),
+      selectedProjectRepoPaths: new Set(project.repositories.map((r) => r.path)),
+    }
+  }, [projectFilter, projects])
 
   // Detect mobile for layout direction
   const [isMobile, setIsMobile] = useState(() =>
@@ -225,18 +257,83 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
     return blocking
   }, [graphData])
 
+  // Helper to check if a task matches the project filter
+  const taskMatchesProjectFilter = useCallback(
+    (task: TaskGraphNode): boolean => {
+      // Get full task data for repository info
+      const fullTask = taskMap.get(task.id)
+      if (!fullTask) return true // If no full data, don't filter out
+
+      if (projectFilter === 'inbox') {
+        // Show only tasks without a project (neither directly via projectId nor via repository)
+        return (
+          !fullTask.projectId &&
+          (!fullTask.repositoryId || !projectRepoIds.has(fullTask.repositoryId)) &&
+          (!fullTask.repoPath || !projectRepoPaths.has(fullTask.repoPath))
+        )
+      } else if (projectFilter) {
+        // Show tasks for a specific project (either directly via projectId or via repository)
+        return (
+          fullTask.projectId === projectFilter ||
+          (!!fullTask.repositoryId && selectedProjectRepoIds.has(fullTask.repositoryId)) ||
+          (!!fullTask.repoPath && selectedProjectRepoPaths.has(fullTask.repoPath))
+        )
+      }
+      return true // No filter applied
+    },
+    [projectFilter, projectRepoIds, projectRepoPaths, selectedProjectRepoIds, selectedProjectRepoPaths, taskMap]
+  )
+
+  // Helper to check if a task matches the tags filter (OR logic)
+  const taskMatchesTagsFilter = useCallback(
+    (task: TaskGraphNode): boolean => {
+      if (!tagsFilter || tagsFilter.length === 0) return true
+      // Task matches if it has ANY of the selected tags
+      return task.tags.some((tag) => tagsFilter.includes(tag))
+    },
+    [tagsFilter]
+  )
+
   // Convert API data to ReactFlow nodes and edges
   const { initialNodes, initialEdges } = useMemo((): { initialNodes: Node<TaskNodeData>[]; initialEdges: Edge[] } => {
     if (!graphData) return { initialNodes: [], initialEdges: [] }
 
-    // Only include nodes that are part of dependency chains
-    const nodesInChains = new Set<string>()
-    for (const edge of graphData.edges) {
-      nodesInChains.add(edge.source)
-      nodesInChains.add(edge.target)
+    // First, determine which tasks match our filters
+    const matchingTaskIds = new Set<string>()
+    for (const task of graphData.nodes) {
+      if (taskMatchesProjectFilter(task) && taskMatchesTagsFilter(task)) {
+        matchingTaskIds.add(task.id)
+      }
     }
 
-    const filteredTasks = graphData.nodes.filter((task) => nodesInChains.has(task.id))
+    // Expand to include full dependency chains
+    // Any task that is connected to a matching task should be included
+    const nodesInFilteredChains = new Set<string>()
+    for (const edge of graphData.edges) {
+      const sourceMatches = matchingTaskIds.has(edge.source)
+      const targetMatches = matchingTaskIds.has(edge.target)
+      // Include the edge (and both nodes) if either end matches the filter
+      if (sourceMatches || targetMatches) {
+        nodesInFilteredChains.add(edge.source)
+        nodesInFilteredChains.add(edge.target)
+      }
+    }
+
+    // If no filters are applied, show all nodes in dependency chains
+    const hasFilters = projectFilter || (tagsFilter && tagsFilter.length > 0)
+    if (!hasFilters) {
+      for (const edge of graphData.edges) {
+        nodesInFilteredChains.add(edge.source)
+        nodesInFilteredChains.add(edge.target)
+      }
+    }
+
+    const filteredTasks = graphData.nodes.filter((task) => nodesInFilteredChains.has(task.id))
+
+    // Filter edges to only include those where both nodes are in the filtered set
+    const filteredEdges = graphData.edges.filter(
+      (edge) => nodesInFilteredChains.has(edge.source) && nodesInFilteredChains.has(edge.target)
+    )
 
     const nodes: Node<TaskNodeData>[] = filteredTasks.map((task) => ({
       id: task.id,
@@ -250,7 +347,7 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
       },
     }))
 
-    const edges: Edge[] = graphData.edges.map((edge) => ({
+    const edges: Edge[] = filteredEdges.map((edge) => ({
       id: edge.id,
       source: edge.source,
       target: edge.target,
@@ -271,7 +368,7 @@ export function TaskDependencyGraph({ className }: TaskDependencyGraphProps) {
     // Apply automatic layout (LR on desktop, TB on mobile)
     const layouted = getLayoutedElements(nodes, edges, direction)
     return { initialNodes: layouted.nodes as Node<TaskNodeData>[], initialEdges: layouted.edges }
-  }, [graphData, blockedNodes, blockingNodes, direction])
+  }, [graphData, blockedNodes, blockingNodes, direction, taskMatchesProjectFilter, taskMatchesTagsFilter, projectFilter, tagsFilter])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)

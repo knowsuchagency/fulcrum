@@ -61,9 +61,10 @@ function MobileDropZone({ status }: { status: TaskStatus }) {
 interface KanbanBoardProps {
   projectFilter?: string | null // 'inbox' for tasks without project, or project ID
   searchQuery?: string
+  tagsFilter?: string[]
 }
 
-function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
+function KanbanBoardInner({ projectFilter, searchQuery, tagsFilter }: KanbanBoardProps) {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const { data: allTasks = [], isLoading } = useTasks()
@@ -134,7 +135,7 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
     }
   }, [projectFilter, projects])
 
-  // Filter tasks by project and search query, sort by latest first
+  // Filter tasks by project, tags, and search query, sort by latest first
   const tasks = useMemo(() => {
     let filtered = allTasks
 
@@ -154,6 +155,13 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
           t.projectId === projectFilter ||
           (t.repositoryId && selectedProjectRepoIds.has(t.repositoryId)) ||
           (t.repoPath && selectedProjectRepoPaths.has(t.repoPath))
+      )
+    }
+
+    // Filter by tags (OR logic - show tasks with ANY selected tag)
+    if (tagsFilter && tagsFilter.length > 0) {
+      filtered = filtered.filter((t) =>
+        t.tags.some((tag) => tagsFilter.includes(tag))
       )
     }
 
@@ -181,7 +189,7 @@ function KanbanBoardInner({ projectFilter, searchQuery }: KanbanBoardProps) {
       )
     }
     return filtered
-  }, [allTasks, projectFilter, searchQuery, projectRepoIds, projectRepoPaths, selectedProjectRepoIds, selectedProjectRepoPaths])
+  }, [allTasks, projectFilter, searchQuery, tagsFilter, projectRepoIds, projectRepoPaths, selectedProjectRepoIds, selectedProjectRepoPaths])
 
   // Task counts for tabs
   const taskCounts = useMemo(() => {

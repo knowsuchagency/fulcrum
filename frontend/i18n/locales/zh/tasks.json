@@ -2,6 +2,12 @@
   "title": "任务",
   "searchPlaceholder": "搜索",
   "allProjects": "全部项目",
+  "allTags": "标签",
+  "searchTags": "搜索标签...",
+  "noTagsFound": "未找到标签",
+  "clearTags": "清除所有标签",
+  "searchProjects": "搜索项目...",
+  "noProjectsFound": "未找到项目",
   "newTask": "新建任务",
   "createModal": {
     "title": "创建新任务",

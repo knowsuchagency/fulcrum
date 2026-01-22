@@ -8,13 +8,13 @@ import { TerminalTabBar } from '@/components/terminal/terminal-tab-bar'
 import { TabEditDialog } from '@/components/terminal/tab-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { TaskDaily01Icon, FilterIcon, ComputerTerminal01Icon, FolderLibraryIcon, Loading03Icon, Tick02Icon } from '@hugeicons/core-free-icons'
+import { TaskDaily01Icon, FilterIcon, ComputerTerminal01Icon, FolderLibraryIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
+import { ProjectFilter } from '@/components/tasks/project-filter'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { useTerminalStore, useStore } from '@/stores'
@@ -828,41 +828,12 @@ const TerminalsView = observer(function TerminalsView() {
         <div className="flex shrink-0 items-center gap-3 max-sm:gap-1">
           {/* Project filter (only when Task Terminals is active and multiple projects exist) */}
           {activeTabId === ALL_TASKS_TAB_ID && taskProjectOptions.length > 1 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="outline" size="sm" className="max-sm:w-auto" />}
-              >
-                <HugeiconsIcon icon={FilterIcon} size={12} strokeWidth={2} className="text-muted-foreground" />
-                <span>
-                  {selectedTaskProjectId
-                    ? taskProjectOptions.find(o => o.id === selectedTaskProjectId)?.name ?? selectedTaskProjectId
-                    : t('allProjects')}
-                </span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64" align="end">
-                <DropdownMenuItem
-                  onClick={() => setTaskProjectFilter(undefined)}
-                  className="flex items-center justify-between"
-                >
-                  <span>{t('allProjects')}</span>
-                  {!selectedTaskProjectId && (
-                    <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} className="text-primary" />
-                  )}
-                </DropdownMenuItem>
-                {taskProjectOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.id}
-                    onClick={() => setTaskProjectFilter(option.id)}
-                    className="flex items-center justify-between"
-                  >
-                    <span>{option.name}</span>
-                    {selectedTaskProjectId === option.id && (
-                      <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} className="text-primary" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ProjectFilter
+              value={selectedTaskProjectId ?? null}
+              onChange={(projectId) => setTaskProjectFilter(projectId ?? undefined)}
+              options={taskProjectOptions}
+              allLabel={t('allProjects')}
+            />
           )}
           {/* Repository filter (only when Repo Terminals is active) */}
           {activeTabId === ALL_REPOS_TAB_ID && repositories.length > 0 && (

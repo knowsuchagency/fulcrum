@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTasks } from '@/hooks/use-tasks'
+import { useProjects } from '@/hooks/use-projects'
 import type { Task, TaskStatus } from '@/types'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -20,20 +21,76 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 interface TaskCalendarProps {
   className?: string
+  projectFilter?: string | null
+  tagsFilter?: string[]
 }
 
-export function TaskCalendar({ className }: TaskCalendarProps) {
+export function TaskCalendar({ className, projectFilter, tagsFilter }: TaskCalendarProps) {
   const navigate = useNavigate()
   const { data: tasks = [] } = useTasks()
+  const { data: projects = [] } = useProjects()
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  // Get tasks with due dates grouped by date
+  // Build sets of repository IDs and paths that belong to projects
+  const { projectRepoIds, projectRepoPaths } = useMemo(() => {
+    const repoIds = new Set<string>()
+    const repoPaths = new Set<string>()
+    for (const project of projects) {
+      for (const repo of project.repositories) {
+        repoIds.add(repo.id)
+        repoPaths.add(repo.path)
+      }
+    }
+    return { projectRepoIds: repoIds, projectRepoPaths: repoPaths }
+  }, [projects])
+
+  // Helper to check if a task matches the project filter
+  const taskMatchesProjectFilter = useCallback(
+    (task: Task): boolean => {
+      if (!projectFilter) return true
+      if (projectFilter === 'inbox') {
+        // Inbox = tasks not associated with any project (directly or via repository)
+        return (
+          !task.projectId &&
+          (!task.repositoryId || !projectRepoIds.has(task.repositoryId)) &&
+          (!task.repoPath || !projectRepoPaths.has(task.repoPath))
+        )
+      }
+      // Match specific project
+      if (task.projectId === projectFilter) return true
+      // Also match tasks whose repository belongs to the project
+      const project = projects.find((p) => p.id === projectFilter)
+      if (project) {
+        const repoIds = new Set(project.repositories.map((r) => r.id))
+        const repoPaths = new Set(project.repositories.map((r) => r.path))
+        if (task.repositoryId && repoIds.has(task.repositoryId)) return true
+        if (task.repoPath && repoPaths.has(task.repoPath)) return true
+      }
+      return false
+    },
+    [projectFilter, projects, projectRepoIds, projectRepoPaths]
+  )
+
+  // Helper to check if a task matches the tags filter (OR logic)
+  const taskMatchesTagsFilter = useCallback(
+    (task: Task): boolean => {
+      if (!tagsFilter || tagsFilter.length === 0) return true
+      return task.tags.some((tag) => tagsFilter.includes(tag))
+    },
+    [tagsFilter]
+  )
+
+  // Get filtered tasks with due dates grouped by date
   const tasksByDate = useMemo(() => {
     const map = new Map<string, Task[]>()
     for (const task of tasks) {
       if (task.dueDate) {
+        // Apply filters
+        if (!taskMatchesProjectFilter(task)) continue
+        if (!taskMatchesTagsFilter(task)) continue
+
         const dateKey = task.dueDate.split('T')[0] // YYYY-MM-DD
         if (!map.has(dateKey)) {
           map.set(dateKey, [])
@@ -42,7 +99,7 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
       }
     }
     return map
-  }, [tasks])
+  }, [tasks, taskMatchesProjectFilter, taskMatchesTagsFilter])
 
   // Calculate calendar grid
   const calendarDays = useMemo(() => {
@@ -102,7 +159,12 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
     year: 'numeric',
   })
 
-  const tasksWithDueDates = tasks.filter((t) => t.dueDate).length
+  // Count filtered tasks with due dates
+  const tasksWithDueDates = useMemo(() => {
+    return tasks.filter(
+      (t) => t.dueDate && taskMatchesProjectFilter(t) && taskMatchesTagsFilter(t)
+    ).length
+  }, [tasks, taskMatchesProjectFilter, taskMatchesTagsFilter])
 
   return (
     <div className={cn('flex h-full flex-col', className)}>

@@ -2,6 +2,12 @@
   "title": "Tasks",
   "searchPlaceholder": "Search",
   "allProjects": "All Projects",
+  "allTags": "Tags",
+  "searchTags": "Search tags...",
+  "noTagsFound": "No tags found",
+  "clearTags": "Clear all tags",
+  "searchProjects": "Search projects...",
+  "noProjectsFound": "No projects found",
   "newTask": "New Task",
   "createModal": {
     "title": "Create New Task",
