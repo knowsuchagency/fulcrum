@@ -2,10 +2,12 @@
 export const ExitCodes = {
   SUCCESS: 0,
   ERROR: 1,
+  GENERAL_ERROR: 1,
   INVALID_ARGS: 2,
   SERVER_UNREACHABLE: 3,
   NOT_FOUND: 4,
   VALIDATION_ERROR: 5,
+  NETWORK_ERROR: 6,
 } as const
 
 export type ExitCode = (typeof ExitCodes)[keyof typeof ExitCodes]

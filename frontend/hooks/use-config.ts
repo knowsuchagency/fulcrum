@@ -451,6 +451,50 @@ export function useFulcrumVersion() {
   }
 }
 
+interface VersionCheckResponse {
+  currentVersion: string | null
+  latestVersion: string | null
+  updateAvailable: boolean
+  updateCommand: string
+  releaseUrl: string
+}
+
+const VERSION_CHECK_STALE_TIME = 2 * 60 * 60 * 1000
+
+export function useVersionCheck() {
+  return useQuery({
+    queryKey: ['version-check'],
+    queryFn: () => fetchJSON<VersionCheckResponse>(`${API_BASE}/api/version/check`),
+    staleTime: VERSION_CHECK_STALE_TIME,
+    refetchOnWindowFocus: false,
+  })
+}
+
+export function useRefreshVersionCheck() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => fetchJSON<VersionCheckResponse>(`${API_BASE}/api/version/check?force=1`),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['version-check'], data)
+    },
+  })
+}
+
+interface UpdateResponse {
+  success: boolean
+  message?: string
+  error?: string
+  fromVersion?: string
+  toVersion?: string
+}
+
+export function useTriggerUpdate() {
+  return useMutation({
+    mutationFn: () => fetchJSON<UpdateResponse>(`${API_BASE}/api/version/update`, { method: 'POST' }),
+  })
+}
+
 // Legacy hook aliases for backward compatibility
 /** @deprecated Use useEditorSshPort instead */
 export const useSshPort = useEditorSshPort

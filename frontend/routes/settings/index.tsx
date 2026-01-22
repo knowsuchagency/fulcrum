@@ -18,7 +18,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon, ArrowDown01Icon, Alert02Icon } from '@hugeicons/core-free-icons'
+import { Folder01Icon, RotateLeft01Icon, Tick02Icon, TestTube01Icon, Loading03Icon, Upload04Icon, Delete02Icon, ArrowDown01Icon, Alert02Icon, ArrowUp02Icon, RefreshIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import {
   usePort,
@@ -31,6 +31,7 @@ import {
   useOpencodeModel,
   useOpencodeDefaultAgent,
   useOpencodePlanAgent,
+  useTriggerUpdate,
   useUpdateConfig,
   useResetConfig,
   useNotificationSettings,
@@ -43,6 +44,9 @@ import {
   useClaudeCodeLightTheme,
   useClaudeCodeDarkTheme,
   useFulcrumVersion,
+  useVersionCheck,
+  useRefreshVersionCheck,
+
   useDefaultTaskType,
   useStartWorktreeTasksImmediately,
   NotificationSettingsConflictError,
@@ -104,6 +108,9 @@ function SettingsPage() {
   const { data: defaultTaskType, isLoading: taskTypeLoading } = useDefaultTaskType()
   const { data: startWorktreeTasksImmediately, isLoading: startImmediatelyLoading } = useStartWorktreeTasksImmediately()
   const { version } = useFulcrumVersion()
+  const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
+  const refreshVersionCheck = useRefreshVersionCheck()
+  const triggerUpdate = useTriggerUpdate()
   const updateConfig = useUpdateConfig()
   const resetConfig = useResetConfig()
   const updateNotifications = useUpdateNotificationSettings()
@@ -697,10 +704,93 @@ function SettingsPage() {
     }
   }
 
+  const handleUpdate = () => {
+    triggerUpdate.mutate(undefined, {
+      onSuccess: () => {
+        toast.info(t('version.updateStarted'))
+      },
+      onError: () => {
+        toast.error(t('version.updateFailed'))
+      },
+    })
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center border-b border-border bg-background px-4 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
         <h1 className="text-sm font-medium">{t('title')}</h1>
+        <div className="flex items-center gap-2">
+          {version && <span className="text-xs font-mono text-muted-foreground">v{version}</span>}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            onClick={() => refreshVersionCheck.mutate()}
+            disabled={versionCheckLoading || refreshVersionCheck.isPending}
+            title={t('version.refresh')}
+            aria-label={t('version.refresh')}
+          >
+            <HugeiconsIcon 
+              icon={RefreshIcon} 
+              size={14} 
+              strokeWidth={2} 
+              className={refreshVersionCheck.isPending ? "animate-spin" : ""}
+            />
+          </Button>
+          {versionCheckLoading && (
+            <div className="flex h-6 items-center gap-1.5 rounded-full bg-muted/50 px-2.5 text-xs text-muted-foreground">
+              <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
+              <span>{t('version.checkingForUpdates')}</span>
+            </div>
+          )}
+
+          {versionCheck?.updateAvailable && versionCheck.latestVersion && (
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 items-center gap-1.5 rounded-full bg-primary/10 px-2.5 text-xs font-medium text-primary border border-primary/20">
+                <HugeiconsIcon icon={ArrowUp02Icon} size={12} strokeWidth={2.5} />
+                {t('version.updateAvailable', { version: versionCheck.latestVersion })}
+              </span>
+              <Button
+                size="sm"
+                className="h-6 gap-1.5 px-2.5 text-xs"
+                disabled={triggerUpdate.isPending || triggerUpdate.isSuccess}
+                onClick={handleUpdate}
+              >
+                {triggerUpdate.isPending ? (
+                  <>
+                    <HugeiconsIcon icon={Loading03Icon} size={12} strokeWidth={2} className="animate-spin" />
+                    {t('version.updating')}
+                  </>
+                ) : (
+                  <>
+                    <HugeiconsIcon icon={ArrowUp02Icon} size={12} strokeWidth={2} />
+                    {t('version.update')}
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1.5 px-2.5 text-xs"
+                onClick={() => {
+                  if (versionCheck.releaseUrl) {
+                    window.open(versionCheck.releaseUrl, '_blank')
+                  }
+                }}
+              >
+                {t('version.viewRelease')}
+              </Button>
+            </div>
+          )}
+
+          {!versionCheckLoading && versionCheck && !versionCheck.updateAvailable && (
+            <span className="flex h-6 items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 text-xs font-medium text-green-600 dark:text-green-400 border border-green-500/20">
+              <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2.5} />
+              {t('version.upToDate')}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-6">
@@ -1762,10 +1852,7 @@ function SettingsPage() {
 
       {/* Sticky Save Button Footer */}
       <div className="shrink-0 border-t border-border bg-background px-6 py-3">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            Fulcrum {version ? `v${version}` : '(dev)'}
-          </span>
+        <div className="mx-auto flex max-w-5xl items-center justify-end">
           <div className={`flex items-center gap-2 ${isDesktop ? 'flex-row-reverse' : ''}`}>
             {saved && (
               <span className="flex items-center gap-1 text-xs text-accent">

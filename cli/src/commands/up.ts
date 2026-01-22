@@ -20,6 +20,7 @@ import {
 } from '../utils/install'
 import { getDependency, getInstallMethod, getInstallCommand } from '../utils/dependencies'
 import { installClaudePlugin, needsPluginUpdate } from './claude'
+import { checkForUpdates, installLatestVersion } from './update'
 import pkg from '../../../package.json'
 import { globalArgs, toFlags, setupJsonOutput } from './shared'
 
@@ -49,6 +50,27 @@ function getPackageRoot(): string {
 
 async function handleUpCommand(flags: Record<string, string>) {
   const autoYes = flags.yes === 'true' || flags.y === 'true'
+  const shouldUpdate = flags.update === 'true'
+
+  // Handle --update flag: check for updates and install if available
+  if (shouldUpdate) {
+    console.error('Checking for updates...')
+    const { currentVersion, latestVersion, updateAvailable } = await checkForUpdates()
+
+    if (latestVersion && updateAvailable) {
+      console.error(`Update available: ${currentVersion} → ${latestVersion}`)
+      console.error('Installing update...')
+      const installed = installLatestVersion()
+      if (!installed) {
+        throw new CliError('UPDATE_FAILED', 'Failed to install update', ExitCodes.ERROR)
+      }
+      console.error('Update installed successfully.')
+    } else if (latestVersion) {
+      console.error(`Already on latest version: ${currentVersion}`)
+    } else {
+      console.error('Could not check for updates, continuing with current version.')
+    }
+  }
 
   // Check for migration from ~/.vibora (legacy Vibora installation)
   if (needsViboraMigration()) {
@@ -284,6 +306,7 @@ export const upCommand = defineCommand({
     ...globalArgs,
     yes: { type: 'boolean' as const, alias: 'y', description: 'Auto-answer yes to prompts' },
     host: { type: 'boolean' as const, description: 'Bind to 0.0.0.0 (expose to network)' },
+    update: { type: 'boolean' as const, description: 'Check for and install updates before starting' },
   },
   async run({ args }) {
     setupJsonOutput(args)

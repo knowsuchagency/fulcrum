@@ -15,7 +15,7 @@ const HEALTH_CHECK_TIMEOUT = 3000; // 3 seconds per check
 const MAX_HEALTH_RETRIES = 10;
 const DEV_PORT = 5173;
 const UPDATE_CHECK_URL = 'https://github.com/knowsuchagency/fulcrum/releases/latest/download/manifest.json';
-const UPDATE_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // Check daily (24 hours)
+const UPDATE_CHECK_INTERVAL = 2 * 60 * 60 * 1000; // Check every 2 hours
 
 // State
 let serverUrl = null;
@@ -677,16 +677,71 @@ function getPlatformId() {
  * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
  */
 function compareVersions(v1, v2) {
-  const parts1 = v1.split('.').map(Number);
-  const parts2 = v2.split('.').map(Number);
+  const parsed1 = parseSemver(v1);
+  const parsed2 = parseSemver(v2);
+  if (!parsed1 || !parsed2) return 0;
 
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0;
-    const p2 = parts2[i] || 0;
-    if (p1 > p2) return 1;
-    if (p1 < p2) return -1;
+  if (parsed1.major !== parsed2.major) return parsed1.major - parsed2.major;
+  if (parsed1.minor !== parsed2.minor) return parsed1.minor - parsed2.minor;
+  if (parsed1.patch !== parsed2.patch) return parsed1.patch - parsed2.patch;
+
+  const pre1 = parsed1.preRelease;
+  const pre2 = parsed2.preRelease;
+  if (pre1.length === 0 && pre2.length === 0) return 0;
+  if (pre1.length === 0) return 1;
+  if (pre2.length === 0) return -1;
+
+  const maxLen = Math.max(pre1.length, pre2.length);
+  for (let i = 0; i < maxLen; i++) {
+    const id1 = pre1[i];
+    const id2 = pre2[i];
+    if (id1 === undefined) return -1;
+    if (id2 === undefined) return 1;
+    const diff = compareIdentifiers(id1, id2);
+    if (diff !== 0) return diff;
   }
+
   return 0;
+}
+
+function parseSemver(version) {
+  const cleaned = String(version).trim().replace(/^v/, '');
+  const mainAndPre = cleaned.split('+')[0];
+  const parts = mainAndPre.split('-');
+  const main = parts[0];
+  const preReleaseRaw = parts[1];
+  const mainParts = main.split('.');
+  if (mainParts.length === 0 || mainParts.length > 3) return null;
+
+  if (mainParts.some((part) => part.length > 1 && part.startsWith('0'))) return null;
+
+  const major = Number(mainParts[0]);
+  const minor = Number(mainParts[1] ?? '0');
+  const patch = Number(mainParts[2] ?? '0');
+  if (!Number.isFinite(major) || !Number.isFinite(minor) || !Number.isFinite(patch)) return null;
+  if (major < 0 || minor < 0 || patch < 0) return null;
+
+  if (preReleaseRaw) {
+    const preReleaseParts = preReleaseRaw.split('.');
+    if (preReleaseParts.some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith('0'))) {
+      return null;
+    }
+  }
+
+  const preRelease = preReleaseRaw
+    ? preReleaseRaw.split('.').map((part) => (/^\d+$/.test(part) ? Number(part) : part))
+    : [];
+
+  return { major, minor, patch, preRelease };
+}
+
+function compareIdentifiers(a, b) {
+  const isNumA = typeof a === 'number';
+  const isNumB = typeof b === 'number';
+  if (isNumA && isNumB) return a - b;
+  if (isNumA) return -1;
+  if (isNumB) return 1;
+  return String(a).localeCompare(String(b));
 }
 
 /**

@@ -17,6 +17,7 @@ import { doctorCommand } from './commands/doctor'
 import { devCommand } from './commands/dev'
 import { mcpCommand } from './commands/mcp'
 import { migrateFromViboraCommand } from './commands/migrate-from-vibora'
+import { updateCommand } from './commands/update'
 
 import pkg from '../../package.json'
 
@@ -72,6 +73,7 @@ const main = defineCommand({
     doctor: doctorCommand,
     dev: devCommand,
     mcp: mcpCommand,
+    update: updateCommand,
 
     // Migration
     'migrate-from-vibora': migrateFromViboraCommand,
