@@ -1,11 +1,9 @@
 import { defineCommand } from 'citty'
 import { spawn, spawnSync } from 'node:child_process'
-import { writeFileSync, chmodSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { output, isJsonOutput } from '../utils/output'
 import { CliError, ExitCodes } from '../utils/errors'
 import { globalArgs, setupJsonOutput, toFlags } from './shared'
+import { compareVersions } from '../../../shared/semver'
 import pkg from '../../../package.json'
 
 const GITHUB_REPO = 'knowsuchagency/fulcrum'
@@ -30,76 +28,7 @@ async function fetchLatestVersionFromNpm(): Promise<string | null> {
   }
 }
 
-function parseSemver(version: string): {
-  major: number
-  minor: number
-  patch: number
-  preRelease: Array<string | number>
-} | null {
-  const cleaned = version.trim().replace(/^v/, '')
-  const [mainAndPre] = cleaned.split('+', 1)
-  const [main, preReleaseRaw] = mainAndPre.split('-', 2)
-  const parts = main.split('.')
-  if (parts.length > 3 || parts.length === 0) return null
-
-  if (parts.some((part) => part.length > 1 && part.startsWith('0'))) return null
-
-  const major = Number(parts[0])
-  const minor = Number(parts[1] ?? '0')
-  const patch = Number(parts[2] ?? '0')
-  if (!Number.isFinite(major) || !Number.isFinite(minor) || !Number.isFinite(patch)) return null
-  if (major < 0 || minor < 0 || patch < 0) return null
-
-  if (preReleaseRaw) {
-    const preReleaseParts = preReleaseRaw.split('.')
-    if (preReleaseParts.some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith('0'))) {
-      return null
-    }
-  }
-
-  const preRelease = preReleaseRaw
-    ? preReleaseRaw.split('.').map((part) => (/^\d+$/.test(part) ? Number(part) : part))
-    : []
-
-  return { major, minor, patch, preRelease }
-}
-
-function compareIdentifiers(a: string | number, b: string | number): number {
-  if (typeof a === 'number' && typeof b === 'number') return a - b
-  if (typeof a === 'number') return -1
-  if (typeof b === 'number') return 1
-  return a.localeCompare(b)
-}
-
-function compareVersions(v1: string, v2: string): number {
-  const parsed1 = parseSemver(v1)
-  const parsed2 = parseSemver(v2)
-  if (!parsed1 || !parsed2) return 0
-
-  if (parsed1.major !== parsed2.major) return parsed1.major - parsed2.major
-  if (parsed1.minor !== parsed2.minor) return parsed1.minor - parsed2.minor
-  if (parsed1.patch !== parsed2.patch) return parsed1.patch - parsed2.patch
-
-  const pre1 = parsed1.preRelease
-  const pre2 = parsed2.preRelease
-  if (pre1.length === 0 && pre2.length === 0) return 0
-  if (pre1.length === 0) return 1
-  if (pre2.length === 0) return -1
-
-  const maxLen = Math.max(pre1.length, pre2.length)
-  for (let i = 0; i < maxLen; i++) {
-    const id1 = pre1[i]
-    const id2 = pre2[i]
-    if (id1 === undefined) return -1
-    if (id2 === undefined) return 1
-    const diff = compareIdentifiers(id1, id2)
-    if (diff !== 0) return diff
-  }
-
-  return 0
-}
-
-async function checkForUpdates(): Promise<VersionCheckResult> {
+export async function checkForUpdates(): Promise<VersionCheckResult> {
   const currentVersion = pkg.version
   const latestVersion = await fetchLatestVersionFromNpm()
 
@@ -143,7 +72,7 @@ function stopServer(): void {
   }
 }
 
-function installLatestVersion(): boolean {
+export function installLatestVersion(): boolean {
   const { execCommand, command } = getPackageRunner()
   console.log(`\nInstalling latest version via ${command}...`)
 
@@ -187,49 +116,6 @@ function startServer(): Promise<number> {
   })
 }
 
-/**
- * Spawn a detached update script that survives parent process death.
- * Used when triggered from UI - the server calling this will die during update.
- */
-function spawnDetachedUpdate(): void {
-  const { command } = getPackageRunner()
-  const scriptPath = join(tmpdir(), `fulcrum-update-${Date.now()}.sh`)
-
-  const installArgs = command === 'bunx' ? '--bun' : '--yes --ignore-scripts'
-  const script = `#!/bin/bash
-# Fulcrum self-update script - runs independently of parent process
-
-# Wait for old server to fully stop
-sleep 2
-
-# Stop any remaining server (in case it's still running)
-${command} ${NPM_PACKAGE}@latest down 2>/dev/null || true
-
-# Install latest version (cache it)
-${command} ${installArgs} ${NPM_PACKAGE}@latest --version
-
-# Start new server
-${command} ${NPM_PACKAGE}@latest up
-
-# Clean up this script
-rm -f "${scriptPath}"
-`
-
-  writeFileSync(scriptPath, script)
-  chmodSync(scriptPath, 0o755)
-
-  const child = spawn('nohup', [scriptPath], {
-    detached: true,
-    stdio: 'ignore',
-    shell: false,
-  })
-
-  child.unref()
-
-  console.log('Update process spawned in background.')
-  console.log('The server will restart momentarily with the new version.')
-}
-
 async function runUpdate(): Promise<number> {
   stopServer()
 
@@ -246,7 +132,6 @@ async function runUpdate(): Promise<number> {
 
 export async function handleUpdateCommand(flags: Record<string, string>) {
   const checkOnly = flags.check === 'true'
-  const background = flags.background === 'true'
   const { command } = getPackageRunner()
 
   if (isJsonOutput()) {
@@ -282,12 +167,6 @@ export async function handleUpdateCommand(flags: Record<string, string>) {
     return
   }
 
-  if (background) {
-    console.log('\nSpawning background update process...')
-    spawnDetachedUpdate()
-    return
-  }
-
   console.log('\nUpdating Fulcrum...')
   console.log('This will stop the current server, install the update, and restart.\n')
 
@@ -314,10 +193,6 @@ export const updateCommand = defineCommand({
     check: {
       type: 'boolean' as const,
       description: 'Only check for updates, do not install',
-    },
-    background: {
-      type: 'boolean' as const,
-      description: 'Run update in background (for UI-triggered updates)',
     },
   },
   async run({ args }) {
