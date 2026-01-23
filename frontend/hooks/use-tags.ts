@@ -67,3 +67,37 @@ export function useRemoveProjectTag() {
     },
   })
 }
+
+// Task-specific tag hooks
+export function useAddTaskTag() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, tag }: { taskId: string; tag: string }) =>
+      fetchJSON<{ tags: string[] }>(`${API_BASE}/api/tasks/${taskId}/tags`, {
+        method: 'POST',
+        body: JSON.stringify({ tag }),
+      }),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+  })
+}
+
+export function useRemoveTaskTag() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, tag }: { taskId: string; tag: string }) =>
+      fetchJSON<{ tags: string[] }>(`${API_BASE}/api/tasks/${taskId}/tags/${encodeURIComponent(tag)}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+  })
+}

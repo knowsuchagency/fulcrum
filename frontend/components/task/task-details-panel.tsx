@@ -8,8 +8,9 @@ import { LinksManager } from '@/components/task/links-manager'
 import { DependencyManager } from '@/components/task/dependency-manager'
 import { AttachmentsManager } from '@/components/task/attachments-manager'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Cancel01Icon, GitPullRequestIcon, Link02Icon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, GitPullRequestIcon, Link02Icon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { useUpdateTask } from '@/hooks/use-tasks'
+import { useAddTaskTag, useRemoveTaskTag } from '@/hooks/use-tags'
 import { openExternalUrl } from '@/lib/editor-url'
 import type { Task } from '@/types'
 
@@ -19,6 +20,8 @@ interface TaskDetailsPanelProps {
 
 export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const updateTask = useUpdateTask()
+  const addTaskTag = useAddTaskTag()
+  const removeTaskTag = useRemoveTaskTag()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editedTitle, setEditedTitle] = useState(task.title)
   const [isEditingDescription, setIsEditingDescription] = useState(false)
@@ -26,6 +29,7 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [editedNotes, setEditedNotes] = useState(task.notes || '')
   const [tagInput, setTagInput] = useState('')
+  const [deletingTags, setDeletingTags] = useState<Set<string>>(new Set())
   const [prUrlInput, setPrUrlInput] = useState(task.prUrl || '')
   const [isEditingPrUrl, setIsEditingPrUrl] = useState(false)
 
@@ -61,19 +65,14 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const handleAddTag = () => {
     const trimmed = tagInput.trim()
     if (trimmed && !task.tags.includes(trimmed)) {
-      updateTask.mutate({
-        taskId: task.id,
-        updates: { tags: [...task.tags, trimmed] } as Partial<Task>,
-      })
+      addTaskTag.mutate({ taskId: task.id, tag: trimmed })
       setTagInput('')
     }
   }
 
   const handleRemoveTag = (tag: string) => {
-    updateTask.mutate({
-      taskId: task.id,
-      updates: { tags: task.tags.filter((t) => t !== tag) } as Partial<Task>,
-    })
+    setDeletingTags((prev) => new Set(prev).add(tag))
+    removeTaskTag.mutate({ taskId: task.id, tag })
   }
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -251,21 +250,25 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
           <div className="rounded-lg border bg-card p-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
             <div className="flex flex-wrap items-center gap-1.5">
-              {task.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="text-muted-foreground hover:text-foreground"
+              {task.tags.map((tag) => {
+                const isDeleting = deletingTags.has(tag)
+                return (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium"
                   >
-                    <HugeiconsIcon icon={Cancel01Icon} size={10} />
-                  </button>
-                </span>
-              ))}
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      disabled={isDeleting}
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                    >
+                      <HugeiconsIcon icon={isDeleting ? Loading03Icon : Cancel01Icon} size={10} className={isDeleting ? 'animate-spin' : ''} />
+                    </button>
+                  </span>
+                )
+              })}
               <input
                 type="text"
                 value={tagInput}
