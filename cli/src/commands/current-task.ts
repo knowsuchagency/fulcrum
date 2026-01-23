@@ -277,12 +277,12 @@ const currentTaskPrCommand = defineCommand({
   meta: { name: 'pr', description: 'Link a PR to current task' },
   args: {
     ...globalArgs,
-    url: { type: 'positional' as const, description: 'PR URL', required: true },
+    prUrl: { type: 'positional' as const, description: 'PR URL', required: true },
     path: { type: 'string' as const, description: 'Path override (default: cwd)' },
   },
   async run({ args }) {
     setupJsonOutput(args)
-    await handleCurrentTaskCommand('pr', [args.url as string], toFlags(args))
+    await handleCurrentTaskCommand('pr', [args.prUrl as string], toFlags(args))
   },
 })
 
