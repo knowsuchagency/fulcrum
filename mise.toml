@@ -74,6 +74,19 @@ if [ -f "$settings_file" ]; then
   fi
 fi
 
+# Update MCP server versions
+mcp_http="server/routes/mcp.ts"
+if [ -f "$mcp_http" ]; then
+  perl -i -pe "s/version: '[0-9]+\\.[0-9]+\\.[0-9]+'/version: '$new_version'/" "$mcp_http"
+  echo "Updated $mcp_http"
+fi
+
+mcp_stdio="cli/src/mcp/index.ts"
+if [ -f "$mcp_stdio" ]; then
+  perl -i -pe "s/version: '[0-9]+\\.[0-9]+\\.[0-9]+'/version: '$new_version'/" "$mcp_stdio"
+  echo "Updated $mcp_stdio"
+fi
+
 echo "Bumped version: $current → $new_version"
 """
 
