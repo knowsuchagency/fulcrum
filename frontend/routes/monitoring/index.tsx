@@ -69,7 +69,7 @@ function MonitoringPage() {
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="flex h-full flex-col">
-          <TabsList className="shrink-0 justify-start gap-1 border-b border-border bg-transparent rounded-none px-4 h-10">
+          <TabsList className="shrink-0 justify-start gap-1 border-b border-border rounded-none px-4 h-10" style={{ background: 'var(--gradient-header)' }}>
             <TabsTrigger value="system" className="gap-1.5 data-[state=active]:bg-muted">
               <HugeiconsIcon icon={CpuIcon} size={14} strokeWidth={2} />
               <span className="max-sm:hidden">{t('tabs.system')}</span>

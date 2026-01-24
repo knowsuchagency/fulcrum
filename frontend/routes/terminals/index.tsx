@@ -779,7 +779,7 @@ const TerminalsView = observer(function TerminalsView() {
   return (
     <div className="flex h-full max-w-full flex-col overflow-hidden">
       {/* Tab Bar + Actions */}
-      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-background px-2 py-1">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border px-2 py-1" style={{ background: 'var(--gradient-header)' }}>
         <div className="flex min-w-0 flex-1 items-center">
           {/* Tasks system tab - always first, visually distinct */}
           <button
