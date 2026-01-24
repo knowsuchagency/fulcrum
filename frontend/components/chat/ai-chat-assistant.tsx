@@ -91,22 +91,23 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         e.preventDefault()
         toggle()
       }
-      // Escape to close
-      if (e.key === 'Escape' && isOpen) {
+      // Escape to close (but not if modal is open - let modal handle it first)
+      if (e.key === 'Escape' && isOpen && !expandedMessageId) {
         close()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggle, close, isOpen])
+  }, [toggle, close, isOpen, expandedMessageId])
 
   // Close chat when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (chatRef.current && !chatRef.current.contains(event.target as Node)) {
-        // Check if the click is not on the floating button
-        if (!(event.target as Element).closest('.floating-ai-button')) {
+        // Check if the click is not on the floating button or the expanded message dialog
+        const target = event.target as Element
+        if (!target.closest('.floating-ai-button') && !target.closest('[data-slot="dialog-overlay"]') && !target.closest('[data-slot="dialog-content"]')) {
           close()
         }
       }
