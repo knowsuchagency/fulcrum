@@ -33,7 +33,7 @@ export const ConnectionStatusBanner = observer(function ConnectionStatusBanner()
     <div
       className={cn(
         'flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium',
-        'border-b',
+        'border-b animate-in slide-in-from-top-2 fade-in duration-200',
         hasExhaustedAttempts
           ? 'bg-destructive/10 border-destructive/30 text-destructive'
           : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
