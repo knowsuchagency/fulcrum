@@ -173,27 +173,14 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               ref={scrollRef}
               className="flex-1 overflow-y-auto px-4 py-2 min-h-[200px] max-h-[350px] scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
             >
-              {messages.length === 0 ? (
-                <div className="py-8 text-center">
-                  <Bot className="w-10 h-10 mx-auto mb-3 text-zinc-500" />
-                  <p className="text-zinc-400 text-sm">
-                    Hi! I can help you manage tasks,
-                  </p>
-                  <p className="text-zinc-400 text-sm">run commands, and more.</p>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    Try: "List my tasks" or "Create a new task"
-                  </p>
-                </div>
-              ) : (
-                messages.map((msg) => (
-                  <ChatMessage
-                    key={msg.id}
-                    role={msg.role as 'user' | 'assistant'}
-                    content={msg.content}
-                    isStreaming={msg.isStreaming}
-                  />
-                ))
-              )}
+              {messages.map((msg) => (
+                <ChatMessage
+                  key={msg.id}
+                  role={msg.role as 'user' | 'assistant'}
+                  content={msg.content}
+                  isStreaming={msg.isStreaming}
+                />
+              ))}
 
               {/* Error display */}
               {error && (
