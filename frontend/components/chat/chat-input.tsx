@@ -21,7 +21,6 @@ export function ChatInput({
   const [isModelOpen, setIsModelOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const modelRef = useRef<HTMLDivElement>(null)
-  const maxChars = 2000
 
   // Auto-resize textarea
   const adjustHeight = useCallback(() => {
@@ -81,7 +80,7 @@ export function ChatInput({
         <textarea
           ref={textareaRef}
           value={value}
-          onChange={(e) => setValue(e.target.value.slice(0, maxChars))}
+          onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={3}
           disabled={isLoading}
@@ -133,14 +132,6 @@ export function ChatInput({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Character Counter */}
-            <div className="text-xs font-medium text-zinc-500">
-              <span className={value.length > maxChars * 0.9 ? 'text-amber-400' : ''}>
-                {value.length}
-              </span>
-              /<span className="text-zinc-400">{maxChars}</span>
-            </div>
-
             {/* Send Button */}
             <button
               onClick={handleSubmit}
