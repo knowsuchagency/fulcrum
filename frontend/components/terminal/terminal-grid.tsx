@@ -200,7 +200,7 @@ function EmptyPane({ onAdd, message }: { onAdd?: () => void; message?: string })
         className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
           background: `
-            radial-gradient(ellipse 80% 50% at 20% 10%, var(--gradient-glow) 0%, transparent 50%),
+            radial-gradient(ellipse 80% 50% at 20% 40%, var(--gradient-glow) 0%, transparent 50%),
             radial-gradient(ellipse 60% 40% at 80% 30%, var(--gradient-glow) 0%, transparent 45%),
             radial-gradient(ellipse 70% 60% at 60% 90%, var(--gradient-glow) 0%, transparent 40%)
           `
