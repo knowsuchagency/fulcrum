@@ -710,9 +710,29 @@ export function updateNotificationSettings(
 
   const current = getNotificationSettings()
 
+  // Log incoming update for debugging - always log when enabled is being changed
+  if (updates.enabled !== undefined) {
+    log.settings.info('Notification enabled state change requested', {
+      clientTimestamp,
+      serverTimestamp: current._updatedAt,
+      currentEnabled: current.enabled,
+      requestedEnabled: updates.enabled,
+      hasTimestamp: clientTimestamp !== undefined,
+      stack: new Error().stack,
+    })
+  }
+
   // Check for stale update (optimistic locking)
-  if (clientTimestamp !== undefined && current._updatedAt !== undefined) {
-    if (clientTimestamp !== current._updatedAt) {
+  if (current._updatedAt !== undefined) {
+    if (clientTimestamp === undefined) {
+      // Client didn't send timestamp - log warning but allow (for CLI compatibility)
+      log.settings.warn('Notification settings update without timestamp (no optimistic lock)', {
+        serverTimestamp: current._updatedAt,
+        attemptedChanges: updates,
+        stack: new Error().stack,
+      })
+      // Allow the update but we've logged it
+    } else if (clientTimestamp !== current._updatedAt) {
       log.settings.warn('Rejected stale notification settings update', {
         clientTimestamp,
         serverTimestamp: current._updatedAt,

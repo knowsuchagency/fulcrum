@@ -413,9 +413,11 @@ export class FulcrumClient {
   }
 
   async updateNotifications(updates: Partial<NotificationSettings>): Promise<NotificationSettings> {
+    // Fetch current settings first to get _updatedAt for optimistic locking
+    const current = await this.getNotifications()
     return this.fetch('/api/config/notifications', {
       method: 'PUT',
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ ...updates, _updatedAt: current._updatedAt }),
     })
   }
 
