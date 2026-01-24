@@ -13,7 +13,7 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   isLoading,
-  placeholder = 'Manage tasks, run commands, deploy apps... Ask anything!',
+  placeholder = 'Manage tasks, projects, run commands, deploy apps... Ask anything!',
   model,
   onModelChange,
 }: ChatInputProps) {
