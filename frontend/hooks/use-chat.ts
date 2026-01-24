@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { ChatStore, type IChatStore, type ClaudeModelId, type ProviderId } from '@/stores/chat-store'
 import { createLogger } from '@/lib/logger'
 import type { PageContext } from '../../shared/types'
@@ -37,6 +37,20 @@ function getChatStore(): IChatStore {
 export function useChat() {
   const store = useMemo(() => getChatStore(), [])
 
+  // Memoize actions to prevent unnecessary re-renders
+  const toggle = useCallback(() => store.toggle(), [store])
+  const open = useCallback(() => store.setOpen(true), [store])
+  const close = useCallback(() => store.setOpen(false), [store])
+  const sendMessage = useCallback(
+    (message: string, context?: PageContext) => store.sendMessage(message, context),
+    [store]
+  )
+  const clearMessages = useCallback(() => store.clearMessages(), [store])
+  const setProvider = useCallback((provider: ProviderId) => store.setProvider(provider), [store])
+  const setModel = useCallback((model: ClaudeModelId) => store.setModel(model), [store])
+  const setOpencodeModel = useCallback((model: string | null) => store.setOpencodeModel(model), [store])
+  const reset = useCallback(() => store.reset(), [store])
+
   return {
     // State
     isOpen: store.isOpen,
@@ -49,15 +63,15 @@ export function useChat() {
     model: store.model as ClaudeModelId,
     opencodeModel: store.opencodeModel,
 
-    // Actions
-    toggle: () => store.toggle(),
-    open: () => store.setOpen(true),
-    close: () => store.setOpen(false),
-    sendMessage: (message: string, context?: PageContext) => store.sendMessage(message, context),
-    clearMessages: () => store.clearMessages(),
-    setProvider: (provider: ProviderId) => store.setProvider(provider),
-    setModel: (model: ClaudeModelId) => store.setModel(model),
-    setOpencodeModel: (model: string | null) => store.setOpencodeModel(model),
-    reset: () => store.reset(),
+    // Actions (memoized)
+    toggle,
+    open,
+    close,
+    sendMessage,
+    clearMessages,
+    setProvider,
+    setModel,
+    setOpencodeModel,
+    reset,
   }
 }
