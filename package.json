@@ -51,6 +51,7 @@
     "ghostty-web": "^0.4.0",
     "glob": "^13.0.0",
     "hono": "^4.11.1",
+    "lucide-react": "^0.511.0",
     "i18next": "^25.7.3",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",

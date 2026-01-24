@@ -3,6 +3,14 @@ import type { Instance } from 'mobx-state-tree'
 import { API_BASE } from '@/hooks/use-apps'
 import type { Logger } from '../../shared/logger'
 
+export type ModelId = 'opus' | 'sonnet' | 'haiku'
+
+export const MODEL_OPTIONS: { id: ModelId; label: string; description: string }[] = [
+  { id: 'sonnet', label: 'Sonnet', description: 'Fast & capable' },
+  { id: 'opus', label: 'Opus', description: 'Most powerful' },
+  { id: 'haiku', label: 'Haiku', description: 'Fastest' },
+]
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -54,6 +62,8 @@ export const ChatStore = types
     taskId: types.maybeNull(types.string),
     /** Error message */
     error: types.maybeNull(types.string),
+    /** Selected model */
+    model: types.optional(types.enumeration(['opus', 'sonnet', 'haiku']), 'sonnet'),
   })
   .volatile(() => ({
     /** Active EventSource connection */
@@ -89,6 +99,10 @@ export const ChatStore = types
         self.taskId = taskId
       },
 
+      setModel(model: 'opus' | 'sonnet' | 'haiku') {
+        self.model = model
+      },
+
       createSession: flow(function* () {
         const log = getLog()
         try {
@@ -112,13 +126,29 @@ export const ChatStore = types
         }
       }),
 
-      sendMessage: flow(function* (message: string) {
+      sendMessage: flow(function* sendMessage(message: string) {
         const log = getLog()
 
         if (!self.sessionId) {
-          yield (self as IChatStore).createSession()
-          if (!self.sessionId) {
-            log.error('Cannot send message without session')
+          // Create session inline
+          try {
+            const sessionResponse: Response = yield fetch(`${API_BASE}/api/chat/sessions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ taskId: self.taskId }),
+            })
+
+            if (!sessionResponse.ok) {
+              throw new Error('Failed to create chat session')
+            }
+
+            const { sessionId }: { sessionId: string } = yield sessionResponse.json()
+            self.sessionId = sessionId
+            log.info('Created chat session', { sessionId, taskId: self.taskId })
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err)
+            log.error('Failed to create chat session', { error: errorMsg })
+            self.error = errorMsg
             return
           }
         }
@@ -144,8 +174,34 @@ export const ChatStore = types
         self.isStreaming = true
         self.error = null
 
-        // Store reference to the store for callback access
-        const store = self as IChatStore
+        // Helper functions to update state
+        const updateLastMessage = (content: string) => {
+          const lastMsg = self.messages[self.messages.length - 1]
+          if (lastMsg && lastMsg.role === 'assistant') {
+            lastMsg.content = content
+          }
+        }
+
+        const finishStreaming = () => {
+          const lastMsg = self.messages[self.messages.length - 1]
+          if (lastMsg && lastMsg.role === 'assistant') {
+            lastMsg.isStreaming = false
+          }
+          self.isStreaming = false
+        }
+
+        const handleError = (errorMsg: string) => {
+          log.error('Chat error', { error: errorMsg })
+          self.error = errorMsg
+          self.isStreaming = false
+
+          const lastMsg = self.messages[self.messages.length - 1]
+          if (lastMsg && lastMsg.role === 'assistant' && !lastMsg.content) {
+            self.messages.pop()
+          } else if (lastMsg && lastMsg.role === 'assistant') {
+            lastMsg.isStreaming = false
+          }
+        }
 
         try {
           // Close any existing connection
@@ -158,7 +214,7 @@ export const ChatStore = types
           const response: Response = yield fetch(`${API_BASE}/api/chat/${self.sessionId}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message }),
+            body: JSON.stringify({ message, model: self.model }),
           })
 
           if (!response.ok) {
@@ -196,13 +252,13 @@ export const ChatStore = types
                   if ('text' in parsed) {
                     // content:delta
                     currentContent += parsed.text
-                    store._updateLastMessage(currentContent)
+                    updateLastMessage(currentContent)
                   } else if ('content' in parsed) {
                     // message:complete
-                    store._updateLastMessage(parsed.content)
+                    updateLastMessage(parsed.content)
                   } else if ('message' in parsed) {
                     // error
-                    store._handleError(parsed.message)
+                    handleError(parsed.message)
                   }
                 } catch {
                   // Ignore parse errors
@@ -212,43 +268,13 @@ export const ChatStore = types
           }
 
           // Mark streaming as complete
-          store._finishStreaming()
+          finishStreaming()
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err)
           log.error('Failed to send message', { error: errorMsg })
-          store._handleError(errorMsg)
+          handleError(errorMsg)
         }
       }),
-
-      _updateLastMessage(content: string) {
-        const lastMessage = self.messages[self.messages.length - 1]
-        if (lastMessage && lastMessage.role === 'assistant') {
-          lastMessage.content = content
-        }
-      },
-
-      _finishStreaming() {
-        const lastMessage = self.messages[self.messages.length - 1]
-        if (lastMessage && lastMessage.role === 'assistant') {
-          lastMessage.isStreaming = false
-        }
-        self.isStreaming = false
-      },
-
-      _handleError(errorMsg: string) {
-        const log = getLog()
-        log.error('Chat error', { error: errorMsg })
-        self.error = errorMsg
-        self.isStreaming = false
-
-        // Remove the incomplete assistant message
-        const lastMessage = self.messages[self.messages.length - 1]
-        if (lastMessage && lastMessage.role === 'assistant' && !lastMessage.content) {
-          self.messages.pop()
-        } else if (lastMessage && lastMessage.role === 'assistant') {
-          lastMessage.isStreaming = false
-        }
-      },
 
       clearMessages() {
         self.messages.clear()
