@@ -127,7 +127,8 @@ export async function* streamMessage(
           },
         },
         systemPrompt: buildSystemPrompt(session.taskId),
-        permissionMode: 'acceptEdits', // Auto-accept for seamless chat
+        permissionMode: 'bypassPermissions', // Bypass all permissions for seamless chat
+        allowDangerouslySkipPermissions: true, // Required for bypassPermissions mode
       },
     })
 

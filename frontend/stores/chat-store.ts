@@ -1,4 +1,4 @@
-import { types, getEnv } from 'mobx-state-tree'
+import { types, getEnv, flow } from 'mobx-state-tree'
 import type { Instance } from 'mobx-state-tree'
 import { API_BASE } from '@/hooks/use-apps'
 import type { Logger } from '../../shared/logger'
@@ -89,10 +89,10 @@ export const ChatStore = types
         self.taskId = taskId
       },
 
-      async createSession() {
+      createSession: flow(function* () {
         const log = getLog()
         try {
-          const response = await fetch(`${API_BASE}/api/chat/sessions`, {
+          const response: Response = yield fetch(`${API_BASE}/api/chat/sessions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ taskId: self.taskId }),
@@ -102,7 +102,7 @@ export const ChatStore = types
             throw new Error('Failed to create chat session')
           }
 
-          const { sessionId } = await response.json()
+          const { sessionId }: { sessionId: string } = yield response.json()
           self.sessionId = sessionId
           log.info('Created chat session', { sessionId, taskId: self.taskId })
         } catch (err) {
@@ -110,13 +110,13 @@ export const ChatStore = types
           log.error('Failed to create chat session', { error: errorMsg })
           self.error = errorMsg
         }
-      },
+      }),
 
-      async sendMessage(message: string) {
+      sendMessage: flow(function* (message: string) {
         const log = getLog()
 
         if (!self.sessionId) {
-          await this.createSession()
+          yield (self as IChatStore).createSession()
           if (!self.sessionId) {
             log.error('Cannot send message without session')
             return
@@ -155,7 +155,7 @@ export const ChatStore = types
           }
 
           // Send message and stream response
-          const response = await fetch(`${API_BASE}/api/chat/${self.sessionId}/messages`, {
+          const response: Response = yield fetch(`${API_BASE}/api/chat/${self.sessionId}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message }),
@@ -175,7 +175,7 @@ export const ChatStore = types
           let currentContent = ''
 
           while (true) {
-            const { done, value } = await reader.read()
+            const { done, value }: ReadableStreamReadResult<Uint8Array> = yield reader.read()
             if (done) break
 
             buffer += decoder.decode(value, { stream: true })
@@ -218,7 +218,7 @@ export const ChatStore = types
           log.error('Failed to send message', { error: errorMsg })
           store._handleError(errorMsg)
         }
-      },
+      }),
 
       _updateLastMessage(content: string) {
         const lastMessage = self.messages[self.messages.length - 1]
@@ -252,15 +252,16 @@ export const ChatStore = types
 
       clearMessages() {
         self.messages.clear()
+        self.sessionId = null // Clear session so a new one is created
         self.error = null
       },
 
-      async endSession() {
+      endSession: flow(function* () {
         const log = getLog()
 
         if (self.sessionId) {
           try {
-            await fetch(`${API_BASE}/api/chat/${self.sessionId}`, {
+            yield fetch(`${API_BASE}/api/chat/${self.sessionId}`, {
               method: 'DELETE',
             })
             log.info('Ended chat session', { sessionId: self.sessionId })
@@ -278,7 +279,7 @@ export const ChatStore = types
         self.messages.clear()
         self.isStreaming = false
         self.error = null
-      },
+      }),
 
       reset() {
         this.endSession()
