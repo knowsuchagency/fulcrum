@@ -27,7 +27,7 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
   )
 
   return (
-    <div className={`flex gap-3 py-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex gap-3 py-3 animate-in fade-in-0 duration-200 ${isUser ? 'flex-row-reverse slide-in-from-right-2' : 'flex-row slide-in-from-left-2'}`}>
       {/* Avatar */}
       <div
         className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center ${

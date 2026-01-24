@@ -354,7 +354,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="sm:max-w-lg p-0 gap-0 overflow-hidden"
+        className="sm:max-w-lg p-0 gap-0 overflow-hidden data-open:slide-in-from-top-4 data-closed:slide-out-to-top-2 duration-150"
         showCloseButton={false}
         onKeyDown={handleKeyDown}
       >
@@ -399,7 +399,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
                           onClick={() => command.action()}
                           onMouseEnter={() => setSelectedIndex(index)}
                           className={cn(
-                            'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm',
+                            'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors duration-100',
                             isSelected
                               ? 'bg-accent text-accent-foreground'
                               : 'text-foreground hover:bg-accent/50'

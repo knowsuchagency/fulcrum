@@ -160,8 +160,9 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
           {isOpen ? <X className="w-7 h-7 text-white" /> : <Bot className="w-8 h-8 text-white" />}
         </div>
 
-        {/* Glowing animation */}
-        <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isDark ? 'bg-indigo-500' : 'bg-teal-600'}`} />
+        {/* Breathing glow animation */}
+        <div className={`absolute inset-0 rounded-full animate-pulse opacity-30 ${isDark ? 'bg-indigo-500' : 'bg-teal-600'}`} />
+        {!isOpen && <div className={`absolute -inset-1 rounded-full animate-ping opacity-15 ${isDark ? 'bg-indigo-400' : 'bg-teal-500'}`} />}
       </button>
 
       {/* Chat Interface */}
@@ -203,7 +204,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
 
                   {/* Model Dropdown */}
                   {isModelOpen && (
-                    <div className={`absolute top-full right-0 mt-1 w-40 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden z-10 ${
+                    <div className={`absolute top-full right-0 mt-1 w-40 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden z-10 animate-in fade-in-0 slide-in-from-top-1 duration-150 ${
                       isDark
                         ? 'bg-zinc-900/95 border border-zinc-700/50'
                         : 'bg-white/95 border border-zinc-200'
