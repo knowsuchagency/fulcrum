@@ -5,12 +5,14 @@ interface ChatInputProps {
   onSend: (message: string) => void
   isLoading?: boolean
   placeholder?: string
+  isDark?: boolean
 }
 
 export function ChatInput({
   onSend,
   isLoading,
   placeholder = 'Manage tasks, projects, run commands, deploy apps... Ask anything!',
+  isDark = true,
 }: ChatInputProps) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -61,13 +63,19 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
           rows={3}
           disabled={isLoading}
-          className="w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-normal leading-relaxed min-h-[100px] text-zinc-100 placeholder-zinc-500 disabled:opacity-50"
+          className={`w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-normal leading-relaxed min-h-[100px] disabled:opacity-50 ${
+            isDark ? 'text-zinc-100 placeholder-zinc-500' : 'text-zinc-800 placeholder-zinc-400'
+          }`}
           placeholder={placeholder}
           style={{ scrollbarWidth: 'none' }}
         />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-zinc-800/5 to-transparent pointer-events-none"
-          style={{ background: 'linear-gradient(to top, rgba(39, 39, 42, 0.05), transparent)' }}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: isDark
+              ? 'linear-gradient(to top, rgba(39, 39, 42, 0.05), transparent)'
+              : 'linear-gradient(to top, rgba(244, 244, 245, 0.3), transparent)'
+          }}
         />
       </div>
 
@@ -78,9 +86,15 @@ export function ChatInput({
           <button
             onClick={handleSubmit}
             disabled={!value.trim() || isLoading}
-            className="group relative p-3 bg-gradient-to-r from-red-600 to-red-500 border-none rounded-xl cursor-pointer transition-all duration-300 text-white shadow-lg hover:from-red-500 hover:to-red-400 hover:scale-105 hover:shadow-red-500/30 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg"
+            className={`group relative p-3 border-none rounded-xl cursor-pointer transition-all duration-300 text-white shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg ${
+              isDark
+                ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 hover:shadow-red-500/30'
+                : 'bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 hover:shadow-teal-500/30'
+            }`}
             style={{
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(239, 68, 68, 0.4)',
+              boxShadow: isDark
+                ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(239, 68, 68, 0.4)'
+                : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(13, 92, 99, 0.4)',
             }}
           >
             {isLoading ? (
@@ -90,7 +104,11 @@ export function ChatInput({
             )}
 
             {/* Animated background glow */}
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-600 to-red-500 opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110" />
+            <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 ${
+              isDark
+                ? 'bg-gradient-to-r from-red-600 to-red-500'
+                : 'bg-gradient-to-r from-teal-600 to-teal-500'
+            }`} />
 
             {/* Ripple effect on click */}
             <div className="absolute inset-0 rounded-xl overflow-hidden">
