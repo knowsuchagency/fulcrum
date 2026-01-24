@@ -1,18 +1,13 @@
-import Anthropic from '@anthropic-ai/sdk'
-import type { MessageParam, ContentBlockParam, ToolResultBlockParam, ToolUseBlock, TextBlock } from '@anthropic-ai/sdk/resources/messages'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
+import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import { getSettings } from '../lib/settings'
 import { log } from '../lib/logger'
 
 const MODEL = 'claude-sonnet-4-20250514'
-const MAX_TOKENS = 8192
 
 interface ChatSession {
   id: string
-  messages: MessageParam[]
+  claudeSessionId?: string // Claude Agent SDK session ID for resume
   taskId?: string
-  mcpClient?: Client
   createdAt: Date
 }
 
@@ -25,9 +20,6 @@ setInterval(() => {
   const now = Date.now()
   for (const [id, session] of sessions) {
     if (now - session.createdAt.getTime() > SESSION_TTL_MS) {
-      if (session.mcpClient) {
-        session.mcpClient.close().catch(() => {})
-      }
       sessions.delete(id)
       log.chat.debug('Session expired and cleaned up', { sessionId: id })
     }
@@ -41,7 +33,6 @@ export function createSession(taskId?: string): string {
   const id = crypto.randomUUID()
   const session: ChatSession = {
     id,
-    messages: [],
     taskId,
     createdAt: new Date(),
   }
@@ -63,72 +54,11 @@ export function getSession(id: string): ChatSession | undefined {
 export function endSession(id: string): boolean {
   const session = sessions.get(id)
   if (session) {
-    if (session.mcpClient) {
-      session.mcpClient.close().catch(() => {})
-    }
     sessions.delete(id)
     log.chat.info('Ended chat session', { sessionId: id })
     return true
   }
   return false
-}
-
-/**
- * Get MCP tools from Fulcrum's MCP server
- */
-async function getMcpTools(session: ChatSession): Promise<Anthropic.Tool[]> {
-  const settings = getSettings()
-  const port = settings.server.port
-
-  // Create MCP client if not exists
-  if (!session.mcpClient) {
-    const transport = new SSEClientTransport(new URL(`http://localhost:${port}/mcp`))
-    const client = new Client({ name: 'fulcrum-chat', version: '1.0.0' }, { capabilities: {} })
-    await client.connect(transport)
-    session.mcpClient = client
-    log.chat.debug('Connected to MCP server', { sessionId: session.id })
-  }
-
-  // List available tools
-  const { tools } = await session.mcpClient.listTools()
-
-  // Convert MCP tools to Anthropic tool format
-  return tools.map((tool) => ({
-    name: tool.name,
-    description: tool.description || '',
-    input_schema: tool.inputSchema as Anthropic.Tool.InputSchema,
-  }))
-}
-
-/**
- * Execute an MCP tool
- */
-async function executeMcpTool(
-  session: ChatSession,
-  toolName: string,
-  toolInput: Record<string, unknown>
-): Promise<string> {
-  if (!session.mcpClient) {
-    throw new Error('MCP client not initialized')
-  }
-
-  try {
-    const result = await session.mcpClient.callTool({ name: toolName, arguments: toolInput })
-
-    // Extract text content from result
-    if (result.content && Array.isArray(result.content)) {
-      const textParts = result.content
-        .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
-        .map((c) => c.text)
-      return textParts.join('\n')
-    }
-
-    return JSON.stringify(result)
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err)
-    log.chat.error('MCP tool execution failed', { tool: toolName, error: errorMsg })
-    return `Error executing tool: ${errorMsg}`
-  }
 }
 
 /**
@@ -161,7 +91,7 @@ Important guidelines:
 }
 
 /**
- * Stream a chat message response
+ * Stream a chat message response using Claude Agent SDK
  */
 export async function* streamMessage(
   sessionId: string,
@@ -173,117 +103,86 @@ export async function* streamMessage(
     return
   }
 
-  // Check for API key
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    yield { type: 'error', data: { message: 'ANTHROPIC_API_KEY environment variable not set. Please set it in your environment.' } }
-    return
-  }
-
-  const anthropic = new Anthropic({ apiKey })
+  const settings = getSettings()
+  const port = settings.server.port
 
   try {
-    // Get MCP tools
-    let tools: Anthropic.Tool[] = []
-    try {
-      tools = await getMcpTools(session)
-      log.chat.debug('Loaded MCP tools', { count: tools.length })
-    } catch (err) {
-      log.chat.warn('Failed to load MCP tools, proceeding without them', { error: String(err) })
-    }
+    log.chat.debug('Starting Claude Agent SDK query', {
+      sessionId,
+      hasResume: !!session.claudeSessionId,
+      taskId: session.taskId,
+    })
 
-    // Add user message to history
-    session.messages.push({ role: 'user', content: userMessage })
-
-    // Tool use loop - keep processing until no more tool calls
-    let continueLoop = true
-    while (continueLoop) {
-      continueLoop = false
-
-      // Create streaming message
-      const stream = anthropic.messages.stream({
+    // Create query with Claude Agent SDK
+    const result = query({
+      prompt: userMessage,
+      options: {
         model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: buildSystemPrompt(session.taskId),
-        messages: session.messages,
-        tools: tools.length > 0 ? tools : undefined,
-      })
+        resume: session.claudeSessionId, // Resume conversation if exists
+        includePartialMessages: true, // Stream partial messages
+        mcpServers: {
+          fulcrum: {
+            type: 'http',
+            url: `http://localhost:${port}/mcp`,
+          },
+        },
+        systemPrompt: buildSystemPrompt(session.taskId),
+        permissionMode: 'acceptEdits', // Auto-accept for seamless chat
+      },
+    })
 
-      // Collect the full response
-      const contentBlocks: ContentBlockParam[] = []
-      let currentText = ''
-      let stopReason: string | null = null
+    let currentText = ''
+    let lastYieldedLength = 0
 
-      // Stream text deltas
-      for await (const event of stream) {
-        if (event.type === 'content_block_start') {
-          if (event.content_block.type === 'text') {
-            currentText = event.content_block.text
-          }
-        } else if (event.type === 'content_block_delta') {
-          if (event.delta.type === 'text_delta') {
-            currentText += event.delta.text
-            yield { type: 'content:delta', data: { text: event.delta.text } }
-          }
-        } else if (event.type === 'content_block_stop') {
-          // Content block completed
-        } else if (event.type === 'message_delta') {
-          if (event.delta.stop_reason) {
-            stopReason = event.delta.stop_reason
-          }
+    // Stream messages from the SDK
+    for await (const message of result) {
+      if (message.type === 'stream_event') {
+        // Streaming partial message
+        const event = (message as { type: 'stream_event'; event: { type: string; delta?: { type: string; text?: string } } }).event
+
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta' && event.delta.text) {
+          currentText += event.delta.text
+          yield { type: 'content:delta', data: { text: event.delta.text } }
         }
-      }
+      } else if (message.type === 'assistant') {
+        // Complete assistant message - save session ID for resume
+        const assistantMsg = message as { type: 'assistant'; session_id: string; message: { content: Array<{ type: string; text?: string }> } }
+        session.claudeSessionId = assistantMsg.session_id
 
-      // Get the final message
-      const finalMessage = await stream.finalMessage()
+        // Extract final text content
+        const textContent = assistantMsg.message.content
+          .filter((block): block is { type: 'text'; text: string } => block.type === 'text')
+          .map((block) => block.text)
+          .join('')
 
-      // Add assistant message to history
-      session.messages.push({ role: 'assistant', content: finalMessage.content })
-
-      // Check if there are tool uses to process
-      const toolUses = finalMessage.content.filter((block): block is ToolUseBlock => block.type === 'tool_use')
-
-      if (toolUses.length > 0 && stopReason === 'tool_use') {
-        // Process tool calls
-        const toolResults: ToolResultBlockParam[] = []
-
-        for (const toolUse of toolUses) {
-          yield { type: 'tool:start', data: { name: toolUse.name, input: toolUse.input } }
-
-          try {
-            const result = await executeMcpTool(session, toolUse.name, toolUse.input as Record<string, unknown>)
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: toolUse.id,
-              content: result,
-            })
-            yield { type: 'tool:result', data: { name: toolUse.name, result } }
-          } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : String(err)
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: toolUse.id,
-              content: `Error: ${errorMsg}`,
-              is_error: true,
-            })
-            yield { type: 'tool:error', data: { name: toolUse.name, error: errorMsg } }
+        if (textContent) {
+          // If we haven't streamed all the content yet, yield remaining
+          if (textContent.length > currentText.length) {
+            const remaining = textContent.slice(currentText.length)
+            if (remaining) {
+              yield { type: 'content:delta', data: { text: remaining } }
+            }
           }
+          yield { type: 'message:complete', data: { content: textContent } }
+        }
+      } else if (message.type === 'system' && (message as { subtype?: string }).subtype === 'init') {
+        // System init message - MCP servers connected
+        log.chat.debug('Claude Agent SDK initialized', { sessionId })
+      } else if (message.type === 'result') {
+        // Final result with usage info
+        const resultMsg = message as { type: 'result'; subtype?: string; session_id: string; total_cost_usd?: number; is_error?: boolean; errors?: string[] }
+
+        if (resultMsg.subtype?.startsWith('error_')) {
+          const errors = resultMsg.errors || ['Unknown error']
+          yield { type: 'error', data: { message: errors.join(', ') } }
         }
 
-        // Add tool results to messages and continue the loop
-        session.messages.push({ role: 'user', content: toolResults })
-        continueLoop = true
+        log.chat.debug('Query completed', {
+          sessionId,
+          cost: resultMsg.total_cost_usd,
+          isError: resultMsg.is_error,
+        })
       }
-    }
-
-    // Get final text content for the complete message
-    const lastAssistantMessage = session.messages[session.messages.length - 1]
-    if (lastAssistantMessage.role === 'assistant' && Array.isArray(lastAssistantMessage.content)) {
-      const textContent = (lastAssistantMessage.content as Array<TextBlock | ToolUseBlock>)
-        .filter((block): block is TextBlock => block.type === 'text')
-        .map((block) => block.text)
-        .join('')
-      yield { type: 'message:complete', data: { content: textContent } }
     }
 
     yield { type: 'done', data: {} }
@@ -297,12 +196,12 @@ export async function* streamMessage(
 /**
  * Get session info
  */
-export function getSessionInfo(sessionId: string): { id: string; messageCount: number; taskId?: string } | null {
+export function getSessionInfo(sessionId: string): { id: string; taskId?: string; hasConversation: boolean } | null {
   const session = sessions.get(sessionId)
   if (!session) return null
   return {
     id: session.id,
-    messageCount: session.messages.length,
     taskId: session.taskId,
+    hasConversation: !!session.claudeSessionId,
   }
 }
