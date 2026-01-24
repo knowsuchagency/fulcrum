@@ -150,7 +150,7 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
       {!isDragPreview && (
         <div
           className={cn(
-            'absolute left-2 top-2 z-20 transition-opacity',
+            'absolute left-2 top-2 z-20 transition-opacity duration-150',
             selected ? 'opacity-100' : 'opacity-0 group-hover/card:opacity-100'
           )}
           onPointerDown={(e) => e.stopPropagation()}
@@ -167,7 +167,9 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
         onPointerDown={handlePointerDown}
         onClick={handleClick}
         className={cn(
-          'transition-shadow hover:shadow-md relative cursor-grab active:cursor-grabbing',
+          'relative cursor-grab active:cursor-grabbing',
+          'transition-all duration-200 ease-out',
+          'hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5',
           isDragging && 'opacity-50',
           selected && 'ring-2 ring-primary bg-primary/5'
         )}

@@ -100,8 +100,9 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                   active
                     ? 'bg-background text-foreground'
                     : 'text-foreground/60 hover:text-foreground',
-                  'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
-                  active ? 'after:opacity-100' : 'after:opacity-0'
+                  'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground',
+                  'after:origin-center after:transition-transform after:duration-200',
+                  active ? 'after:scale-x-100' : 'after:scale-x-0 hover:after:scale-x-100'
                 )}
               >
                 <HugeiconsIcon
@@ -135,8 +136,9 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
             pathname === '/settings'
               ? 'bg-background text-foreground'
               : 'text-foreground/60 hover:text-foreground',
-            'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground after:transition-opacity',
-            pathname === '/settings' ? 'after:opacity-100' : 'after:opacity-0'
+            'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground',
+            'after:origin-center after:transition-transform after:duration-200',
+            pathname === '/settings' ? 'after:scale-x-100' : 'after:scale-x-0 hover:after:scale-x-100'
           )}
         >
           <HugeiconsIcon icon={Settings01Icon} size={16} strokeWidth={2} />
