@@ -18,7 +18,7 @@ function getChatStore(): IChatStore {
         isOpen: false,
         taskId: null,
         error: null,
-        model: 'sonnet',
+        model: 'opus',
       },
       { log: createLogger('Chat') }
     )
