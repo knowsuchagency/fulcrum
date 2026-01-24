@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import type { PageContext } from '../../shared/types'
 
 // Default OpenCode server port
-const OPENCODE_DEFAULT_PORT = 14000
+const OPENCODE_DEFAULT_PORT = 4096
 
 interface OpencodeSession {
   id: string
@@ -236,7 +236,7 @@ async function buildContextMessage(context?: PageContext): Promise<string | null
 }
 
 /**
- * Stream a chat message response using OpenCode SDK
+ * Stream a chat message response using OpenCode SDK with SSE events
  */
 export async function* streamOpencodeMessage(
   sessionId: string,
@@ -268,9 +268,24 @@ export async function* streamOpencodeMessage(
     let opencodeSessionId = session.opencodeSessionId
     if (!opencodeSessionId) {
       // Create a new OpenCode session
+      // Parse model string "provider/modelId" into separate fields
+      // e.g., "openrouter/z-ai/glm-4.7" -> providerID: "openrouter", modelID: "z-ai/glm-4.7"
+      let modelConfig: { providerID: string; modelID: string } | undefined
+      if (model) {
+        const slashIndex = model.indexOf('/')
+        if (slashIndex > 0) {
+          modelConfig = {
+            providerID: model.substring(0, slashIndex),
+            modelID: model.substring(slashIndex + 1),
+          }
+        }
+      }
+
+      log.chat.debug('Creating OpenCode session', { model, modelConfig })
+
       const newSession = await client.session.create({
         body: {
-          ...(model && { model }),
+          ...(modelConfig && { model: modelConfig }),
         },
       })
       if (newSession.error) {
@@ -285,43 +300,172 @@ export async function* streamOpencodeMessage(
       throw new Error('Failed to get OpenCode session ID')
     }
 
-    // Send the message
-    const response = await client.session.prompt({
-      path: { id: opencodeSessionId },
-      body: {
-        parts: [{ type: 'text', text: fullMessage }],
-        ...(model && { model }),
-      },
-    })
+    // Subscribe to events before sending the prompt
+    log.chat.debug('Subscribing to OpenCode events', { opencodeSessionId })
+    const eventResult = await client.event.subscribe()
 
-    if (response.error) {
-      throw new Error(response.error.message || 'Failed to send message')
-    }
-
-    // Extract text content from the response
-    let responseText = ''
-    const data = response.data
-    if (data && 'parts' in data && Array.isArray(data.parts)) {
-      for (const part of data.parts) {
-        if (part.type === 'text' && 'text' in part) {
-          responseText += part.text
+    // Parse model string for prompt (may need to re-parse if session existed)
+    let promptModelConfig: { providerID: string; modelID: string } | undefined
+    if (model) {
+      const slashIndex = model.indexOf('/')
+      if (slashIndex > 0) {
+        promptModelConfig = {
+          providerID: model.substring(0, slashIndex),
+          modelID: model.substring(slashIndex + 1),
         }
       }
     }
 
-    // Stream the response in chunks for a better UX
-    const chunkSize = 50
-    for (let i = 0; i < responseText.length; i += chunkSize) {
-      const chunk = responseText.slice(i, i + chunkSize)
-      yield { type: 'content:delta', data: { text: chunk } }
-      // Small delay for visual streaming effect
-      await new Promise((resolve) => setTimeout(resolve, 10))
+    // Send the prompt asynchronously - include model to ensure it's used
+    log.chat.debug('Sending prompt to OpenCode', { opencodeSessionId, model, promptModelConfig, messageLength: fullMessage.length })
+    const promptPromise = client.session.prompt({
+      path: { id: opencodeSessionId },
+      body: {
+        parts: [{ type: 'text', text: fullMessage }],
+        ...(promptModelConfig && { model: promptModelConfig }),
+      },
+    })
+
+    // Collect full response text
+    let responseText = ''
+    let isComplete = false
+    const timeout = 120000 // 2 minute timeout
+    const startTime = Date.now()
+
+    // Track text per message part to compute deltas
+    // The event sends full text each time, not just the new part
+    const partTextCache = new Map<string, string>()
+    let userMessageId: string | null = null
+
+    // Process events from the stream (eventResult.stream is the async generator)
+    for await (const event of eventResult.stream) {
+      if (Date.now() - startTime > timeout) {
+        log.chat.warn('OpenCode event stream timeout', { sessionId })
+        break
+      }
+
+      // Event has type and properties at top level
+      const evt = event as {
+        type?: string
+        properties?: {
+          part?: { type?: string; text?: string; messageID?: string; sessionID?: string; id?: string }
+          info?: { role?: string; sessionID?: string; id?: string }
+          message?: string
+          sessionID?: string
+        }
+      }
+
+      // Get session ID from event properties (different events store it differently)
+      const eventSessionId = evt.properties?.sessionID ||
+                             evt.properties?.part?.sessionID ||
+                             evt.properties?.info?.sessionID
+
+      // Skip events that aren't for our session (except server.connected which is global)
+      if (evt.type !== 'server.connected' && eventSessionId && eventSessionId !== opencodeSessionId) {
+        continue
+      }
+
+      // Track the user message ID so we can skip its text updates
+      if (evt.type === 'message.updated') {
+        const info = evt.properties?.info
+        if (info?.role === 'user' && info?.id) {
+          userMessageId = info.id
+        }
+      }
+
+      // Handle text updates from assistant messages
+      // message.part.updated contains the FULL text so far, not just delta
+      if (evt.type === 'message.part.updated') {
+        const part = evt.properties?.part
+        if (part?.type === 'text' && part?.text && part?.id) {
+          // Skip user message text updates
+          if (part.messageID === userMessageId) {
+            continue
+          }
+
+          // Compute delta from previous text
+          const prevText = partTextCache.get(part.id) || ''
+          const fullText = part.text
+          const delta = fullText.slice(prevText.length)
+
+          if (delta) {
+            partTextCache.set(part.id, fullText)
+            responseText = fullText // Track full response
+            yield { type: 'content:delta', data: { text: delta } }
+          }
+        }
+      }
+
+      // Handle session becoming idle (response complete) - only for our session
+      if (evt.type === 'session.idle' && evt.properties?.sessionID === opencodeSessionId) {
+        log.chat.debug('Session idle, response complete', { sessionId })
+        isComplete = true
+        break
+      }
+
+      // Handle errors for our session
+      if (evt.type === 'session.error' && evt.properties?.sessionID === opencodeSessionId) {
+        throw new Error(evt.properties?.message || 'OpenCode session error')
+      }
+    }
+
+    // Wait for the prompt request to complete
+    const promptResponse = await promptPromise
+    if (promptResponse.error) {
+      log.chat.error('OpenCode prompt error', { error: promptResponse.error })
+      // Don't throw if we already got content via events
+      if (!responseText) {
+        throw new Error(promptResponse.error.message || JSON.stringify(promptResponse.error) || 'Failed to send message')
+      }
+    }
+
+    // If we didn't get content from events, try to get it from session messages
+    if (!responseText) {
+      log.chat.debug('No content from events, fetching messages', { opencodeSessionId })
+      const messagesResponse = await client.session.messages({
+        path: { id: opencodeSessionId },
+      })
+
+      log.chat.debug('Messages response', {
+        hasData: !!messagesResponse.data,
+        isArray: Array.isArray(messagesResponse.data),
+        messageCount: Array.isArray(messagesResponse.data) ? messagesResponse.data.length : 0,
+        rawData: JSON.stringify(messagesResponse.data).slice(0, 1000),
+      })
+
+      if (messagesResponse.data && Array.isArray(messagesResponse.data)) {
+        // Get the last assistant message
+        for (let i = messagesResponse.data.length - 1; i >= 0; i--) {
+          const msg = messagesResponse.data[i] as { role?: string; parts?: Array<{ type?: string; text?: string; content?: string }> }
+          log.chat.debug('Checking message', { index: i, role: msg.role, hasParts: !!msg.parts })
+          if (msg.role === 'assistant' && msg.parts) {
+            for (const part of msg.parts) {
+              // Text might be in 'text' or 'content' field
+              const text = part.text || part.content
+              if (part.type === 'text' && text) {
+                responseText += text
+              }
+            }
+            break
+          }
+        }
+      }
+
+      // Stream the fetched response
+      if (responseText) {
+        const chunkSize = 50
+        for (let i = 0; i < responseText.length; i += chunkSize) {
+          const chunk = responseText.slice(i, i + chunkSize)
+          yield { type: 'content:delta', data: { text: chunk } }
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+      }
     }
 
     yield { type: 'message:complete', data: { content: responseText } }
     yield { type: 'done', data: {} }
 
-    log.chat.debug('OpenCode query completed', { sessionId })
+    log.chat.debug('OpenCode query completed', { sessionId, responseLength: responseText.length })
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err)
     log.chat.error('OpenCode chat stream error', { sessionId, error: errorMsg })
