@@ -57,8 +57,8 @@
 
     /* Subtle gradient overlays using theme colors */
     --gradient-subtle: linear-gradient(135deg, var(--accent) 0%, transparent 50%, var(--destructive) 100%);
-    --gradient-card: linear-gradient(180deg, var(--card) 0%, var(--background) 100%);
-    --gradient-header: linear-gradient(180deg, var(--card) 0%, var(--background) 100%);
+    --gradient-card: linear-gradient(180deg, #fdfcfa 0%, #f7f6f2 100%);
+    --gradient-header: linear-gradient(180deg, #fdfcfa 0%, #f9f8f4 100%);
     --gradient-glow: #0d5c63;                        /* Teal glow for light mode */
 }
 
