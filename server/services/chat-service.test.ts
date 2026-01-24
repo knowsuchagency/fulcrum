@@ -47,20 +47,14 @@ describe('Chat Service', () => {
       expect(id1).not.toBe(id3)
     })
 
-    test('stores taskId if provided', () => {
-      const sessionId = createSession('task-abc-123')
-      const session = getSession(sessionId)
-
-      expect(session).toBeDefined()
-      expect(session?.taskId).toBe('task-abc-123')
-    })
-
-    test('creates session without taskId', () => {
+    test('creates session without taskId (context passed per message)', () => {
+      // Note: taskId is no longer stored at session level - context is passed with each message
       const sessionId = createSession()
       const session = getSession(sessionId)
 
       expect(session).toBeDefined()
-      expect(session?.taskId).toBeUndefined()
+      expect(session?.id).toBe(sessionId)
+      expect(session?.createdAt).toBeInstanceOf(Date)
     })
   })
 
@@ -103,12 +97,11 @@ describe('Chat Service', () => {
 
   describe('getSessionInfo', () => {
     test('returns info for valid session', () => {
-      const sessionId = createSession('task-xyz')
+      const sessionId = createSession()
       const info = getSessionInfo(sessionId)
 
       expect(info).toBeDefined()
       expect(info?.id).toBe(sessionId)
-      expect(info?.taskId).toBe('task-xyz')
       expect(info?.hasConversation).toBe(false) // No Claude session yet
     })
 

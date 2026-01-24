@@ -2,6 +2,7 @@ import { types, getEnv, flow } from 'mobx-state-tree'
 import type { Instance } from 'mobx-state-tree'
 import { API_BASE } from '@/hooks/use-apps'
 import type { Logger } from '../../shared/logger'
+import type { PageContext } from '../../shared/types'
 
 export type ModelId = 'opus' | 'sonnet' | 'haiku'
 
@@ -58,8 +59,6 @@ export const ChatStore = types
     isStreaming: types.optional(types.boolean, false),
     /** Whether the chat panel is open */
     isOpen: types.optional(types.boolean, false),
-    /** Current task ID for context */
-    taskId: types.maybeNull(types.string),
     /** Error message */
     error: types.maybeNull(types.string),
     /** Selected model */
@@ -95,10 +94,6 @@ export const ChatStore = types
         this.setOpen(!self.isOpen)
       },
 
-      setTaskId(taskId: string | null) {
-        self.taskId = taskId
-      },
-
       setModel(model: 'opus' | 'sonnet' | 'haiku') {
         self.model = model
       },
@@ -109,7 +104,7 @@ export const ChatStore = types
           const response: Response = yield fetch(`${API_BASE}/api/chat/sessions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ taskId: self.taskId }),
+            body: JSON.stringify({}),
           })
 
           if (!response.ok) {
@@ -118,7 +113,7 @@ export const ChatStore = types
 
           const { sessionId }: { sessionId: string } = yield response.json()
           self.sessionId = sessionId
-          log.info('Created chat session', { sessionId, taskId: self.taskId })
+          log.info('Created chat session', { sessionId })
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err)
           log.error('Failed to create chat session', { error: errorMsg })
@@ -126,7 +121,7 @@ export const ChatStore = types
         }
       }),
 
-      sendMessage: flow(function* sendMessage(message: string) {
+      sendMessage: flow(function* sendMessage(message: string, context?: PageContext) {
         const log = getLog()
 
         if (!self.sessionId) {
@@ -135,7 +130,7 @@ export const ChatStore = types
             const sessionResponse: Response = yield fetch(`${API_BASE}/api/chat/sessions`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ taskId: self.taskId }),
+              body: JSON.stringify({}),
             })
 
             if (!sessionResponse.ok) {
@@ -144,7 +139,7 @@ export const ChatStore = types
 
             const { sessionId }: { sessionId: string } = yield sessionResponse.json()
             self.sessionId = sessionId
-            log.info('Created chat session', { sessionId, taskId: self.taskId })
+            log.info('Created chat session', { sessionId })
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err)
             log.error('Failed to create chat session', { error: errorMsg })
@@ -214,7 +209,7 @@ export const ChatStore = types
           const response: Response = yield fetch(`${API_BASE}/api/chat/${self.sessionId}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, model: self.model }),
+            body: JSON.stringify({ message, model: self.model, context }),
           })
 
           if (!response.ok) {
@@ -310,7 +305,6 @@ export const ChatStore = types
       reset() {
         this.endSession()
         self.isOpen = false
-        self.taskId = null
       },
     }
   })

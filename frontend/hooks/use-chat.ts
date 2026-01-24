@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { ChatStore, type IChatStore, type ModelId } from '@/stores/chat-store'
 import { createLogger } from '@/lib/logger'
+import type { PageContext } from '../../shared/types'
 
 // Singleton store instance
 let chatStoreInstance: IChatStore | null = null
@@ -16,7 +17,6 @@ function getChatStore(): IChatStore {
         messages: [],
         isStreaming: false,
         isOpen: false,
-        taskId: null,
         error: null,
         model: 'opus',
       },
@@ -46,9 +46,8 @@ export function useChat() {
     toggle: () => store.toggle(),
     open: () => store.setOpen(true),
     close: () => store.setOpen(false),
-    sendMessage: (message: string) => store.sendMessage(message),
+    sendMessage: (message: string, context?: PageContext) => store.sendMessage(message, context),
     clearMessages: () => store.clearMessages(),
-    setTaskId: (taskId: string | null) => store.setTaskId(taskId),
     setModel: (model: ModelId) => store.setModel(model),
     reset: () => store.reset(),
   }

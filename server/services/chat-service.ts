@@ -1,6 +1,9 @@
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import { getSettings } from '../lib/settings'
 import { log } from '../lib/logger'
+import { db, tasks, projects, repositories, apps, projectRepositories } from '../db'
+import { eq } from 'drizzle-orm'
+import type { PageContext } from '../../shared/types'
 
 type ModelId = 'opus' | 'sonnet' | 'haiku'
 
@@ -13,7 +16,6 @@ const MODEL_MAP: Record<ModelId, string> = {
 interface ChatSession {
   id: string
   claudeSessionId?: string // Claude Agent SDK session ID for resume
-  taskId?: string
   createdAt: Date
 }
 
@@ -35,15 +37,14 @@ setInterval(() => {
 /**
  * Create a new chat session
  */
-export function createSession(taskId?: string): string {
+export function createSession(): string {
   const id = crypto.randomUUID()
   const session: ChatSession = {
     id,
-    taskId,
     createdAt: new Date(),
   }
   sessions.set(id, session)
-  log.chat.info('Created chat session', { sessionId: id, taskId })
+  log.chat.info('Created chat session', { sessionId: id })
   return id
 }
 
@@ -68,9 +69,9 @@ export function endSession(id: string): boolean {
 }
 
 /**
- * Build the system prompt for the chat assistant
+ * Build the system prompt for the chat assistant with page context
  */
-function buildSystemPrompt(taskId?: string): string {
+async function buildSystemPrompt(context?: PageContext): Promise<string> {
   let prompt = `You are an AI assistant integrated into Fulcrum, a terminal-first tool for orchestrating AI coding agents across isolated git worktrees.
 
 You have access to Fulcrum's MCP tools which allow you to:
@@ -89,8 +90,144 @@ Important guidelines:
 - If a task requires multiple steps, explain what you're doing
 - For destructive operations (delete, etc.), confirm with the user first unless they're explicit`
 
-  if (taskId) {
-    prompt += `\n\nContext: The user is currently viewing task ID: ${taskId}. You can use get_task to fetch details about this task.`
+  if (!context) {
+    return prompt
+  }
+
+  // Add page-specific context
+  const contextParts: string[] = []
+  contextParts.push(`Current page: ${context.path}`)
+
+  switch (context.pageType) {
+    case 'task': {
+      if (context.taskId) {
+        const task = db.select().from(tasks).where(eq(tasks.id, context.taskId)).get()
+        if (task) {
+          contextParts.push(`Viewing task: "${task.title}"`)
+          contextParts.push(`Status: ${task.status}`)
+          if (task.branch) contextParts.push(`Branch: ${task.branch}`)
+          if (task.repoName) contextParts.push(`Repository: ${task.repoName}`)
+          if (task.description) contextParts.push(`Description: ${task.description}`)
+          if (task.worktreePath) contextParts.push(`Worktree: ${task.worktreePath}`)
+        }
+      }
+      break
+    }
+
+    case 'tasks': {
+      contextParts.push('Viewing the tasks kanban board')
+      if (context.filters?.project) {
+        if (context.filters.project === 'inbox') {
+          contextParts.push('Filtered to: Inbox (tasks without a project)')
+        } else {
+          const project = db.select().from(projects).where(eq(projects.id, context.filters.project)).get()
+          if (project) {
+            contextParts.push(`Filtered to project: "${project.name}"`)
+          }
+        }
+      }
+      if (context.filters?.tags?.length) {
+        contextParts.push(`Filtered by tags: ${context.filters.tags.join(', ')}`)
+      }
+      if (context.filters?.view) {
+        contextParts.push(`View mode: ${context.filters.view}`)
+      }
+      break
+    }
+
+    case 'project': {
+      if (context.projectId) {
+        const project = db.select().from(projects).where(eq(projects.id, context.projectId)).get()
+        if (project) {
+          contextParts.push(`Viewing project: "${project.name}"`)
+          if (project.description) contextParts.push(`Description: ${project.description}`)
+          if (project.status) contextParts.push(`Status: ${project.status}`)
+
+          // Count repositories
+          const repoLinks = db
+            .select()
+            .from(projectRepositories)
+            .where(eq(projectRepositories.projectId, context.projectId))
+            .all()
+          if (repoLinks.length > 0) {
+            contextParts.push(`Linked repositories: ${repoLinks.length}`)
+          }
+        }
+      }
+      break
+    }
+
+    case 'projects': {
+      contextParts.push('Viewing the projects list')
+      break
+    }
+
+    case 'repository': {
+      if (context.repositoryId) {
+        const repo = db.select().from(repositories).where(eq(repositories.id, context.repositoryId)).get()
+        if (repo) {
+          contextParts.push(`Viewing repository: "${repo.displayName}"`)
+          contextParts.push(`Path: ${repo.path}`)
+          if (repo.defaultAgent) contextParts.push(`Default agent: ${repo.defaultAgent}`)
+          if (repo.remoteUrl) contextParts.push(`Remote: ${repo.remoteUrl}`)
+        }
+      }
+      break
+    }
+
+    case 'repositories': {
+      contextParts.push('Viewing the repositories list')
+      break
+    }
+
+    case 'app': {
+      if (context.appId) {
+        const app = db.select().from(apps).where(eq(apps.id, context.appId)).get()
+        if (app) {
+          contextParts.push(`Viewing app: "${app.name}"`)
+          contextParts.push(`Status: ${app.status}`)
+          contextParts.push(`Branch: ${app.branch}`)
+          if (app.lastDeployedAt) contextParts.push(`Last deployed: ${app.lastDeployedAt}`)
+        }
+      }
+      break
+    }
+
+    case 'apps': {
+      contextParts.push('Viewing the apps deployment list')
+      break
+    }
+
+    case 'monitoring': {
+      contextParts.push('Viewing the monitoring dashboard')
+      if (context.activeTab) {
+        contextParts.push(`Active tab: ${context.activeTab}`)
+      }
+      break
+    }
+
+    case 'terminals': {
+      contextParts.push('Viewing the persistent terminals page')
+      break
+    }
+
+    case 'jobs':
+    case 'job': {
+      contextParts.push(context.pageType === 'jobs' ? 'Viewing scheduled jobs list' : `Viewing job details`)
+      if (context.jobId) {
+        contextParts.push(`Job ID: ${context.jobId}`)
+      }
+      break
+    }
+
+    case 'settings': {
+      contextParts.push('Viewing the settings page')
+      break
+    }
+  }
+
+  if (contextParts.length > 0) {
+    prompt += `\n\nCurrent Context:\n${contextParts.map((p) => `- ${p}`).join('\n')}`
   }
 
   return prompt
@@ -102,7 +239,8 @@ Important guidelines:
 export async function* streamMessage(
   sessionId: string,
   userMessage: string,
-  modelId: ModelId = 'sonnet'
+  modelId: ModelId = 'sonnet',
+  context?: PageContext
 ): AsyncGenerator<{ type: string; data: unknown }> {
   const session = sessions.get(sessionId)
   if (!session) {
@@ -117,8 +255,11 @@ export async function* streamMessage(
     log.chat.debug('Starting Claude Agent SDK query', {
       sessionId,
       hasResume: !!session.claudeSessionId,
-      taskId: session.taskId,
+      pageType: context?.pageType,
     })
+
+    // Build system prompt with page context
+    const systemPrompt = await buildSystemPrompt(context)
 
     // Create query with Claude Agent SDK
     const result = query({
@@ -133,7 +274,7 @@ export async function* streamMessage(
             url: `http://localhost:${port}/mcp`,
           },
         },
-        systemPrompt: buildSystemPrompt(session.taskId),
+        systemPrompt,
         permissionMode: 'bypassPermissions', // Bypass all permissions for seamless chat
         allowDangerouslySkipPermissions: true, // Required for bypassPermissions mode
       },
@@ -203,12 +344,11 @@ export async function* streamMessage(
 /**
  * Get session info
  */
-export function getSessionInfo(sessionId: string): { id: string; taskId?: string; hasConversation: boolean } | null {
+export function getSessionInfo(sessionId: string): { id: string; hasConversation: boolean } | null {
   const session = sessions.get(sessionId)
   if (!session) return null
   return {
     id: session.id,
-    taskId: session.taskId,
     hasConversation: !!session.claudeSessionId,
   }
 }
