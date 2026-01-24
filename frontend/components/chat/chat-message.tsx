@@ -26,31 +26,25 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
   return (
     <div className={`flex gap-3 py-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            isUser
-              ? 'bg-zinc-700 border border-zinc-600'
-              : 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-500/40'
-          }`}
-          style={
-            !isUser
-              ? {
-                  boxShadow:
-                    '0 0 10px rgba(239, 68, 68, 0.4), 0 0 20px rgba(234, 88, 12, 0.2)',
-                }
-              : undefined
-          }
-        >
-          {isUser ? (
-            <User className="w-4 h-4 text-zinc-300" />
-          ) : (
-            <Bot className="w-4 h-4 text-red-300" />
-          )}
-        </div>
-        {/* Subtle glow ring for AI */}
-        {!isUser && (
-          <div className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse" />
+      <div
+        className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center ${
+          isUser
+            ? 'bg-zinc-700 border border-zinc-600'
+            : 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-500/40'
+        }`}
+        style={
+          !isUser
+            ? {
+                boxShadow:
+                  '0 0 10px rgba(239, 68, 68, 0.4), 0 0 20px rgba(234, 88, 12, 0.2)',
+              }
+            : undefined
+        }
+      >
+        {isUser ? (
+          <User className="w-4 h-4 text-zinc-300" />
+        ) : (
+          <Bot className="w-4 h-4 text-red-300" />
         )}
       </div>
 

@@ -6,8 +6,8 @@ import type { Logger } from '../../shared/logger'
 export type ModelId = 'opus' | 'sonnet' | 'haiku'
 
 export const MODEL_OPTIONS: { id: ModelId; label: string; description: string }[] = [
-  { id: 'sonnet', label: 'Sonnet', description: 'Fast & capable' },
   { id: 'opus', label: 'Opus', description: 'Most powerful' },
+  { id: 'sonnet', label: 'Sonnet', description: 'Fast & capable' },
   { id: 'haiku', label: 'Haiku', description: 'Fastest' },
 ]
 
@@ -63,7 +63,7 @@ export const ChatStore = types
     /** Error message */
     error: types.maybeNull(types.string),
     /** Selected model */
-    model: types.optional(types.enumeration(['opus', 'sonnet', 'haiku']), 'sonnet'),
+    model: types.optional(types.enumeration(['opus', 'sonnet', 'haiku']), 'opus'),
   })
   .volatile(() => ({
     /** Active EventSource connection */
