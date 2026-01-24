@@ -5,9 +5,9 @@ import { log } from '../lib/logger'
 type ModelId = 'opus' | 'sonnet' | 'haiku'
 
 const MODEL_MAP: Record<ModelId, string> = {
-  opus: 'claude-opus-4-20250514',
-  sonnet: 'claude-sonnet-4-20250514',
-  haiku: 'claude-haiku-4-20250514',
+  opus: 'claude-opus-4-5-latest',
+  sonnet: 'claude-sonnet-4-5-latest',
+  haiku: 'claude-haiku-4-5-latest',
 }
 
 interface ChatSession {

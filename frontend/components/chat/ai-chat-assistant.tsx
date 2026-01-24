@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { useRouterState } from '@tanstack/react-router'
-import { Bot, X, Trash2, Info } from 'lucide-react'
+import { Bot, X, Trash2, Info, ChevronDown } from 'lucide-react'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
 import { useChat } from '@/hooks/use-chat'
@@ -29,6 +29,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
+  const modelRef = useRef<HTMLDivElement>(null)
+  const [isModelOpen, setIsModelOpen] = useState(false)
   const location = useRouterState({ select: (s) => s.location })
 
   // Extract task ID from URL if on task detail page
@@ -87,6 +89,20 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     }
   }, [isOpen, close])
 
+  // Close model dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelRef.current && !modelRef.current.contains(event.target as Node)) {
+        setIsModelOpen(false)
+      }
+    }
+
+    if (isModelOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isModelOpen])
+
   const handleSend = useCallback(
     (message: string) => {
       sendMessage(message)
@@ -144,12 +160,39 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                 <span className="text-xs font-medium text-zinc-400">AI Assistant</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-1 text-xs font-medium bg-zinc-800/60 text-zinc-300 rounded-2xl">
-                  {currentModel?.label}
-                </span>
-                <span className="px-2 py-1 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl">
-                  Pro
-                </span>
+                {/* Model Selector */}
+                <div ref={modelRef} className="relative">
+                  <button
+                    onClick={() => setIsModelOpen(!isModelOpen)}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-zinc-800/60 text-zinc-300 rounded-2xl hover:bg-zinc-700/60 transition-colors"
+                  >
+                    <span>{currentModel?.label}</span>
+                    <ChevronDown
+                      className={`w-3 h-3 transition-transform ${isModelOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {/* Model Dropdown */}
+                  {isModelOpen && (
+                    <div className="absolute top-full right-0 mt-1 w-40 bg-zinc-900/95 border border-zinc-700/50 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden z-10">
+                      {MODEL_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            setModel(option.id)
+                            setIsModelOpen(false)
+                          }}
+                          className={`w-full px-3 py-2 text-left hover:bg-zinc-800/50 transition-colors ${
+                            model === option.id ? 'bg-red-500/10 text-red-400' : 'text-zinc-300'
+                          }`}
+                        >
+                          <div className="font-medium text-xs">{option.label}</div>
+                          <div className="text-[10px] text-zinc-500">{option.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 {hasMessages && (
                   <button
                     onClick={clearMessages}
@@ -200,12 +243,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             )}
 
             {/* Input Section */}
-            <ChatInput
-              onSend={handleSend}
-              isLoading={isStreaming}
-              model={model}
-              onModelChange={setModel}
-            />
+            <ChatInput onSend={handleSend} isLoading={isStreaming} />
 
             {/* Footer Info */}
             <div className="flex items-center justify-between px-4 pb-3 pt-1 text-xs text-zinc-500 gap-4">
