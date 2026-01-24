@@ -56,7 +56,7 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
 
       {/* Message content */}
       <div
-        className={`flex-1 max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
+        className={`flex-1 min-w-0 max-w-[85%] rounded-2xl px-4 py-3 text-sm overflow-hidden ${
           isUser
             ? isDark
               ? 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-100 rounded-tr-sm'
@@ -79,10 +79,10 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
                 color: isDark ? '#e4e4e7' : '#3f3f46',
               }}
               components={components}
-              className={`prose-sm max-w-none ${
+              className={`prose-sm max-w-none [&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full [&_pre]:overflow-x-auto ${
                 isDark
-                  ? '[&_pre]:bg-zinc-900/50 [&_pre]:border [&_pre]:border-zinc-700/50 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-red-300 [&_a]:text-red-400 [&_a:hover]:text-red-300 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200'
-                  : '[&_pre]:bg-zinc-100 [&_pre]:border [&_pre]:border-zinc-200 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-teal-700 [&_a]:text-teal-600 [&_a:hover]:text-teal-700 [&_strong]:text-zinc-800 [&_h1]:text-zinc-800 [&_h2]:text-zinc-800 [&_h3]:text-zinc-800 [&_h4]:text-zinc-800 [&_li]:text-zinc-700'
+                  ? '[&_pre]:bg-zinc-900/50 [&_pre]:border [&_pre]:border-zinc-700/50 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-red-300 [&_a]:text-red-400 [&_a:hover]:text-red-300 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200 [&_table]:border-zinc-700 [&_th]:bg-zinc-800 [&_th]:border-zinc-700 [&_td]:border-zinc-700'
+                  : '[&_pre]:bg-zinc-100 [&_pre]:border [&_pre]:border-zinc-200 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-teal-700 [&_a]:text-teal-600 [&_a:hover]:text-teal-700 [&_strong]:text-zinc-800 [&_h1]:text-zinc-800 [&_h2]:text-zinc-800 [&_h3]:text-zinc-800 [&_h4]:text-zinc-800 [&_li]:text-zinc-700 [&_table]:border-zinc-200 [&_th]:bg-zinc-100 [&_th]:border-zinc-200 [&_td]:border-zinc-200'
               }`}
             />
           </div>
