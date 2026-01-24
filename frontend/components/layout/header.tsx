@@ -53,7 +53,12 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   }, [onNewTaskRef])
 
   return (
-    <header className="sticky top-0 z-10 flex h-10 shrink-0 items-center justify-between border-b border-border bg-card px-4 max-sm:px-2">
+    <header
+      className="sticky top-0 z-10 flex h-10 shrink-0 items-center justify-between border-b border-border px-4 max-sm:px-2"
+      style={{
+        background: 'var(--gradient-header)'
+      }}
+    >
       <div className="flex min-w-0 items-center gap-4 max-sm:gap-2">
 
         {/* Mobile navigation menu (hamburger) */}
