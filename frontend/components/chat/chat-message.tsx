@@ -7,12 +7,14 @@ interface ChatMessageProps {
   role: 'user' | 'assistant'
   content: string
   isStreaming?: boolean
+  onClick?: () => void
 }
 
-export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
+export function ChatMessage({ role, content, isStreaming, onClick }: ChatMessageProps) {
   const isUser = role === 'user'
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
+  const isClickable = !isUser && content && onClick
 
   // Custom components for markdown
   const components = useMemo(
@@ -56,6 +58,7 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
 
       {/* Message content */}
       <div
+        onClick={isClickable ? onClick : undefined}
         className={`flex-1 min-w-0 max-w-[85%] rounded-2xl px-4 py-3 text-sm overflow-hidden ${
           isUser
             ? isDark
@@ -64,7 +67,8 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
             : isDark
               ? 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-200 rounded-tl-sm'
               : 'bg-white border border-zinc-200 text-zinc-700 rounded-tl-sm'
-        }`}
+        } ${isClickable ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ' + (isDark ? 'hover:ring-red-500/50 hover:ring-offset-zinc-900' : 'hover:ring-teal-500/50 hover:ring-offset-white') : ''}`}
+        title={isClickable ? 'Click to expand' : undefined}
       >
         {isUser ? (
           <p className="whitespace-pre-wrap leading-relaxed">{content}</p>

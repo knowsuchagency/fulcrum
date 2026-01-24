@@ -1,13 +1,20 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { observer } from 'mobx-react-lite'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTheme } from 'next-themes'
 import { Bot, X, Trash2, Info, ChevronDown } from 'lucide-react'
+import MarkdownPreview from '@uiw/react-markdown-preview'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
 import { useChat } from '@/hooks/use-chat'
 import { usePageContext } from '@/hooks/use-page-context'
 import { MODEL_OPTIONS } from '@/stores/chat-store'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 /**
  * AI Chat Assistant - A floating chat widget for interacting with Claude
@@ -36,7 +43,25 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   const chatRef = useRef<HTMLDivElement>(null)
   const modelRef = useRef<HTMLDivElement>(null)
   const [isModelOpen, setIsModelOpen] = useState(false)
+  const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null)
   const wasStreamingRef = useRef(false)
+
+  const expandedMessage = useMemo(
+    () => messages.find((m) => m.id === expandedMessageId),
+    [messages, expandedMessageId]
+  )
+
+  // Custom components for expanded markdown
+  const markdownComponents = useMemo(
+    () => ({
+      a: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+          {children}
+        </a>
+      ),
+    }),
+    []
+  )
 
   // Invalidate queries when chat streaming completes (AI may have modified data)
   useEffect(() => {
@@ -125,6 +150,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         } hover:scale-110`}
         onClick={toggle}
         style={{
+          cursor: 'pointer',
           background: isDark
             ? 'linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(168,85,247,0.8) 100%)'
             : 'linear-gradient(135deg, rgba(13,92,99,0.9) 0%, rgba(11,122,117,0.9) 100%)',
@@ -248,6 +274,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                   role={msg.role as 'user' | 'assistant'}
                   content={msg.content}
                   isStreaming={msg.isStreaming}
+                  onClick={msg.role === 'assistant' ? () => setExpandedMessageId(msg.id) : undefined}
                 />
               ))}
 
@@ -318,12 +345,67 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
           }
         }
 
+        .floating-ai-button,
+        .floating-ai-button * {
+          cursor: pointer !important;
+        }
+
         .floating-ai-button:hover {
           box-shadow: 0 0 30px color-mix(in srgb, var(--gradient-glow) 90%, transparent),
                       0 0 50px color-mix(in srgb, var(--gradient-glow) 70%, transparent),
                       0 0 70px color-mix(in srgb, var(--gradient-glow) 50%, transparent);
         }
       `}</style>
+
+      {/* Expanded Message Modal */}
+      <Dialog open={!!expandedMessageId} onOpenChange={(open) => !open && setExpandedMessageId(null)}>
+        <DialogContent
+          className={`sm:max-w-2xl lg:max-w-4xl ${
+            isDark
+              ? 'bg-zinc-900 border-zinc-700'
+              : 'bg-white border-zinc-200'
+          }`}
+        >
+          <DialogHeader>
+            <DialogTitle className={`flex items-center gap-2 ${isDark ? 'text-zinc-100' : 'text-zinc-800'}`}>
+              <div
+                className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  isDark
+                    ? 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-500/40'
+                    : 'bg-gradient-to-br from-teal-500/30 to-teal-400/30 border border-teal-500/40'
+                }`}
+              >
+                <Bot className={`w-3.5 h-3.5 ${isDark ? 'text-red-300' : 'text-teal-600'}`} />
+              </div>
+              AI Assistant Response
+            </DialogTitle>
+          </DialogHeader>
+          {expandedMessage && (
+            <div
+              data-color-mode={isDark ? 'dark' : 'light'}
+              className={`mt-2 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent ${
+                isDark ? 'scrollbar-thumb-zinc-700' : 'scrollbar-thumb-zinc-300'
+              }`}
+            >
+              <MarkdownPreview
+                source={expandedMessage.content}
+                style={{
+                  backgroundColor: 'transparent',
+                  fontSize: '14px',
+                  lineHeight: '1.7',
+                  color: isDark ? '#e4e4e7' : '#3f3f46',
+                }}
+                components={markdownComponents}
+                className={`prose max-w-none [&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full [&_pre]:overflow-x-auto ${
+                  isDark
+                    ? '[&_pre]:bg-zinc-800 [&_pre]:border [&_pre]:border-zinc-700 [&_code]:text-red-300 [&_a]:text-red-400 [&_a:hover]:text-red-300 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200 [&_table]:border-zinc-700 [&_th]:bg-zinc-800 [&_th]:border-zinc-700 [&_th]:text-zinc-100 [&_td]:border-zinc-700 [&_td]:text-zinc-200'
+                    : '[&_pre]:bg-zinc-100 [&_pre]:border [&_pre]:border-zinc-200 [&_code]:text-teal-700 [&_a]:text-teal-600 [&_a:hover]:text-teal-700 [&_strong]:text-zinc-800 [&_h1]:text-zinc-800 [&_h2]:text-zinc-800 [&_h3]:text-zinc-800 [&_h4]:text-zinc-800 [&_li]:text-zinc-700 [&_table]:border-zinc-200 [&_th]:bg-zinc-100 [&_th]:border-zinc-200 [&_th]:text-zinc-800 [&_td]:border-zinc-200 [&_td]:text-zinc-700'
+                }`}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 })
