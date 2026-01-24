@@ -354,7 +354,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="sm:max-w-lg p-0 gap-0 overflow-hidden data-open:slide-in-from-top-4 data-closed:slide-out-to-top-2 duration-150"
+        className="sm:max-w-lg p-0 gap-0 overflow-hidden data-closed:zoom-out-100 data-open:zoom-in-100 data-open:slide-in-from-top-4 data-closed:slide-out-to-top-2"
         showCloseButton={false}
         onKeyDown={handleKeyDown}
       >
