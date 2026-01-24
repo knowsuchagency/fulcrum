@@ -52,7 +52,10 @@ const claudeBuilder: AgentCommandBuilder = {
     }
 
     if (mode === 'plan') {
-      return `claude ${escapedPrompt} --append-system-prompt ${escapedSystemPrompt} --allow-dangerously-skip-permissions --permission-mode plan${extraFlags}`
+      // Workaround for https://github.com/anthropics/claude-code/issues/17544
+      // Append plan mode instruction instead of using --permission-mode plan to avoid trust prompt
+      const planPrompt = escapeForShell(`${prompt}\n\nEnter plan mode before starting.`)
+      return `claude ${planPrompt} --append-system-prompt ${escapedSystemPrompt} --dangerously-skip-permissions${extraFlags}`
     }
     return `claude ${escapedPrompt} --append-system-prompt ${escapedSystemPrompt} --dangerously-skip-permissions${extraFlags}`
   },
