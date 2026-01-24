@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
 import {
   Combobox,
   ComboboxInput,
@@ -20,6 +21,7 @@ import { useBranches } from '@/hooks/use-filesystem'
 import { useUpdateTask } from '@/hooks/use-tasks'
 import { useDefaultAgent } from '@/hooks/use-config'
 import { AGENT_DISPLAY_NAMES, type AgentType, type Task } from '@/types'
+import { InitializeWorktreeTaskModal } from './initialize-worktree-task-modal'
 
 interface WorktreeTaskSettingsProps {
   task: Task
@@ -37,6 +39,7 @@ export function WorktreeTaskSettings({ task, compact }: WorktreeTaskSettingsProp
   const [repoSearchQuery, setRepoSearchQuery] = useState('')
   const [agent, setAgent] = useState<AgentType>((task.agent as AgentType) || defaultAgent || 'claude')
   const [baseBranch, setBaseBranch] = useState(task.baseBranch || '')
+  const [initializeModalOpen, setInitializeModalOpen] = useState(false)
 
   // Get selected repository
   const selectedRepo = selectedRepoId ? repositories?.find((r) => r.id === selectedRepoId) : null
@@ -242,11 +245,15 @@ export function WorktreeTaskSettings({ task, compact }: WorktreeTaskSettingsProp
             </div>
           )}
 
-          {/* Instructions */}
+          {/* Initialize Task Button */}
           {selectedRepoId && (
-            <p className="text-xs text-muted-foreground">
-              Move to In Progress to create worktree and start coding.
-            </p>
+            <Button
+              onClick={() => setInitializeModalOpen(true)}
+              className="w-full"
+              size={compact ? 'sm' : 'default'}
+            >
+              Initialize Task
+            </Button>
           )}
         </div>
       )}
@@ -256,6 +263,12 @@ export function WorktreeTaskSettings({ task, compact }: WorktreeTaskSettingsProp
           Enable to associate a repository and create a worktree when work starts.
         </p>
       )}
+
+      <InitializeWorktreeTaskModal
+        task={task}
+        open={initializeModalOpen}
+        onOpenChange={setInitializeModalOpen}
+      />
     </div>
   )
 }

@@ -4,7 +4,7 @@ export const tasks = sqliteTable('tasks', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   description: text('description'),
-  status: text('status').notNull().default('IN_PROGRESS'),
+  status: text('status').notNull().default('TO_DO'),
   position: integer('position').notNull(),
   repoPath: text('repo_path'), // Now nullable for non-worktree tasks
   repoName: text('repo_name'), // Now nullable for non-worktree tasks
