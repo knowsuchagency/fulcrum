@@ -656,3 +656,36 @@ export interface ProjectWithDetails extends Project {
   links: ProjectLink[] // Project links
   taskCount: number // Number of tasks in this project
 }
+
+// Page context types for AI chat assistant
+export type PageType =
+  | 'tasks'
+  | 'task'
+  | 'projects'
+  | 'project'
+  | 'repositories'
+  | 'repository'
+  | 'monitoring'
+  | 'terminals'
+  | 'apps'
+  | 'app'
+  | 'jobs'
+  | 'job'
+  | 'settings'
+  | 'unknown'
+
+export interface PageContext {
+  pageType: PageType
+  path: string
+  taskId?: string
+  projectId?: string
+  repositoryId?: string
+  appId?: string
+  jobId?: string
+  filters?: {
+    project?: string
+    tags?: string[]
+    view?: string
+  }
+  activeTab?: string
+}

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { createSession, endSession, streamMessage, getSessionInfo } from '../services/chat-service'
+import type { PageContext } from '../../shared/types'
 
 const chatRoutes = new Hono()
 
@@ -9,8 +10,7 @@ const chatRoutes = new Hono()
  * Create a new chat session
  */
 chatRoutes.post('/sessions', async (c) => {
-  const body = await c.req.json<{ taskId?: string }>().catch(() => ({}))
-  const sessionId = createSession(body.taskId)
+  const sessionId = createSession()
   return c.json({ sessionId })
 })
 
@@ -35,7 +35,11 @@ chatRoutes.get('/:sessionId', async (c) => {
  */
 chatRoutes.post('/:sessionId/messages', async (c) => {
   const sessionId = c.req.param('sessionId')
-  const { message, model } = await c.req.json<{ message: string; model?: 'opus' | 'sonnet' | 'haiku' }>()
+  const { message, model, context } = await c.req.json<{
+    message: string
+    model?: 'opus' | 'sonnet' | 'haiku'
+    context?: PageContext
+  }>()
 
   if (!message || typeof message !== 'string') {
     return c.json({ error: 'Message is required' }, 400)
@@ -47,7 +51,7 @@ chatRoutes.post('/:sessionId/messages', async (c) => {
   }
 
   return streamSSE(c, async (stream) => {
-    for await (const event of streamMessage(sessionId, message, model)) {
+    for await (const event of streamMessage(sessionId, message, model, context)) {
       await stream.writeSSE({
         event: event.type,
         data: JSON.stringify(event.data),

@@ -34,19 +34,21 @@ describe('Chat Routes', () => {
       expect(body.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
     })
 
-    test('creates a session with taskId', async () => {
+    test('creates a session ignoring extra body fields', async () => {
       const { post, get } = createTestApp()
-      const createRes = await post('/api/chat/sessions', { taskId: 'task-123' })
+      // The session endpoint no longer uses taskId - context is passed with each message
+      const createRes = await post('/api/chat/sessions', { someField: 'value' })
       const createBody = await createRes.json()
 
       expect(createRes.status).toBe(200)
       expect(createBody.sessionId).toBeDefined()
 
-      // Verify the taskId is associated
+      // Verify session was created
       const infoRes = await get(`/api/chat/${createBody.sessionId}`)
       const infoBody = await infoRes.json()
 
-      expect(infoBody.taskId).toBe('task-123')
+      expect(infoBody.id).toBe(createBody.sessionId)
+      expect(infoBody.hasConversation).toBe(false)
     })
 
     test('handles missing body gracefully', async () => {
@@ -77,7 +79,6 @@ describe('Chat Routes', () => {
       expect(res.status).toBe(200)
       expect(body.id).toBe(sessionId)
       expect(body.hasConversation).toBe(false)
-      expect(body.taskId).toBeUndefined()
     })
 
     test('returns 404 for non-existent session', async () => {

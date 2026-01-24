@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { observer } from 'mobx-react-lite'
-import { useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTheme } from 'next-themes'
 import { Bot, X, Trash2, Info, ChevronDown } from 'lucide-react'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
 import { useChat } from '@/hooks/use-chat'
+import { usePageContext } from '@/hooks/use-page-context'
 import { MODEL_OPTIONS } from '@/stores/chat-store'
 
 /**
@@ -25,10 +25,10 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     close,
     sendMessage,
     clearMessages,
-    setTaskId,
     setModel,
   } = useChat()
 
+  const pageContext = usePageContext()
   const queryClient = useQueryClient()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
@@ -37,22 +37,6 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   const modelRef = useRef<HTMLDivElement>(null)
   const [isModelOpen, setIsModelOpen] = useState(false)
   const wasStreamingRef = useRef(false)
-  const location = useRouterState({ select: (s) => s.location })
-
-  // Extract task ID from URL if on task detail page
-  useEffect(() => {
-    const path = location.pathname
-    if (path.startsWith('/tasks/')) {
-      const taskId = path.split('/')[2]
-      if (taskId && taskId !== 'new') {
-        setTaskId(taskId)
-      } else {
-        setTaskId(null)
-      }
-    } else {
-      setTaskId(null)
-    }
-  }, [location.pathname, setTaskId])
 
   // Invalidate queries when chat streaming completes (AI may have modified data)
   useEffect(() => {
@@ -125,9 +109,9 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
 
   const handleSend = useCallback(
     (message: string) => {
-      sendMessage(message)
+      sendMessage(message, pageContext)
     },
-    [sendMessage]
+    [sendMessage, pageContext]
   )
 
   const currentModel = MODEL_OPTIONS.find((m) => m.id === model)
