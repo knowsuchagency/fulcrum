@@ -31,13 +31,13 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
           className={`w-8 h-8 rounded-full flex items-center justify-center ${
             isUser
               ? 'bg-zinc-700 border border-zinc-600'
-              : 'bg-gradient-to-br from-violet-500/30 to-purple-500/30 border border-violet-500/40'
+              : 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-500/40'
           }`}
           style={
             !isUser
               ? {
                   boxShadow:
-                    '0 0 10px rgba(139, 92, 246, 0.4), 0 0 20px rgba(124, 58, 237, 0.2)',
+                    '0 0 10px rgba(239, 68, 68, 0.4), 0 0 20px rgba(234, 88, 12, 0.2)',
                 }
               : undefined
           }
@@ -45,12 +45,12 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
           {isUser ? (
             <User className="w-4 h-4 text-zinc-300" />
           ) : (
-            <Bot className="w-4 h-4 text-violet-300" />
+            <Bot className="w-4 h-4 text-red-300" />
           )}
         </div>
         {/* Subtle glow ring for AI */}
         {!isUser && (
-          <div className="absolute inset-0 rounded-full bg-violet-500/20 animate-pulse" />
+          <div className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse" />
         )}
       </div>
 
@@ -75,7 +75,7 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
                 color: '#e4e4e7',
               }}
               components={components}
-              className="prose-sm max-w-none [&_pre]:bg-zinc-900/50 [&_pre]:border [&_pre]:border-zinc-700/50 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-violet-300 [&_a]:text-violet-400 [&_a:hover]:text-violet-300 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200"
+              className="prose-sm max-w-none [&_pre]:bg-zinc-900/50 [&_pre]:border [&_pre]:border-zinc-700/50 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-red-300 [&_a]:text-red-400 [&_a:hover]:text-red-300 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200"
             />
           </div>
         ) : isStreaming ? (
@@ -83,15 +83,15 @@ export function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
             <span className="animate-pulse">Thinking</span>
             <span className="inline-flex gap-0.5">
               <span
-                className="w-1 h-1 bg-violet-400 rounded-full animate-bounce"
+                className="w-1 h-1 bg-red-400 rounded-full animate-bounce"
                 style={{ animationDelay: '0ms' }}
               />
               <span
-                className="w-1 h-1 bg-violet-400 rounded-full animate-bounce"
+                className="w-1 h-1 bg-red-400 rounded-full animate-bounce"
                 style={{ animationDelay: '150ms' }}
               />
               <span
-                className="w-1 h-1 bg-violet-400 rounded-full animate-bounce"
+                className="w-1 h-1 bg-red-400 rounded-full animate-bounce"
                 style={{ animationDelay: '300ms' }}
               />
             </span>
