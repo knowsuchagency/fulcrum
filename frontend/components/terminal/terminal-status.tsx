@@ -60,8 +60,8 @@ export function TerminalStatusBar({
     >
       {/* Status indicator */}
       <span
-        className={cn('h-2 w-2 shrink-0 rounded-full', {
-          'bg-accent': status === 'running',
+        className={cn('h-2 w-2 shrink-0 rounded-full transition-colors duration-300', {
+          'bg-accent animate-pulse': status === 'running',
           'bg-muted-foreground': status === 'exited' && exitCode === 0,
           'bg-destructive': (status === 'exited' && exitCode !== 0) || status === 'error',
         })}
