@@ -121,7 +121,7 @@ export function ChatInput({
                       setIsModelOpen(false)
                     }}
                     className={`w-full px-4 py-2.5 text-left hover:bg-zinc-800/50 transition-colors ${
-                      model === option.id ? 'bg-violet-500/10 text-violet-400' : 'text-zinc-300'
+                      model === option.id ? 'bg-red-500/10 text-red-400' : 'text-zinc-300'
                     }`}
                   >
                     <div className="font-medium text-sm">{option.label}</div>
