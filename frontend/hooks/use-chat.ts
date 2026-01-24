@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ChatStore, type IChatStore } from '@/stores/chat-store'
+import { ChatStore, type IChatStore, type ModelId } from '@/stores/chat-store'
 import { createLogger } from '@/lib/logger'
 
 // Singleton store instance
@@ -18,6 +18,7 @@ function getChatStore(): IChatStore {
         isOpen: false,
         taskId: null,
         error: null,
+        model: 'sonnet',
       },
       { log: createLogger('Chat') }
     )
@@ -39,6 +40,7 @@ export function useChat() {
     hasMessages: store.hasMessages,
     error: store.error,
     sessionId: store.sessionId,
+    model: store.model as ModelId,
 
     // Actions
     toggle: () => store.toggle(),
@@ -47,6 +49,7 @@ export function useChat() {
     sendMessage: (message: string) => store.sendMessage(message),
     clearMessages: () => store.clearMessages(),
     setTaskId: (taskId: string | null) => store.setTaskId(taskId),
+    setModel: (model: ModelId) => store.setModel(model),
     reset: () => store.reset(),
   }
 }

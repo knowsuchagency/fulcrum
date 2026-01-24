@@ -2,7 +2,13 @@ import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import { getSettings } from '../lib/settings'
 import { log } from '../lib/logger'
 
-const MODEL = 'claude-sonnet-4-20250514'
+type ModelId = 'opus' | 'sonnet' | 'haiku'
+
+const MODEL_MAP: Record<ModelId, string> = {
+  opus: 'claude-opus-4-20250514',
+  sonnet: 'claude-sonnet-4-20250514',
+  haiku: 'claude-haiku-4-20250514',
+}
 
 interface ChatSession {
   id: string
@@ -95,7 +101,8 @@ Important guidelines:
  */
 export async function* streamMessage(
   sessionId: string,
-  userMessage: string
+  userMessage: string,
+  modelId: ModelId = 'sonnet'
 ): AsyncGenerator<{ type: string; data: unknown }> {
   const session = sessions.get(sessionId)
   if (!session) {
@@ -117,7 +124,7 @@ export async function* streamMessage(
     const result = query({
       prompt: userMessage,
       options: {
-        model: MODEL,
+        model: MODEL_MAP[modelId],
         resume: session.claudeSessionId, // Resume conversation if exists
         includePartialMessages: true, // Stream partial messages
         mcpServers: {

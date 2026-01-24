@@ -35,7 +35,7 @@ chatRoutes.get('/:sessionId', async (c) => {
  */
 chatRoutes.post('/:sessionId/messages', async (c) => {
   const sessionId = c.req.param('sessionId')
-  const { message } = await c.req.json<{ message: string }>()
+  const { message, model } = await c.req.json<{ message: string; model?: 'opus' | 'sonnet' | 'haiku' }>()
 
   if (!message || typeof message !== 'string') {
     return c.json({ error: 'Message is required' }, 400)
@@ -47,7 +47,7 @@ chatRoutes.post('/:sessionId/messages', async (c) => {
   }
 
   return streamSSE(c, async (stream) => {
-    for await (const event of streamMessage(sessionId, message)) {
+    for await (const event of streamMessage(sessionId, message, model)) {
       await stream.writeSSE({
         event: event.type,
         data: JSON.stringify(event.data),
