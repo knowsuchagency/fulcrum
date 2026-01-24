@@ -54,6 +54,12 @@
     --status-in-review: #e08d3c;                  /* Tiger's Eye - waiting */
     --status-done: #0d5c63;                       /* Stormy Teal - complete */
     --status-canceled: #dd403a;                   /* Cinnabar - stopped */
+
+    /* Subtle gradient overlays using theme colors */
+    --gradient-subtle: linear-gradient(135deg, var(--accent) 0%, transparent 50%, var(--destructive) 100%);
+    --gradient-card: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 8%) 100%);
+    --gradient-header: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 15%) 100%);
+    --gradient-radial: radial-gradient(ellipse at top center, var(--accent) 0%, transparent 60%);
 }
 
 .dark {
@@ -103,6 +109,12 @@
     /* Status colors - swapped for dark mode */
     --status-todo: #6b7280;                       /* Gray - not started */
     --status-in-progress: #9ca3af;                /* Soft gray - active */
+
+    /* Subtle gradient overlays using theme colors */
+    --gradient-subtle: linear-gradient(135deg, var(--accent) 0%, transparent 50%, var(--destructive) 100%);
+    --gradient-card: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 8%) 100%);
+    --gradient-header: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 15%) 100%);
+    --gradient-radial: radial-gradient(ellipse at top center, var(--accent) 0%, transparent 60%);
 }
 
 @theme inline {

@@ -15,6 +15,13 @@ export function PageBackground() {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+      {/* Subtle gradient overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          background: 'var(--gradient-radial)'
+        }}
+      />
       <Tiles rows={100} cols={50} tileSize="sm" />
     </div>
   )
