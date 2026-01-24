@@ -1,4 +1,4 @@
-import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
+import { query } from '@anthropic-ai/claude-agent-sdk'
 import { getSettings } from '../lib/settings'
 import { log } from '../lib/logger'
 
@@ -140,7 +140,6 @@ export async function* streamMessage(
     })
 
     let currentText = ''
-    let lastYieldedLength = 0
 
     // Stream messages from the SDK
     for await (const message of result) {
