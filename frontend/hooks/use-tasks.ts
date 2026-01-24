@@ -48,6 +48,8 @@ export function useCreateTask() {
       dueDate?: string | null
       notes?: string | null
       projectId?: string | null
+      // Dependencies - tasks that must be completed before this one can start
+      blockedByTaskIds?: string[]
     }) =>
       fetchJSON<Task>(`${API_BASE}/api/tasks`, {
         method: 'POST',
@@ -58,6 +60,7 @@ export function useCreateTask() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies'] })
     },
   })
 }

@@ -1,14 +1,36 @@
 import { Hono } from 'hono'
-import { eq, or } from 'drizzle-orm'
+import { eq, or, and } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
-import { db, tasks, taskDependencies } from '../db'
+import { db, tasks, taskRelationships } from '../db'
 
 const app = new Hono()
 
 // GET /api/task-dependencies/graph - Get all dependencies for graph visualization
 app.get('/graph', (c) => {
-  const allDeps = db.select().from(taskDependencies).all()
+  // Only include 'depends_on' relationships for dependency graph
+  const allDeps = db
+    .select()
+    .from(taskRelationships)
+    .where(eq(taskRelationships.type, 'depends_on'))
+    .all()
   const allTasks = db.select().from(tasks).all()
+
+  // Build maps for filtering
+  const taskMap = new Map(allTasks.map((t) => [t.id, t]))
+  const completedStatuses = new Set(['DONE', 'CANCELED'])
+
+  // Filter edges to only include those where:
+  // 1. Both tasks exist
+  // 2. At least one task is not in a completed state
+  const validEdges = allDeps.filter((d) => {
+    const sourceTask = taskMap.get(d.relatedTaskId)
+    const targetTask = taskMap.get(d.taskId)
+    if (!sourceTask || !targetTask) return false
+    // Skip if both tasks are completed
+    const bothCompleted =
+      completedStatuses.has(sourceTask.status) && completedStatuses.has(targetTask.status)
+    return !bothCompleted
+  })
 
   return c.json({
     nodes: allTasks.map((t) => ({
@@ -19,9 +41,9 @@ app.get('/graph', (c) => {
       tags: t.tags ? JSON.parse(t.tags) : [],
       dueDate: t.dueDate,
     })),
-    edges: allDeps.map((d) => ({
+    edges: validEdges.map((d) => ({
       id: d.id,
-      source: d.dependsOnTaskId,
+      source: d.relatedTaskId,
       target: d.taskId,
     })),
   })
@@ -31,12 +53,15 @@ app.get('/graph', (c) => {
 app.get('/:taskId', (c) => {
   const taskId = c.req.param('taskId')
 
-  // Get all dependencies where this task is either the dependent or the dependency
+  // Get all 'depends_on' relationships where this task is either the dependent or the dependency
   const deps = db
     .select()
-    .from(taskDependencies)
+    .from(taskRelationships)
     .where(
-      or(eq(taskDependencies.taskId, taskId), eq(taskDependencies.dependsOnTaskId, taskId))
+      and(
+        eq(taskRelationships.type, 'depends_on'),
+        or(eq(taskRelationships.taskId, taskId), eq(taskRelationships.relatedTaskId, taskId))
+      )
     )
     .all()
 
@@ -48,8 +73,8 @@ app.get('/:taskId', (c) => {
   for (const dep of deps) {
     if (dep.taskId === taskId) {
       // This task depends on another task (blocked by)
-      blockedByIds.push(dep.dependsOnTaskId)
-      relatedTaskIds.add(dep.dependsOnTaskId)
+      blockedByIds.push(dep.relatedTaskId)
+      relatedTaskIds.add(dep.relatedTaskId)
     } else {
       // Another task depends on this task (blocking)
       blockingIds.push(dep.taskId)
@@ -76,14 +101,14 @@ app.get('/:taskId', (c) => {
     blockedBy: blockedByIds
       .map((id) => {
         const task = taskMap.get(id)
-        const dep = deps.find((d) => d.taskId === taskId && d.dependsOnTaskId === id)
+        const dep = deps.find((d) => d.taskId === taskId && d.relatedTaskId === id)
         return task && dep ? { ...task, dependencyId: dep.id } : null
       })
       .filter(Boolean),
     blocking: blockingIds
       .map((id) => {
         const task = taskMap.get(id)
-        const dep = deps.find((d) => d.taskId === id && d.dependsOnTaskId === taskId)
+        const dep = deps.find((d) => d.taskId === id && d.relatedTaskId === taskId)
         return task && dep ? { ...task, dependencyId: dep.id } : null
       })
       .filter(Boolean),
@@ -112,10 +137,15 @@ app.post('/:taskId', async (c) => {
   // Check for existing dependency
   const existing = db
     .select()
-    .from(taskDependencies)
-    .where(eq(taskDependencies.taskId, taskId))
-    .all()
-    .find((d) => d.dependsOnTaskId === body.dependsOnTaskId)
+    .from(taskRelationships)
+    .where(
+      and(
+        eq(taskRelationships.taskId, taskId),
+        eq(taskRelationships.relatedTaskId, body.dependsOnTaskId),
+        eq(taskRelationships.type, 'depends_on')
+      )
+    )
+    .get()
 
   if (existing) {
     return c.json({ error: 'Dependency already exists' }, 400)
@@ -124,10 +154,15 @@ app.post('/:taskId', async (c) => {
   // Check for circular dependency (dependsOnTask should not depend on taskId)
   const reverseDep = db
     .select()
-    .from(taskDependencies)
-    .where(eq(taskDependencies.taskId, body.dependsOnTaskId))
-    .all()
-    .find((d) => d.dependsOnTaskId === taskId)
+    .from(taskRelationships)
+    .where(
+      and(
+        eq(taskRelationships.taskId, body.dependsOnTaskId),
+        eq(taskRelationships.relatedTaskId, taskId),
+        eq(taskRelationships.type, 'depends_on')
+      )
+    )
+    .get()
 
   if (reverseDep) {
     return c.json({ error: 'Circular dependency detected' }, 400)
@@ -137,11 +172,12 @@ app.post('/:taskId', async (c) => {
   const id = nanoid()
   const now = new Date().toISOString()
 
-  db.insert(taskDependencies)
+  db.insert(taskRelationships)
     .values({
       id,
       taskId,
-      dependsOnTaskId: body.dependsOnTaskId,
+      relatedTaskId: body.dependsOnTaskId,
+      type: 'depends_on',
       createdAt: now,
     })
     .run()
@@ -161,8 +197,8 @@ app.delete('/:taskId/:dependencyId', (c) => {
 
   const dep = db
     .select()
-    .from(taskDependencies)
-    .where(eq(taskDependencies.id, dependencyId))
+    .from(taskRelationships)
+    .where(eq(taskRelationships.id, dependencyId))
     .get()
 
   if (!dep) {
@@ -170,11 +206,11 @@ app.delete('/:taskId/:dependencyId', (c) => {
   }
 
   // Verify the dependency is related to the task
-  if (dep.taskId !== taskId && dep.dependsOnTaskId !== taskId) {
+  if (dep.taskId !== taskId && dep.relatedTaskId !== taskId) {
     return c.json({ error: 'Dependency not related to this task' }, 400)
   }
 
-  db.delete(taskDependencies).where(eq(taskDependencies.id, dependencyId)).run()
+  db.delete(taskRelationships).where(eq(taskRelationships.id, dependencyId)).run()
 
   return c.json({ success: true })
 })

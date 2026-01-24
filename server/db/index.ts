@@ -362,6 +362,19 @@ function runMigrations(sqlite: Database, drizzleDb: BunSQLiteDatabase<typeof sch
             shouldMark = true
           }
         }
+        // 0039 renames task_dependencies to task_relationships and adds type column
+        else if (entry.tag.startsWith('0039')) {
+          const hasTaskRelationshipsTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='task_relationships'")
+            .get()
+          const hasTaskDependenciesTable = sqlite
+            .query("SELECT name FROM sqlite_master WHERE type='table' AND name='task_dependencies'")
+            .get()
+          // Mark as applied if task_relationships exists and task_dependencies doesn't (fresh DB or already migrated)
+          if (hasTaskRelationshipsTable && !hasTaskDependenciesTable) {
+            shouldMark = true
+          }
+        }
 
         if (shouldMark) {
           migrationsToMark.push(entry)

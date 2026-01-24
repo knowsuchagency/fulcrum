@@ -47,7 +47,8 @@
       "prUrlPlaceholder": "https://github.com/owner/repo/pull/123",
       "attachments": "附件",
       "addAttachments": "添加附件...",
-      "addMoreFiles": "添加更多文件..."
+      "addMoreFiles": "添加更多文件...",
+      "blockedBy": "阻塞任务"
     },
     "aiModes": {
       "plan": "计划",
@@ -69,6 +70,9 @@
     "createTask": "创建任务",
     "noProject": "无项目（收件箱）",
     "projectHint": "无项目的任务将显示在收件箱中。",
+    "blockedByHint": "必须完成才能开始此任务的前置任务。",
+    "blockedByPlaceholder": "搜索阻塞任务...",
+    "noTasksFound": "未找到任务",
     "startImmediately": "立即开始工作",
     "errors": {
       "notGitRepo": "所选文件夹不是 Git 仓库",

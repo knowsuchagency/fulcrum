@@ -432,10 +432,6 @@ export function TaskDependencyGraph({ className, projectFilter, tagsFilter }: Ta
   return (
     <>
       <div className={`h-full relative ${className}`}>
-        {/* Info badge */}
-        <div className="absolute top-2 left-2 z-10 bg-background/90 border rounded-md px-2 py-1 text-xs text-muted-foreground">
-          {nodes.length} tasks with dependencies ({graphData.edges.length} links)
-        </div>
         <ReactFlow
           nodes={nodes}
           edges={edges}

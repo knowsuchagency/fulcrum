@@ -47,7 +47,8 @@
       "prUrlPlaceholder": "https://github.com/owner/repo/pull/123",
       "attachments": "Attachments",
       "addAttachments": "Add attachments...",
-      "addMoreFiles": "Add more files..."
+      "addMoreFiles": "Add more files...",
+      "blockedBy": "Blocked By"
     },
     "aiModes": {
       "plan": "Plan",
@@ -69,6 +70,9 @@
     "createTask": "Create Task",
     "noProject": "No project (Inbox)",
     "projectHint": "Tasks without a project appear in the Inbox.",
+    "blockedByHint": "Tasks that must be completed before this one can start.",
+    "blockedByPlaceholder": "Search tasks to block this...",
+    "noTasksFound": "No tasks found",
     "startImmediately": "Start work immediately",
     "errors": {
       "notGitRepo": "Selected folder is not a git repository",

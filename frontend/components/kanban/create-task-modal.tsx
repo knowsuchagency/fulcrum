@@ -47,6 +47,7 @@ import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { DatePickerPopover } from '@/components/ui/date-picker-popover'
 import { ModelPicker } from '@/components/opencode/model-picker'
 import { useUploadAttachment } from '@/hooks/use-task-attachments'
+import { DependencySelector } from '@/components/kanban/dependency-selector'
 
 type TaskType = 'worktree' | 'non-worktree'
 
@@ -122,6 +123,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const [linkLabelInput, setLinkLabelInput] = useState('')
   const [prUrl, setPrUrl] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [blockedByTaskIds, setBlockedByTaskIds] = useState<string[]>([])
 
   const navigate = useNavigate()
   const createTask = useCreateTask()
@@ -326,6 +328,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         notes: notes.trim() || null,
         projectId: isCodeTask ? selectedRepoProject?.id : selectedProjectId,
         prUrl: prUrl.trim() || null,
+        // Dependencies
+        blockedByTaskIds: blockedByTaskIds.length > 0 ? blockedByTaskIds : undefined,
       },
       {
         onSuccess: async (task) => {
@@ -397,6 +401,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
     setRepoSearchQuery('')
     setRepoError(null)
     setSelectedProjectId(null)
+    setBlockedByTaskIds([])
     // Reset tab to saved if repositories exist, otherwise browse
     setRepoTab(repositories && repositories.length > 0 ? 'saved' : 'browse')
   }
@@ -840,6 +845,18 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                   rows={2}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                 />
+              </Field>
+
+              {/* Blocked By (Dependencies) */}
+              <Field>
+                <FieldLabel>{t('createModal.fields.blockedBy')}</FieldLabel>
+                <DependencySelector
+                  selectedIds={blockedByTaskIds}
+                  onSelectionChange={setBlockedByTaskIds}
+                />
+                <FieldDescription>
+                  {t('createModal.blockedByHint')}
+                </FieldDescription>
               </Field>
 
               {/* Links */}

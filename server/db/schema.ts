@@ -30,13 +30,17 @@ export const tasks = sqliteTable('tasks', {
   updatedAt: text('updated_at').notNull(),
 })
 
-// Task dependencies - tracks which tasks depend on other tasks
-export const taskDependencies = sqliteTable('task_dependencies', {
+// Task relationships - tracks relationships between tasks (dependencies, related, subtasks)
+export const taskRelationships = sqliteTable('task_relationships', {
   id: text('id').primaryKey(),
   taskId: text('task_id').notNull(),
-  dependsOnTaskId: text('depends_on_task_id').notNull(),
+  relatedTaskId: text('related_task_id').notNull(),
+  type: text('type').notNull().default('depends_on'), // 'depends_on' | 'relates_to' | 'subtask'
   createdAt: text('created_at').notNull(),
 })
+
+// Backwards compatibility alias
+export const taskDependencies = taskRelationships
 
 // Task links - arbitrary URL links associated with tasks
 export const taskLinks = sqliteTable('task_links', {
@@ -289,8 +293,11 @@ export type Project = typeof projects.$inferSelect
 export type NewProject = typeof projects.$inferInsert
 export type TaskLink = typeof taskLinks.$inferSelect
 export type NewTaskLink = typeof taskLinks.$inferInsert
-export type TaskDependency = typeof taskDependencies.$inferSelect
-export type NewTaskDependency = typeof taskDependencies.$inferInsert
+export type TaskRelationship = typeof taskRelationships.$inferSelect
+export type NewTaskRelationship = typeof taskRelationships.$inferInsert
+// Backwards compatibility aliases
+export type TaskDependency = TaskRelationship
+export type NewTaskDependency = NewTaskRelationship
 export type ProjectRepository = typeof projectRepositories.$inferSelect
 export type NewProjectRepository = typeof projectRepositories.$inferInsert
 export type TaskAttachment = typeof taskAttachments.$inferSelect

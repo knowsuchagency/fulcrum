@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { nanoid } from 'nanoid'
-import { db, tasks, repositories, taskLinks, taskDependencies, taskAttachments, tags, taskTags, type Task, type NewTask, type TaskLink } from '../db'
+import { db, tasks, repositories, taskLinks, taskRelationships, taskAttachments, tags, taskTags, type Task, type NewTask, type TaskLink } from '../db'
 import { eq, asc, and, inArray } from 'drizzle-orm'
 import { detectLinkType } from '../lib/link-utils'
 import { execSync } from 'child_process'
@@ -249,6 +249,7 @@ app.post('/', async (c) => {
         agentOptions?: Record<string, string> | null
         opencodeModel?: string | null
         tags?: string[]
+        blockedByTaskIds?: string[]
       }
     >()
 
@@ -310,6 +311,41 @@ app.post('/', async (c) => {
     }
 
     db.insert(tasks).values(newTask).run()
+
+    // Create dependencies if blockedByTaskIds provided
+    if (body.blockedByTaskIds && body.blockedByTaskIds.length > 0) {
+      // Dedupe and filter out self-references and invalid/non-existent tasks
+      const uniqueIds = [...new Set(body.blockedByTaskIds)].filter((id) => id !== newTask.id)
+      for (const dependsOnTaskId of uniqueIds) {
+        // Check if the target task exists
+        const targetTask = db.select().from(tasks).where(eq(tasks.id, dependsOnTaskId)).get()
+        if (!targetTask) continue
+
+        // Check for circular dependency (shouldn't happen with a new task, but be safe)
+        const circularCheck = db
+          .select()
+          .from(taskRelationships)
+          .where(
+            and(
+              eq(taskRelationships.taskId, dependsOnTaskId),
+              eq(taskRelationships.relatedTaskId, newTask.id),
+              eq(taskRelationships.type, 'depends_on')
+            )
+          )
+          .get()
+        if (circularCheck) continue
+
+        db.insert(taskRelationships)
+          .values({
+            id: crypto.randomUUID(),
+            taskId: newTask.id,
+            relatedTaskId: dependsOnTaskId,
+            type: 'depends_on',
+            createdAt: now,
+          })
+          .run()
+      }
+    }
 
     // Update lastUsedAt for the repository (if it exists in our database)
     if (body.repoPath) {
@@ -890,26 +926,36 @@ app.get('/:id/dependencies', (c) => {
     return c.json({ error: 'Task not found' }, 404)
   }
 
-  // Get tasks that this task depends on (blockers)
+  // Get tasks that this task depends on (blockers) - only 'depends_on' type
   const dependsOn = db
     .select()
-    .from(taskDependencies)
-    .where(eq(taskDependencies.taskId, taskId))
+    .from(taskRelationships)
+    .where(
+      and(
+        eq(taskRelationships.taskId, taskId),
+        eq(taskRelationships.type, 'depends_on')
+      )
+    )
     .all()
 
-  // Get tasks that depend on this task (dependents)
+  // Get tasks that depend on this task (dependents) - only 'depends_on' type
   const dependents = db
     .select()
-    .from(taskDependencies)
-    .where(eq(taskDependencies.dependsOnTaskId, taskId))
+    .from(taskRelationships)
+    .where(
+      and(
+        eq(taskRelationships.relatedTaskId, taskId),
+        eq(taskRelationships.type, 'depends_on')
+      )
+    )
     .all()
 
   // Fetch the actual task details for dependencies
   const dependsOnTasks = dependsOn.map((dep) => {
-    const t = db.select().from(tasks).where(eq(tasks.id, dep.dependsOnTaskId)).get()
+    const t = db.select().from(tasks).where(eq(tasks.id, dep.relatedTaskId)).get()
     return {
       id: dep.id,
-      dependsOnTaskId: dep.dependsOnTaskId,
+      dependsOnTaskId: dep.relatedTaskId,
       task: t ? { id: t.id, title: t.title, status: t.status } : null,
       createdAt: dep.createdAt,
     }
@@ -966,11 +1012,12 @@ app.post('/:id/dependencies', async (c) => {
     // Check for existing dependency
     const existing = db
       .select()
-      .from(taskDependencies)
+      .from(taskRelationships)
       .where(
         and(
-          eq(taskDependencies.taskId, taskId),
-          eq(taskDependencies.dependsOnTaskId, body.dependsOnTaskId)
+          eq(taskRelationships.taskId, taskId),
+          eq(taskRelationships.relatedTaskId, body.dependsOnTaskId),
+          eq(taskRelationships.type, 'depends_on')
         )
       )
       .get()
@@ -982,11 +1029,12 @@ app.post('/:id/dependencies', async (c) => {
     // Check for circular dependency (target depends on us)
     const circular = db
       .select()
-      .from(taskDependencies)
+      .from(taskRelationships)
       .where(
         and(
-          eq(taskDependencies.taskId, body.dependsOnTaskId),
-          eq(taskDependencies.dependsOnTaskId, taskId)
+          eq(taskRelationships.taskId, body.dependsOnTaskId),
+          eq(taskRelationships.relatedTaskId, taskId),
+          eq(taskRelationships.type, 'depends_on')
         )
       )
       .get()
@@ -999,16 +1047,23 @@ app.post('/:id/dependencies', async (c) => {
     const newDep = {
       id: crypto.randomUUID(),
       taskId,
-      dependsOnTaskId: body.dependsOnTaskId,
+      relatedTaskId: body.dependsOnTaskId,
+      type: 'depends_on' as const,
       createdAt: now,
     }
 
-    db.insert(taskDependencies).values(newDep).run()
+    db.insert(taskRelationships).values(newDep).run()
 
     broadcast({ type: 'task:updated', payload: { taskId } })
     broadcast({ type: 'task:updated', payload: { taskId: body.dependsOnTaskId } })
 
-    return c.json(newDep, 201)
+    // Return with the old field name for API compatibility
+    return c.json({
+      id: newDep.id,
+      taskId: newDep.taskId,
+      dependsOnTaskId: newDep.relatedTaskId,
+      createdAt: newDep.createdAt,
+    }, 201)
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to add dependency' }, 400)
   }
@@ -1021,18 +1076,18 @@ app.delete('/:id/dependencies/:depId', (c) => {
 
   const dep = db
     .select()
-    .from(taskDependencies)
-    .where(and(eq(taskDependencies.id, depId), eq(taskDependencies.taskId, taskId)))
+    .from(taskRelationships)
+    .where(and(eq(taskRelationships.id, depId), eq(taskRelationships.taskId, taskId)))
     .get()
 
   if (!dep) {
     return c.json({ error: 'Dependency not found' }, 404)
   }
 
-  db.delete(taskDependencies).where(eq(taskDependencies.id, depId)).run()
+  db.delete(taskRelationships).where(eq(taskRelationships.id, depId)).run()
 
   broadcast({ type: 'task:updated', payload: { taskId } })
-  broadcast({ type: 'task:updated', payload: { taskId: dep.dependsOnTaskId } })
+  broadcast({ type: 'task:updated', payload: { taskId: dep.relatedTaskId } })
 
   return c.json({ success: true })
 })
