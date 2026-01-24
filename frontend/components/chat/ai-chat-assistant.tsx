@@ -312,7 +312,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               style={{
                 background: isDark
                   ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent, rgba(147, 51, 234, 0.05))'
-                  : 'linear-gradient(135deg, rgba(13, 92, 99, 0.03), transparent, rgba(13, 92, 99, 0.03))',
+                  : 'linear-gradient(135deg, rgba(13, 92, 99, 0.04), transparent 40%, rgba(11, 122, 117, 0.03))',
               }}
             />
           </div>
@@ -333,7 +333,9 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         }
 
         .floating-ai-button:hover {
-          box-shadow: 0 0 30px rgba(139, 92, 246, 0.9), 0 0 50px rgba(124, 58, 237, 0.7), 0 0 70px rgba(109, 40, 217, 0.5);
+          box-shadow: 0 0 30px color-mix(in srgb, var(--gradient-glow) 90%, transparent),
+                      0 0 50px color-mix(in srgb, var(--gradient-glow) 70%, transparent),
+                      0 0 70px color-mix(in srgb, var(--gradient-glow) 50%, transparent);
         }
       `}</style>
     </div>
