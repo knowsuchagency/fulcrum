@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { useRouterState } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Bot, X, Trash2, Info, ChevronDown } from 'lucide-react'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
@@ -27,10 +28,12 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     setModel,
   } = useChat()
 
+  const queryClient = useQueryClient()
   const scrollRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
   const modelRef = useRef<HTMLDivElement>(null)
   const [isModelOpen, setIsModelOpen] = useState(false)
+  const wasStreamingRef = useRef(false)
   const location = useRouterState({ select: (s) => s.location })
 
   // Extract task ID from URL if on task detail page
@@ -47,6 +50,19 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
       setTaskId(null)
     }
   }, [location.pathname, setTaskId])
+
+  // Invalidate queries when chat streaming completes (AI may have modified data)
+  useEffect(() => {
+    if (wasStreamingRef.current && !isStreaming) {
+      // Streaming just finished - invalidate common data queries
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['repositories'] })
+      queryClient.invalidateQueries({ queryKey: ['apps'] })
+    }
+    wasStreamingRef.current = isStreaming
+  }, [isStreaming, queryClient])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
