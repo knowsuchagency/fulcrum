@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { useTheme } from 'next-themes'
 import { Bot, X, Trash2, Info, ChevronDown } from 'lucide-react'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
@@ -29,6 +30,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   } = useChat()
 
   const queryClient = useQueryClient()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   const scrollRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
   const modelRef = useRef<HTMLDivElement>(null)
@@ -137,10 +140,12 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         } hover:scale-110`}
         onClick={toggle}
         style={{
-          background:
-            'linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(168,85,247,0.8) 100%)',
-          boxShadow:
-            '0 0 20px rgba(139, 92, 246, 0.7), 0 0 40px rgba(124, 58, 237, 0.5), 0 0 60px rgba(109, 40, 217, 0.3)',
+          background: isDark
+            ? 'linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(168,85,247,0.8) 100%)'
+            : 'linear-gradient(135deg, rgba(13,92,99,0.9) 0%, rgba(11,122,117,0.9) 100%)',
+          boxShadow: isDark
+            ? '0 0 20px rgba(139, 92, 246, 0.7), 0 0 40px rgba(124, 58, 237, 0.5), 0 0 60px rgba(109, 40, 217, 0.3)'
+            : '0 0 20px rgba(13, 92, 99, 0.6), 0 0 40px rgba(11, 122, 117, 0.4), 0 0 60px rgba(13, 92, 99, 0.2)',
           border: '2px solid rgba(255, 255, 255, 0.2)',
         }}
       >
@@ -156,7 +161,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         </div>
 
         {/* Glowing animation */}
-        <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-indigo-500" />
+        <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isDark ? 'bg-indigo-500' : 'bg-teal-600'}`} />
       </button>
 
       {/* Chat Interface */}
@@ -168,19 +173,27 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
           }}
         >
-          <div className="relative flex flex-col rounded-3xl bg-gradient-to-br from-zinc-800/80 to-zinc-900/90 border border-zinc-500/50 shadow-2xl backdrop-blur-3xl overflow-hidden max-h-[min(600px,calc(100vh-140px))]">
+          <div className={`relative flex flex-col rounded-3xl shadow-2xl backdrop-blur-3xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] ${
+            isDark
+              ? 'bg-gradient-to-br from-zinc-800/80 to-zinc-900/90 border border-zinc-500/50'
+              : 'bg-gradient-to-br from-white/95 to-zinc-50/95 border border-zinc-200'
+          }`}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-4 pb-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-medium text-zinc-400">AI Assistant</span>
+                <span className={`text-xs font-medium ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>AI Assistant</span>
               </div>
               <div className="flex items-center gap-2">
                 {/* Model Selector */}
                 <div ref={modelRef} className="relative">
                   <button
                     onClick={() => setIsModelOpen(!isModelOpen)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-zinc-800/60 text-zinc-300 rounded-2xl hover:bg-zinc-700/60 transition-colors"
+                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-2xl transition-colors ${
+                      isDark
+                        ? 'bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700/60'
+                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                    }`}
                   >
                     <span>{currentModel?.label}</span>
                     <ChevronDown
@@ -190,7 +203,11 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
 
                   {/* Model Dropdown */}
                   {isModelOpen && (
-                    <div className="absolute top-full right-0 mt-1 w-40 bg-zinc-900/95 border border-zinc-700/50 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden z-10">
+                    <div className={`absolute top-full right-0 mt-1 w-40 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden z-10 ${
+                      isDark
+                        ? 'bg-zinc-900/95 border border-zinc-700/50'
+                        : 'bg-white/95 border border-zinc-200'
+                    }`}>
                       {MODEL_OPTIONS.map((option) => (
                         <button
                           key={option.id}
@@ -198,12 +215,16 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                             setModel(option.id)
                             setIsModelOpen(false)
                           }}
-                          className={`w-full px-3 py-2 text-left hover:bg-zinc-800/50 transition-colors ${
-                            model === option.id ? 'bg-red-500/10 text-red-400' : 'text-zinc-300'
+                          className={`w-full px-3 py-2 text-left transition-colors ${
+                            isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
+                          } ${
+                            model === option.id
+                              ? isDark ? 'bg-red-500/10 text-red-400' : 'bg-teal-500/10 text-teal-600'
+                              : isDark ? 'text-zinc-300' : 'text-zinc-700'
                           }`}
                         >
                           <div className="font-medium text-xs">{option.label}</div>
-                          <div className="text-[10px] text-zinc-500">{option.description}</div>
+                          <div className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>{option.description}</div>
                         </button>
                       ))}
                     </div>
@@ -212,17 +233,17 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                 {hasMessages && (
                   <button
                     onClick={clearMessages}
-                    className="p-1.5 rounded-full hover:bg-zinc-700/50 transition-colors"
+                    className={`p-1.5 rounded-full transition-colors ${isDark ? 'hover:bg-zinc-700/50' : 'hover:bg-zinc-200'}`}
                     title="Clear conversation"
                   >
-                    <Trash2 className="w-4 h-4 text-zinc-400" />
+                    <Trash2 className={`w-4 h-4 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`} />
                   </button>
                 )}
                 <button
                   onClick={close}
-                  className="p-1.5 rounded-full hover:bg-zinc-700/50 transition-colors"
+                  className={`p-1.5 rounded-full transition-colors ${isDark ? 'hover:bg-zinc-700/50' : 'hover:bg-zinc-200'}`}
                 >
-                  <X className="w-4 h-4 text-zinc-400" />
+                  <X className={`w-4 h-4 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`} />
                 </button>
               </div>
             </div>
@@ -231,7 +252,9 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             {messages.length > 0 && (
               <div
                 ref={scrollRef}
-                className="overflow-y-auto px-4 py-2 max-h-[350px] scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+                className={`overflow-y-auto px-4 py-2 max-h-[350px] scrollbar-thin scrollbar-track-transparent ${
+                  isDark ? 'scrollbar-thumb-zinc-700' : 'scrollbar-thumb-zinc-300'
+                }`}
               >
               {messages.map((msg) => (
                 <ChatMessage
@@ -259,15 +282,19 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             )}
 
             {/* Input Section */}
-            <ChatInput onSend={handleSend} isLoading={isStreaming} />
+            <ChatInput onSend={handleSend} isLoading={isStreaming} isDark={isDark} />
 
             {/* Footer Info */}
-            <div className="flex items-center justify-between px-4 pb-3 pt-1 text-xs text-zinc-500 gap-4">
+            <div className={`flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
               <div className="flex items-center gap-2">
                 <Info className="w-3 h-3" />
                 <span>
                   Press{' '}
-                  <kbd className="px-1.5 py-0.5 bg-zinc-800 border border-zinc-600 rounded text-zinc-400 font-mono text-xs shadow-sm">
+                  <kbd className={`px-1.5 py-0.5 rounded font-mono text-xs shadow-sm ${
+                    isDark
+                      ? 'bg-zinc-800 border border-zinc-600 text-zinc-400'
+                      : 'bg-zinc-100 border border-zinc-300 text-zinc-500'
+                  }`}>
                     Shift + Enter
                   </kbd>{' '}
                   for new line
@@ -283,8 +310,9 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             <div
               className="absolute inset-0 rounded-3xl pointer-events-none"
               style={{
-                background:
-                  'linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent, rgba(147, 51, 234, 0.05))',
+                background: isDark
+                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent, rgba(147, 51, 234, 0.05))'
+                  : 'linear-gradient(135deg, rgba(13, 92, 99, 0.03), transparent, rgba(13, 92, 99, 0.03))',
               }}
             />
           </div>

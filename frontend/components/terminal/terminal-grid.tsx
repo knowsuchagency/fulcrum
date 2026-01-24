@@ -21,6 +21,7 @@ import { MobileTerminalSelector } from './mobile-terminal-selector'
 import { useStore } from '@/stores'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
+import { Tiles } from '@/components/ui/tiles'
 
 interface TaskInfo {
   taskId: string
@@ -193,14 +194,28 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, repoIn
 
 function EmptyPane({ onAdd, message }: { onAdd?: () => void; message?: string }) {
   return (
-    <div className="flex h-full items-center justify-center bg-terminal-background">
+    <div className="relative flex h-full items-center justify-center bg-terminal-background overflow-hidden">
+      {/* Amorphous gradient blobs */}
+      <div
+        className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 50% at 20% 10%, var(--gradient-glow) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 40% at 80% 30%, var(--gradient-glow) 0%, transparent 45%),
+            radial-gradient(ellipse 70% 60% at 60% 90%, var(--gradient-glow) 0%, transparent 40%)
+          `
+        }}
+      />
+      <div className="absolute inset-0 pointer-events-none">
+        <Tiles rows={100} cols={50} tileSize="sm" />
+      </div>
       {onAdd ? (
-        <Button variant="outline" size="sm" onClick={onAdd} className="gap-2">
+        <Button variant="outline" size="sm" onClick={onAdd} className="gap-2 relative z-10">
           <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2} />
           New Terminal
         </Button>
       ) : (
-        <p className="text-xs text-muted-foreground">{message || 'No terminals'}</p>
+        <p className="text-xs text-muted-foreground relative z-10">{message || 'No terminals'}</p>
       )}
     </div>
   )

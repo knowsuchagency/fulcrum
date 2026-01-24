@@ -57,9 +57,9 @@
 
     /* Subtle gradient overlays using theme colors */
     --gradient-subtle: linear-gradient(135deg, var(--accent) 0%, transparent 50%, var(--destructive) 100%);
-    --gradient-card: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 8%) 100%);
-    --gradient-header: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 15%) 100%);
-    --gradient-radial: radial-gradient(ellipse at top center, var(--accent) 0%, transparent 60%);
+    --gradient-card: linear-gradient(180deg, var(--card) 0%, var(--background) 100%);
+    --gradient-header: linear-gradient(180deg, var(--card) 0%, var(--background) 100%);
+    --gradient-glow: #0d5c63;                        /* Teal glow for light mode */
 }
 
 .dark {
@@ -112,9 +112,9 @@
 
     /* Subtle gradient overlays using theme colors */
     --gradient-subtle: linear-gradient(135deg, var(--accent) 0%, transparent 50%, var(--destructive) 100%);
-    --gradient-card: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 8%) 100%);
-    --gradient-header: linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--card), var(--background) 15%) 100%);
-    --gradient-radial: radial-gradient(ellipse at top center, var(--accent) 0%, transparent 60%);
+    --gradient-card: linear-gradient(180deg, var(--card) 0%, var(--background) 100%);
+    --gradient-header: linear-gradient(180deg, var(--card) 0%, var(--background) 100%);
+    --gradient-glow: #ef4444;                        /* Red glow for dark mode */
 }
 
 @theme inline {
