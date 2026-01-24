@@ -13,6 +13,7 @@ import { AgentSetupBanner } from '@/components/onboarding/agent-setup-banner'
 import { KeyboardShortcutsHelp } from '@/components/keyboard-shortcuts-help'
 import { OpenInEditorDialog } from '@/components/open-in-editor-dialog'
 import { Toaster } from '@/components/ui/sonner'
+import { AiChatAssistant } from '@/components/chat'
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -128,6 +129,7 @@ function RootLayout() {
         />
         <KeyboardShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
         <OpenInEditorDialog open={openInEditorDialogOpen} onOpenChange={setOpenInEditorDialogOpen} />
+        <AiChatAssistant />
         <Toaster position={isDesktop ? 'bottom-center' : 'bottom-right'} />
       </div>
     </KeyboardProvider>

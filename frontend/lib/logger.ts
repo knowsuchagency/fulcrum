@@ -166,4 +166,5 @@ export const log = {
   kanban: createLogger('Kanban'),
   viewer: createLogger('Viewer'),
   deployment: createLogger('Deployment'),
+  chat: createLogger('Chat'),
 }
