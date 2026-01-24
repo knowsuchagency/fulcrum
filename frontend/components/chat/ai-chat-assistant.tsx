@@ -169,10 +169,11 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             </div>
 
             {/* Messages */}
-            <div
-              ref={scrollRef}
-              className="flex-1 overflow-y-auto px-4 py-2 min-h-[200px] max-h-[350px] scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
-            >
+            {messages.length > 0 && (
+              <div
+                ref={scrollRef}
+                className="overflow-y-auto px-4 py-2 max-h-[350px] scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+              >
               {messages.map((msg) => (
                 <ChatMessage
                   key={msg.id}
@@ -188,7 +189,15 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                   {error}
                 </div>
               )}
-            </div>
+              </div>
+            )}
+
+            {/* Error display when no messages */}
+            {messages.length === 0 && error && (
+              <div className="mx-4 my-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
 
             {/* Input Section */}
             <ChatInput
