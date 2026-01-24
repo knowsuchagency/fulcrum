@@ -147,7 +147,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                 <span className="px-2 py-1 text-xs font-medium bg-zinc-800/60 text-zinc-300 rounded-2xl">
                   {currentModel?.label}
                 </span>
-                <span className="px-2 py-1 text-xs font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-2xl">
+                <span className="px-2 py-1 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl">
                   Pro
                 </span>
                 {hasMessages && (
@@ -234,7 +234,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               className="absolute inset-0 rounded-3xl pointer-events-none"
               style={{
                 background:
-                  'linear-gradient(135deg, rgba(139, 92, 246, 0.05), transparent, rgba(147, 51, 234, 0.05))',
+                  'linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent, rgba(147, 51, 234, 0.05))',
               }}
             />
           </div>
