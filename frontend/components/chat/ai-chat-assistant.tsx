@@ -9,6 +9,7 @@ import { ChatInput } from './chat-input'
 import { useChat } from '@/hooks/use-chat'
 import { usePageContext } from '@/hooks/use-page-context'
 import { useOpencodeModels } from '@/hooks/use-opencode-models'
+import { useOpencodeModel as useOpencodeModelSetting } from '@/hooks/use-config'
 import { CLAUDE_MODEL_OPTIONS, type ClaudeModelId } from '@/stores/chat-store'
 import {
   Dialog,
@@ -53,8 +54,16 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   const filterInputRef = useRef<HTMLInputElement>(null)
   const wasStreamingRef = useRef(false)
 
-  // Fetch OpenCode models
+  // Fetch OpenCode models and default from settings
   const { providers: opencodeProviders, installed: opencodeInstalled } = useOpencodeModels()
+  const { data: defaultOpencodeModel } = useOpencodeModelSetting()
+
+  // Initialize OpenCode model from settings when switching to opencode and no model is selected
+  useEffect(() => {
+    if (provider === 'opencode' && !opencodeModel && defaultOpencodeModel) {
+      setOpencodeModel(defaultOpencodeModel)
+    }
+  }, [provider, opencodeModel, defaultOpencodeModel, setOpencodeModel])
 
   const expandedMessage = useMemo(
     () => messages.find((m) => m.id === expandedMessageId),
