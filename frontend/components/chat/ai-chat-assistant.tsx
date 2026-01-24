@@ -185,10 +185,10 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
           }}
         >
-          <div className={`relative flex flex-col rounded-3xl shadow-2xl backdrop-blur-3xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] ${
+          <div className={`relative flex flex-col rounded-3xl shadow-2xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] ${
             isDark
-              ? 'bg-gradient-to-br from-zinc-800/80 to-zinc-900/90 border border-zinc-500/50'
-              : 'bg-gradient-to-br from-white/95 to-zinc-50/95 border border-zinc-200'
+              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-600'
+              : 'bg-gradient-to-br from-white to-zinc-50 border border-zinc-200'
           }`}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-4 pb-2">
