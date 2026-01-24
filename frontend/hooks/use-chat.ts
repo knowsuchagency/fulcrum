@@ -1,7 +1,10 @@
 import { useMemo } from 'react'
-import { ChatStore, type IChatStore, type ModelId } from '@/stores/chat-store'
+import { ChatStore, type IChatStore, type ClaudeModelId, type ProviderId } from '@/stores/chat-store'
 import { createLogger } from '@/lib/logger'
 import type { PageContext } from '../../shared/types'
+
+// Legacy export for backwards compatibility
+export type ModelId = ClaudeModelId
 
 // Singleton store instance
 let chatStoreInstance: IChatStore | null = null
@@ -18,7 +21,9 @@ function getChatStore(): IChatStore {
         isStreaming: false,
         isOpen: false,
         error: null,
+        provider: 'claude',
         model: 'opus',
+        opencodeModel: null,
       },
       { log: createLogger('Chat') }
     )
@@ -40,7 +45,9 @@ export function useChat() {
     hasMessages: store.hasMessages,
     error: store.error,
     sessionId: store.sessionId,
-    model: store.model as ModelId,
+    provider: store.provider as ProviderId,
+    model: store.model as ClaudeModelId,
+    opencodeModel: store.opencodeModel,
 
     // Actions
     toggle: () => store.toggle(),
@@ -48,7 +55,9 @@ export function useChat() {
     close: () => store.setOpen(false),
     sendMessage: (message: string, context?: PageContext) => store.sendMessage(message, context),
     clearMessages: () => store.clearMessages(),
-    setModel: (model: ModelId) => store.setModel(model),
+    setProvider: (provider: ProviderId) => store.setProvider(provider),
+    setModel: (model: ClaudeModelId) => store.setModel(model),
+    setOpencodeModel: (model: string | null) => store.setOpencodeModel(model),
     reset: () => store.reset(),
   }
 }

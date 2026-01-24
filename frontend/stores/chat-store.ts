@@ -4,13 +4,23 @@ import { API_BASE } from '@/hooks/use-apps'
 import type { Logger } from '../../shared/logger'
 import type { PageContext } from '../../shared/types'
 
-export type ModelId = 'opus' | 'sonnet' | 'haiku'
+export type ProviderId = 'claude' | 'opencode'
+export type ClaudeModelId = 'opus' | 'sonnet' | 'haiku'
 
-export const MODEL_OPTIONS: { id: ModelId; label: string; description: string }[] = [
+export const PROVIDER_OPTIONS: { id: ProviderId; label: string; description: string }[] = [
+  { id: 'claude', label: 'Claude Code', description: 'Anthropic Claude' },
+  { id: 'opencode', label: 'OpenCode', description: 'Multi-provider' },
+]
+
+export const CLAUDE_MODEL_OPTIONS: { id: ClaudeModelId; label: string; description: string }[] = [
   { id: 'opus', label: 'Opus', description: 'Most powerful' },
   { id: 'sonnet', label: 'Sonnet', description: 'Fast & capable' },
   { id: 'haiku', label: 'Haiku', description: 'Fastest' },
 ]
+
+// Legacy export for backwards compatibility
+export type ModelId = ClaudeModelId
+export const MODEL_OPTIONS = CLAUDE_MODEL_OPTIONS
 
 export interface ChatMessage {
   id: string
@@ -61,8 +71,12 @@ export const ChatStore = types
     isOpen: types.optional(types.boolean, false),
     /** Error message */
     error: types.maybeNull(types.string),
-    /** Selected model */
+    /** Selected provider */
+    provider: types.optional(types.enumeration(['claude', 'opencode']), 'claude'),
+    /** Selected Claude model (only used when provider is 'claude') */
     model: types.optional(types.enumeration(['opus', 'sonnet', 'haiku']), 'opus'),
+    /** Selected OpenCode model (only used when provider is 'opencode') */
+    opencodeModel: types.maybeNull(types.string),
   })
   .volatile(() => ({
     /** Active EventSource connection */
@@ -98,13 +112,25 @@ export const ChatStore = types
         self.model = model
       },
 
+      setProvider(provider: 'claude' | 'opencode') {
+        // When switching providers, clear the session so a new one is created
+        if (self.provider !== provider) {
+          self.sessionId = null
+          self.provider = provider
+        }
+      },
+
+      setOpencodeModel(model: string | null) {
+        self.opencodeModel = model
+      },
+
       createSession: flow(function* () {
         const log = getLog()
         try {
           const response: Response = yield fetch(`${API_BASE}/api/chat/sessions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
+            body: JSON.stringify({ provider: self.provider }),
           })
 
           if (!response.ok) {
@@ -113,7 +139,7 @@ export const ChatStore = types
 
           const { sessionId }: { sessionId: string } = yield response.json()
           self.sessionId = sessionId
-          log.info('Created chat session', { sessionId })
+          log.info('Created chat session', { sessionId, provider: self.provider })
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err)
           log.error('Failed to create chat session', { error: errorMsg })
@@ -130,7 +156,7 @@ export const ChatStore = types
             const sessionResponse: Response = yield fetch(`${API_BASE}/api/chat/sessions`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({}),
+              body: JSON.stringify({ provider: self.provider }),
             })
 
             if (!sessionResponse.ok) {
@@ -139,7 +165,7 @@ export const ChatStore = types
 
             const { sessionId }: { sessionId: string } = yield sessionResponse.json()
             self.sessionId = sessionId
-            log.info('Created chat session', { sessionId })
+            log.info('Created chat session', { sessionId, provider: self.provider })
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err)
             log.error('Failed to create chat session', { error: errorMsg })
@@ -206,10 +232,18 @@ export const ChatStore = types
           }
 
           // Send message and stream response
+          // Use the appropriate model based on provider
+          const modelToSend = self.provider === 'opencode' ? self.opencodeModel : self.model
+
           const response: Response = yield fetch(`${API_BASE}/api/chat/${self.sessionId}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, model: self.model, context }),
+            body: JSON.stringify({
+              message,
+              model: modelToSend,
+              context,
+              provider: self.provider,
+            }),
           })
 
           if (!response.ok) {

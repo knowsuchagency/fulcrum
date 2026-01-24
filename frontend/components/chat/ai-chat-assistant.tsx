@@ -2,13 +2,14 @@ import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { observer } from 'mobx-react-lite'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTheme } from 'next-themes'
-import { Bot, X, Trash2, Info, ChevronDown } from 'lucide-react'
+import { Bot, X, Trash2, Info, ChevronDown, Check } from 'lucide-react'
 import MarkdownPreview from '@uiw/react-markdown-preview'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
 import { useChat } from '@/hooks/use-chat'
 import { usePageContext } from '@/hooks/use-page-context'
-import { MODEL_OPTIONS } from '@/stores/chat-store'
+import { useOpencodeModels } from '@/hooks/use-opencode-models'
+import { CLAUDE_MODEL_OPTIONS, type ClaudeModelId } from '@/stores/chat-store'
 import {
   Dialog,
   DialogContent,
@@ -27,12 +28,16 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     messages,
     hasMessages,
     error,
+    provider,
     model,
+    opencodeModel,
     toggle,
     close,
     sendMessage,
     clearMessages,
+    setProvider,
     setModel,
+    setOpencodeModel,
   } = useChat()
 
   const pageContext = usePageContext()
@@ -41,10 +46,15 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   const isDark = resolvedTheme === 'dark'
   const scrollRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
-  const modelRef = useRef<HTMLDivElement>(null)
-  const [isModelOpen, setIsModelOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null)
+  const [modelFilter, setModelFilter] = useState('')
+  const filterInputRef = useRef<HTMLInputElement>(null)
   const wasStreamingRef = useRef(false)
+
+  // Fetch OpenCode models
+  const { providers: opencodeProviders, installed: opencodeInstalled } = useOpencodeModels()
 
   const expandedMessage = useMemo(
     () => messages.find((m) => m.id === expandedMessageId),
@@ -119,19 +129,28 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     }
   }, [isOpen, close])
 
-  // Close model dropdown when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modelRef.current && !modelRef.current.contains(event.target as Node)) {
-        setIsModelOpen(false)
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+        setModelFilter('')
       }
     }
 
-    if (isModelOpen) {
+    if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isModelOpen])
+  }, [isDropdownOpen])
+
+  // Focus filter input when dropdown opens for OpenCode
+  useEffect(() => {
+    if (isDropdownOpen && provider === 'opencode' && filterInputRef.current) {
+      // Small delay to ensure the dropdown is rendered
+      setTimeout(() => filterInputRef.current?.focus(), 50)
+    }
+  }, [isDropdownOpen, provider])
 
   const handleSend = useCallback(
     (message: string) => {
@@ -140,7 +159,42 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     [sendMessage, pageContext]
   )
 
-  const currentModel = MODEL_OPTIONS.find((m) => m.id === model)
+  const currentClaudeModel = CLAUDE_MODEL_OPTIONS.find((m) => m.id === model)
+
+  // Get current model display label
+  const getModelLabel = () => {
+    if (provider === 'claude') {
+      return currentClaudeModel?.label || 'Opus'
+    }
+    if (opencodeModel) {
+      // Show just the model name, not the full provider/model path
+      const parts = opencodeModel.split('/')
+      return parts.length > 1 ? parts[1] : opencodeModel
+    }
+    return 'Select model'
+  }
+
+  // Sort OpenCode providers alphabetically and filter by search term
+  const sortedOpencodeProviders = useMemo(() => {
+    const sorted = Object.entries(opencodeProviders).sort(([a], [b]) => a.localeCompare(b))
+    if (!modelFilter.trim()) return sorted
+
+    const filter = modelFilter.toLowerCase()
+    return sorted
+      .map(([providerName, models]) => {
+        // Filter models that match the search
+        const filteredModels = models.filter(
+          (modelName) =>
+            modelName.toLowerCase().includes(filter) ||
+            providerName.toLowerCase().includes(filter)
+        )
+        return [providerName, filteredModels] as [string, string[]]
+      })
+      .filter(([, models]) => models.length > 0)
+  }, [opencodeProviders, modelFilter])
+
+  // Check if OpenCode is available (installed and has models)
+  const isOpencodeAvailable = opencodeInstalled && sortedOpencodeProviders.length > 0
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -198,48 +252,160 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                 <span className={`text-xs font-medium ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>AI Assistant</span>
               </div>
               <div className="flex items-center gap-2">
-                {/* Model Selector */}
-                <div ref={modelRef} className="relative">
+                {/* Provider Toggle */}
+                {isOpencodeAvailable && (
+                  <div className={`flex items-center rounded-full p-0.5 ${
+                    isDark ? 'bg-zinc-800/60' : 'bg-zinc-100'
+                  }`}>
+                    <button
+                      onClick={() => setProvider('claude')}
+                      className={`px-2 py-1 text-[10px] font-medium rounded-full transition-all ${
+                        provider === 'claude'
+                          ? isDark
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-teal-500/20 text-teal-600'
+                          : isDark
+                            ? 'text-zinc-500 hover:text-zinc-300'
+                            : 'text-zinc-400 hover:text-zinc-600'
+                      }`}
+                    >
+                      Claude
+                    </button>
+                    <button
+                      onClick={() => setProvider('opencode')}
+                      className={`px-2 py-1 text-[10px] font-medium rounded-full transition-all ${
+                        provider === 'opencode'
+                          ? isDark
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-teal-500/20 text-teal-600'
+                          : isDark
+                            ? 'text-zinc-500 hover:text-zinc-300'
+                            : 'text-zinc-400 hover:text-zinc-600'
+                      }`}
+                    >
+                      OpenCode
+                    </button>
+                  </div>
+                )}
+
+                {/* Model Selector Dropdown */}
+                <div ref={dropdownRef} className="relative">
                   <button
-                    onClick={() => setIsModelOpen(!isModelOpen)}
+                    onClick={() => {
+                      const newState = !isDropdownOpen
+                      setIsDropdownOpen(newState)
+                      if (!newState) setModelFilter('')
+                    }}
                     className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-2xl transition-colors ${
                       isDark
                         ? 'bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700/60'
                         : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                     }`}
                   >
-                    <span>{currentModel?.label}</span>
+                    <span className="max-w-[80px] truncate">{getModelLabel()}</span>
                     <ChevronDown
-                      className={`w-3 h-3 transition-transform ${isModelOpen ? 'rotate-180' : ''}`}
+                      className={`w-3 h-3 transition-transform flex-shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`}
                     />
                   </button>
 
                   {/* Model Dropdown */}
-                  {isModelOpen && (
-                    <div className={`absolute top-full right-0 mt-1 w-40 rounded-xl shadow-xl backdrop-blur-sm overflow-hidden z-10 animate-in fade-in-0 slide-in-from-top-1 duration-150 ${
+                  {isDropdownOpen && (
+                    <div className={`absolute top-full right-0 mt-1 w-48 max-h-64 overflow-y-auto rounded-xl shadow-xl backdrop-blur-sm z-10 animate-in fade-in-0 slide-in-from-top-1 duration-150 scrollbar-thin ${
                       isDark
-                        ? 'bg-zinc-900/95 border border-zinc-700/50'
-                        : 'bg-white/95 border border-zinc-200'
+                        ? 'bg-zinc-900/95 border border-zinc-700/50 scrollbar-thumb-zinc-700'
+                        : 'bg-white/95 border border-zinc-200 scrollbar-thumb-zinc-300'
                     }`}>
-                      {MODEL_OPTIONS.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => {
-                            setModel(option.id)
-                            setIsModelOpen(false)
-                          }}
-                          className={`w-full px-3 py-2 text-left transition-colors ${
-                            isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
-                          } ${
-                            model === option.id
-                              ? isDark ? 'bg-red-500/10 text-red-400' : 'bg-teal-500/10 text-teal-600'
-                              : isDark ? 'text-zinc-300' : 'text-zinc-700'
-                          }`}
-                        >
-                          <div className="font-medium text-xs">{option.label}</div>
-                          <div className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>{option.description}</div>
-                        </button>
-                      ))}
+                      {/* Claude Models */}
+                      {provider === 'claude' && (
+                        <>
+                          {CLAUDE_MODEL_OPTIONS.map((option) => (
+                            <button
+                              key={option.id}
+                              onClick={() => {
+                                setModel(option.id as ClaudeModelId)
+                                setIsDropdownOpen(false)
+                              }}
+                              className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between ${
+                                isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
+                              } ${
+                                model === option.id
+                                  ? isDark ? 'bg-red-500/10 text-red-400' : 'bg-teal-500/10 text-teal-600'
+                                  : isDark ? 'text-zinc-300' : 'text-zinc-700'
+                              }`}
+                            >
+                              <div>
+                                <div className="font-medium text-xs">{option.label}</div>
+                                <div className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>{option.description}</div>
+                              </div>
+                              {model === option.id && (
+                                <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-red-400' : 'text-teal-600'}`} />
+                              )}
+                            </button>
+                          ))}
+                        </>
+                      )}
+
+                      {/* OpenCode Models */}
+                      {provider === 'opencode' && (
+                        <>
+                          {/* Filter Input */}
+                          <div className={`sticky top-0 p-2 ${isDark ? 'bg-zinc-900/95' : 'bg-white/95'}`}>
+                            <input
+                              ref={filterInputRef}
+                              type="text"
+                              value={modelFilter}
+                              onChange={(e) => setModelFilter(e.target.value)}
+                              placeholder="Filter models..."
+                              className={`w-full px-2.5 py-1.5 text-xs rounded-lg outline-none transition-colors ${
+                                isDark
+                                  ? 'bg-zinc-800 border border-zinc-700 text-zinc-200 placeholder:text-zinc-500 focus:border-zinc-600'
+                                  : 'bg-zinc-100 border border-zinc-200 text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-300'
+                              }`}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          {sortedOpencodeProviders.length === 0 && modelFilter && (
+                            <div className={`px-3 py-4 text-xs text-center ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                              No models match "{modelFilter}"
+                            </div>
+                          )}
+                          {sortedOpencodeProviders.map(([providerName, models]) => (
+                            <div key={providerName}>
+                              <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider ${
+                                isDark ? 'text-zinc-500 bg-zinc-800/50' : 'text-zinc-400 bg-zinc-50'
+                              }`}>
+                                {providerName}
+                              </div>
+                              {models.map((modelName) => {
+                                const fullModelId = `${providerName}/${modelName}`
+                                const isSelected = opencodeModel === fullModelId
+                                return (
+                                  <button
+                                    key={fullModelId}
+                                    onClick={() => {
+                                      setOpencodeModel(fullModelId)
+                                      setIsDropdownOpen(false)
+                                      setModelFilter('')
+                                    }}
+                                    className={`w-full px-3 py-1.5 text-left transition-colors flex items-center justify-between ${
+                                      isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
+                                    } ${
+                                      isSelected
+                                        ? isDark ? 'bg-red-500/10 text-red-400' : 'bg-teal-500/10 text-teal-600'
+                                        : isDark ? 'text-zinc-300' : 'text-zinc-700'
+                                    }`}
+                                  >
+                                    <span className="text-xs truncate">{modelName}</span>
+                                    {isSelected && (
+                                      <Check className={`w-3.5 h-3.5 flex-shrink-0 ml-2 ${isDark ? 'text-red-400' : 'text-teal-600'}`} />
+                                    )}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          ))}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
