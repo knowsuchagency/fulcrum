@@ -145,9 +145,9 @@ export function ChatInput({
             <button
               onClick={handleSubmit}
               disabled={!value.trim() || isLoading}
-              className="group relative p-3 bg-gradient-to-r from-violet-600 to-purple-500 border-none rounded-xl cursor-pointer transition-all duration-300 text-white shadow-lg hover:from-violet-500 hover:to-purple-400 hover:scale-105 hover:shadow-violet-500/30 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg"
+              className="group relative p-3 bg-gradient-to-r from-red-600 to-red-500 border-none rounded-xl cursor-pointer transition-all duration-300 text-white shadow-lg hover:from-red-500 hover:to-red-400 hover:scale-105 hover:shadow-red-500/30 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg"
               style={{
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(139, 92, 246, 0.4)',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(239, 68, 68, 0.4)',
               }}
             >
               {isLoading ? (
@@ -157,7 +157,7 @@ export function ChatInput({
               )}
 
               {/* Animated background glow */}
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110" />
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-600 to-red-500 opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110" />
 
               {/* Ripple effect on click */}
               <div className="absolute inset-0 rounded-xl overflow-hidden">
