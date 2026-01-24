@@ -68,11 +68,12 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   }, [isStreaming, queryClient])
 
   // Auto-scroll to bottom when new messages arrive
+  const lastMessageContent = messages[messages.length - 1]?.content
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages.length, messages[messages.length - 1]?.content])
+  }, [messages.length, lastMessageContent])
 
   // Keyboard shortcut to toggle chat
   useEffect(() => {
