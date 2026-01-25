@@ -70,7 +70,7 @@ export function listSessions(options: {
 }): { sessions: ChatSession[]; total: number } {
   const { limit = 50, offset = 0, projectId, search, favorites } = options
 
-  let conditions = []
+  const conditions = []
 
   if (projectId) {
     conditions.push(eq(chatSessions.projectId, projectId))
@@ -474,8 +474,8 @@ User message: ${userMessage}`
     })
 
     let currentText = ''
-    let tokensIn = 0
-    let tokensOut = 0
+    const tokensIn = 0
+    const tokensOut = 0
 
     for await (const message of result) {
       if (message.type === 'stream_event') {
@@ -677,7 +677,7 @@ export function listArtifacts(options: {
 }): { artifacts: Artifact[]; total: number } {
   const { sessionId, type, favorites, limit = 50, offset = 0 } = options
 
-  let conditions = []
+  const conditions = []
 
   if (sessionId) {
     conditions.push(eq(artifacts.sessionId, sessionId))
