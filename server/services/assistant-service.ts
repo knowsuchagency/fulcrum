@@ -196,14 +196,12 @@ function buildSystemPrompt(): string {
 
 ## Canvas Tool
 
-You have a canvas panel on the right side of the chat. Use the \`\`\`\`canvas code block (4 backticks) to explicitly display content in the viewer:
+You have a canvas panel on the right side of the chat. Use <canvas> XML tags to display content in the viewer:
 
-\`\`\`\`canvas
+<canvas>
 Content to display in the canvas viewer.
 This can include markdown, tables, code blocks, charts, etc.
-\`\`\`\`
-
-**Important:** Use 4 backticks (\`\`\`\`) so you can include regular code blocks (\`\`\`) inside.
+</canvas>
 
 **When to use the canvas:**
 - When the user asks you to "show", "display", "visualize", or "render" something
@@ -348,29 +346,29 @@ Use standard markdown for explanatory text. After the chart, explain key insight
 
 The user may have a document open in the Editor tab. When present, you'll see it in <editor_content> tags before their message.
 
-**IMPORTANT: To update the editor, you MUST use a \`\`\`document code block.**
+**IMPORTANT: To update the editor, use <document> XML tags.**
 
-When the user asks you to help with, edit, fix, improve, or modify their document in any way, you MUST output the corrected/updated content using the \`document\` language identifier:
+When the user asks you to help with, edit, fix, improve, or modify their document in any way, output the corrected/updated content wrapped in document tags:
 
-\`\`\`document
+<document>
 The complete updated document content goes here.
-\`\`\`
+</document>
 
 This will automatically update the editor. Always provide the COMPLETE document, not just the changes.
 
 **Example - User asks "fix my spelling":**
 
-\`\`\`document
+<document>
 Where in the world is Carmen Sandiego?
-\`\`\`
+</document>
 
-**When to use \`\`\`document blocks:**
+**When to use <document> tags:**
 - Fixing spelling, grammar, or typos
 - Rewriting or improving text
 - Adding new content
 - Any request that involves changing the document
 
-After the document block, you can explain what changes you made.`
+After the document tags, you can explain what changes you made.`
 
   // Add custom instructions from settings if configured
   const settings = getSettings()
@@ -546,11 +544,11 @@ User message: ${userMessage}`
 
 /**
  * Extract document content from assistant response
- * Looks for ```document code blocks
+ * Looks for <document> XML tags
  */
 function extractDocumentContent(content: string): string | null {
-  // Match ```document blocks with optional newline after the language identifier
-  const pattern = /```document\s*\n?([\s\S]*?)```/g
+  // Match <document>...</document> tags
+  const pattern = /<document>\s*([\s\S]*?)\s*<\/document>/g
   const match = pattern.exec(content)
   if (match) {
     return match[1].trim()
@@ -560,11 +558,11 @@ function extractDocumentContent(content: string): string | null {
 
 /**
  * Extract canvas content from assistant response
- * Uses ````canvas (4 backticks) to allow nested code blocks inside
+ * Looks for <canvas> XML tags
  */
 function extractCanvasContent(content: string): string | null {
-  // Match ````canvas blocks (4 backticks to allow nested ``` code blocks)
-  const pattern = /````canvas\s*\n?([\s\S]*?)````/g
+  // Match <canvas>...</canvas> tags
+  const pattern = /<canvas>\s*([\s\S]*?)\s*<\/canvas>/g
   const match = pattern.exec(content)
   if (match) {
     return match[1].trim()
