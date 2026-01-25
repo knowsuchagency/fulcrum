@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import MDEditor from '@uiw/react-md-editor'
+import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 
 interface MarkdownEditorProps {
@@ -19,6 +20,9 @@ export function MarkdownEditor({
   className,
   placeholder = 'Start writing...',
 }: MarkdownEditorProps) {
+  const { resolvedTheme } = useTheme()
+  const colorMode = resolvedTheme === 'dark' ? 'dark' : 'light'
+
   const handleChange = useCallback(
     (value?: string) => {
       onChange?.(value || '')
@@ -27,7 +31,7 @@ export function MarkdownEditor({
   )
 
   return (
-    <div className={cn('h-full', className)} data-color-mode="dark">
+    <div className={cn('h-full', className)} data-color-mode={colorMode}>
       <MDEditor
         value={content}
         onChange={handleChange}
