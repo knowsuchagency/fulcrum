@@ -281,6 +281,13 @@
       "when": 1769511200000,
       "tag": "0039_task_relationships",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1769597600000,
+      "tag": "0040_migrate_task_tags_to_join_table",
+      "breakpoints": true
     }
   ]
 }

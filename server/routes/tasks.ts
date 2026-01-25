@@ -161,36 +161,25 @@ function getTaskLinks(taskId: string): TaskLink[] {
   return db.select().from(taskLinks).where(eq(taskLinks.taskId, taskId)).all()
 }
 
-// Helper to get tags for a task from join table (with fallback to JSON column)
-function getTaskTagsFromJoinTable(taskId: string, legacyTagsJson: string | null): string[] {
-  // Try to get tags from the join table first
+// Helper to get tags for a task from join table
+function getTaskTags(taskId: string): string[] {
   const joins = db
     .select()
     .from(taskTags)
     .where(eq(taskTags.taskId, taskId))
     .all()
 
-  if (joins.length > 0) {
-    // Get tag names from the tags table
-    const tagIds = joins.map((j) => j.tagId)
-    const tagRows = db
-      .select()
-      .from(tags)
-      .where(inArray(tags.id, tagIds))
-      .all()
-    return tagRows.map((t) => t.name)
+  if (joins.length === 0) {
+    return []
   }
 
-  // Fallback to legacy JSON column (still called 'labels' in DB)
-  if (legacyTagsJson) {
-    try {
-      return JSON.parse(legacyTagsJson)
-    } catch {
-      return []
-    }
-  }
-
-  return []
+  const tagIds = joins.map((j) => j.tagId)
+  const tagRows = db
+    .select()
+    .from(tags)
+    .where(inArray(tags.id, tagIds))
+    .all()
+  return tagRows.map((t) => t.name)
 }
 
 // Helper to parse JSON fields from database
@@ -202,7 +191,7 @@ function toApiResponse(
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
     agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
-    tags: getTaskTagsFromJoinTable(task.id, task.tags),
+    tags: getTaskTags(task.id),
   }
   if (includeLinks) {
     response.links = getTaskLinks(task.id)
@@ -230,7 +219,7 @@ app.get('/', (c) => {
   // Filter by tag if specified
   if (tag) {
     allTasks = allTasks.filter((t) => {
-      const taskTags = getTaskTagsFromJoinTable(t.id, t.tags)
+      const taskTags = getTaskTags(t.id)
       return taskTags.includes(tag)
     })
   }
@@ -285,7 +274,6 @@ app.post('/', async (c) => {
       // New generalized task fields
       projectId: body.projectId || null,
       repositoryId: body.repositoryId || null,
-      tags: body.tags && body.tags.length > 0 ? JSON.stringify(body.tags) : null,
       startedAt,
       dueDate: body.dueDate || null,
       createdAt: now,
@@ -311,6 +299,38 @@ app.post('/', async (c) => {
     }
 
     db.insert(tasks).values(newTask).run()
+
+    // Add tags to task_tags join table if provided
+    if (body.tags && body.tags.length > 0) {
+      for (const tagName of body.tags) {
+        const name = tagName.trim().toLowerCase()
+        if (!name) continue
+
+        // Get or create tag
+        let tag = db.select().from(tags).where(eq(tags.name, name)).get()
+        if (!tag) {
+          const tagId = crypto.randomUUID()
+          db.insert(tags)
+            .values({ id: tagId, name, color: null, createdAt: now })
+            .run()
+          tag = db.select().from(tags).where(eq(tags.id, tagId)).get()
+        }
+
+        if (tag) {
+          // Check if already linked (shouldn't happen for new task, but be safe)
+          const existing = db
+            .select()
+            .from(taskTags)
+            .where(and(eq(taskTags.taskId, newTask.id), eq(taskTags.tagId, tag.id)))
+            .get()
+          if (!existing) {
+            db.insert(taskTags)
+              .values({ id: crypto.randomUUID(), taskId: newTask.id, tagId: tag.id, createdAt: now })
+              .run()
+          }
+        }
+      }
+    }
 
     // Create dependencies if blockedByTaskIds provided
     if (body.blockedByTaskIds && body.blockedByTaskIds.length > 0) {
@@ -539,10 +559,10 @@ app.patch('/:id', async (c) => {
     if (body.viewState !== undefined) {
       updates.viewState = body.viewState ? JSON.stringify(body.viewState) : null
     }
-    // Serialize tags array to JSON string
-    if (body.tags !== undefined) {
-      updates.tags = body.tags && body.tags.length > 0 ? JSON.stringify(body.tags) : null
-    }
+
+    // Handle tags via join table (remove tags field from updates if present)
+    const tagsToUpdate = (body as { tags?: string[] }).tags
+    delete updates.tags // Don't try to update non-existent column
 
     // Only do additional db update if there are other fields to update
     if (Object.keys(otherFields).length > 0 || body.viewState !== undefined) {
@@ -550,6 +570,37 @@ app.patch('/:id', async (c) => {
         .set(updates)
         .where(eq(tasks.id, id))
         .run()
+      broadcast({ type: 'task:updated', payload: { taskId: id } })
+    }
+
+    // Update tags via join table if provided
+    if (tagsToUpdate !== undefined) {
+      // Clear existing tags
+      db.delete(taskTags).where(eq(taskTags.taskId, id)).run()
+
+      // Add new tags
+      if (tagsToUpdate && tagsToUpdate.length > 0) {
+        for (const tagName of tagsToUpdate) {
+          const name = tagName.trim().toLowerCase()
+          if (!name) continue
+
+          // Get or create tag
+          let tag = db.select().from(tags).where(eq(tags.name, name)).get()
+          if (!tag) {
+            const tagId = crypto.randomUUID()
+            db.insert(tags)
+              .values({ id: tagId, name, color: null, createdAt: now })
+              .run()
+            tag = db.select().from(tags).where(eq(tags.id, tagId)).get()
+          }
+
+          if (tag) {
+            db.insert(taskTags)
+              .values({ id: crypto.randomUUID(), taskId: id, tagId: tag.id, createdAt: now })
+              .run()
+          }
+        }
+      }
       broadcast({ type: 'task:updated', payload: { taskId: id } })
     }
 
@@ -846,7 +897,7 @@ app.post('/:id/tags', async (c) => {
         .run()
     }
 
-    const currentTags = getTaskTagsFromJoinTable(taskId, null)
+    const currentTags = getTaskTags(taskId)
     broadcast({ type: 'task:updated', payload: { taskId } })
     return c.json({ tags: currentTags })
   } catch (err) {
@@ -872,7 +923,7 @@ app.delete('/:id/tags/:tag', (c) => {
 
   if (!tag) {
     // Tag doesn't exist, nothing to remove
-    const currentTags = getTaskTagsFromJoinTable(taskId, task.tags)
+    const currentTags = getTaskTags(taskId)
     return c.json({ tags: currentTags })
   }
 
@@ -887,7 +938,7 @@ app.delete('/:id/tags/:tag', (c) => {
     .where(eq(tasks.id, taskId))
     .run()
 
-  const currentTags = getTaskTagsFromJoinTable(taskId, null)
+  const currentTags = getTaskTags(taskId)
   broadcast({ type: 'task:updated', payload: { taskId } })
   return c.json({ tags: currentTags })
 })
