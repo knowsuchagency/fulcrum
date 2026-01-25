@@ -35,15 +35,23 @@ interface SessionWithMessages extends ChatSession {
 function AssistantView() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const { chat: chatId } = Route.useSearch()
+  const { chat: chatId, tab: canvasActiveTab = 'viewer' } = Route.useSearch()
   const [isStreaming, setIsStreaming] = useState(false)
   const [provider, setProvider] = useState<AgentType>('claude')
   const [model, setModel] = useState<ClaudeModelId>('sonnet')
   const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
   const [editorContent, setEditorContent] = useState('')
   const [canvasContent, setCanvasContent] = useState<string | null>(null)
-  const [canvasActiveTab, setCanvasActiveTab] = useState<'viewer' | 'editor' | 'documents'>('viewer')
   const editorSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Set canvas active tab via URL
+  const setCanvasActiveTab = useCallback((tab: 'viewer' | 'editor' | 'documents') => {
+    navigate({
+      to: '/assistant',
+      search: (prev) => ({ ...prev, tab }),
+      replace: true,
+    })
+  }, [navigate])
 
   // Fetch OpenCode models and defaults from settings
   const { providers: opencodeProviders, installed: opencodeInstalled } = useOpencodeModels()
@@ -134,10 +142,14 @@ function AssistantView() {
       const res = await fetch(`/api/assistant/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ editorContent: content }),
+        body: JSON.stringify({ editorContent: content, saveDocument: true }),
       })
       if (!res.ok) throw new Error('Failed to save editor content')
       return res.json()
+    },
+    onSuccess: () => {
+      // Refresh documents list when editor content is saved
+      queryClient.invalidateQueries({ queryKey: ['assistant-documents'] })
     },
   })
 
@@ -274,9 +286,12 @@ function AssistantView() {
 
   // Handle document selection - navigate to chat and switch to editor tab
   const handleSelectDocument = useCallback((doc: Document) => {
-    setSelectedSessionId(doc.sessionId)
-    setCanvasActiveTab('editor')
-  }, [setSelectedSessionId])
+    navigate({
+      to: '/assistant',
+      search: (prev) => ({ ...prev, chat: doc.sessionId, tab: 'editor' as const }),
+      replace: true,
+    })
+  }, [navigate])
 
   // Send message handler
   const handleSendMessage = useCallback(
@@ -524,11 +539,18 @@ function AssistantView() {
   )
 }
 
+type CanvasTab = 'viewer' | 'editor' | 'documents'
+
 export const Route = createFileRoute('/assistant/')({
   component: AssistantView,
-  validateSearch: (search: Record<string, unknown>): { chat?: string } => {
+  validateSearch: (search: Record<string, unknown>): { chat?: string; tab?: CanvasTab } => {
+    const validTabs: CanvasTab[] = ['viewer', 'editor', 'documents']
+    const tab = typeof search.tab === 'string' && validTabs.includes(search.tab as CanvasTab)
+      ? (search.tab as CanvasTab)
+      : undefined
     return {
       chat: typeof search.chat === 'string' ? search.chat : undefined,
+      tab,
     }
   },
 })
