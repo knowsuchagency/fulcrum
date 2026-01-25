@@ -193,6 +193,34 @@ const DEFAULT_SETTINGS: Settings = {
 // Old default port for migration detection
 const OLD_DEFAULT_PORT = 3333
 
+// Valid setting paths that can be updated via updateSettingByPath
+// This ensures we don't silently write to unknown paths
+export const VALID_SETTING_PATHS = new Set([
+  'server.port',
+  'paths.defaultGitReposDir',
+  'editor.app',
+  'editor.host',
+  'editor.sshPort',
+  'integrations.githubPat',
+  'integrations.cloudflareApiToken',
+  'integrations.cloudflareAccountId',
+  'agent.defaultAgent',
+  'agent.opencodeModel',
+  'agent.opencodeDefaultAgent',
+  'agent.opencodePlanAgent',
+  'tasks.defaultTaskType',
+  'tasks.startWorktreeTasksImmediately',
+  'appearance.language',
+  'appearance.theme',
+  'appearance.timezone',
+  'appearance.syncClaudeCodeTheme',
+  'appearance.claudeCodeLightTheme',
+  'appearance.claudeCodeDarkTheme',
+  'assistant.provider',
+  'assistant.model',
+  'assistant.customInstructions',
+])
+
 // Migration map from old flat keys to new nested paths
 const MIGRATION_MAP: Record<string, string> = {
   port: 'server.port',
@@ -551,7 +579,13 @@ export function isDeveloperMode(): boolean {
 }
 
 // Update a setting by dot-notation path
+// Throws an error if the path is not a known valid setting path
 export function updateSettingByPath(settingPath: string, value: unknown): Settings {
+  // Validate that the path is a known setting
+  if (!VALID_SETTING_PATHS.has(settingPath)) {
+    throw new Error(`Unknown setting path: ${settingPath}`)
+  }
+
   ensureFulcrumDir()
   const settingsPath = getSettingsPath()
 

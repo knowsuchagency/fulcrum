@@ -244,6 +244,14 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
       expect(file.integrations.githubPat).toBe('new-key')
     })
+
+    test('throws error for unknown setting path', async () => {
+      const settingsPath = join(tempDir, 'settings.json')
+      writeFileSync(settingsPath, JSON.stringify({}))
+
+      const { updateSettingByPath } = await import('./settings')
+      expect(() => updateSettingByPath('unknown.path', 'value')).toThrow('Unknown setting path: unknown.path')
+    })
   })
 
   describe('resetSettings', () => {
