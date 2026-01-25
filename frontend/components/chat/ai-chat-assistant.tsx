@@ -249,33 +249,23 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
           }}
         >
-          <div className={`relative flex flex-col rounded-3xl shadow-2xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] ${
-            isDark
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-600'
-              : 'bg-white border border-zinc-200'
-          }`}>
+          <div className="film-grain relative flex flex-col font-sans rounded-3xl shadow-2xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] bg-popover border border-border" style={{ background: 'var(--gradient-card)' }}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-4 pb-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className={`text-xs font-medium ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>AI Assistant</span>
+                <span className="text-xs font-medium text-muted-foreground">AI Assistant</span>
               </div>
               <div className="flex items-center gap-2">
                 {/* Provider Toggle */}
                 {isOpencodeAvailable && (
-                  <div className={`flex items-center rounded-full p-0.5 ${
-                    isDark ? 'bg-zinc-800/60' : 'bg-zinc-100'
-                  }`}>
+                  <div className="flex items-center rounded-full p-0.5 bg-muted/60">
                     <button
                       onClick={() => setProvider('claude')}
                       className={`px-2 py-1 text-[10px] font-medium rounded-full transition-all ${
                         provider === 'claude'
-                          ? isDark
-                            ? 'bg-destructive/20 text-destructive'
-                            : 'bg-accent/20 text-accent'
-                          : isDark
-                            ? 'text-zinc-500 hover:text-zinc-300'
-                            : 'text-zinc-400 hover:text-zinc-600'
+                          ? 'bg-accent/20 text-accent'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       Claude
@@ -284,12 +274,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                       onClick={() => setProvider('opencode')}
                       className={`px-2 py-1 text-[10px] font-medium rounded-full transition-all ${
                         provider === 'opencode'
-                          ? isDark
-                            ? 'bg-destructive/20 text-destructive'
-                            : 'bg-accent/20 text-accent'
-                          : isDark
-                            ? 'text-zinc-500 hover:text-zinc-300'
-                            : 'text-zinc-400 hover:text-zinc-600'
+                          ? 'bg-accent/20 text-accent'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       OpenCode
@@ -305,11 +291,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                       setIsDropdownOpen(newState)
                       if (!newState) setModelFilter('')
                     }}
-                    className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-2xl transition-colors ${
-                      isDark
-                        ? 'bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700/60'
-                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                    }`}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-2xl transition-colors bg-muted/60 text-foreground hover:bg-muted"
                   >
                     <span className="max-w-[80px] truncate">{getModelLabel()}</span>
                     <ChevronDown
@@ -319,11 +301,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
 
                   {/* Model Dropdown */}
                   {isDropdownOpen && (
-                    <div className={`absolute top-full right-0 mt-1 w-48 max-h-64 overflow-y-auto rounded-xl shadow-xl backdrop-blur-sm z-10 animate-in fade-in-0 slide-in-from-top-1 duration-150 scrollbar-thin ${
-                      isDark
-                        ? 'bg-zinc-900/95 border border-zinc-700/50 scrollbar-thumb-zinc-700'
-                        : 'bg-white/95 border border-zinc-200 scrollbar-thumb-zinc-300'
-                    }`}>
+                    <div className="absolute top-full right-0 mt-1 w-48 max-h-64 overflow-y-auto rounded-xl shadow-xl backdrop-blur-sm z-10 animate-in fade-in-0 slide-in-from-top-1 duration-150 scrollbar-thin bg-popover/95 border border-border scrollbar-thumb-muted">
                       {/* Claude Models */}
                       {provider === 'claude' && (
                         <>
@@ -334,20 +312,18 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                                 setModel(option.id as ClaudeModelId)
                                 setIsDropdownOpen(false)
                               }}
-                              className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between ${
-                                isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
-                              } ${
+                              className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between hover:bg-muted/50 ${
                                 model === option.id
-                                  ? isDark ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
-                                  : isDark ? 'text-zinc-300' : 'text-zinc-700'
+                                  ? 'bg-accent/10 text-accent'
+                                  : 'text-foreground'
                               }`}
                             >
                               <div>
                                 <div className="font-medium text-xs">{option.label}</div>
-                                <div className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>{option.description}</div>
+                                <div className="text-[10px] text-muted-foreground">{option.description}</div>
                               </div>
                               {model === option.id && (
-                                <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-destructive' : 'text-accent'}`} />
+                                <Check className="w-3.5 h-3.5 flex-shrink-0 text-accent" />
                               )}
                             </button>
                           ))}
@@ -358,31 +334,25 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                       {provider === 'opencode' && (
                         <>
                           {/* Filter Input */}
-                          <div className={`sticky top-0 p-2 ${isDark ? 'bg-zinc-900/95' : 'bg-white/95'}`}>
+                          <div className="sticky top-0 p-2 bg-popover/95">
                             <input
                               ref={filterInputRef}
                               type="text"
                               value={modelFilter}
                               onChange={(e) => setModelFilter(e.target.value)}
                               placeholder="Filter models..."
-                              className={`w-full px-2.5 py-1.5 text-xs rounded-lg outline-none transition-colors ${
-                                isDark
-                                  ? 'bg-zinc-800 border border-zinc-700 text-zinc-200 placeholder:text-zinc-500 focus:border-zinc-600'
-                                  : 'bg-zinc-100 border border-zinc-200 text-zinc-700 placeholder:text-zinc-400 focus:border-zinc-300'
-                              }`}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg outline-none transition-colors bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
                               onKeyDown={(e) => e.stopPropagation()}
                             />
                           </div>
                           {sortedOpencodeProviders.length === 0 && modelFilter && (
-                            <div className={`px-3 py-4 text-xs text-center ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                            <div className="px-3 py-4 text-xs text-center text-muted-foreground">
                               No models match "{modelFilter}"
                             </div>
                           )}
                           {sortedOpencodeProviders.map(([providerName, models]) => (
                             <div key={providerName}>
-                              <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider ${
-                                isDark ? 'text-zinc-500 bg-zinc-800/50' : 'text-zinc-400 bg-zinc-50'
-                              }`}>
+                              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50">
                                 {providerName}
                               </div>
                               {models.map((modelName) => {
@@ -396,17 +366,15 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                                       setIsDropdownOpen(false)
                                       setModelFilter('')
                                     }}
-                                    className={`w-full px-3 py-1.5 text-left transition-colors flex items-center justify-between ${
-                                      isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
-                                    } ${
+                                    className={`w-full px-3 py-1.5 text-left transition-colors flex items-center justify-between hover:bg-muted/50 ${
                                       isSelected
-                                        ? isDark ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
-                                        : isDark ? 'text-zinc-300' : 'text-zinc-700'
+                                        ? 'bg-accent/10 text-accent'
+                                        : 'text-foreground'
                                     }`}
                                   >
                                     <span className="text-xs truncate">{modelName}</span>
                                     {isSelected && (
-                                      <Check className={`w-3.5 h-3.5 flex-shrink-0 ml-2 ${isDark ? 'text-destructive' : 'text-accent'}`} />
+                                      <Check className="w-3.5 h-3.5 flex-shrink-0 ml-2 text-accent" />
                                     )}
                                   </button>
                                 )
@@ -421,17 +389,17 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                 {hasMessages && (
                   <button
                     onClick={clearMessages}
-                    className={`p-1.5 rounded-full transition-colors ${isDark ? 'hover:bg-zinc-700/50' : 'hover:bg-zinc-200'}`}
+                    className="p-1.5 rounded-full transition-colors hover:bg-muted"
                     title="Clear conversation"
                   >
-                    <Trash2 className={`w-4 h-4 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`} />
+                    <Trash2 className="w-4 h-4 text-muted-foreground" />
                   </button>
                 )}
                 <button
                   onClick={close}
-                  className={`p-1.5 rounded-full transition-colors ${isDark ? 'hover:bg-zinc-700/50' : 'hover:bg-zinc-200'}`}
+                  className="p-1.5 rounded-full transition-colors hover:bg-muted"
                 >
-                  <X className={`w-4 h-4 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`} />
+                  <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
             </div>
@@ -440,9 +408,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             {messages.length > 0 && (
               <div
                 ref={scrollRef}
-                className={`overflow-y-auto px-4 py-2 max-h-[350px] scrollbar-thin scrollbar-track-transparent ${
-                  isDark ? 'scrollbar-thumb-zinc-700' : 'scrollbar-thumb-zinc-300'
-                }`}
+                className="overflow-y-auto px-4 py-2 max-h-[350px] scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted"
               >
               {messages.map((msg) => (
                 <ChatMessage
@@ -471,19 +437,15 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             )}
 
             {/* Input Section */}
-            <ChatInput onSend={handleSend} isLoading={isStreaming} isDark={isDark} />
+            <ChatInput onSend={handleSend} isLoading={isStreaming} />
 
             {/* Footer Info */}
-            <div className={`flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+            <div className="flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Info className="w-3 h-3" />
                 <span>
                   Press{' '}
-                  <kbd className={`px-1.5 py-0.5 rounded font-mono text-xs shadow-sm ${
-                    isDark
-                      ? 'bg-zinc-800 border border-zinc-600 text-zinc-400'
-                      : 'bg-zinc-100 border border-zinc-300 text-zinc-500'
-                  }`}>
+                  <kbd className="px-1.5 py-0.5 rounded font-mono text-xs shadow-sm bg-muted border border-border text-muted-foreground">
                     Shift + Enter
                   </kbd>{' '}
                   for new line
@@ -535,23 +497,11 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
 
       {/* Expanded Message Modal */}
       <Dialog open={!!expandedMessageId} onOpenChange={(open) => !open && setExpandedMessageId(null)}>
-        <DialogContent
-          className={`sm:max-w-2xl lg:max-w-4xl ${
-            isDark
-              ? 'bg-zinc-900 border-zinc-700'
-              : 'bg-white border-zinc-200'
-          }`}
-        >
+        <DialogContent className="sm:max-w-2xl lg:max-w-4xl">
           <DialogHeader>
-            <DialogTitle className={`flex items-center gap-2 ${isDark ? 'text-zinc-100' : 'text-zinc-800'}`}>
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  isDark
-                    ? 'bg-gradient-to-br from-destructive/30 to-destructive/20 border border-destructive/40'
-                    : 'bg-gradient-to-br from-accent/30 to-accent/20 border border-accent/40'
-                }`}
-              >
-                <Bot className={`w-3.5 h-3.5 ${isDark ? 'text-destructive' : 'text-accent'}`} />
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br from-accent/30 to-accent/20 border border-accent/40">
+                <Bot className="w-3.5 h-3.5 text-accent" />
               </div>
               AI Assistant Response
             </DialogTitle>
@@ -559,9 +509,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
           {expandedMessage && (
             <div
               data-color-mode={isDark ? 'dark' : 'light'}
-              className={`mt-2 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent ${
-                isDark ? 'scrollbar-thumb-zinc-700' : 'scrollbar-thumb-zinc-300'
-              }`}
+              className="mt-2 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted"
             >
               <MarkdownPreview
                 source={expandedMessage.content}
@@ -569,14 +517,11 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                   backgroundColor: 'transparent',
                   fontSize: '14px',
                   lineHeight: '1.7',
-                  color: isDark ? '#e4e4e7' : '#3f3f46',
+                  color: 'var(--foreground)',
+                  fontFamily: 'var(--font-sans)',
                 }}
                 components={markdownComponents}
-                className={`prose max-w-none [&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full [&_pre]:overflow-x-auto ${
-                  isDark
-                    ? '[&_pre]:bg-zinc-800 [&_pre]:border [&_pre]:border-zinc-700 [&_code]:text-destructive [&_a]:text-destructive [&_a:hover]:text-destructive/80 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200 [&_table]:border-zinc-700 [&_th]:bg-zinc-800 [&_th]:border-zinc-700 [&_th]:text-zinc-100 [&_td]:border-zinc-700 [&_td]:text-zinc-200'
-                    : '[&_pre]:bg-zinc-100 [&_pre]:border [&_pre]:border-zinc-200 [&_code]:text-accent [&_a]:text-accent [&_a:hover]:text-accent/80 [&_strong]:text-zinc-800 [&_h1]:text-zinc-800 [&_h2]:text-zinc-800 [&_h3]:text-zinc-800 [&_h4]:text-zinc-800 [&_li]:text-zinc-700 [&_table]:border-zinc-200 [&_th]:bg-zinc-100 [&_th]:border-zinc-200 [&_th]:text-zinc-800 [&_td]:border-zinc-200 [&_td]:text-zinc-700'
-                }`}
+                className="prose max-w-none [&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full [&_pre]:overflow-x-auto [&_pre]:bg-muted [&_pre]:border [&_pre]:border-border [&_code]:text-accent [&_a]:text-accent [&_a:hover]:text-accent/80 [&_strong]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_h4]:text-foreground [&_li]:text-foreground [&_table]:border-border [&_th]:bg-muted [&_th]:border-border [&_th]:text-foreground [&_td]:border-border [&_td]:text-foreground"
               />
             </div>
           )}

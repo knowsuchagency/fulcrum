@@ -5,14 +5,12 @@ interface ChatInputProps {
   onSend: (message: string) => void
   isLoading?: boolean
   placeholder?: string
-  isDark?: boolean
 }
 
 export function ChatInput({
   onSend,
   isLoading,
   placeholder = 'Manage tasks, projects, run commands, deploy apps... Ask anything!',
-  isDark = true,
 }: ChatInputProps) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -63,20 +61,10 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
           rows={3}
           disabled={isLoading}
-          className={`w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-normal leading-relaxed min-h-[100px] disabled:opacity-50 ${
-            isDark ? 'text-zinc-100 placeholder-zinc-500' : 'text-zinc-800 placeholder-zinc-400'
-          }`}
+          className="w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-sans font-normal leading-relaxed min-h-[100px] disabled:opacity-50 text-foreground placeholder-muted-foreground"
           placeholder={placeholder}
           style={{ scrollbarWidth: 'none' }}
         />
-{isDark && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(to top, rgba(39, 39, 42, 0.05), transparent)'
-            }}
-          />
-        )}
       </div>
 
       {/* Controls Section */}
@@ -86,15 +74,9 @@ export function ChatInput({
           <button
             onClick={handleSubmit}
             disabled={!value.trim() || isLoading}
-            className={`group relative p-3 border-none rounded-xl cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg ${
-              isDark
-                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                : 'bg-accent text-accent-foreground hover:bg-accent/90'
-            }`}
+            className="group relative p-3 border-none rounded-xl cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg bg-accent text-accent-foreground hover:bg-accent/90"
             style={{
-              boxShadow: isDark
-                ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--destructive) 30%, transparent)'
-                : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--accent) 30%, transparent)',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--accent) 30%, transparent)',
             }}
           >
             {isLoading ? (
@@ -104,11 +86,7 @@ export function ChatInput({
             )}
 
             {/* Animated background glow */}
-            <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 ${
-              isDark
-                ? 'bg-destructive'
-                : 'bg-accent'
-            }`} />
+            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 bg-accent" />
 
             {/* Ripple effect on click */}
             <div className="absolute inset-0 rounded-xl overflow-hidden">

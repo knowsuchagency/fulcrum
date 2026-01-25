@@ -34,40 +34,32 @@ export function ChatMessage({ role, content, isStreaming, onClick }: ChatMessage
       <div
         className={`w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center ${
           isUser
-            ? isDark ? 'bg-zinc-700 border border-zinc-600' : 'bg-zinc-200 border border-zinc-300'
-            : isDark
-              ? 'bg-gradient-to-br from-destructive/30 to-destructive/20 border border-destructive/40'
-              : 'bg-gradient-to-br from-accent/30 to-accent/20 border border-accent/40'
+            ? 'bg-muted border border-border'
+            : 'bg-gradient-to-br from-accent/30 to-accent/20 border border-accent/40'
         }`}
         style={
           !isUser
             ? {
-                boxShadow: isDark
-                  ? '0 0 10px color-mix(in oklch, var(--destructive) 30%, transparent), 0 0 20px color-mix(in oklch, var(--destructive) 15%, transparent)'
-                  : '0 0 10px color-mix(in oklch, var(--accent) 30%, transparent), 0 0 20px color-mix(in oklch, var(--accent) 15%, transparent)',
+                boxShadow: '0 0 10px color-mix(in oklch, var(--accent) 30%, transparent), 0 0 20px color-mix(in oklch, var(--accent) 15%, transparent)',
               }
             : undefined
         }
       >
         {isUser ? (
-          <User className={`w-4 h-4 ${isDark ? 'text-zinc-300' : 'text-zinc-600'}`} />
+          <User className="w-4 h-4 text-foreground" />
         ) : (
-          <Bot className={`w-4 h-4 ${isDark ? 'text-destructive' : 'text-accent'}`} />
+          <Bot className="w-4 h-4 text-accent" />
         )}
       </div>
 
       {/* Message content */}
       <div
         onClick={isClickable ? onClick : undefined}
-        className={`flex-1 min-w-0 max-w-[85%] rounded-2xl px-4 py-3 text-sm overflow-hidden ${
+        className={`flex-1 min-w-0 max-w-[85%] rounded-2xl px-4 py-3 text-sm overflow-hidden text-foreground ${
           isUser
-            ? isDark
-              ? 'bg-zinc-700/50 border border-zinc-600/50 text-zinc-100 rounded-tr-sm'
-              : 'bg-zinc-100 border border-zinc-200 text-zinc-800 rounded-tr-sm'
-            : isDark
-              ? 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-200 rounded-tl-sm'
-              : 'bg-white border border-zinc-200 text-zinc-700 rounded-tl-sm'
-        } ${isClickable ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ' + (isDark ? 'hover:ring-destructive/40 hover:ring-offset-zinc-900' : 'hover:ring-accent/40 hover:ring-offset-white') : ''}`}
+            ? 'bg-muted/50 border border-border/50 rounded-tr-sm'
+            : 'bg-card/50 border border-border/50 rounded-tl-sm'
+        } ${isClickable ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all hover:ring-accent/40 hover:ring-offset-background' : ''}`}
         title={isClickable ? 'Click to expand' : undefined}
       >
         {isUser ? (
@@ -80,30 +72,27 @@ export function ChatMessage({ role, content, isStreaming, onClick }: ChatMessage
                 backgroundColor: 'transparent',
                 fontSize: '13px',
                 lineHeight: '1.6',
-                color: isDark ? '#e4e4e7' : '#3f3f46',
+                color: 'var(--foreground)',
+                fontFamily: 'var(--font-sans)',
               }}
               components={components}
-              className={`prose-sm max-w-none [&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full [&_pre]:overflow-x-auto ${
-                isDark
-                  ? '[&_pre]:bg-zinc-900/50 [&_pre]:border [&_pre]:border-zinc-700/50 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-destructive [&_a]:text-destructive [&_a:hover]:text-destructive/80 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200 [&_table]:border-zinc-700 [&_th]:bg-zinc-800 [&_th]:border-zinc-700 [&_td]:border-zinc-700'
-                  : '[&_pre]:bg-zinc-100 [&_pre]:border [&_pre]:border-zinc-200 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-accent [&_a]:text-accent [&_a:hover]:text-accent/80 [&_strong]:text-zinc-800 [&_h1]:text-zinc-800 [&_h2]:text-zinc-800 [&_h3]:text-zinc-800 [&_h4]:text-zinc-800 [&_li]:text-zinc-700 [&_table]:border-zinc-200 [&_th]:bg-zinc-100 [&_th]:border-zinc-200 [&_td]:border-zinc-200'
-              }`}
+              className="prose-sm max-w-none [&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full [&_pre]:overflow-x-auto [&_pre]:bg-muted/50 [&_pre]:border [&_pre]:border-border/50 [&_pre]:text-xs [&_code]:text-xs [&_code]:text-accent [&_a]:text-accent [&_a:hover]:text-accent/80 [&_strong]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_h4]:text-foreground [&_li]:text-foreground [&_table]:border-border [&_th]:bg-muted [&_th]:border-border [&_td]:border-border"
             />
           </div>
         ) : isStreaming ? (
-          <span className={`inline-flex items-center gap-1 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
             <span className="animate-pulse">Thinking</span>
             <span className="inline-flex gap-0.5">
               <span
-                className={`w-1 h-1 rounded-full animate-bounce ${isDark ? 'bg-destructive' : 'bg-accent'}`}
+                className="w-1 h-1 rounded-full animate-bounce bg-accent"
                 style={{ animationDelay: '0ms' }}
               />
               <span
-                className={`w-1 h-1 rounded-full animate-bounce ${isDark ? 'bg-destructive' : 'bg-accent'}`}
+                className="w-1 h-1 rounded-full animate-bounce bg-accent"
                 style={{ animationDelay: '150ms' }}
               />
               <span
-                className={`w-1 h-1 rounded-full animate-bounce ${isDark ? 'bg-destructive' : 'bg-accent'}`}
+                className="w-1 h-1 rounded-full animate-bounce bg-accent"
                 style={{ animationDelay: '300ms' }}
               />
             </span>
