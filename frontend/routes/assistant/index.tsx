@@ -28,6 +28,7 @@ function AssistantView() {
   const [provider, setProvider] = useState<AgentType>('claude')
   const [model, setModel] = useState<ClaudeModelId>('opus')
   const [editorContent, setEditorContent] = useState('')
+  const [canvasContent, setCanvasContent] = useState<string | null>(null)
   const editorSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch sessions
@@ -71,6 +72,7 @@ function AssistantView() {
   useEffect(() => {
     setSelectedArtifact(null)
     setEditorContent('') // Clear editor immediately when switching sessions
+    setCanvasContent(null) // Clear canvas when switching sessions
   }, [chatId])
 
   // Load editor content from session once it's loaded
@@ -293,6 +295,9 @@ function AssistantView() {
                 log.assistant.info('DOCUMENT EVENT MATCHED - updating editor', { content: data.content })
                 setEditorContent(data.content)
                 saveEditorContentMutation.mutate({ sessionId: chatId, content: data.content })
+              } else if (currentEventType === 'canvas' && data.content) {
+                log.assistant.info('CANVAS EVENT - updating viewer', { contentPreview: data.content.slice(0, 100) })
+                setCanvasContent(data.content)
               } else if (!currentEventType && data.text) {
                 assistantContent += data.text
                 queryClient.setQueryData<SessionWithMessages>(
@@ -384,6 +389,7 @@ function AssistantView() {
         provider={provider}
         model={model}
         editorContent={editorContent}
+        canvasContent={canvasContent}
         onProviderChange={setProvider}
         onModelChange={setModel}
         onSelectSession={(session) => setSelectedSessionId(session.id)}

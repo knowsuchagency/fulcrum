@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Code2, LayoutGrid, Eye, Edit3, Star } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { ContentRenderer } from './content-renderer'
 import { MarkdownEditor } from './markdown-editor'
-import type { ChatSession, Artifact, ChatMessage } from './types'
+import type { ChatSession, Artifact } from './types'
 
 interface CanvasPanelProps {
   session: ChatSession | null
@@ -14,27 +14,7 @@ interface CanvasPanelProps {
   onSelectArtifact: (artifact: Artifact | null) => void
   editorContent: string
   onEditorContentChange: (content: string) => void
-}
-
-/**
- * Extract canvas content from the last assistant message
- * Looks for chart blocks that should be rendered in the viewer
- */
-function extractCanvasContent(messages?: ChatMessage[]): string | null {
-  if (!messages?.length) return null
-
-  // Find the last assistant message with chart content
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]
-    if (msg.role === 'assistant' && msg.content) {
-      // Check if it has chart or mdx-chart content
-      if (msg.content.includes('```chart') || msg.content.includes('```mdx-chart')) {
-        return msg.content
-      }
-    }
-  }
-
-  return null
+  canvasContent: string | null
 }
 
 export function CanvasPanel({
@@ -44,14 +24,9 @@ export function CanvasPanel({
   onSelectArtifact,
   editorContent,
   onEditorContentChange,
+  canvasContent,
 }: CanvasPanelProps) {
   const [activeTab, setActiveTab] = useState<'viewer' | 'editor' | 'gallery'>('viewer')
-
-  // Get canvas content from the latest message with vega-lite blocks
-  const canvasContent = useMemo(
-    () => extractCanvasContent(session?.messages),
-    [session?.messages]
-  )
 
   if (!session) {
     return (
@@ -125,16 +100,13 @@ interface ViewerTabProps {
 }
 
 function ViewerTab({ content, artifact }: ViewerTabProps) {
-  // Debug: log what we receive
-  console.log('ViewerTab content:', content?.slice(0, 200), 'artifact:', artifact?.type, 'artifact.content:', artifact?.content?.slice(0, 100))
-
   if (!content) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <Eye className="size-12 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">No content to display</p>
-          <p className="text-xs mt-1">Ask the assistant to create a chart or visualization</p>
+          <p className="text-sm">Canvas is empty</p>
+          <p className="text-xs mt-1">Ask the assistant to show a chart, table, or visualization</p>
         </div>
       </div>
     )

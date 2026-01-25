@@ -321,3 +321,68 @@
 .w-md-editor-fullscreen .w-md-editor-text {
   background-color: var(--background) !important;
 }
+
+/* Markdown preview code block contrast fix for light mode */
+.wmde-markdown pre {
+  background-color: var(--muted) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) code[class*="language-"],
+.wmde-markdown:not([data-color-mode="dark"]) pre[class*="language-"] {
+  color: oklch(0.25 0 0) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.comment,
+.wmde-markdown:not([data-color-mode="dark"]) .token.prolog,
+.wmde-markdown:not([data-color-mode="dark"]) .token.doctype,
+.wmde-markdown:not([data-color-mode="dark"]) .token.cdata {
+  color: oklch(0.45 0 0) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.punctuation {
+  color: oklch(0.35 0 0) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.property,
+.wmde-markdown:not([data-color-mode="dark"]) .token.tag,
+.wmde-markdown:not([data-color-mode="dark"]) .token.constant,
+.wmde-markdown:not([data-color-mode="dark"]) .token.symbol,
+.wmde-markdown:not([data-color-mode="dark"]) .token.deleted {
+  color: oklch(0.45 0.2 25) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.boolean,
+.wmde-markdown:not([data-color-mode="dark"]) .token.number {
+  color: oklch(0.45 0.15 280) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.selector,
+.wmde-markdown:not([data-color-mode="dark"]) .token.attr-name,
+.wmde-markdown:not([data-color-mode="dark"]) .token.string,
+.wmde-markdown:not([data-color-mode="dark"]) .token.char,
+.wmde-markdown:not([data-color-mode="dark"]) .token.builtin,
+.wmde-markdown:not([data-color-mode="dark"]) .token.inserted {
+  color: oklch(0.40 0.15 145) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.operator,
+.wmde-markdown:not([data-color-mode="dark"]) .token.entity,
+.wmde-markdown:not([data-color-mode="dark"]) .token.url,
+.wmde-markdown:not([data-color-mode="dark"]) .token.variable {
+  color: oklch(0.40 0.12 60) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.atrule,
+.wmde-markdown:not([data-color-mode="dark"]) .token.attr-value,
+.wmde-markdown:not([data-color-mode="dark"]) .token.function,
+.wmde-markdown:not([data-color-mode="dark"]) .token.class-name {
+  color: oklch(0.45 0.18 260) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.keyword {
+  color: oklch(0.45 0.2 320) !important;
+}
+
+.wmde-markdown:not([data-color-mode="dark"]) .token.parameter {
+  color: oklch(0.35 0.12 40) !important;
+}

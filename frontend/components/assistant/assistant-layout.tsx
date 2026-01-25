@@ -19,6 +19,7 @@ interface AssistantLayoutProps {
   provider: AgentType
   model: ClaudeModelId
   editorContent: string
+  canvasContent: string | null
   onProviderChange: (provider: AgentType) => void
   onModelChange: (model: ClaudeModelId) => void
   onSelectSession: (session: ChatSession) => void
@@ -38,6 +39,7 @@ export function AssistantLayout({
   provider,
   model,
   editorContent,
+  canvasContent,
   onProviderChange,
   onModelChange,
   onSelectSession,
@@ -75,6 +77,7 @@ export function AssistantLayout({
           onSelectArtifact={onSelectArtifact}
           editorContent={editorContent}
           onEditorContentChange={onEditorContentChange}
+          canvasContent={canvasContent}
         />
       </div>
     </div>

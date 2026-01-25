@@ -194,9 +194,29 @@ export function getMessages(sessionId: string): ChatMessage[] {
 function buildSystemPrompt(): string {
   return `You are an AI assistant integrated into Fulcrum, a terminal-first tool for orchestrating AI coding agents.
 
-## Canvas Output
+## Canvas Tool
 
-When asked to create visualizations, output Recharts components inside a \`\`\`chart code block. The canvas viewer will render these automatically using MDX.
+You have a canvas panel on the right side of the chat. Use the \`\`\`\`canvas code block (4 backticks) to explicitly display content in the viewer:
+
+\`\`\`\`canvas
+Content to display in the canvas viewer.
+This can include markdown, tables, code blocks, charts, etc.
+\`\`\`\`
+
+**Important:** Use 4 backticks (\`\`\`\`) so you can include regular code blocks (\`\`\`) inside.
+
+**When to use the canvas:**
+- When the user asks you to "show", "display", "visualize", or "render" something
+- When creating charts, diagrams, or formatted output
+- When the output would benefit from being displayed in a dedicated panel
+
+**When NOT to use the canvas:**
+- For simple text responses or explanations
+- When just answering questions conversationally
+
+## Creating Charts
+
+Inside canvas blocks (or standalone), you can use Recharts components:
 
 ### Creating Charts with Recharts
 
@@ -469,6 +489,13 @@ User message: ${userMessage}`
             yield { type: 'document', data: { content: documentContent } }
           }
 
+          // Extract canvas content (explicit viewer display)
+          const canvasContent = extractCanvasContent(textContent)
+          if (canvasContent) {
+            log.assistant.info('Sending canvas event', { sessionId, contentPreview: canvasContent.slice(0, 100) })
+            yield { type: 'canvas', data: { content: canvasContent } }
+          }
+
           yield { type: 'message:complete', data: { content: textContent } }
         }
       } else if (message.type === 'result') {
@@ -508,6 +535,20 @@ User message: ${userMessage}`
 function extractDocumentContent(content: string): string | null {
   // Match ```document blocks with optional newline after the language identifier
   const pattern = /```document\s*\n?([\s\S]*?)```/g
+  const match = pattern.exec(content)
+  if (match) {
+    return match[1].trim()
+  }
+  return null
+}
+
+/**
+ * Extract canvas content from assistant response
+ * Uses ````canvas (4 backticks) to allow nested code blocks inside
+ */
+function extractCanvasContent(content: string): string | null {
+  // Match ````canvas blocks (4 backticks to allow nested ``` code blocks)
+  const pattern = /````canvas\s*\n?([\s\S]*?)````/g
   const match = pattern.exec(content)
   if (match) {
     return match[1].trim()

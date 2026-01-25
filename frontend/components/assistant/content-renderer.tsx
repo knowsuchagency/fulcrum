@@ -44,11 +44,22 @@ export function ContentRenderer({ content, className, contentType }: ContentRend
     )
   }
 
-  // Otherwise, parse the content to extract chart blocks from markdown
+  // Parse the content to extract chart blocks from markdown
   const blocks = extractChartBlocks(content)
 
+  // If no chart blocks found, render the entire content as markdown
   if (blocks.length === 0) {
-    return null
+    return (
+      <div className={cn('space-y-4', className)}>
+        <MarkdownPreview
+          source={content}
+          className="!bg-transparent prose prose-sm dark:prose-invert max-w-none"
+          wrapperElement={{
+            'data-color-mode': colorMode,
+          }}
+        />
+      </div>
+    )
   }
 
   return (

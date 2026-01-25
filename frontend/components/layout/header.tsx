@@ -22,7 +22,6 @@ import {
   BrowserIcon,
   Chart02Icon,
   More03Icon,
-  ArtificialIntelligence01Icon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { useChat } from '@/hooks/use-chat'
@@ -37,7 +36,7 @@ const NAV_ITEMS = [
   { to: '/tasks', icon: TaskDaily01Icon, labelKey: 'header.tasks', matchPrefix: true },
   { to: '/terminals', icon: ComputerTerminal01Icon, labelKey: 'header.terminals', matchPrefix: false },
   { to: '/projects', icon: PackageIcon, labelKey: 'header.projects', matchPrefix: true },
-  { to: '/assistant', icon: ArtificialIntelligence01Icon, labelKey: 'header.assistant', matchPrefix: true },
+  { to: '/assistant', icon: null, lucideIcon: Bot, labelKey: 'header.assistant', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
   { to: '/monitoring', icon: Chart02Icon, labelKey: 'header.monitoring', matchPrefix: true },
 ] as const
@@ -86,7 +85,11 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                     render={<Link to={item.to} />}
                     onClick={() => setMenuValue('')}
                   >
-                    <HugeiconsIcon icon={item.icon} size={16} strokeWidth={2} />
+                    {item.icon ? (
+                      <HugeiconsIcon icon={item.icon} size={16} strokeWidth={2} />
+                    ) : item.lucideIcon ? (
+                      <item.lucideIcon className="size-4" />
+                    ) : null}
                     {t(item.labelKey)}
                   </NavigationMenuLink>
                 ))}
@@ -113,12 +116,16 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
                   active ? 'after:scale-x-100' : 'after:scale-x-0 hover:after:scale-x-100'
                 )}
               >
-                <HugeiconsIcon
-                  icon={item.icon}
-                  size={16}
-                  strokeWidth={2}
-                  data-slot="icon"
-                />
+                {item.icon ? (
+                  <HugeiconsIcon
+                    icon={item.icon}
+                    size={16}
+                    strokeWidth={2}
+                    data-slot="icon"
+                  />
+                ) : item.lucideIcon ? (
+                  <item.lucideIcon className="size-4" data-slot="icon" />
+                ) : null}
                 <span>{t(item.labelKey)}</span>
               </Link>
             )
