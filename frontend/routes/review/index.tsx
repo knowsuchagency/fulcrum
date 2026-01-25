@@ -86,7 +86,7 @@ function ReviewPage() {
         onValueChange={(v) => setActiveTab(v as 'prs' | 'issues')}
         className="flex flex-1 flex-col overflow-hidden"
       >
-        <div className="flex shrink-0 flex-col border-b border-border sm:flex-row sm:items-center sm:justify-between" style={{ background: 'var(--gradient-header)' }}>
+        <div className="film-grain relative flex shrink-0 flex-col border-b border-border sm:flex-row sm:items-center sm:justify-between" style={{ background: 'var(--gradient-header)' }}>
           <div className="flex items-center justify-between px-4 py-1 max-sm:px-2">
             <TabsList variant="line">
               <TabsTrigger value="prs">{t('tabs.pullRequests')}</TabsTrigger>
