@@ -230,10 +230,10 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
               <span className="text-muted-foreground/30">•</span>
             </>
           )}
-          {/* Blocking indicator (warning/amber) */}
+          {/* Blocking indicator (accent/blue) */}
           {isBlocking && (
             <>
-              <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-warning font-medium">
+              <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-accent font-medium">
                 <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2} />
                 <span>Blocking</span>
               </span>
