@@ -32,6 +32,8 @@ export const CONFIG_KEYS = {
   CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
   DEFAULT_TASK_TYPE: 'tasks.defaultTaskType',
   START_WORKTREE_TASKS_IMMEDIATELY: 'tasks.startWorktreeTasksImmediately',
+  ASSISTANT_MODEL: 'assistant.model',
+  ASSISTANT_CUSTOM_INSTRUCTIONS: 'assistant.customInstructions',
 } as const
 
 // Default values (client-side fallbacks)
@@ -265,6 +267,30 @@ export function useStartWorktreeTasksImmediately() {
 
 /** @deprecated Use useStartWorktreeTasksImmediately instead */
 export const useStartCodeTasksImmediately = useStartWorktreeTasksImmediately
+
+// Assistant settings
+export type AssistantModel = 'opus' | 'sonnet' | 'haiku'
+export const ASSISTANT_MODELS: AssistantModel[] = ['opus', 'sonnet', 'haiku']
+
+export function useAssistantModel() {
+  const query = useConfig(CONFIG_KEYS.ASSISTANT_MODEL)
+
+  return {
+    ...query,
+    data: (query.data?.value as AssistantModel) ?? 'sonnet',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useAssistantCustomInstructions() {
+  const query = useConfig(CONFIG_KEYS.ASSISTANT_CUSTOM_INSTRUCTIONS)
+
+  return {
+    ...query,
+    data: (query.data?.value as string | null) ?? null,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
 
 export function useUpdateConfig() {
   const queryClient = useQueryClient()

@@ -192,7 +192,7 @@ export function getMessages(sessionId: string): ChatMessage[] {
  * Build system prompt for assistant
  */
 function buildSystemPrompt(): string {
-  return `You are an AI assistant integrated into Fulcrum, a terminal-first tool for orchestrating AI coding agents.
+  const basePrompt = `You are an AI assistant integrated into Fulcrum, a terminal-first tool for orchestrating AI coding agents.
 
 ## Canvas Tool
 
@@ -371,6 +371,19 @@ Where in the world is Carmen Sandiego?
 - Any request that involves changing the document
 
 After the document block, you can explain what changes you made.`
+
+  // Add custom instructions from settings if configured
+  const settings = getSettings()
+  const customInstructions = settings.assistant.customInstructions
+  if (customInstructions) {
+    return basePrompt + `
+
+## Custom Instructions
+
+${customInstructions}`
+  }
+
+  return basePrompt
 }
 
 /**
@@ -379,7 +392,7 @@ After the document block, you can explain what changes you made.`
 export async function* streamMessage(
   sessionId: string,
   userMessage: string,
-  modelId: ModelId = 'sonnet',
+  modelId?: ModelId,
   editorContent?: string
 ): AsyncGenerator<{ type: string; data: unknown }> {
   const session = getSession(sessionId)
@@ -397,6 +410,9 @@ export async function* streamMessage(
 
   const settings = getSettings()
   const port = settings.server.port
+
+  // Use provided model or fall back to default from settings
+  const effectiveModelId: ModelId = modelId ?? settings.assistant.model
 
   // Get or create session state
   let state = sessionState.get(sessionId)
@@ -427,7 +443,7 @@ User message: ${userMessage}`
     const result = query({
       prompt: fullPrompt,
       options: {
-        model: MODEL_MAP[modelId],
+        model: MODEL_MAP[effectiveModelId],
         resume: state.claudeSessionId,
         includePartialMessages: true,
         mcpServers: {
@@ -514,7 +530,7 @@ User message: ${userMessage}`
     addMessage(sessionId, {
       role: 'assistant',
       content: currentText,
-      model: MODEL_MAP[modelId],
+      model: MODEL_MAP[effectiveModelId],
       tokensIn,
       tokensOut,
       sessionId,

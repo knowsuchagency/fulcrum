@@ -8,6 +8,7 @@
     "integrations": "集成",
     "zai": "z.ai",
     "agent": "AI 代理",
+    "assistant": "AI 助手",
     "tasks": "任务默认值",
     "notifications": "通知",
     "appearance": "外观",
@@ -105,6 +106,22 @@
       "opencodePlanAgent": {
         "label": "计划模式",
         "description": "受限/计划模式的代理名称。oh-my-opencode 使用 'Planner-Sisyphus'，原版 OpenCode 使用 'plan'。注意：Planner-Sisyphus 从 OpenCode 的 plan 代理配置继承模型，因此上述模型覆盖可能不适用。请在 ~/.config/opencode/oh-my-opencode.json 中配置模型。"
+      }
+    },
+    "assistant": {
+      "model": {
+        "label": "默认模型",
+        "description": "AI 助手对话使用的 Claude 模型",
+        "options": {
+          "opus": "Opus（最强大）",
+          "sonnet": "Sonnet（平衡）",
+          "haiku": "Haiku（最快）"
+        }
+      },
+      "customInstructions": {
+        "label": "自定义指令",
+        "description": "添加到助手系统提示的额外指令。用于自定义行为、提供上下文或设置偏好。",
+        "placeholder": "例如：始终使用 TypeScript。偏好函数式编程模式。"
       }
     },
     "tasks": {

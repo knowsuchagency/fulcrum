@@ -99,6 +99,9 @@ export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'li
 // Task type for defaults
 export type TaskType = 'worktree' | 'non-worktree'
 
+// Assistant model types
+export type AssistantModel = 'opus' | 'sonnet' | 'haiku'
+
 export interface Settings {
   _schemaVersion?: number
   server: {
@@ -134,6 +137,10 @@ export interface Settings {
     syncClaudeCodeTheme: boolean
     claudeCodeLightTheme: ClaudeCodeTheme
     claudeCodeDarkTheme: ClaudeCodeTheme
+  }
+  assistant: {
+    model: AssistantModel
+    customInstructions: string | null
   }
 }
 
@@ -173,6 +180,10 @@ const DEFAULT_SETTINGS: Settings = {
     syncClaudeCodeTheme: false,
     claudeCodeLightTheme: 'light-ansi',
     claudeCodeDarkTheme: 'dark-ansi',
+  },
+  assistant: {
+    model: 'sonnet',
+    customInstructions: null,
   },
 }
 
@@ -452,6 +463,10 @@ export function getSettings(): Settings {
       claudeCodeLightTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeLightTheme as ClaudeCodeTheme) ?? 'light-ansi',
       claudeCodeDarkTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeDarkTheme as ClaudeCodeTheme) ?? 'dark-ansi',
     },
+    assistant: {
+      model: ((parsed.assistant as Record<string, unknown>)?.model as AssistantModel) ?? DEFAULT_SETTINGS.assistant.model,
+      customInstructions: ((parsed.assistant as Record<string, unknown>)?.customInstructions as string | null) ?? null,
+    },
   }
 
   // Apply environment variable overrides
@@ -481,6 +496,7 @@ export function getSettings(): Settings {
     agent: fileSettings.agent,
     tasks: fileSettings.tasks,
     appearance: fileSettings.appearance,
+    assistant: fileSettings.assistant,
   }
 }
 

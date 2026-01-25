@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { FilesystemBrowser } from '@/components/ui/filesystem-browser'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -50,12 +51,16 @@ import {
   useDefaultTaskType,
   useStartWorktreeTasksImmediately,
   useTimezone,
+  useAssistantModel,
+  useAssistantCustomInstructions,
   NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
+  ASSISTANT_MODELS,
   type EditorApp,
   type ClaudeCodeTheme,
   type TaskType,
+  type AssistantModel,
 } from '@/hooks/use-config'
 import { useQueryClient } from '@tanstack/react-query'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
@@ -109,6 +114,8 @@ function SettingsPage() {
   const { data: defaultTaskType, isLoading: taskTypeLoading } = useDefaultTaskType()
   const { data: startWorktreeTasksImmediately, isLoading: startImmediatelyLoading } = useStartWorktreeTasksImmediately()
   const { data: timezone, isLoading: timezoneLoading } = useTimezone()
+  const { data: assistantModel, isLoading: assistantModelLoading } = useAssistantModel()
+  const { data: assistantCustomInstructions, isLoading: assistantInstructionsLoading } = useAssistantCustomInstructions()
   const { version } = useFulcrumVersion()
   const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
   const refreshVersionCheck = useRefreshVersionCheck()
@@ -168,6 +175,10 @@ function SettingsPage() {
 
   // Timezone local state
   const [localTimezone, setLocalTimezone] = useState<string | null>(null)
+
+  // Assistant settings local state
+  const [localAssistantModel, setLocalAssistantModel] = useState<AssistantModel>('sonnet')
+  const [localAssistantCustomInstructions, setLocalAssistantCustomInstructions] = useState<string>('')
 
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
@@ -250,8 +261,14 @@ function SettingsPage() {
     if (timezone !== undefined) setLocalTimezone(timezone)
   }, [timezone])
 
+  // Sync assistant settings
+  useEffect(() => {
+    if (assistantModel !== undefined) setLocalAssistantModel(assistantModel)
+    if (assistantCustomInstructions !== undefined) setLocalAssistantCustomInstructions(assistantCustomInstructions ?? '')
+  }, [assistantModel, assistantCustomInstructions])
+
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantModelLoading || assistantInstructionsLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -271,6 +288,10 @@ function SettingsPage() {
     localStartWorktreeTasksImmediately !== startWorktreeTasksImmediately
 
   const hasTimezoneChanges = localTimezone !== timezone
+
+  const hasAssistantChanges =
+    localAssistantModel !== assistantModel ||
+    localAssistantCustomInstructions !== (assistantCustomInstructions ?? '')
 
   // Check if deployment settings have changed
   // We compare local state against server values
@@ -320,7 +341,8 @@ function SettingsPage() {
     hasClaudeCodeChanges ||
     hasDeploymentChanges ||
     hasTaskDefaultsChanges ||
-    hasTimezoneChanges
+    hasTimezoneChanges ||
+    hasAssistantChanges
 
   const handleSaveAll = async () => {
     const promises: Promise<unknown>[] = []
@@ -556,6 +578,30 @@ function SettingsPage() {
           )
         })
       )
+    }
+
+    // Save assistant settings
+    if (hasAssistantChanges) {
+      if (localAssistantModel !== assistantModel) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.ASSISTANT_MODEL, value: localAssistantModel },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localAssistantCustomInstructions !== (assistantCustomInstructions ?? '')) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.ASSISTANT_CUSTOM_INSTRUCTIONS, value: localAssistantCustomInstructions || null },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
     }
 
     // Save deployment settings (cloudflare token/account ID)
@@ -1369,6 +1415,58 @@ function SettingsPage() {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+              </SettingsSection>
+
+              {/* AI Assistant */}
+              <SettingsSection title={t('sections.assistant')}>
+                <div className="space-y-4">
+                  {/* Default model */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.assistant.model.label')}
+                      </label>
+                      <Select
+                        value={localAssistantModel}
+                        onValueChange={(v) => setLocalAssistantModel(v as AssistantModel)}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ASSISTANT_MODELS.map((model) => (
+                            <SelectItem key={model} value={model}>
+                              {t(`fields.assistant.model.options.${model}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.assistant.model.description')}
+                    </p>
+                  </div>
+
+                  {/* Custom instructions */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm text-muted-foreground">
+                        {t('fields.assistant.customInstructions.label')}
+                      </label>
+                      <Textarea
+                        value={localAssistantCustomInstructions}
+                        onChange={(e) => setLocalAssistantCustomInstructions(e.target.value)}
+                        placeholder={t('fields.assistant.customInstructions.placeholder')}
+                        disabled={isLoading}
+                        className="min-h-24 resize-y font-mono text-sm"
+                        rows={4}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('fields.assistant.customInstructions.description')}
+                    </p>
+                  </div>
+                </div>
               </SettingsSection>
 
               {/* Task Defaults */}
