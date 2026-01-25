@@ -458,15 +458,31 @@ export function ChatPanel({
 }
 
 /**
- * Strip chart code blocks from message content and replace with a placeholder
- * This keeps the chat clean since charts render in the canvas panel
+ * Strip special content blocks from message and replace with placeholders
+ * This keeps the chat clean since these render in dedicated panels
  */
 function formatMessageForChat(content: string): string {
+  let result = content
+
   // Replace chart/mdx-chart blocks with a placeholder
-  return content.replace(
+  result = result.replace(
     /```(?:chart|mdx-chart)\s*[\s\S]*?```/g,
     '*📊 Chart rendered in canvas →*'
   )
+
+  // Replace <canvas> tags with a placeholder
+  result = result.replace(
+    /<canvas>[\s\S]*?<\/canvas>/g,
+    '*🖼️ Content displayed in canvas →*'
+  )
+
+  // Replace <editor> tags with a placeholder
+  result = result.replace(
+    /<editor>[\s\S]*?<\/editor>/g,
+    '*📝 Document updated in editor →*'
+  )
+
+  return result
 }
 
 interface MessageItemProps {

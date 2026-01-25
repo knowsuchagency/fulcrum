@@ -346,29 +346,29 @@ Use standard markdown for explanatory text. After the chart, explain key insight
 
 The user may have a document open in the Editor tab. When present, you'll see it in <editor_content> tags before their message.
 
-**IMPORTANT: To update the editor, use <document> XML tags.**
+**IMPORTANT: To update the editor, use <editor> XML tags.**
 
-When the user asks you to help with, edit, fix, improve, or modify their document in any way, output the corrected/updated content wrapped in document tags:
+When the user asks you to help with, edit, fix, improve, or modify their document in any way, output the corrected/updated content wrapped in editor tags:
 
-<document>
+<editor>
 The complete updated document content goes here.
-</document>
+</editor>
 
 This will automatically update the editor. Always provide the COMPLETE document, not just the changes.
 
 **Example - User asks "fix my spelling":**
 
-<document>
+<editor>
 Where in the world is Carmen Sandiego?
-</document>
+</editor>
 
-**When to use <document> tags:**
+**When to use <editor> tags:**
 - Fixing spelling, grammar, or typos
 - Rewriting or improving text
 - Adding new content
 - Any request that involves changing the document
 
-After the document tags, you can explain what changes you made.`
+After the editor tags, you can explain what changes you made.`
 
   // Add custom instructions from settings if configured
   const settings = getSettings()
@@ -543,12 +543,12 @@ User message: ${userMessage}`
 }
 
 /**
- * Extract document content from assistant response
- * Looks for <document> XML tags
+ * Extract editor content from assistant response
+ * Looks for <editor> XML tags
  */
 function extractDocumentContent(content: string): string | null {
-  // Match <document>...</document> tags
-  const pattern = /<document>\s*([\s\S]*?)\s*<\/document>/g
+  // Match <editor>...</editor> tags
+  const pattern = /<editor>\s*([\s\S]*?)\s*<\/editor>/g
   const match = pattern.exec(content)
   if (match) {
     return match[1].trim()
