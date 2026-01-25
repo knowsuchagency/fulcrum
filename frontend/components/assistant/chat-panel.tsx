@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import type { ChatSession, ChatMessage } from './types'
-import { AGENT_DISPLAY_NAMES, type AgentType } from '../../../shared/types'
+import type { AgentType } from '../../../shared/types'
 
 // Claude models for the AI assistant
 const CLAUDE_MODELS = [
@@ -23,13 +23,6 @@ const CLAUDE_MODELS = [
 ] as const
 
 type ClaudeModelId = (typeof CLAUDE_MODELS)[number]['id']
-
-// Display names for Claude models
-const CLAUDE_MODEL_NAMES: Record<string, string> = {
-  opus: 'Opus',
-  sonnet: 'Sonnet',
-  haiku: 'Haiku',
-}
 
 // Model Dropdown Component (supports both Claude and OpenCode)
 function ModelDropdown({
@@ -218,6 +211,7 @@ interface ChatPanelProps {
   onSelectSession: (session: ChatSession) => void
   onCreateSession: () => void
   onDeleteSession: (id: string) => void
+  onUpdateSessionTitle: (id: string, title: string) => void
 }
 
 export function ChatPanel({
@@ -236,9 +230,13 @@ export function ChatPanel({
   onSelectSession,
   onCreateSession,
   onDeleteSession,
+  onUpdateSessionTitle,
 }: ChatPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
   const messages = session?.messages || []
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editedTitle, setEditedTitle] = useState('')
 
   // Auto-scroll to bottom when new messages arrive
   const lastMessageContent = messages[messages.length - 1]?.content
@@ -248,28 +246,74 @@ export function ChatPanel({
     }
   }, [messages.length, lastMessageContent])
 
+  // Focus title input when editing starts
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [isEditingTitle])
+
+  // Start editing title
+  const handleStartEditTitle = useCallback(() => {
+    if (session) {
+      setEditedTitle(session.title)
+      setIsEditingTitle(true)
+    }
+  }, [session])
+
+  // Save title
+  const handleSaveTitle = useCallback(() => {
+    if (session && editedTitle.trim()) {
+      onUpdateSessionTitle(session.id, editedTitle.trim())
+    }
+    setIsEditingTitle(false)
+  }, [session, editedTitle, onUpdateSessionTitle])
+
+  // Handle title input keydown
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSaveTitle()
+    } else if (e.key === 'Escape') {
+      setIsEditingTitle(false)
+    }
+  }, [handleSaveTitle])
+
   return (
     <div className="h-full w-full flex flex-col bg-background">
       {/* Header with session dropdown */}
       <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+        {/* Editable title or dropdown */}
+        {isEditingTitle && session ? (
+          <input
+            ref={titleInputRef}
+            type="text"
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+            onBlur={handleSaveTitle}
+            onKeyDown={handleTitleKeyDown}
+            className="flex-1 px-2 py-1.5 text-sm font-medium bg-muted/50 border border-border rounded-md outline-none focus:ring-2 focus:ring-accent/20"
+          />
+        ) : (
         <DropdownMenu>
           <DropdownMenuTrigger className="flex-1 justify-between h-auto py-1.5 px-2 rounded-md hover:bg-muted/50 flex items-center">
               <div className="text-left min-w-0">
-                <div className="text-sm font-medium truncate">
+                <div
+                  className="text-sm font-medium truncate cursor-pointer hover:text-accent"
+                  onClick={(e) => {
+                    if (session) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleStartEditTitle()
+                    }
+                  }}
+                >
                   {session?.title || 'Select a chat'}
                 </div>
                 {session && (
-                  <div className="text-xs text-muted-foreground flex items-center gap-1">
-                    <span>{session.messageCount} messages</span>
-                    <span>·</span>
-                    <span>
-                      {AGENT_DISPLAY_NAMES[session.provider]}{' '}
-                      {session.model && (
-                        session.provider === 'claude'
-                          ? CLAUDE_MODEL_NAMES[session.model] || session.model
-                          : session.model
-                      )}
-                    </span>
+                  <div className="text-xs text-muted-foreground">
+                    {session.messageCount} messages
                   </div>
                 )}
               </div>
@@ -312,6 +356,7 @@ export function ChatPanel({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        )}
 
         {/* Provider Toggle */}
         {isOpencodeAvailable && (

@@ -28,6 +28,7 @@ interface AssistantLayoutProps {
   onOpencodeModelChange: (model: string) => void
   onSelectSession: (session: ChatSession) => void
   onDeleteSession: (id: string) => void
+  onUpdateSessionTitle: (id: string, title: string) => void
   onSelectArtifact: (artifact: Artifact | null) => void
   onEditorContentChange: (content: string) => void
   onSendMessage: (message: string) => void
@@ -52,6 +53,7 @@ export function AssistantLayout({
   onOpencodeModelChange,
   onSelectSession,
   onDeleteSession,
+  onUpdateSessionTitle,
   onSelectArtifact,
   onEditorContentChange,
   onSendMessage,
@@ -77,6 +79,7 @@ export function AssistantLayout({
           onSelectSession={onSelectSession}
           onCreateSession={onCreateSession}
           onDeleteSession={onDeleteSession}
+          onUpdateSessionTitle={onUpdateSessionTitle}
         />
       </div>
 

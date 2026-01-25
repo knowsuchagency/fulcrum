@@ -1,12 +1,18 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import { AssistantLayout, type ClaudeModelId } from '@/components/assistant'
 import type { ChatSession, ChatMessage, Artifact } from '@/components/assistant'
 import type { AgentType } from '../../../shared/types'
 import { log } from '@/lib/logger'
 import { useOpencodeModels } from '@/hooks/use-opencode-models'
 import { useOpencodeModel as useOpencodeModelSetting, useAssistantProvider, useAssistantModel } from '@/hooks/use-config'
+
+/** Generate a default title for new chats based on current timestamp */
+function generateDefaultTitle(): string {
+  return format(new Date(), "'Chat' - MMM d, h:mm a")
+}
 
 interface SessionsResponse {
   sessions: ChatSession[]
@@ -162,7 +168,7 @@ function AssistantView() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: 'New Chat',
+          title: generateDefaultTitle(),
           provider,
           model,
         }),
@@ -199,6 +205,23 @@ function AssistantView() {
       if (chatId) {
         setSelectedSessionId(null)
       }
+    },
+  })
+
+  // Update session title mutation
+  const updateSessionTitleMutation = useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }) => {
+      const res = await fetch(`/api/assistant/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+      if (!res.ok) throw new Error('Failed to update session title')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assistant-sessions'] })
+      queryClient.invalidateQueries({ queryKey: ['assistant-session', chatId] })
     },
   })
 
@@ -423,6 +446,7 @@ function AssistantView() {
         onOpencodeModelChange={setOpencodeModel}
         onSelectSession={(session) => setSelectedSessionId(session.id)}
         onDeleteSession={(id) => deleteSessionMutation.mutate(id)}
+        onUpdateSessionTitle={(id, title) => updateSessionTitleMutation.mutate({ id, title })}
         onSelectArtifact={setSelectedArtifact}
         onEditorContentChange={handleEditorContentChange}
         onSendMessage={handleSendMessage}
