@@ -952,7 +952,7 @@ function TaskView() {
 
           <TabsContent value="details" className="flex-1 min-h-0 bg-background">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="flex h-full flex-col">
-              <div className="flex items-center justify-between shrink-0 border-b border-border bg-background px-2 py-1">
+              <div className="film-grain relative flex items-center justify-between shrink-0 border-b border-border px-2 py-1" style={{ background: 'var(--gradient-header)' }}>
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
                     <HugeiconsIcon icon={CodeIcon} size={14} strokeWidth={2} data-slot="icon" />
@@ -1021,7 +1021,7 @@ function TaskView() {
           {/* Right: Diff/Browser Toggle */}
           <ResizablePanel defaultSize={50} minSize={30} className="bg-background">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="flex h-full flex-col">
-              <div className="flex items-center justify-between shrink-0 border-b border-border bg-background px-2 py-1">
+              <div className="film-grain relative flex items-center justify-between shrink-0 border-b border-border px-2 py-1" style={{ background: 'var(--gradient-header)' }}>
                 <TabsList variant="line">
                   <TabsTrigger value="diff">
                     <HugeiconsIcon

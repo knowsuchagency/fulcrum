@@ -157,7 +157,7 @@ export function RepositorySettingsTab({ repository }: RepositorySettingsTabProps
         {/* Two-column layout */}
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Left column: General settings */}
-          <div className="flex-1 bg-card rounded-lg p-6 border border-border">
+          <div className="film-grain relative flex-1 rounded-lg p-6 border border-border" style={{ background: 'var(--gradient-card)' }}>
             <h3 className="text-sm font-medium mb-4">{tProjects('detailView.general.repositoryTitle')}</h3>
             <FieldGroup>
               <Field>
@@ -213,7 +213,7 @@ export function RepositorySettingsTab({ repository }: RepositorySettingsTabProps
           </div>
 
           {/* Right column: Agent settings */}
-          <div className="flex-1 bg-card rounded-lg p-6 border border-border">
+          <div className="film-grain relative flex-1 rounded-lg p-6 border border-border" style={{ background: 'var(--gradient-card)' }}>
             <h3 className="text-sm font-medium mb-4">{tProjects('detailView.general.agentTitle')}</h3>
             <FieldGroup>
               <Field>

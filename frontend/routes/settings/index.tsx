@@ -73,7 +73,7 @@ export const Route = createFileRoute('/settings/')({
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="relative rounded-lg border border-border bg-card p-4 pt-6">
+    <div className="film-grain relative rounded-lg border border-border p-4 pt-6" style={{ background: 'var(--gradient-card)' }}>
       <span className="absolute -top-2.5 left-3 rounded bg-card px-2 text-xs font-medium text-muted-foreground">
         {title}
       </span>
