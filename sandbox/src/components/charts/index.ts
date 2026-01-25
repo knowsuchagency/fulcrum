@@ -1,6 +1,3 @@
-// Re-export chart components
-export { VegaChart } from './vega-chart'
-
 // Re-export recharts components for convenience
 export {
   Area,
