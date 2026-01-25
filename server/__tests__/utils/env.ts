@@ -1,7 +1,6 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { execSync } from 'node:child_process'
 import { resetDatabase } from '../../db'
 import { resetLogFilePath } from '../../lib/logger'
 import { resetDtachService } from '../../terminal/dtach-service'
@@ -32,16 +31,8 @@ export function setupTestEnv(): TestEnv {
   process.env.FULCRUM_DIR = fulcrumDir
   delete process.env.PORT // Clear to use defaults
 
-  // Push database schema to the new test database
-  try {
-    execSync('bun run drizzle-kit push', {
-      env: { ...process.env, FULCRUM_DIR: fulcrumDir },
-      stdio: 'pipe',
-    })
-  } catch (err) {
-    // Log but don't fail - some tests may not need the database
-    console.error('Failed to push database schema:', err)
-  }
+  // Database schema is created via migrations when the db is first accessed.
+  // The lazy db proxy triggers initializeDatabase() → runMigrations() on first use.
 
   return {
     fulcrumDir,
