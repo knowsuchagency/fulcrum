@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Code2, FileText, Eye, Edit3, Star, Pencil, Check, X } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -43,6 +44,7 @@ export function CanvasPanel({
   activeTab: controlledActiveTab,
   onTabChange,
 }: CanvasPanelProps) {
+  const { t } = useTranslation('assistant')
   // Note: artifacts and onSelectArtifact kept for API compatibility but unused after Gallery removal
   void _artifacts
   void _onSelectArtifact
@@ -63,8 +65,8 @@ export function CanvasPanel({
       <div className="h-full flex items-center justify-center bg-muted/30">
         <div className="text-center text-muted-foreground">
           <Code2 className="size-16 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">Select a chat to view the canvas</p>
-          <p className="text-xs mt-1">Charts and visualizations will appear here</p>
+          <p className="text-sm">{t('canvas.empty.title')}</p>
+          <p className="text-xs mt-1">{t('canvas.empty.description')}</p>
         </div>
       </div>
     )
@@ -78,15 +80,15 @@ export function CanvasPanel({
           <TabsList className="h-8">
             <TabsTrigger value="viewer" className="gap-1.5 text-xs">
               <Eye className="size-3" />
-              Canvas
+              {t('canvas.tabs.canvas')}
             </TabsTrigger>
             <TabsTrigger value="editor" className="gap-1.5 text-xs">
               <Edit3 className="size-3" />
-              Editor
+              {t('canvas.tabs.editor')}
             </TabsTrigger>
             <TabsTrigger value="documents" className="gap-1.5 text-xs">
               <FileText className="size-3" />
-              Documents
+              {t('canvas.tabs.documents')}
             </TabsTrigger>
           </TabsList>
 
@@ -99,11 +101,11 @@ export function CanvasPanel({
             <Tooltip>
               <TooltipTrigger>
                 <Badge variant="destructive" className="text-[0.6rem] h-4 px-1.5 cursor-help border border-destructive/30">
-                  Preview
+                  {t('preview.badge')}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent side="bottom" align="end" className="max-w-[200px]">
-                The AI Assistant is in active development. There may be breaking changes.
+                {t('preview.tooltip')}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -143,13 +145,14 @@ interface ViewerTabProps {
 }
 
 function ViewerTab({ content, artifact }: ViewerTabProps) {
+  const { t } = useTranslation('assistant')
   if (!content) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <Eye className="size-12 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">Canvas is empty</p>
-          <p className="text-xs mt-1">Ask the assistant to show a chart, table, or visualization</p>
+          <p className="text-sm">{t('canvas.viewer.empty.title')}</p>
+          <p className="text-xs mt-1">{t('canvas.viewer.empty.description')}</p>
         </div>
       </div>
     )
@@ -182,18 +185,19 @@ interface EditorTabProps {
 }
 
 function EditorTab({ content, onChange }: EditorTabProps) {
+  const { t } = useTranslation('assistant')
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-2 border-b border-border bg-background/50">
         <div className="text-xs text-muted-foreground">
-          Document Editor - Write markdown with AI assistance
+          {t('canvas.editor.title')}
         </div>
       </div>
       <div className="flex-1 overflow-hidden">
         <MarkdownEditor
           content={content}
           onChange={onChange}
-          placeholder="Start writing your document..."
+          placeholder={t('canvas.editor.placeholder')}
         />
       </div>
     </div>
@@ -213,13 +217,14 @@ function DocumentsTab({
   onStarDocument,
   onRenameDocument,
 }: DocumentsTabProps) {
+  const { t } = useTranslation('assistant')
   if (documents.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <FileText className="size-12 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">No documents yet</p>
-          <p className="text-xs mt-1">Documents created by AI will appear here</p>
+          <p className="text-sm">{t('canvas.documents.empty.title')}</p>
+          <p className="text-xs mt-1">{t('canvas.documents.empty.description')}</p>
         </div>
       </div>
     )

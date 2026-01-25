@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { observer } from 'mobx-react-lite'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTheme } from 'next-themes'
@@ -25,6 +26,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
  * Provides access to Fulcrum's MCP tools for task management, git operations, and more.
  */
 export const AiChatAssistant = observer(function AiChatAssistant() {
+  const { t } = useTranslation('assistant')
   const {
     isOpen,
     isStreaming,
@@ -175,14 +177,14 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   // Get current model display label
   const getModelLabel = () => {
     if (provider === 'claude') {
-      return currentClaudeModel?.label || 'Opus'
+      return currentClaudeModel?.label || t('models.opus')
     }
     if (opencodeModel) {
       // Show just the model name, not the full provider/model path
       const parts = opencodeModel.split('/')
       return parts.length > 1 ? parts[1] : opencodeModel
     }
-    return 'Select model'
+    return t('models.selectModel')
   }
 
   // Sort OpenCode providers alphabetically and filter by search term
@@ -258,15 +260,15 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             <div className="flex items-center justify-between px-6 pt-4 pb-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-medium text-muted-foreground">AI Assistant</span>
+                <span className="text-xs font-medium text-muted-foreground">{t('title')}</span>
                 <Tooltip>
                   <TooltipTrigger className="flex items-center">
                     <Badge variant="destructive" className="text-[0.55rem] h-3.5 px-1 cursor-help leading-none border border-destructive/30">
-                      Preview
+                      {t('preview.badge')}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="max-w-[200px]">
-                    The AI Assistant is in active development. There may be breaking changes.
+                    {t('preview.tooltip')}
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -282,7 +284,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      Claude
+                      {t('providers.claude')}
                     </button>
                     <button
                       onClick={() => setProvider('opencode')}
@@ -292,7 +294,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      OpenCode
+                      {t('providers.opencode')}
                     </button>
                   </div>
                 )}
@@ -354,14 +356,14 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                               type="text"
                               value={modelFilter}
                               onChange={(e) => setModelFilter(e.target.value)}
-                              placeholder="Filter models..."
+                              placeholder={t('models.filterModels')}
                               className="w-full px-2.5 py-1.5 text-xs rounded-lg outline-none transition-colors bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
                               onKeyDown={(e) => e.stopPropagation()}
                             />
                           </div>
                           {sortedOpencodeProviders.length === 0 && modelFilter && (
                             <div className="px-3 py-4 text-xs text-center text-muted-foreground">
-                              No models match "{modelFilter}"
+                              {t('models.noModelsMatch', { filter: modelFilter })}
                             </div>
                           )}
                           {sortedOpencodeProviders.map(([providerName, models]) => (
@@ -404,7 +406,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                   <button
                     onClick={clearMessages}
                     className="p-1.5 rounded-full transition-colors hover:bg-muted"
-                    title="Clear conversation"
+                    title={t('header.clearConversation')}
                   >
                     <Trash2 className="w-4 h-4 text-muted-foreground" />
                   </button>
@@ -458,16 +460,23 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               <div className="flex items-center gap-2">
                 <Info className="w-3 h-3" />
                 <span>
-                  Press{' '}
-                  <kbd className="px-1.5 py-0.5 rounded font-mono text-xs shadow-sm bg-muted border border-border text-muted-foreground">
-                    Shift + Enter
-                  </kbd>{' '}
-                  for new line
+                  {t('input.shiftEnterHint').split('<kbd>').map((part, i) => {
+                    if (i === 0) return part
+                    const [kbd, rest] = part.split('</kbd>')
+                    return (
+                      <span key={i}>
+                        <kbd className="px-1.5 py-0.5 rounded font-mono text-xs shadow-sm bg-muted border border-border text-muted-foreground">
+                          {kbd}
+                        </kbd>
+                        {rest}
+                      </span>
+                    )
+                  })}
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                <span>Connected</span>
+                <span>{t('header.connected')}</span>
               </div>
             </div>
 
@@ -517,7 +526,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br from-accent/30 to-accent/20 border border-accent/40">
                 <Bot className="w-3.5 h-3.5 text-accent" />
               </div>
-              AI Assistant Response
+              {t('header.aiAssistantResponse')}
             </DialogTitle>
           </DialogHeader>
           {expandedMessage && (

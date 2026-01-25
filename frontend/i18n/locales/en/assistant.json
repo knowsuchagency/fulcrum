@@ -1,0 +1,76 @@
+{
+  "title": "AI Assistant",
+  "preview": {
+    "badge": "Preview",
+    "tooltip": "The AI Assistant is in active development. There may be breaking changes."
+  },
+  "header": {
+    "clearConversation": "Clear conversation",
+    "connected": "Connected",
+    "aiAssistantResponse": "AI Assistant Response"
+  },
+  "providers": {
+    "claude": "Claude",
+    "opencode": "OpenCode"
+  },
+  "models": {
+    "selectModel": "Select model",
+    "filterModels": "Filter models...",
+    "noModelsMatch": "No models match \"{{filter}}\"",
+    "opus": "Opus",
+    "opusDescription": "Most capable",
+    "sonnet": "Sonnet",
+    "sonnetDescription": "Balanced",
+    "haiku": "Haiku",
+    "haikuDescription": "Fastest"
+  },
+  "input": {
+    "placeholder": "Manage tasks, projects, run commands, deploy apps... Ask anything!",
+    "askAnything": "Ask anything...",
+    "shiftEnterHint": "Press <kbd>Shift + Enter</kbd> for new line"
+  },
+  "chat": {
+    "selectChat": "Select a chat",
+    "messages": "messages",
+    "msgs": "msgs",
+    "rename": "Rename",
+    "delete": "Delete",
+    "noChatsYet": "No chats yet",
+    "newChat": "New Chat",
+    "selectOrCreate": "Select or create a chat to get started",
+    "startConversation": "Start a conversation by sending a message",
+    "thinking": "Thinking"
+  },
+  "canvas": {
+    "tabs": {
+      "canvas": "Canvas",
+      "editor": "Editor",
+      "documents": "Documents"
+    },
+    "empty": {
+      "title": "Select a chat to view the canvas",
+      "description": "Charts and visualizations will appear here"
+    },
+    "viewer": {
+      "empty": {
+        "title": "Canvas is empty",
+        "description": "Ask the assistant to show a chart, table, or visualization"
+      }
+    },
+    "editor": {
+      "title": "Document Editor - Write markdown with AI assistance",
+      "placeholder": "Start writing your document..."
+    },
+    "documents": {
+      "empty": {
+        "title": "No documents yet",
+        "description": "Documents created by AI will appear here"
+      }
+    }
+  },
+  "placeholders": {
+    "chartInCanvas": "Chart rendered in canvas",
+    "contentInCanvas": "Content displayed in canvas",
+    "documentInEditor": "Document updated in editor"
+  }
+}

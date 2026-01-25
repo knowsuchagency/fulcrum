@@ -1,0 +1,76 @@
+{
+  "title": "AI 助手",
+  "preview": {
+    "badge": "预览",
+    "tooltip": "AI 助手正在积极开发中，可能会有重大更改。"
+  },
+  "header": {
+    "clearConversation": "清除对话",
+    "connected": "已连接",
+    "aiAssistantResponse": "AI 助手回复"
+  },
+  "providers": {
+    "claude": "Claude",
+    "opencode": "OpenCode"
+  },
+  "models": {
+    "selectModel": "选择模型",
+    "filterModels": "筛选模型...",
+    "noModelsMatch": "没有匹配 \"{{filter}}\" 的模型",
+    "opus": "Opus",
+    "opusDescription": "最强大",
+    "sonnet": "Sonnet",
+    "sonnetDescription": "均衡",
+    "haiku": "Haiku",
+    "haikuDescription": "最快"
+  },
+  "input": {
+    "placeholder": "管理任务、项目、运行命令、部署应用... 问我任何问题！",
+    "askAnything": "问我任何问题...",
+    "shiftEnterHint": "按 <kbd>Shift + Enter</kbd> 换行"
+  },
+  "chat": {
+    "selectChat": "选择聊天",
+    "messages": "条消息",
+    "msgs": "条",
+    "rename": "重命名",
+    "delete": "删除",
+    "noChatsYet": "暂无聊天",
+    "newChat": "新建聊天",
+    "selectOrCreate": "选择或创建聊天开始对话",
+    "startConversation": "发送消息开始对话",
+    "thinking": "思考中"
+  },
+  "canvas": {
+    "tabs": {
+      "canvas": "画布",
+      "editor": "编辑器",
+      "documents": "文档"
+    },
+    "empty": {
+      "title": "选择聊天以查看画布",
+      "description": "图表和可视化内容将显示在这里"
+    },
+    "viewer": {
+      "empty": {
+        "title": "画布为空",
+        "description": "让助手显示图表、表格或可视化内容"
+      }
+    },
+    "editor": {
+      "title": "文档编辑器 - 使用 AI 辅助编写 Markdown",
+      "placeholder": "开始编写文档..."
+    },
+    "documents": {
+      "empty": {
+        "title": "暂无文档",
+        "description": "AI 创建的文档将显示在这里"
+      }
+    }
+  },
+  "placeholders": {
+    "chartInCanvas": "图表已在画布中渲染",
+    "contentInCanvas": "内容已在画布中显示",
+    "documentInEditor": "文档已在编辑器中更新"
+  }
+}

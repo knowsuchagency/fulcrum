@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Send, Loader2 } from 'lucide-react'
 
 interface ChatInputProps {
@@ -10,8 +11,10 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   isLoading,
-  placeholder = 'Manage tasks, projects, run commands, deploy apps... Ask anything!',
+  placeholder,
 }: ChatInputProps) {
+  const { t } = useTranslation('assistant')
+  const finalPlaceholder = placeholder ?? t('input.placeholder')
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -62,7 +65,7 @@ export function ChatInput({
           rows={3}
           disabled={isLoading}
           className="w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-sans font-normal leading-relaxed min-h-[100px] disabled:opacity-50 text-foreground placeholder-muted-foreground"
-          placeholder={placeholder}
+          placeholder={finalPlaceholder}
           style={{ scrollbarWidth: 'none' }}
         />
       </div>
