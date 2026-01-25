@@ -135,7 +135,7 @@ export function TaskDetailsPanel({ task }: TaskDetailsPanelProps) {
   const isOverdue = useIsOverdue(task.dueDate, task.status)
 
   return (
-    <div className="h-full overflow-auto p-4">
+    <div className="h-full overflow-auto p-4" style={{ background: 'var(--gradient-card)' }}>
       <div className="max-w-2xl space-y-4">
         {/* Title */}
         <div className="rounded-lg border bg-card p-4">

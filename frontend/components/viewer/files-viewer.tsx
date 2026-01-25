@@ -94,7 +94,7 @@ const FilesViewerInner = observer(function FilesViewerInner() {
   // Show file content when a file is selected, otherwise show the tree
   if (selectedFile) {
     return (
-      <div className="flex h-full flex-col bg-background">
+      <div className="flex h-full flex-col" style={{ background: 'var(--gradient-card)' }}>
         <FileContent onBack={handleBack} />
       </div>
     )

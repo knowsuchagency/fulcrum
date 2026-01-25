@@ -188,7 +188,7 @@ export function FileTree({
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full" style={{ background: 'var(--gradient-card)' }}>
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between px-2 py-1 border-b border-border bg-card">
         <span className="text-xs text-muted-foreground">{t('detailView.fileTree.title')}</span>
