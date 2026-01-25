@@ -77,7 +77,7 @@
     --status-canceled: oklch(0.5800 0.2600 25.0000);
     --gradient-subtle: linear-gradient(135deg, var(--accent) 0%, transparent 50%, var(--destructive) 100%);
     --gradient-card: linear-gradient(135deg, var(--card) 0%, var(--background) 100%);
-    --gradient-header: linear-gradient(135deg, var(--card) 0%, var(--muted) 100%);
+    --gradient-header: var(--background);
     --gradient-glow: oklch(0.4800 0.2200 260.0000);
 }
 
