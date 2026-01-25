@@ -35,8 +35,8 @@ interface HeaderProps {
 const NAV_ITEMS = [
   { to: '/tasks', icon: TaskDaily01Icon, labelKey: 'header.tasks', matchPrefix: true },
   { to: '/terminals', icon: ComputerTerminal01Icon, labelKey: 'header.terminals', matchPrefix: false },
-  { to: '/projects', icon: PackageIcon, labelKey: 'header.projects', matchPrefix: true },
   { to: '/assistant', icon: null, lucideIcon: Bot, labelKey: 'header.assistant', matchPrefix: true },
+  { to: '/projects', icon: PackageIcon, labelKey: 'header.projects', matchPrefix: true },
   { to: '/review', icon: GitPullRequestIcon, labelKey: 'header.review', matchPrefix: true },
   { to: '/monitoring', icon: Chart02Icon, labelKey: 'header.monitoring', matchPrefix: true },
 ] as const
