@@ -493,8 +493,8 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
           </div>
         </div>
 
-        {/* Deploy sub-tabs (shown when Deploy is active) */}
-        {activeTab === 'deploy' && (
+        {/* Deploy sub-tabs (shown when Deploy is active and app exists) */}
+        {activeTab === 'deploy' && hasApp && (
           <div className="shrink-0 border-b border-border bg-muted/50 px-4 hidden sm:flex items-center">
             <div className="flex gap-1">
               <button
@@ -600,18 +600,13 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
                     </div>
                   ) : (
                     /* No app - show create option */
-                    <div className="max-w-2xl">
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold">{tProjects('detailView.app.title')}</h3>
-                        <p className="text-sm text-muted-foreground">{tProjects('detailView.app.noApp')}</p>
-                      </div>
-
-                      <div className="border rounded-lg p-6 text-center">
+                    <div className="flex min-h-[calc(100vh-220px)] items-center justify-center">
+                      <div className="text-center">
                         <HugeiconsIcon
                           icon={Rocket01Icon}
-                          size={32}
+                          size={48}
                           strokeWidth={1.5}
-                          className="mx-auto text-muted-foreground mb-3"
+                          className="mx-auto text-muted-foreground mb-4"
                         />
                         <p className="text-sm text-muted-foreground mb-4">
                           {tProjects('detailView.app.configureDeploymentDescription')}
