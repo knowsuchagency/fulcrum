@@ -216,11 +216,11 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         style={{
           cursor: 'pointer',
           background: isDark
-            ? 'linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(168,85,247,0.8) 100%)'
-            : 'linear-gradient(135deg, rgba(13,92,99,0.9) 0%, rgba(11,122,117,0.9) 100%)',
+            ? 'linear-gradient(135deg, var(--destructive) 0%, color-mix(in oklch, var(--destructive) 80%, black) 100%)'
+            : 'linear-gradient(135deg, var(--accent) 0%, color-mix(in oklch, var(--accent) 80%, black) 100%)',
           boxShadow: isDark
-            ? '0 0 20px rgba(139, 92, 246, 0.7), 0 0 40px rgba(124, 58, 237, 0.5), 0 0 60px rgba(109, 40, 217, 0.3)'
-            : '0 0 20px rgba(13, 92, 99, 0.6), 0 0 40px rgba(11, 122, 117, 0.4), 0 0 60px rgba(13, 92, 99, 0.2)',
+            ? '0 0 20px color-mix(in oklch, var(--destructive) 50%, transparent), 0 0 40px color-mix(in oklch, var(--destructive) 30%, transparent)'
+            : '0 0 20px color-mix(in oklch, var(--accent) 50%, transparent), 0 0 40px color-mix(in oklch, var(--accent) 30%, transparent)',
           border: '2px solid rgba(255, 255, 255, 0.2)',
         }}
       >
@@ -236,8 +236,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         </div>
 
         {/* Breathing glow animation */}
-        <div className={`absolute inset-0 rounded-full animate-pulse opacity-30 ${isDark ? 'bg-indigo-500' : 'bg-teal-600'}`} />
-        {!isOpen && <div className={`absolute -inset-1 rounded-full animate-ping opacity-15 ${isDark ? 'bg-indigo-400' : 'bg-teal-500'}`} />}
+        <div className={`absolute inset-0 rounded-full animate-pulse opacity-30 ${isDark ? 'bg-destructive' : 'bg-accent'}`} />
+        {!isOpen && <div className={`absolute -inset-1 rounded-full animate-ping opacity-15 ${isDark ? 'bg-destructive' : 'bg-accent'}`} />}
       </button>
 
       {/* Chat Interface */}
@@ -271,8 +271,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                       className={`px-2 py-1 text-[10px] font-medium rounded-full transition-all ${
                         provider === 'claude'
                           ? isDark
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-teal-500/20 text-teal-600'
+                            ? 'bg-destructive/20 text-destructive'
+                            : 'bg-accent/20 text-accent'
                           : isDark
                             ? 'text-zinc-500 hover:text-zinc-300'
                             : 'text-zinc-400 hover:text-zinc-600'
@@ -285,8 +285,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                       className={`px-2 py-1 text-[10px] font-medium rounded-full transition-all ${
                         provider === 'opencode'
                           ? isDark
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-teal-500/20 text-teal-600'
+                            ? 'bg-destructive/20 text-destructive'
+                            : 'bg-accent/20 text-accent'
                           : isDark
                             ? 'text-zinc-500 hover:text-zinc-300'
                             : 'text-zinc-400 hover:text-zinc-600'
@@ -338,7 +338,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                                 isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
                               } ${
                                 model === option.id
-                                  ? isDark ? 'bg-red-500/10 text-red-400' : 'bg-teal-500/10 text-teal-600'
+                                  ? isDark ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
                                   : isDark ? 'text-zinc-300' : 'text-zinc-700'
                               }`}
                             >
@@ -347,7 +347,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                                 <div className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>{option.description}</div>
                               </div>
                               {model === option.id && (
-                                <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-red-400' : 'text-teal-600'}`} />
+                                <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isDark ? 'text-destructive' : 'text-accent'}`} />
                               )}
                             </button>
                           ))}
@@ -400,13 +400,13 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                                       isDark ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-100'
                                     } ${
                                       isSelected
-                                        ? isDark ? 'bg-red-500/10 text-red-400' : 'bg-teal-500/10 text-teal-600'
+                                        ? isDark ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
                                         : isDark ? 'text-zinc-300' : 'text-zinc-700'
                                     }`}
                                   >
                                     <span className="text-xs truncate">{modelName}</span>
                                     {isSelected && (
-                                      <Check className={`w-3.5 h-3.5 flex-shrink-0 ml-2 ${isDark ? 'text-red-400' : 'text-teal-600'}`} />
+                                      <Check className={`w-3.5 h-3.5 flex-shrink-0 ml-2 ${isDark ? 'text-destructive' : 'text-accent'}`} />
                                     )}
                                   </button>
                                 )
@@ -500,7 +500,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               <div
                 className="absolute inset-0 rounded-3xl pointer-events-none"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent, rgba(147, 51, 234, 0.05))',
+                  background: 'linear-gradient(135deg, color-mix(in oklch, var(--destructive) 3%, transparent), transparent, color-mix(in oklch, var(--accent) 3%, transparent))',
                 }}
               />
             )}
@@ -547,11 +547,11 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center ${
                   isDark
-                    ? 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-500/40'
-                    : 'bg-gradient-to-br from-teal-500/30 to-teal-400/30 border border-teal-500/40'
+                    ? 'bg-gradient-to-br from-destructive/30 to-destructive/20 border border-destructive/40'
+                    : 'bg-gradient-to-br from-accent/30 to-accent/20 border border-accent/40'
                 }`}
               >
-                <Bot className={`w-3.5 h-3.5 ${isDark ? 'text-red-300' : 'text-teal-600'}`} />
+                <Bot className={`w-3.5 h-3.5 ${isDark ? 'text-destructive' : 'text-accent'}`} />
               </div>
               AI Assistant Response
             </DialogTitle>
@@ -574,8 +574,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                 components={markdownComponents}
                 className={`prose max-w-none [&_table]:block [&_table]:overflow-x-auto [&_table]:max-w-full [&_pre]:overflow-x-auto ${
                   isDark
-                    ? '[&_pre]:bg-zinc-800 [&_pre]:border [&_pre]:border-zinc-700 [&_code]:text-red-300 [&_a]:text-red-400 [&_a:hover]:text-red-300 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200 [&_table]:border-zinc-700 [&_th]:bg-zinc-800 [&_th]:border-zinc-700 [&_th]:text-zinc-100 [&_td]:border-zinc-700 [&_td]:text-zinc-200'
-                    : '[&_pre]:bg-zinc-100 [&_pre]:border [&_pre]:border-zinc-200 [&_code]:text-teal-700 [&_a]:text-teal-600 [&_a:hover]:text-teal-700 [&_strong]:text-zinc-800 [&_h1]:text-zinc-800 [&_h2]:text-zinc-800 [&_h3]:text-zinc-800 [&_h4]:text-zinc-800 [&_li]:text-zinc-700 [&_table]:border-zinc-200 [&_th]:bg-zinc-100 [&_th]:border-zinc-200 [&_th]:text-zinc-800 [&_td]:border-zinc-200 [&_td]:text-zinc-700'
+                    ? '[&_pre]:bg-zinc-800 [&_pre]:border [&_pre]:border-zinc-700 [&_code]:text-destructive [&_a]:text-destructive [&_a:hover]:text-destructive/80 [&_strong]:text-zinc-100 [&_h1]:text-zinc-100 [&_h2]:text-zinc-100 [&_h3]:text-zinc-100 [&_h4]:text-zinc-100 [&_li]:text-zinc-200 [&_table]:border-zinc-700 [&_th]:bg-zinc-800 [&_th]:border-zinc-700 [&_th]:text-zinc-100 [&_td]:border-zinc-700 [&_td]:text-zinc-200'
+                    : '[&_pre]:bg-zinc-100 [&_pre]:border [&_pre]:border-zinc-200 [&_code]:text-accent [&_a]:text-accent [&_a:hover]:text-accent/80 [&_strong]:text-zinc-800 [&_h1]:text-zinc-800 [&_h2]:text-zinc-800 [&_h3]:text-zinc-800 [&_h4]:text-zinc-800 [&_li]:text-zinc-700 [&_table]:border-zinc-200 [&_th]:bg-zinc-100 [&_th]:border-zinc-200 [&_th]:text-zinc-800 [&_td]:border-zinc-200 [&_td]:text-zinc-700'
                 }`}
               />
             </div>

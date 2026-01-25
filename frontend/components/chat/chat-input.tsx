@@ -86,15 +86,15 @@ export function ChatInput({
           <button
             onClick={handleSubmit}
             disabled={!value.trim() || isLoading}
-            className={`group relative p-3 border-none rounded-xl cursor-pointer transition-all duration-300 text-white shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg ${
+            className={`group relative p-3 border-none rounded-xl cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg ${
               isDark
-                ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 hover:shadow-red-500/30'
-                : 'bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 hover:shadow-teal-500/30'
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : 'bg-accent text-accent-foreground hover:bg-accent/90'
             }`}
             style={{
               boxShadow: isDark
-                ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(239, 68, 68, 0.4)'
-                : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 rgba(13, 92, 99, 0.4)',
+                ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--destructive) 30%, transparent)'
+                : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--accent) 30%, transparent)',
             }}
           >
             {isLoading ? (
@@ -106,8 +106,8 @@ export function ChatInput({
             {/* Animated background glow */}
             <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 ${
               isDark
-                ? 'bg-gradient-to-r from-red-600 to-red-500'
-                : 'bg-gradient-to-r from-teal-600 to-teal-500'
+                ? 'bg-destructive'
+                : 'bg-accent'
             }`} />
 
             {/* Ripple effect on click */}
