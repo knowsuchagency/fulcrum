@@ -44,6 +44,9 @@ export const CONFIG_KEYS = {
   SYNC_CLAUDE_CODE_THEME: 'appearance.syncClaudeCodeTheme',
   CLAUDE_CODE_LIGHT_THEME: 'appearance.claudeCodeLightTheme',
   CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
+  ASSISTANT_PROVIDER: 'assistant.provider',
+  ASSISTANT_MODEL: 'assistant.model',
+  ASSISTANT_CUSTOM_INSTRUCTIONS: 'assistant.customInstructions',
 } as const
 
 // Legacy key mapping to new nested paths (for backward compatibility)
@@ -397,6 +400,25 @@ app.put('/:key', async (c) => {
     } else if (path === CONFIG_KEYS.START_WORKTREE_TASKS_IMMEDIATELY) {
       if (typeof value !== 'boolean') {
         return c.json({ error: 'Start worktree tasks immediately must be a boolean' }, 400)
+      }
+    } else if (path === CONFIG_KEYS.ASSISTANT_PROVIDER) {
+      const validProviders = ['claude', 'opencode']
+      if (!validProviders.includes(value as string)) {
+        return c.json({ error: `Assistant provider must be one of: ${validProviders.join(', ')}` }, 400)
+      }
+    } else if (path === CONFIG_KEYS.ASSISTANT_MODEL) {
+      const validModels = ['opus', 'sonnet', 'haiku']
+      if (!validModels.includes(value as string)) {
+        return c.json({ error: `Assistant model must be one of: ${validModels.join(', ')}` }, 400)
+      }
+    } else if (path === CONFIG_KEYS.ASSISTANT_CUSTOM_INSTRUCTIONS) {
+      // Custom instructions can be null or a string
+      if (value !== null && typeof value !== 'string') {
+        return c.json({ error: 'Custom instructions must be a string or null' }, 400)
+      }
+      // Convert empty string to null
+      if (value === '') {
+        value = null
       }
     } else if (typeof value === 'string' && value === '') {
       // Convert empty strings to null for nullable fields
