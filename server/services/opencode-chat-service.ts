@@ -328,7 +328,7 @@ export async function* streamOpencodeMessage(
 
     // Collect full response text
     let responseText = ''
-    let isComplete = false
+    // Track completion for logging
     const timeout = 120000 // 2 minute timeout
     const startTime = Date.now()
 
@@ -399,7 +399,6 @@ export async function* streamOpencodeMessage(
       // Handle session becoming idle (response complete) - only for our session
       if (evt.type === 'session.idle' && evt.properties?.sessionID === opencodeSessionId) {
         log.chat.debug('Session idle, response complete', { sessionId })
-        isComplete = true
         break
       }
 
