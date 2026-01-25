@@ -5,9 +5,6 @@ export interface ChatSession {
   title: string
   provider: 'claude' | 'opencode'
   model: string | null
-  worktreePath: string
-  branch: string
-  devPort: number | null
   projectId: string | null
   context: string | null
   isFavorite: boolean
@@ -35,17 +32,16 @@ export interface Artifact {
   id: string
   sessionId: string | null
   messageId: string | null
-  type: 'react' | 'chart' | 'mermaid' | 'markdown' | 'code'
+  type: 'vega-lite' | 'mermaid' | 'markdown' | 'code'
   title: string
   description: string | null
+  content: string | null
   version: number
-  previewPath: string | null
-  contentPath: string
+  previewUrl: string | null
   isFavorite: boolean
   tags: string | null
   createdAt: string
   updatedAt: string
-  content?: string // Loaded on demand
 }
 
 export interface ArtifactWithContent extends Artifact {

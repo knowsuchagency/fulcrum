@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { Bot, User, Send, Loader2, Plus, ChevronDown, Trash2 } from 'lucide-react'
+import { Bot, User, Send, Loader2, Plus, ChevronDown, Trash2, Check } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import MarkdownPreview from '@uiw/react-markdown-preview'
 import { Button } from '@/components/ui/button'
@@ -13,11 +13,101 @@ import {
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import type { ChatSession, ChatMessage } from './types'
+import { AGENT_DISPLAY_NAMES, type AgentType } from '../../../shared/types'
+
+// Claude models for the AI assistant
+const CLAUDE_MODELS = [
+  { id: 'opus', label: 'Opus', description: 'Most capable' },
+  { id: 'sonnet', label: 'Sonnet', description: 'Balanced' },
+  { id: 'haiku', label: 'Haiku', description: 'Fastest' },
+] as const
+
+type ClaudeModelId = (typeof CLAUDE_MODELS)[number]['id']
+
+// Display names for Claude models
+const CLAUDE_MODEL_NAMES: Record<string, string> = {
+  opus: 'Opus',
+  sonnet: 'Sonnet',
+  haiku: 'Haiku',
+}
+
+// Model Dropdown Component (matches ai-chat-assistant styling)
+function ModelDropdown({
+  provider,
+  model,
+  onModelChange,
+}: {
+  provider: AgentType
+  model: ClaudeModelId
+  onModelChange: (model: ClaudeModelId) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+
+  // Only show for Claude provider
+  if (provider !== 'claude') return null
+
+  const currentModel = CLAUDE_MODELS.find((m) => m.id === model)
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-2xl transition-colors bg-muted/60 text-foreground hover:bg-muted"
+      >
+        <span>{currentModel?.label || 'Opus'}</span>
+        <ChevronDown className={cn('w-3 h-3 transition-transform flex-shrink-0', isOpen && 'rotate-180')} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-1 w-36 rounded-xl shadow-xl backdrop-blur-sm z-50 animate-in fade-in-0 slide-in-from-top-1 duration-150 bg-popover/95 border border-border">
+          {CLAUDE_MODELS.map((option) => (
+            <button
+              key={option.id}
+              onClick={() => {
+                onModelChange(option.id)
+                setIsOpen(false)
+              }}
+              className={cn(
+                'w-full px-3 py-2 text-left transition-colors flex items-center justify-between hover:bg-muted/50 first:rounded-t-xl last:rounded-b-xl',
+                model === option.id ? 'bg-accent/10 text-accent' : 'text-foreground'
+              )}
+            >
+              <div>
+                <div className="font-medium text-xs">{option.label}</div>
+                <div className="text-[10px] text-muted-foreground">{option.description}</div>
+              </div>
+              {model === option.id && <Check className="w-3.5 h-3.5 flex-shrink-0 text-accent" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface ChatPanelProps {
   sessions: ChatSession[]
   session: ChatSession | null
   isLoading: boolean
+  provider: AgentType
+  model: ClaudeModelId
+  onProviderChange: (provider: AgentType) => void
+  onModelChange: (model: ClaudeModelId) => void
   onSendMessage: (message: string) => void
   onSelectSession: (session: ChatSession) => void
   onCreateSession: () => void
@@ -28,6 +118,10 @@ export function ChatPanel({
   sessions,
   session,
   isLoading,
+  provider,
+  model,
+  onProviderChange,
+  onModelChange,
   onSendMessage,
   onSelectSession,
   onCreateSession,
@@ -55,8 +149,17 @@ export function ChatPanel({
                   {session?.title || 'Select a chat'}
                 </div>
                 {session && (
-                  <div className="text-xs text-muted-foreground">
-                    {session.messageCount} messages
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span>{session.messageCount} messages</span>
+                    <span>·</span>
+                    <span>
+                      {AGENT_DISPLAY_NAMES[session.provider]}{' '}
+                      {session.model && (
+                        session.provider === 'claude'
+                          ? CLAUDE_MODEL_NAMES[session.model] || session.model
+                          : session.model
+                      )}
+                    </span>
                   </div>
                 )}
               </div>
@@ -99,6 +202,39 @@ export function ChatPanel({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Provider Toggle */}
+        <div className="flex items-center rounded-full p-0.5 bg-muted/60">
+          <button
+            onClick={() => onProviderChange('claude')}
+            className={cn(
+              'px-2 py-1 text-[10px] font-medium rounded-full transition-all',
+              provider === 'claude'
+                ? 'bg-accent/20 text-accent'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Claude
+          </button>
+          <button
+            onClick={() => onProviderChange('opencode')}
+            className={cn(
+              'px-2 py-1 text-[10px] font-medium rounded-full transition-all',
+              provider === 'opencode'
+                ? 'bg-accent/20 text-accent'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            OpenCode
+          </button>
+        </div>
+
+        {/* Model Dropdown */}
+        <ModelDropdown
+          provider={provider}
+          model={model}
+          onModelChange={onModelChange}
+        />
 
         <Button size="icon-sm" variant="ghost" onClick={onCreateSession} title="New chat">
           <Plus className="size-4" />
@@ -161,6 +297,19 @@ export function ChatPanel({
   )
 }
 
+/**
+ * Strip vega-lite code blocks from message content and replace with a placeholder
+ * This keeps the chat clean since charts render in the canvas panel
+ */
+function formatMessageForChat(content: string): string {
+  // Replace vega-lite blocks with a placeholder
+  // More flexible regex to handle different formatting styles
+  return content.replace(
+    /```vega-lite\s*[\s\S]*?```/g,
+    '*📊 Chart rendered in canvas →*'
+  )
+}
+
 interface MessageItemProps {
   message: ChatMessage
 }
@@ -169,6 +318,7 @@ function MessageItem({ message }: MessageItemProps) {
   const isUser = message.role === 'user'
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
+  const displayContent = isUser ? message.content : formatMessageForChat(message.content)
 
   return (
     <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
@@ -202,7 +352,7 @@ function MessageItem({ message }: MessageItemProps) {
         ) : (
           <div data-color-mode={isDark ? 'dark' : 'light'}>
             <MarkdownPreview
-              source={message.content}
+              source={displayContent}
               style={{
                 backgroundColor: 'transparent',
                 fontSize: '13px',

@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AssistantLayout } from '@/components/assistant'
+import { AssistantLayout, type ClaudeModelId } from '@/components/assistant'
 import type { ChatSession, ChatMessage, Artifact } from '@/components/assistant'
+import type { AgentType } from '../../../shared/types'
 
 interface SessionsResponse {
   sessions: ChatSession[]
@@ -22,6 +23,8 @@ function AssistantView() {
   const queryClient = useQueryClient()
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [provider, setProvider] = useState<AgentType>('claude')
+  const [model, setModel] = useState<ClaudeModelId>('opus')
 
   // Fetch sessions
   const { data: sessionsData, isLoading: isLoadingSessions } = useQuery<SessionsResponse>({
@@ -68,7 +71,8 @@ function AssistantView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: 'New Chat',
-          provider: 'claude',
+          provider,
+          model,
         }),
       })
       if (!res.ok) {
@@ -129,13 +133,16 @@ function AssistantView() {
         }
       )
 
+      // Use current model from state
+      const currentModel = model
+
       try {
         const response = await fetch(`/api/assistant/sessions/${selectedSessionId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message,
-            model: 'sonnet',
+            model: currentModel,
           }),
         })
 
@@ -157,7 +164,7 @@ function AssistantView() {
           content: '',
           toolCalls: null,
           artifacts: null,
-          model: 'claude-sonnet-4-5',
+          model: currentModel,
           tokensIn: null,
           tokensOut: null,
           createdAt: new Date().toISOString(),
@@ -248,7 +255,7 @@ function AssistantView() {
         queryClient.invalidateQueries({ queryKey: ['assistant-sessions'] })
       }
     },
-    [selectedSessionId, isStreaming, queryClient]
+    [selectedSessionId, model, isStreaming, queryClient]
   )
 
   // Auto-select first session or create one if none exist
@@ -271,11 +278,15 @@ function AssistantView() {
         artifacts={artifacts}
         selectedArtifact={selectedArtifact}
         isLoading={isStreaming}
+        provider={provider}
+        model={model}
+        onProviderChange={setProvider}
+        onModelChange={setModel}
         onSelectSession={(session) => setSelectedSessionId(session.id)}
-        onCreateSession={() => createSessionMutation.mutate()}
         onDeleteSession={(id) => deleteSessionMutation.mutate(id)}
         onSelectArtifact={setSelectedArtifact}
         onSendMessage={handleSendMessage}
+        onCreateSession={() => createSessionMutation.mutate()}
       />
     </div>
   )

@@ -1,6 +1,14 @@
 import { ChatPanel } from './chat-panel'
 import { CanvasPanel } from './canvas-panel'
 import type { ChatSession, Artifact } from './types'
+import type { AgentType } from '../../../shared/types'
+
+export type ClaudeModelId = 'opus' | 'sonnet' | 'haiku'
+
+export interface CreateSessionOptions {
+  provider: AgentType
+  model: string
+}
 
 interface AssistantLayoutProps {
   sessions: ChatSession[]
@@ -8,11 +16,15 @@ interface AssistantLayoutProps {
   artifacts: Artifact[]
   selectedArtifact: Artifact | null
   isLoading: boolean
+  provider: AgentType
+  model: ClaudeModelId
+  onProviderChange: (provider: AgentType) => void
+  onModelChange: (model: ClaudeModelId) => void
   onSelectSession: (session: ChatSession) => void
-  onCreateSession: () => void
   onDeleteSession: (id: string) => void
   onSelectArtifact: (artifact: Artifact | null) => void
   onSendMessage: (message: string) => void
+  onCreateSession: () => void
 }
 
 export function AssistantLayout({
@@ -21,11 +33,15 @@ export function AssistantLayout({
   artifacts,
   selectedArtifact,
   isLoading,
+  provider,
+  model,
+  onProviderChange,
+  onModelChange,
   onSelectSession,
-  onCreateSession,
   onDeleteSession,
   onSelectArtifact,
   onSendMessage,
+  onCreateSession,
 }: AssistantLayoutProps) {
   return (
     <div className="h-full w-full flex">
@@ -35,6 +51,10 @@ export function AssistantLayout({
           sessions={sessions}
           session={selectedSession}
           isLoading={isLoading}
+          provider={provider}
+          model={model}
+          onProviderChange={onProviderChange}
+          onModelChange={onModelChange}
           onSendMessage={onSendMessage}
           onSelectSession={onSelectSession}
           onCreateSession={onCreateSession}

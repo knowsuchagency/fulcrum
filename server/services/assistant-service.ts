@@ -1,18 +1,10 @@
 import { nanoid } from 'nanoid'
-import { eq, desc, and, sql, like, or } from 'drizzle-orm'
+import { eq, desc, and, sql, like } from 'drizzle-orm'
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import { db, chatSessions, chatMessages, artifacts } from '../db'
 import type { ChatSession, NewChatSession, ChatMessage, NewChatMessage, Artifact, NewArtifact } from '../db/schema'
 import { getSettings } from '../lib/settings'
 import { log } from '../lib/logger'
-import {
-  createChatWorktree,
-  deleteChatWorktree,
-  writeArtifactContent,
-  createArtifactDir,
-  startDevServer,
-  stopDevServer,
-} from './sandbox-service'
 import type { PageContext } from '../../shared/types'
 
 type ModelId = 'opus' | 'sonnet' | 'haiku'
@@ -27,7 +19,7 @@ const MODEL_MAP: Record<ModelId, string> = {
 const sessionState = new Map<string, { claudeSessionId?: string }>()
 
 /**
- * Create a new chat session with worktree
+ * Create a new chat session
  */
 export async function createSession(options: {
   title?: string
@@ -39,30 +31,11 @@ export async function createSession(options: {
   const id = nanoid()
   const now = new Date().toISOString()
 
-  // Create worktree for this session
-  const { worktreePath, branch } = createChatWorktree(id)
-
-  // Auto-start dev server for the sandbox
-  let devPort: number | undefined
-  try {
-    devPort = await startDevServer(id, worktreePath)
-    log.assistant.info('Dev server started for session', { sessionId: id, devPort })
-  } catch (err) {
-    log.assistant.warn('Failed to start dev server', {
-      sessionId: id,
-      error: err instanceof Error ? err.message : String(err),
-    })
-    // Continue without dev server - it can be started later
-  }
-
   const session: NewChatSession = {
     id,
     title: options.title || 'New Chat',
     provider: options.provider || 'claude',
     model: options.model,
-    worktreePath,
-    branch,
-    devPort,
     projectId: options.projectId,
     context: options.context ? JSON.stringify(options.context) : undefined,
     isFavorite: false,
@@ -72,7 +45,7 @@ export async function createSession(options: {
   }
 
   db.insert(chatSessions).values(session).run()
-  log.assistant.info('Created chat session', { sessionId: id, worktreePath, devPort })
+  log.assistant.info('Created chat session', { sessionId: id })
 
   return db.select().from(chatSessions).where(eq(chatSessions.id, id)).get()!
 }
@@ -152,18 +125,11 @@ export function updateSession(id: string, updates: Partial<Pick<ChatSession, 'ti
 }
 
 /**
- * Delete a session and its worktree
+ * Delete a session and its data
  */
 export function deleteSession(id: string): boolean {
   const session = getSession(id)
   if (!session) return false
-
-  // Stop the dev server
-  try {
-    stopDevServer(id)
-  } catch (err) {
-    log.assistant.warn('Failed to stop dev server', { sessionId: id, error: String(err) })
-  }
 
   // Delete associated artifacts
   db.delete(artifacts).where(eq(artifacts.sessionId, id)).run()
@@ -173,13 +139,6 @@ export function deleteSession(id: string): boolean {
 
   // Delete session
   db.delete(chatSessions).where(eq(chatSessions.id, id)).run()
-
-  // Delete worktree
-  try {
-    deleteChatWorktree(session.worktreePath)
-  } catch (err) {
-    log.assistant.warn('Failed to delete worktree', { sessionId: id, error: String(err) })
-  }
 
   // Clear in-memory state
   sessionState.delete(id)
@@ -232,80 +191,81 @@ export function getMessages(sessionId: string): ChatMessage[] {
 /**
  * Build system prompt for assistant
  */
-function buildSystemPrompt(session: ChatSession): string {
+function buildSystemPrompt(): string {
   return `You are an AI assistant integrated into Fulcrum, a terminal-first tool for orchestrating AI coding agents.
 
-## Your Sandbox
+## Canvas Output
 
-You have a React project at: ${session.worktreePath}
+When asked to create visualizations or formatted content, output it as markdown with embedded Vega-Lite specs. The canvas viewer will render these automatically.
 
-Key files:
-- src/App.tsx - Main component (edit this to show your creations)
-- src/components/ - Create components here
-- src/index.css - Tailwind styles
+### Creating Charts with Vega-Lite
 
-The sandbox includes:
-- React 19 with TypeScript
-- Tailwind CSS for styling
-- Recharts for data visualization
-- shadcn/ui components (Button, Card, Badge, Input, Tabs, etc.)
+Use fenced code blocks with the \`vega-lite\` language identifier:
 
-## Creating Visualizations
-
-To create interactive visualizations, edit files directly in your sandbox:
-
-1. **Edit src/App.tsx** to render your component
-2. **Create new files** in src/components/ for complex components
-3. The preview will auto-refresh (Vite HMR)
-
-### Example: Creating a Chart
-
-Use the \`write_file\` tool to update src/App.tsx:
-
-\`\`\`tsx
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-
-const data = [
-  { name: 'Jan', value: 400 },
-  { name: 'Feb', value: 300 },
-  { name: 'Mar', value: 600 },
-  { name: 'Apr', value: 800 },
-]
-
-export default function App() {
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Sales Data</h1>
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis />
-          <Tooltip />
-          <Line type="monotone" dataKey="value" stroke="#8884d8" />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  )
+\`\`\`vega-lite
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "A simple bar chart",
+  "data": {
+    "values": [
+      {"category": "A", "value": 28},
+      {"category": "B", "value": 55},
+      {"category": "C", "value": 43}
+    ]
+  },
+  "mark": "bar",
+  "encoding": {
+    "x": {"field": "category", "type": "nominal"},
+    "y": {"field": "value", "type": "quantitative"}
+  }
 }
 \`\`\`
 
-## Available MCP Tools
+### Chart Types
 
-Use the Fulcrum MCP tools to edit files in your sandbox:
-- \`read_file\`: Read file content - use root="${session.worktreePath}"
-- \`write_file\`: Write entire file - use root="${session.worktreePath}"
-- \`edit_file\`: Replace specific strings - use root="${session.worktreePath}"
+Vega-Lite supports many chart types:
+- **Bar charts**: \`"mark": "bar"\`
+- **Line charts**: \`"mark": "line"\`
+- **Area charts**: \`"mark": "area"\`
+- **Scatter plots**: \`"mark": "point"\`
+- **Pie/donut charts**: Use \`"mark": {"type": "arc"}\` with theta encoding
 
-**Important**: Always use the full worktree path as the \`root\` parameter.
+### Example: Multi-series Line Chart
+
+\`\`\`vega-lite
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "values": [
+      {"month": "Jan", "product": "A", "sales": 100},
+      {"month": "Feb", "product": "A", "sales": 150},
+      {"month": "Jan", "product": "B", "sales": 80},
+      {"month": "Feb", "product": "B", "sales": 120}
+    ]
+  },
+  "mark": "line",
+  "encoding": {
+    "x": {"field": "month", "type": "ordinal"},
+    "y": {"field": "sales", "type": "quantitative"},
+    "color": {"field": "product", "type": "nominal"}
+  }
+}
+\`\`\`
+
+## Markdown Formatting
+
+Use standard markdown for explanatory text:
+- Headings, lists, code blocks
+- Tables for data summaries
+- Bold and italic for emphasis
 
 ## Guidelines
 
-- Always edit files directly using the MCP tools - the preview will auto-refresh
-- Use Tailwind classes for styling (no need for separate CSS)
-- Use Recharts components for charts: LineChart, BarChart, PieChart, AreaChart
-- Keep components in src/App.tsx unless they're complex enough to warrant separate files
-- Explain what your visualization shows`
+- Always include the \`$schema\` field in Vega-Lite specs
+- Provide clear data inline in the \`values\` array
+- Add descriptions to explain what the chart shows
+- Use appropriate chart types for the data being visualized
+- After the chart, explain key insights or patterns`
 }
 
 /**
@@ -345,7 +305,7 @@ export async function* streamMessage(
       hasResume: !!state.claudeSessionId,
     })
 
-    const systemPrompt = buildSystemPrompt(session)
+    const systemPrompt = buildSystemPrompt()
 
     const result = query({
       prompt: userMessage,
@@ -395,7 +355,7 @@ export async function* streamMessage(
           }
 
           // Extract and save artifacts
-          const extractedArtifacts = await extractArtifacts(session, textContent)
+          const extractedArtifacts = await extractArtifacts(sessionId, textContent)
           if (extractedArtifacts.length > 0) {
             yield { type: 'artifacts', data: { artifacts: extractedArtifacts } }
           }
@@ -435,41 +395,25 @@ export async function* streamMessage(
 /**
  * Extract artifacts from assistant response
  */
-async function extractArtifacts(session: ChatSession, content: string): Promise<Artifact[]> {
+async function extractArtifacts(sessionId: string, content: string): Promise<Artifact[]> {
   const extracted: Artifact[] = []
-
-  // React component pattern
-  const reactPattern = /```react\n([\s\S]*?)```/g
   let match
 
-  while ((match = reactPattern.exec(content)) !== null) {
-    const code = match[1].trim()
-    const artifact = await createArtifact({
-      sessionId: session.id,
-      type: 'react',
-      title: extractTitle(code) || 'React Component',
-      content: code,
-      worktreePath: session.worktreePath,
-    })
-    extracted.push(artifact)
-  }
-
-  // Chart pattern
-  const chartPattern = /```chart\n([\s\S]*?)```/g
-  while ((match = chartPattern.exec(content)) !== null) {
-    const config = match[1].trim()
+  // Vega-Lite pattern
+  const vegaLitePattern = /```vega-lite\n([\s\S]*?)```/g
+  while ((match = vegaLitePattern.exec(content)) !== null) {
+    const spec = match[1].trim()
     try {
-      const parsed = JSON.parse(config)
+      const parsed = JSON.parse(spec)
       const artifact = await createArtifact({
-        sessionId: session.id,
-        type: 'chart',
-        title: parsed.title || 'Chart',
-        content: config,
-        worktreePath: session.worktreePath,
+        sessionId,
+        type: 'vega-lite',
+        title: parsed.description || parsed.title || 'Chart',
+        content: spec,
       })
       extracted.push(artifact)
     } catch {
-      log.assistant.warn('Failed to parse chart config')
+      log.assistant.warn('Failed to parse vega-lite spec')
     }
   }
 
@@ -478,54 +422,15 @@ async function extractArtifacts(session: ChatSession, content: string): Promise<
   while ((match = mermaidPattern.exec(content)) !== null) {
     const diagram = match[1].trim()
     const artifact = await createArtifact({
-      sessionId: session.id,
+      sessionId,
       type: 'mermaid',
       title: 'Diagram',
       content: diagram,
-      worktreePath: session.worktreePath,
     })
     extracted.push(artifact)
   }
 
-  // Fallback: Also detect json blocks that look like chart configs
-  // (AI sometimes uses ```json instead of ```chart despite instructions)
-  const jsonChartPattern = /```json\n([\s\S]*?)```/g
-  while ((match = jsonChartPattern.exec(content)) !== null) {
-    const config = match[1].trim()
-    try {
-      const parsed = JSON.parse(config)
-      // Check if it looks like a chart config (has type and data array)
-      if (parsed.type && parsed.data && Array.isArray(parsed.data)) {
-        const artifact = await createArtifact({
-          sessionId: session.id,
-          type: 'chart',
-          title: parsed.title || 'Chart',
-          content: config,
-          worktreePath: session.worktreePath,
-        })
-        extracted.push(artifact)
-      }
-    } catch {
-      // Not valid JSON or not a chart, skip
-    }
-  }
-
   return extracted
-}
-
-/**
- * Extract title from React component code
- */
-function extractTitle(code: string): string | null {
-  // Try to find component name from export default
-  const exportMatch = code.match(/export\s+default\s+function\s+(\w+)/)
-  if (exportMatch) return exportMatch[1]
-
-  // Try to find from const declaration
-  const constMatch = code.match(/const\s+(\w+)\s*=/)
-  if (constMatch) return constMatch[1]
-
-  return null
 }
 
 /**
@@ -533,19 +438,13 @@ function extractTitle(code: string): string | null {
  */
 export async function createArtifact(options: {
   sessionId: string
-  type: 'react' | 'chart' | 'mermaid' | 'markdown' | 'code'
+  type: 'vega-lite' | 'mermaid' | 'markdown' | 'code'
   title: string
   content: string
-  worktreePath: string
   description?: string
 }): Promise<Artifact> {
   const id = nanoid()
   const now = new Date().toISOString()
-
-  // Write content to worktree
-  const contentPath = createArtifactDir(options.worktreePath, id)
-  const filename = options.type === 'react' ? 'component.tsx' : options.type === 'chart' ? 'config.json' : 'content.txt'
-  writeArtifactContent(options.worktreePath, id, filename, options.content)
 
   const artifact: NewArtifact = {
     id,
@@ -553,7 +452,7 @@ export async function createArtifact(options: {
     type: options.type,
     title: options.title,
     description: options.description,
-    contentPath,
+    content: options.content,
     version: 1,
     isFavorite: false,
     createdAt: now,
@@ -660,15 +559,13 @@ export async function forkArtifact(id: string, newContent: string): Promise<Arti
   const original = getArtifact(id)
   if (!original) return null
 
-  const session = getSession(original.sessionId!)
-  if (!session) return null
+  if (!original.sessionId) return null
 
   return createArtifact({
-    sessionId: session.id,
-    type: original.type as 'react' | 'chart' | 'mermaid' | 'markdown' | 'code',
+    sessionId: original.sessionId,
+    type: original.type as 'vega-lite' | 'mermaid' | 'markdown' | 'code',
     title: `${original.title} (v${(original.version || 1) + 1})`,
     content: newContent,
-    worktreePath: session.worktreePath,
     description: original.description || undefined,
   })
 }

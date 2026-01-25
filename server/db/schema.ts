@@ -256,15 +256,12 @@ export const projectTags = sqliteTable('project_tags', {
   createdAt: text('created_at').notNull(),
 })
 
-// Chat sessions - AI assistant conversations with worktree support
+// Chat sessions - AI assistant conversations
 export const chatSessions = sqliteTable('chat_sessions', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   provider: text('provider').notNull().default('claude'), // 'claude' | 'opencode'
   model: text('model'), // Model used for this session
-  worktreePath: text('worktree_path').notNull(), // Path to sandbox worktree
-  branch: text('branch').notNull(), // Git branch name
-  devPort: integer('dev_port'), // Port for the sandbox dev server
   projectId: text('project_id'), // Optional: for organization
   context: text('context'), // JSON: initial page context
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
@@ -288,17 +285,17 @@ export const chatMessages = sqliteTable('chat_messages', {
   createdAt: text('created_at').notNull(),
 })
 
-// Artifacts - generated content from AI assistant (React components, charts, etc.)
+// Artifacts - generated content from AI assistant (charts, diagrams, documents)
 export const artifacts = sqliteTable('artifacts', {
   id: text('id').primaryKey(),
   sessionId: text('session_id'), // FK to chatSessions (nullable - can be detached)
   messageId: text('message_id'), // FK to chatMessages (nullable)
-  type: text('type').notNull(), // 'react' | 'chart' | 'markdown' | 'mermaid' | 'code'
+  type: text('type').notNull(), // 'vega-lite' | 'mermaid' | 'markdown' | 'code'
   title: text('title').notNull(),
   description: text('description'),
+  content: text('content'), // Content stored directly in DB
   version: integer('version').default(1),
-  previewPath: text('preview_path'), // Thumbnail path for gallery
-  contentPath: text('content_path').notNull(), // Content directory in worktree
+  previewUrl: text('preview_url'), // External preview URL if applicable
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
   tags: text('tags'), // JSON array of tags
   createdAt: text('created_at').notNull(),

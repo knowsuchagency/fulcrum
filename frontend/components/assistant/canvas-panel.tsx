@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
-import { Code2, LayoutGrid, Eye, Edit3, Star, Loader2, RefreshCw, ExternalLink, Sun, Moon } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Code2, LayoutGrid, Eye, Edit3, Star } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { ChatSession, Artifact } from './types'
-
-type Theme = 'light' | 'dark'
+import { ContentRenderer } from './content-renderer'
+import { MarkdownEditor } from './markdown-editor'
+import type { ChatSession, Artifact, ChatMessage } from './types'
 
 interface CanvasPanelProps {
   session: ChatSession | null
@@ -15,21 +14,49 @@ interface CanvasPanelProps {
   onSelectArtifact: (artifact: Artifact | null) => void
 }
 
+/**
+ * Extract canvas content from the last assistant message
+ * Looks for vega-lite blocks that should be rendered in the viewer
+ */
+function extractCanvasContent(messages?: ChatMessage[]): string | null {
+  if (!messages?.length) return null
+
+  // Find the last assistant message
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg.role === 'assistant' && msg.content) {
+      // Check if it has vega-lite content
+      if (msg.content.includes('```vega-lite')) {
+        return msg.content
+      }
+    }
+  }
+
+  return null
+}
+
 export function CanvasPanel({
   session,
   artifacts,
   selectedArtifact,
   onSelectArtifact,
 }: CanvasPanelProps) {
-  const [activeTab, setActiveTab] = useState<'preview' | 'editor' | 'gallery'>('preview')
+  const [activeTab, setActiveTab] = useState<'viewer' | 'editor' | 'gallery'>('viewer')
+  const [editorContent, setEditorContent] = useState('')
+
+  // Get canvas content from the latest message with vega-lite blocks
+  const canvasContent = useMemo(
+    () => extractCanvasContent(session?.messages),
+    [session?.messages]
+  )
 
   if (!session) {
     return (
       <div className="h-full flex items-center justify-center bg-muted/30">
         <div className="text-center text-muted-foreground">
           <Code2 className="size-16 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">Select a chat to view artifacts</p>
-          <p className="text-xs mt-1">Generated components, charts, and diagrams will appear here</p>
+          <p className="text-sm">Select a chat to view the canvas</p>
+          <p className="text-xs mt-1">Charts and visualizations will appear here</p>
         </div>
       </div>
     )
@@ -41,9 +68,9 @@ export function CanvasPanel({
         {/* Tab Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background">
           <TabsList className="h-8">
-            <TabsTrigger value="preview" className="gap-1.5 text-xs">
+            <TabsTrigger value="viewer" className="gap-1.5 text-xs">
               <Eye className="size-3" />
-              Preview
+              Viewer
             </TabsTrigger>
             <TabsTrigger value="editor" className="gap-1.5 text-xs">
               <Edit3 className="size-3" />
@@ -63,19 +90,21 @@ export function CanvasPanel({
         </div>
 
         {/* Tab Content */}
-        <TabsContent value="preview" className="flex-1 m-0 data-[state=inactive]:hidden">
-          {selectedArtifact ? (
-            <ArtifactPreview artifact={selectedArtifact} />
-          ) : (
-            <SandboxPreview session={session} />
-          )}
+        <TabsContent value="viewer" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
+          <ViewerTab
+            content={selectedArtifact?.content || canvasContent}
+            artifact={selectedArtifact}
+          />
         </TabsContent>
 
-        <TabsContent value="editor" className="flex-1 m-0 data-[state=inactive]:hidden">
-          <ArtifactEditor artifact={selectedArtifact} />
+        <TabsContent value="editor" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
+          <EditorTab
+            content={editorContent}
+            onChange={setEditorContent}
+          />
         </TabsContent>
 
-        <TabsContent value="gallery" className="flex-1 m-0 data-[state=inactive]:hidden">
+        <TabsContent value="gallery" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
           <ArtifactGallery
             artifacts={artifacts}
             selectedArtifact={selectedArtifact}
@@ -87,266 +116,64 @@ export function CanvasPanel({
   )
 }
 
-interface SandboxPreviewProps {
-  session: ChatSession
-}
-
-function SandboxPreview({ session }: SandboxPreviewProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [iframeKey, setIframeKey] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRestarting, setIsRestarting] = useState(false)
-  const [actualPort, setActualPort] = useState<number | null>(session.devPort)
-  const [serverStatus, setServerStatus] = useState<'unknown' | 'running' | 'stopped'>('unknown')
-
-  // Default to system preference
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-    return 'dark'
-  })
-
-  // Check server status and get actual port on mount and when session changes
-  useEffect(() => {
-    let mounted = true
-
-    const checkServerStatus = async () => {
-      try {
-        const res = await fetch(`/api/assistant/sessions/${session.id}/dev-server`)
-        if (!res.ok) return
-
-        const data = await res.json()
-        if (mounted) {
-          setServerStatus(data.running ? 'running' : 'stopped')
-          if (data.port) {
-            setActualPort(data.port)
-          }
-        }
-      } catch {
-        // Ignore errors
-      }
-    }
-
-    checkServerStatus()
-    return () => { mounted = false }
-  }, [session.id])
-
-  // Send theme to iframe when it changes
-  useEffect(() => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: 'theme', theme }, '*')
-    }
-  }, [theme])
-
-  const handleRefresh = () => {
-    setIsLoading(true)
-    setIframeKey((k) => k + 1)
-  }
-
-  const handleRestart = async () => {
-    setIsRestarting(true)
-    try {
-      const res = await fetch(`/api/assistant/sessions/${session.id}/dev-server/restart`, {
-        method: 'POST',
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setActualPort(data.port)
-        setServerStatus('running')
-        setIsLoading(true)
-        setIframeKey((k) => k + 1)
-      }
-    } catch {
-      // Ignore errors
-    } finally {
-      setIsRestarting(false)
-    }
-  }
-
-  const handleOpenExternal = () => {
-    if (actualPort) {
-      window.open(`http://localhost:${actualPort}?theme=${theme}`, '_blank')
-    }
-  }
-
-  const handleIframeLoad = () => {
-    setIsLoading(false)
-    // Send initial theme to iframe
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: 'theme', theme }, '*')
-    }
-  }
-
-  const toggleTheme = () => {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-  }
-
-  const port = actualPort || session.devPort
-
-  if (!port) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <Loader2 className="size-12 mx-auto mb-4 opacity-40 animate-spin" />
-          <p className="text-sm">Starting canvas...</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="h-full flex flex-col">
-      {/* Preview Header */}
-      <div className="px-4 py-2 border-b border-border bg-background/50 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              "size-2 rounded-full",
-              serverStatus === 'running' ? "bg-green-500" :
-              serverStatus === 'stopped' ? "bg-red-500" :
-              "bg-yellow-500"
-            )}
-            title={serverStatus === 'running' ? 'Connected' : serverStatus === 'stopped' ? 'Disconnected' : 'Connecting...'}
-          />
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={handleRefresh}
-            disabled={isRestarting}
-            title="Refresh"
-          >
-            <RefreshCw className={cn("size-3.5", isRestarting && "animate-spin")} />
-          </Button>
-          <Button variant="ghost" size="icon-sm" onClick={handleOpenExternal} title="Open in new tab">
-            <ExternalLink className="size-3.5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Iframe Container */}
-      <div className="flex-1 relative">
-        {(isLoading || isRestarting) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-        <iframe
-          ref={iframeRef}
-          key={iframeKey}
-          src={`http://localhost:${port}?theme=${theme}`}
-          className={cn(
-            "w-full h-full border-0",
-            theme === 'dark' ? "bg-zinc-950" : "bg-white"
-          )}
-          title="Assistant Canvas"
-          onLoad={handleIframeLoad}
-          onError={() => {
-            // If iframe fails to load, try restarting the server
-            if (serverStatus !== 'running') {
-              handleRestart()
-            }
-          }}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        />
-      </div>
-    </div>
-  )
-}
-
-interface ArtifactPreviewProps {
+interface ViewerTabProps {
+  content: string | null
   artifact: Artifact | null
 }
 
-function ArtifactPreview({ artifact }: ArtifactPreviewProps) {
-  if (!artifact) {
+function ViewerTab({ content, artifact }: ViewerTabProps) {
+  if (!content) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <Eye className="size-12 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">No artifact selected</p>
-          <p className="text-xs mt-1">Select an artifact from the gallery to preview</p>
+          <p className="text-sm">No content to display</p>
+          <p className="text-xs mt-1">Ask the assistant to create a chart or visualization</p>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Artifact Info */}
-      <div className="px-4 py-2 border-b border-border bg-background/50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-medium">{artifact.title}</h4>
-            <p className="text-xs text-muted-foreground capitalize">{artifact.type}</p>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            v{artifact.version}
-          </div>
-        </div>
-      </div>
+  // If this is an artifact with a known type, pass that info to ContentRenderer
+  // Artifacts store raw content without markdown wrappers
+  const contentType = artifact?.type || null
 
-      {/* Preview Area */}
-      <div className="flex-1 p-4">
-        <div className="h-full rounded-lg border border-border bg-background overflow-hidden">
-          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            <div className="text-center">
-              <Code2 className="size-8 mx-auto mb-2 opacity-40" />
-              <p>Artifact preview</p>
-              <p className="text-xs mt-1">Type: {artifact.type}</p>
-            </div>
+  return (
+    <ScrollArea className="h-full">
+      <div className="p-4">
+        {artifact && (
+          <div className="mb-4 pb-4 border-b border-border">
+            <h4 className="text-sm font-medium">{artifact.title}</h4>
+            {artifact.description && (
+              <p className="text-xs text-muted-foreground mt-1">{artifact.description}</p>
+            )}
           </div>
-        </div>
+        )}
+        <ContentRenderer content={content} contentType={contentType} />
       </div>
-    </div>
+    </ScrollArea>
   )
 }
 
-interface ArtifactEditorProps {
-  artifact: Artifact | null
+interface EditorTabProps {
+  content: string
+  onChange: (content: string) => void
 }
 
-function ArtifactEditor({ artifact }: ArtifactEditorProps) {
-  if (!artifact) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <Edit3 className="size-12 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">No artifact selected</p>
-          <p className="text-xs mt-1">Select an artifact to edit its code</p>
-        </div>
-      </div>
-    )
-  }
-
-  // For now, show a placeholder. Monaco editor will be integrated later.
+function EditorTab({ content, onChange }: EditorTabProps) {
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-2 border-b border-border bg-background/50">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium">Editing: {artifact.title}</div>
-          <div className="text-xs text-muted-foreground">
-            {artifact.type === 'react' ? 'component.tsx' : artifact.type === 'chart' ? 'config.json' : 'content.txt'}
-          </div>
+        <div className="text-xs text-muted-foreground">
+          Document Editor - Write markdown with AI assistance
         </div>
       </div>
-
-      <div className="flex-1 p-4">
-        <div className="h-full rounded-lg border border-border bg-background font-mono text-sm overflow-auto">
-          <pre className="p-4 text-muted-foreground">
-            {artifact.content || '// Loading content...'}
-          </pre>
-        </div>
+      <div className="flex-1 overflow-hidden">
+        <MarkdownEditor
+          initialContent={content}
+          onChange={onChange}
+          placeholder="Start writing your document..."
+        />
       </div>
     </div>
   )
@@ -365,7 +192,7 @@ function ArtifactGallery({ artifacts, selectedArtifact, onSelectArtifact }: Arti
         <div className="text-center text-muted-foreground">
           <LayoutGrid className="size-12 mx-auto mb-4 opacity-20" />
           <p className="text-sm">No artifacts yet</p>
-          <p className="text-xs mt-1">Artifacts created during the chat will appear here</p>
+          <p className="text-xs mt-1">Charts and visualizations will be saved here</p>
         </div>
       </div>
     )
@@ -395,8 +222,7 @@ interface ArtifactCardProps {
 
 function ArtifactCard({ artifact, isSelected, onSelect }: ArtifactCardProps) {
   const typeColors: Record<string, string> = {
-    react: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    chart: 'bg-green-500/10 text-green-500 border-green-500/20',
+    'vega-lite': 'bg-green-500/10 text-green-500 border-green-500/20',
     mermaid: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
     markdown: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
     code: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
@@ -423,7 +249,7 @@ function ArtifactCard({ artifact, isSelected, onSelect }: ArtifactCardProps) {
           <div className="min-w-0">
             <h5 className="text-xs font-medium truncate">{artifact.title}</h5>
             <div className="flex items-center gap-2 mt-1">
-              <span className={cn('px-1.5 py-0.5 rounded text-[10px] border', typeColors[artifact.type])}>
+              <span className={cn('px-1.5 py-0.5 rounded text-[10px] border', typeColors[artifact.type] || typeColors.code)}>
                 {artifact.type}
               </span>
               <span className="text-[10px] text-muted-foreground">v{artifact.version}</span>

@@ -1,19 +1,7 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import * as assistantService from '../services/assistant-service'
-import {
-  getArtifact,
-  readArtifactContent,
-  startDevServer,
-  stopDevServer,
-  getDevServerPort,
-  isDevServerRunning,
-} from '../services/sandbox-service'
-import { db, chatSessions } from '../db'
-import { eq } from 'drizzle-orm'
 import type { PageContext } from '../../shared/types'
-import fs from 'fs'
-import path from 'path'
 
 const assistantRoutes = new Hono()
 
@@ -102,64 +90,6 @@ assistantRoutes.delete('/sessions/:id', async (c) => {
 })
 
 /**
- * GET /api/assistant/sessions/:id/dev-server
- * Get dev server status for a session
- */
-assistantRoutes.get('/sessions/:id/dev-server', async (c) => {
-  const id = c.req.param('id')
-  const session = assistantService.getSession(id)
-
-  if (!session) {
-    return c.json({ error: 'Session not found' }, 404)
-  }
-
-  const running = isDevServerRunning(id)
-  const port = getDevServerPort(id) ?? session.devPort
-
-  return c.json({
-    running,
-    port,
-    url: port ? `http://localhost:${port}` : null,
-  })
-})
-
-/**
- * POST /api/assistant/sessions/:id/dev-server/restart
- * Restart the dev server for a session
- */
-assistantRoutes.post('/sessions/:id/dev-server/restart', async (c) => {
-  const id = c.req.param('id')
-  const session = assistantService.getSession(id)
-
-  if (!session) {
-    return c.json({ error: 'Session not found' }, 404)
-  }
-
-  try {
-    // Stop existing server if running
-    stopDevServer(id)
-
-    // Start new server
-    const port = await startDevServer(id, session.worktreePath)
-
-    // Update session with new port
-    db.update(chatSessions)
-      .set({ devPort: port, updatedAt: new Date().toISOString() })
-      .where(eq(chatSessions.id, id))
-      .run()
-
-    return c.json({
-      success: true,
-      port,
-      url: `http://localhost:${port}`,
-    })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return c.json({ error: message }, 500)
-  }
-})
-
-/**
  * POST /api/assistant/sessions/:id/messages
  * Send a message and stream the response via SSE
  */
@@ -216,17 +146,7 @@ assistantRoutes.get('/artifacts/:id', async (c) => {
     return c.json({ error: 'Artifact not found' }, 404)
   }
 
-  // Read content from disk
-  let content: string | null = null
-  if (artifact.contentPath && fs.existsSync(artifact.contentPath)) {
-    const files = fs.readdirSync(artifact.contentPath)
-    if (files.length > 0) {
-      const mainFile = files[0]
-      content = fs.readFileSync(path.join(artifact.contentPath, mainFile), 'utf-8')
-    }
-  }
-
-  return c.json({ ...artifact, content })
+  return c.json(artifact)
 })
 
 /**
@@ -236,7 +156,7 @@ assistantRoutes.get('/artifacts/:id', async (c) => {
 assistantRoutes.post('/artifacts', async (c) => {
   const body = await c.req.json<{
     sessionId: string
-    type: 'react' | 'chart' | 'mermaid' | 'markdown' | 'code'
+    type: 'vega-lite' | 'mermaid' | 'markdown' | 'code'
     title: string
     content: string
     description?: string
@@ -253,7 +173,6 @@ assistantRoutes.post('/artifacts', async (c) => {
       type: body.type,
       title: body.title,
       content: body.content,
-      worktreePath: session.worktreePath,
       description: body.description,
     })
     return c.json(artifact)
