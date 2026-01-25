@@ -68,7 +68,7 @@
     /* Preserved/adapted variables */
     --warning: oklch(0.6500 0.2200 30.0000);
     --chart-system: oklch(0.4800 0.2200 260.0000);
-    --terminal-background: oklch(1.0000 0 0);
+    --terminal-background: oklch(0.9850 0 0); /* matches --card */
     --tile: oklch(0 0 0 / 0.1);
     --status-todo: oklch(0.6000 0 0);
     --status-in-progress: oklch(0.5500 0.2300 260.0000);
@@ -129,7 +129,7 @@
     /* Preserved/adapted variables */
     --warning: oklch(0.6800 0.2300 30.0000);
     --chart-system: oklch(0.6000 0.2700 25.0000);
-    --terminal-background: oklch(0.0000 0 0);
+    --terminal-background: oklch(0.1400 0 0); /* matches --card */
     --tile: oklch(1 0 0 / 0.1);
     --status-todo: oklch(0.4000 0 0);
     --status-in-progress: oklch(0.5500 0.2300 260.0000);

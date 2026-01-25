@@ -8,11 +8,11 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { useTheme } from 'next-themes'
-import { lightTheme, darkTheme } from './terminal-theme'
+import { getTerminalTheme } from './terminal-theme'
 import { log } from '@/lib/logger'
 
 // Create a Ghostty-compatible theme from xterm theme
-function toGhosttyTheme(xtermTheme: typeof lightTheme): GhosttyTheme {
+function toGhosttyTheme(xtermTheme: ReturnType<typeof getTerminalTheme>): GhosttyTheme {
   return {
     background: xtermTheme.background,
     foreground: xtermTheme.foreground,
@@ -74,7 +74,7 @@ export function TerminalGhostty({ className, onReady, onResize, onContainerReady
   const { setTerminalFocused } = useKeyboardContext()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const terminalTheme = isDark ? darkTheme : lightTheme
+  const terminalTheme = getTerminalTheme(isDark)
 
   // VibeTunnel's scroll management pattern:
   // Auto-disable follow when user scrolls up

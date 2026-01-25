@@ -11,7 +11,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDownDoubleIcon } from '@hugeicons/core-free-icons'
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { useTheme } from 'next-themes'
-import { lightTheme, darkTheme } from './terminal-theme'
+import { getTerminalTheme } from './terminal-theme'
 
 interface TerminalProps {
   className?: string
@@ -35,7 +35,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
   const { setTerminalFocused } = useKeyboardContext()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const terminalTheme = isDark ? darkTheme : lightTheme
+  const terminalTheme = getTerminalTheme(isDark)
 
   // Keep refs updated
   useEffect(() => {

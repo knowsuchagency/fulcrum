@@ -15,14 +15,14 @@ import { ArrowDownDoubleIcon, Loading03Icon, Alert02Icon, Cancel01Icon } from '@
 import { MobileTerminalControls } from './mobile-terminal-controls'
 import { log } from '@/lib/logger'
 import { useTheme } from 'next-themes'
-import { lightTheme, darkTheme } from './terminal-theme'
+import { getTerminalTheme } from './terminal-theme'
 import { buildAgentCommand, matchesAgentNotFound } from '@/lib/agent-commands'
 import { AGENT_DISPLAY_NAMES, AGENT_INSTALL_COMMANDS, AGENT_DOC_URLS, type AgentType } from '@/types'
 import { useOpencodeDefaultAgent, useOpencodePlanAgent } from '@/hooks/use-config'
 import { USE_GHOSTTY_TERMINAL, type AnyTerminal } from './terminal-types'
 
 // Convert xterm theme to Ghostty format
-function toGhosttyTheme(xtermTheme: typeof lightTheme): GhosttyTheme {
+function toGhosttyTheme(xtermTheme: ReturnType<typeof getTerminalTheme>): GhosttyTheme {
   return {
     background: xtermTheme.background,
     foreground: xtermTheme.foreground,
@@ -93,7 +93,7 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
   const [agentNotFound, setAgentNotFound] = useState<AgentType | null>(null)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
-  const terminalTheme = isDark ? darkTheme : lightTheme
+  const terminalTheme = getTerminalTheme(isDark)
 
   // Get global OpenCode agent name settings
   const { data: opencodeDefaultAgent } = useOpencodeDefaultAgent()
