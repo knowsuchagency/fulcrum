@@ -32,6 +32,8 @@ interface SessionWithMessages extends ChatSession {
   messages: ChatMessage[]
 }
 
+type CanvasTab = 'viewer' | 'editor' | 'documents'
+
 function AssistantView() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -183,7 +185,7 @@ function AssistantView() {
   const setSelectedSessionId = useCallback((id: string | null) => {
     navigate({
       to: '/assistant',
-      search: (prev) => ({ ...prev, chat: id || undefined }),
+      search: (prev) => ({ chat: id || undefined, tab: prev.tab as CanvasTab | undefined }),
       replace: true,
     })
   }, [navigate])
@@ -538,8 +540,6 @@ function AssistantView() {
     </div>
   )
 }
-
-type CanvasTab = 'viewer' | 'editor' | 'documents'
 
 export const Route = createFileRoute('/assistant/')({
   component: AssistantView,

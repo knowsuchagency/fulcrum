@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { ContentRenderer } from './content-renderer'
 import { MarkdownEditor } from './markdown-editor'
@@ -88,11 +90,23 @@ export function CanvasPanel({
             </TabsTrigger>
           </TabsList>
 
-          {selectedArtifact && (
-            <div className="text-xs text-muted-foreground">
-              {selectedArtifact.title}
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {selectedArtifact && (
+              <div className="text-xs text-muted-foreground">
+                {selectedArtifact.title}
+              </div>
+            )}
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge variant="destructive" className="text-[0.6rem] h-4 px-1.5 cursor-help border border-destructive/30">
+                  Preview
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="end" className="max-w-[200px]">
+                The AI Assistant is in active development. There may be breaking changes.
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Tab Content */}

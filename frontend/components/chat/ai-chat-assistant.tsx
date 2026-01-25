@@ -17,6 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 /**
  * AI Chat Assistant - A floating chat widget for interacting with Claude
@@ -257,6 +259,16 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-xs font-medium text-muted-foreground">AI Assistant</span>
+                <Tooltip>
+                  <TooltipTrigger className="flex items-center">
+                    <Badge variant="destructive" className="text-[0.55rem] h-3.5 px-1 cursor-help leading-none border border-destructive/30">
+                      Preview
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    The AI Assistant is in active development. There may be breaking changes.
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div className="flex items-center gap-2">
                 {/* Provider Toggle */}

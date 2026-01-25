@@ -94,7 +94,6 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 function SettingsPage() {
   const { t } = useTranslation('settings')
   const { t: tc } = useTranslation('common')
-  const isDesktop = typeof window !== 'undefined' && window.parent !== window
   const { data: port, isLoading: portLoading } = usePort()
   const { data: defaultGitReposDir, isLoading: reposDirLoading } = useDefaultGitReposDir()
   const { data: editorApp, isLoading: editorAppLoading } = useEditorApp()
@@ -2115,8 +2114,8 @@ function SettingsPage() {
 
       {/* Sticky Save Button Footer */}
       <div className="shrink-0 border-t border-border bg-background px-6 py-3">
-        <div className="mx-auto flex max-w-5xl items-center justify-end">
-          <div className={`flex items-center gap-2 ${isDesktop ? 'flex-row-reverse' : ''}`}>
+        <div className="mx-auto flex max-w-5xl items-center justify-start">
+          <div className="flex items-center gap-2">
             {saved && (
               <span className="flex items-center gap-1 text-xs text-accent">
                 <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
