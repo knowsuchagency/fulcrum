@@ -3,7 +3,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AssistantLayout } from '@/components/assistant'
 import type { ChatSession, ChatMessage, Artifact } from '@/components/assistant'
-import { usePageContext } from '@/hooks/use-page-context'
 
 interface SessionsResponse {
   sessions: ChatSession[]
@@ -21,7 +20,6 @@ interface SessionWithMessages extends ChatSession {
 
 function AssistantView() {
   const queryClient = useQueryClient()
-  const pageContext = usePageContext()
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
 
@@ -71,7 +69,6 @@ function AssistantView() {
         body: JSON.stringify({
           title: 'New Chat',
           provider: 'claude',
-          context: pageContext,
         }),
       })
       if (!res.ok) {
@@ -139,7 +136,6 @@ function AssistantView() {
           body: JSON.stringify({
             message,
             model: 'sonnet',
-            context: pageContext,
           }),
         })
 
@@ -252,7 +248,7 @@ function AssistantView() {
         queryClient.invalidateQueries({ queryKey: ['assistant-sessions'] })
       }
     },
-    [selectedSessionId, isStreaming, pageContext, queryClient]
+    [selectedSessionId, isStreaming, queryClient]
   )
 
   // Auto-select first session or create one if none exist

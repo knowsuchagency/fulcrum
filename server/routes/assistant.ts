@@ -165,10 +165,9 @@ assistantRoutes.post('/sessions/:id/dev-server/restart', async (c) => {
  */
 assistantRoutes.post('/sessions/:id/messages', async (c) => {
   const sessionId = c.req.param('id')
-  const { message, model, context } = await c.req.json<{
+  const { message, model } = await c.req.json<{
     message: string
     model?: 'opus' | 'sonnet' | 'haiku'
-    context?: PageContext
   }>()
 
   if (!message || typeof message !== 'string') {
@@ -181,7 +180,7 @@ assistantRoutes.post('/sessions/:id/messages', async (c) => {
   }
 
   return streamSSE(c, async (stream) => {
-    for await (const event of assistantService.streamMessage(sessionId, message, model, context)) {
+    for await (const event of assistantService.streamMessage(sessionId, message, model)) {
       await stream.writeSSE({
         event: event.type,
         data: JSON.stringify(event.data),

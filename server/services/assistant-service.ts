@@ -232,8 +232,8 @@ export function getMessages(sessionId: string): ChatMessage[] {
 /**
  * Build system prompt for assistant
  */
-function buildSystemPrompt(session: ChatSession, context?: PageContext): string {
-  let prompt = `You are an AI assistant integrated into Fulcrum, a terminal-first tool for orchestrating AI coding agents.
+function buildSystemPrompt(session: ChatSession): string {
+  return `You are an AI assistant integrated into Fulcrum, a terminal-first tool for orchestrating AI coding agents.
 
 ## Your Sandbox
 
@@ -306,15 +306,6 @@ Use the Fulcrum MCP tools to edit files in your sandbox:
 - Use Recharts components for charts: LineChart, BarChart, PieChart, AreaChart
 - Keep components in src/App.tsx unless they're complex enough to warrant separate files
 - Explain what your visualization shows`
-
-  if (context) {
-    prompt += `\n\n## Current Context\n- Page: ${context.path}`
-    if (context.pageType) prompt += `\n- Page Type: ${context.pageType}`
-    if (context.taskId) prompt += `\n- Task ID: ${context.taskId}`
-    if (context.projectId) prompt += `\n- Project ID: ${context.projectId}`
-  }
-
-  return prompt
 }
 
 /**
@@ -323,8 +314,7 @@ Use the Fulcrum MCP tools to edit files in your sandbox:
 export async function* streamMessage(
   sessionId: string,
   userMessage: string,
-  modelId: ModelId = 'sonnet',
-  context?: PageContext
+  modelId: ModelId = 'sonnet'
 ): AsyncGenerator<{ type: string; data: unknown }> {
   const session = getSession(sessionId)
   if (!session) {
@@ -355,7 +345,7 @@ export async function* streamMessage(
       hasResume: !!state.claudeSessionId,
     })
 
-    const systemPrompt = buildSystemPrompt(session, context)
+    const systemPrompt = buildSystemPrompt(session)
 
     const result = query({
       prompt: userMessage,
