@@ -143,7 +143,7 @@ function RepositoryCard({
 
   return (
     <Card
-      className="group transition-colors hover:border-foreground/20 cursor-pointer bg-card"
+      className="group transition-colors hover:border-foreground/20 cursor-pointer"
       onClick={handleCardClick}
     >
       <CardContent className="py-3 px-4">
@@ -916,7 +916,7 @@ function ProjectDetailView() {
             ) : null}
 
             {/* Repositories Section */}
-            <section className="film-grain relative rounded-lg border p-4 space-y-3" style={{ background: 'var(--gradient-card)' }}>
+            <section className="rounded-lg border p-4 space-y-3 bg-card">
               <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('detail.sections.repositories')}
               </h2>
