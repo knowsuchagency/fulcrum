@@ -48,7 +48,7 @@ export function CanvasPanel({
           <TabsList className="h-8">
             <TabsTrigger value="viewer" className="gap-1.5 text-xs">
               <Eye className="size-3" />
-              Viewer
+              Canvas
             </TabsTrigger>
             <TabsTrigger value="editor" className="gap-1.5 text-xs">
               <Edit3 className="size-3" />
