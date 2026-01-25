@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Code2, LayoutGrid, Eye, Edit3, Star, Loader2, RefreshCw, ExternalLink } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Code2, LayoutGrid, Eye, Edit3, Star, Loader2, RefreshCw, ExternalLink, Sun, Moon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { ChatSession, Artifact } from './types'
+
+type Theme = 'light' | 'dark'
 
 interface CanvasPanelProps {
   session: ChatSession | null
@@ -90,11 +92,20 @@ interface SandboxPreviewProps {
 }
 
 function SandboxPreview({ session }: SandboxPreviewProps) {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const [iframeKey, setIframeKey] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isRestarting, setIsRestarting] = useState(false)
   const [actualPort, setActualPort] = useState<number | null>(session.devPort)
   const [serverStatus, setServerStatus] = useState<'unknown' | 'running' | 'stopped'>('unknown')
+
+  // Default to system preference
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    return 'dark'
+  })
 
   // Check server status and get actual port on mount and when session changes
   useEffect(() => {
@@ -120,6 +131,13 @@ function SandboxPreview({ session }: SandboxPreviewProps) {
     checkServerStatus()
     return () => { mounted = false }
   }, [session.id])
+
+  // Send theme to iframe when it changes
+  useEffect(() => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: 'theme', theme }, '*')
+    }
+  }, [theme])
 
   const handleRefresh = () => {
     setIsLoading(true)
@@ -148,8 +166,20 @@ function SandboxPreview({ session }: SandboxPreviewProps) {
 
   const handleOpenExternal = () => {
     if (actualPort) {
-      window.open(`http://localhost:${actualPort}`, '_blank')
+      window.open(`http://localhost:${actualPort}?theme=${theme}`, '_blank')
     }
+  }
+
+  const handleIframeLoad = () => {
+    setIsLoading(false)
+    // Send initial theme to iframe
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: 'theme', theme }, '*')
+    }
+  }
+
+  const toggleTheme = () => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
   }
 
   const port = actualPort || session.devPort
@@ -159,8 +189,7 @@ function SandboxPreview({ session }: SandboxPreviewProps) {
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <Loader2 className="size-12 mx-auto mb-4 opacity-40 animate-spin" />
-          <p className="text-sm">Starting preview server...</p>
-          <p className="text-xs mt-1">This may take a moment on first load</p>
+          <p className="text-sm">Starting canvas...</p>
         </div>
       </div>
     )
@@ -171,25 +200,35 @@ function SandboxPreview({ session }: SandboxPreviewProps) {
       {/* Preview Header */}
       <div className="px-4 py-2 border-b border-border bg-background/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={cn(
-            "size-2 rounded-full",
-            serverStatus === 'running' ? "bg-green-500 animate-pulse" :
-            serverStatus === 'stopped' ? "bg-red-500" :
-            "bg-yellow-500"
-          )} />
-          <span className="text-xs text-muted-foreground">localhost:{port}</span>
+          <div
+            className={cn(
+              "size-2 rounded-full",
+              serverStatus === 'running' ? "bg-green-500" :
+              serverStatus === 'stopped' ? "bg-red-500" :
+              "bg-yellow-500"
+            )}
+            title={serverStatus === 'running' ? 'Connected' : serverStatus === 'stopped' ? 'Disconnected' : 'Connecting...'}
+          />
         </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
+            size="icon-sm"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={handleRefresh}
             disabled={isRestarting}
+            title="Refresh"
           >
             <RefreshCw className={cn("size-3.5", isRestarting && "animate-spin")} />
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleOpenExternal}>
+          <Button variant="ghost" size="icon-sm" onClick={handleOpenExternal} title="Open in new tab">
             <ExternalLink className="size-3.5" />
           </Button>
         </div>
@@ -203,11 +242,15 @@ function SandboxPreview({ session }: SandboxPreviewProps) {
           </div>
         )}
         <iframe
+          ref={iframeRef}
           key={iframeKey}
-          src={`http://localhost:${port}`}
-          className="w-full h-full border-0 bg-white"
-          title="Sandbox Preview"
-          onLoad={() => setIsLoading(false)}
+          src={`http://localhost:${port}?theme=${theme}`}
+          className={cn(
+            "w-full h-full border-0",
+            theme === 'dark' ? "bg-zinc-950" : "bg-white"
+          )}
+          title="Assistant Canvas"
+          onLoad={handleIframeLoad}
           onError={() => {
             // If iframe fails to load, try restarting the server
             if (serverStatus !== 'running') {
