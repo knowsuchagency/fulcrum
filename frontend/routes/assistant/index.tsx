@@ -11,7 +11,7 @@ import { useOpencodeModel as useOpencodeModelSetting, useAssistantProvider, useA
 
 /** Generate a default title for new chats based on current timestamp */
 function generateDefaultTitle(): string {
-  return format(new Date(), "'Chat' - MMM d, h:mm a")
+  return format(new Date(), "MMM d, h:mm a")
 }
 
 interface SessionsResponse {

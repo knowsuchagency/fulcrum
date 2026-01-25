@@ -297,7 +297,7 @@ export function ChatPanel({
           />
         ) : (
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex-1 justify-between h-auto py-1.5 px-2 rounded-md hover:bg-muted/50 flex items-center">
+          <DropdownMenuTrigger className="flex-1 min-w-0 max-w-[180px] justify-between h-auto py-1.5 px-2 rounded-md hover:bg-muted/50 flex items-center">
               <div className="text-left min-w-0">
                 <div
                   className="text-sm font-medium truncate cursor-pointer hover:text-accent"
