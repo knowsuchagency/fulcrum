@@ -12,6 +12,8 @@ interface CanvasPanelProps {
   artifacts: Artifact[]
   selectedArtifact: Artifact | null
   onSelectArtifact: (artifact: Artifact | null) => void
+  editorContent: string
+  onEditorContentChange: (content: string) => void
 }
 
 /**
@@ -40,9 +42,10 @@ export function CanvasPanel({
   artifacts,
   selectedArtifact,
   onSelectArtifact,
+  editorContent,
+  onEditorContentChange,
 }: CanvasPanelProps) {
   const [activeTab, setActiveTab] = useState<'viewer' | 'editor' | 'gallery'>('viewer')
-  const [editorContent, setEditorContent] = useState('')
 
   // Get canvas content from the latest message with vega-lite blocks
   const canvasContent = useMemo(
@@ -100,7 +103,7 @@ export function CanvasPanel({
         <TabsContent value="editor" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
           <EditorTab
             content={editorContent}
-            onChange={setEditorContent}
+            onChange={onEditorContentChange}
           />
         </TabsContent>
 
@@ -173,7 +176,7 @@ function EditorTab({ content, onChange }: EditorTabProps) {
       </div>
       <div className="flex-1 overflow-hidden">
         <MarkdownEditor
-          initialContent={content}
+          content={content}
           onChange={onChange}
           placeholder="Start writing your document..."
         />

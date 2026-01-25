@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import MDEditor from '@uiw/react-md-editor'
 import { cn } from '@/lib/utils'
 
 interface MarkdownEditorProps {
-  initialContent?: string
+  content?: string
   onChange?: (content: string) => void
   className?: string
   placeholder?: string
@@ -11,20 +11,17 @@ interface MarkdownEditorProps {
 
 /**
  * Rich markdown editor for document authoring
+ * This is a controlled component - parent owns the state
  */
 export function MarkdownEditor({
-  initialContent = '',
+  content = '',
   onChange,
   className,
   placeholder = 'Start writing...',
 }: MarkdownEditorProps) {
-  const [content, setContent] = useState(initialContent)
-
   const handleChange = useCallback(
     (value?: string) => {
-      const newContent = value || ''
-      setContent(newContent)
-      onChange?.(newContent)
+      onChange?.(value || '')
     },
     [onChange]
   )

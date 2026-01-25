@@ -18,11 +18,13 @@ interface AssistantLayoutProps {
   isLoading: boolean
   provider: AgentType
   model: ClaudeModelId
+  editorContent: string
   onProviderChange: (provider: AgentType) => void
   onModelChange: (model: ClaudeModelId) => void
   onSelectSession: (session: ChatSession) => void
   onDeleteSession: (id: string) => void
   onSelectArtifact: (artifact: Artifact | null) => void
+  onEditorContentChange: (content: string) => void
   onSendMessage: (message: string) => void
   onCreateSession: () => void
 }
@@ -35,11 +37,13 @@ export function AssistantLayout({
   isLoading,
   provider,
   model,
+  editorContent,
   onProviderChange,
   onModelChange,
   onSelectSession,
   onDeleteSession,
   onSelectArtifact,
+  onEditorContentChange,
   onSendMessage,
   onCreateSession,
 }: AssistantLayoutProps) {
@@ -69,6 +73,8 @@ export function AssistantLayout({
           artifacts={artifacts}
           selectedArtifact={selectedArtifact}
           onSelectArtifact={onSelectArtifact}
+          editorContent={editorContent}
+          onEditorContentChange={onEditorContentChange}
         />
       </div>
     </div>

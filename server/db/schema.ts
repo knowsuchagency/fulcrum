@@ -264,6 +264,7 @@ export const chatSessions = sqliteTable('chat_sessions', {
   model: text('model'), // Model used for this session
   projectId: text('project_id'), // Optional: for organization
   context: text('context'), // JSON: initial page context
+  editorContent: text('editor_content'), // Persisted editor/document content
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
   messageCount: integer('message_count').default(0),
   lastMessageAt: text('last_message_at'),

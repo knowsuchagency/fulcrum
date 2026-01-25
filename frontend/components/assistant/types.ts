@@ -7,6 +7,7 @@ export interface ChatSession {
   model: string | null
   projectId: string | null
   context: string | null
+  editorContent: string | null
   isFavorite: boolean
   messageCount: number
   lastMessageAt: string | null

@@ -109,7 +109,7 @@ export function listSessions(options: {
 /**
  * Update a session
  */
-export function updateSession(id: string, updates: Partial<Pick<ChatSession, 'title' | 'isFavorite'>>): ChatSession | null {
+export function updateSession(id: string, updates: Partial<Pick<ChatSession, 'title' | 'isFavorite' | 'editorContent'>>): ChatSession | null {
   const session = getSession(id)
   if (!session) return null
 
@@ -322,7 +322,35 @@ ALWAYS use these CSS variables for colors - they adapt to light/dark themes:
 
 ## Markdown Formatting
 
-Use standard markdown for explanatory text. After the chart, explain key insights or patterns.`
+Use standard markdown for explanatory text. After the chart, explain key insights or patterns.
+
+## Editor Context
+
+The user may have a document open in the Editor tab. When present, you'll see it in <editor_content> tags before their message.
+
+**IMPORTANT: To update the editor, you MUST use a \`\`\`document code block.**
+
+When the user asks you to help with, edit, fix, improve, or modify their document in any way, you MUST output the corrected/updated content using the \`document\` language identifier:
+
+\`\`\`document
+The complete updated document content goes here.
+\`\`\`
+
+This will automatically update the editor. Always provide the COMPLETE document, not just the changes.
+
+**Example - User asks "fix my spelling":**
+
+\`\`\`document
+Where in the world is Carmen Sandiego?
+\`\`\`
+
+**When to use \`\`\`document blocks:**
+- Fixing spelling, grammar, or typos
+- Rewriting or improving text
+- Adding new content
+- Any request that involves changing the document
+
+After the document block, you can explain what changes you made.`
 }
 
 /**
@@ -331,7 +359,8 @@ Use standard markdown for explanatory text. After the chart, explain key insight
 export async function* streamMessage(
   sessionId: string,
   userMessage: string,
-  modelId: ModelId = 'sonnet'
+  modelId: ModelId = 'sonnet',
+  editorContent?: string
 ): AsyncGenerator<{ type: string; data: unknown }> {
   const session = getSession(sessionId)
   if (!session) {
@@ -360,12 +389,23 @@ export async function* streamMessage(
     log.assistant.debug('Starting assistant query', {
       sessionId,
       hasResume: !!state.claudeSessionId,
+      hasEditorContent: !!editorContent,
     })
 
     const systemPrompt = buildSystemPrompt()
 
+    // Build the full prompt, including editor content if present
+    let fullPrompt = userMessage
+    if (editorContent && editorContent.trim()) {
+      fullPrompt = `<editor_content>
+${editorContent}
+</editor_content>
+
+User message: ${userMessage}`
+    }
+
     const result = query({
-      prompt: userMessage,
+      prompt: fullPrompt,
       options: {
         model: MODEL_MAP[modelId],
         resume: state.claudeSessionId,
@@ -417,6 +457,18 @@ export async function* streamMessage(
             yield { type: 'artifacts', data: { artifacts: extractedArtifacts } }
           }
 
+          // Extract document updates
+          const documentContent = extractDocumentContent(textContent)
+          log.assistant.debug('Document extraction check', {
+            sessionId,
+            hasDocument: !!documentContent,
+            textPreview: textContent.slice(0, 100),
+          })
+          if (documentContent) {
+            log.assistant.info('Sending document event', { sessionId, content: documentContent })
+            yield { type: 'document', data: { content: documentContent } }
+          }
+
           yield { type: 'message:complete', data: { content: textContent } }
         }
       } else if (message.type === 'result') {
@@ -447,6 +499,20 @@ export async function* streamMessage(
     log.assistant.error('Assistant stream error', { sessionId, error: errorMsg })
     yield { type: 'error', data: { message: errorMsg } }
   }
+}
+
+/**
+ * Extract document content from assistant response
+ * Looks for ```document code blocks
+ */
+function extractDocumentContent(content: string): string | null {
+  // Match ```document blocks with optional newline after the language identifier
+  const pattern = /```document\s*\n?([\s\S]*?)```/g
+  const match = pattern.exec(content)
+  if (match) {
+    return match[1].trim()
+  }
+  return null
 }
 
 /**

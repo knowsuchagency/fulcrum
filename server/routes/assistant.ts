@@ -64,7 +64,7 @@ assistantRoutes.get('/sessions/:id', async (c) => {
  */
 assistantRoutes.patch('/sessions/:id', async (c) => {
   const id = c.req.param('id')
-  const updates = await c.req.json<{ title?: string; isFavorite?: boolean }>()
+  const updates = await c.req.json<{ title?: string; isFavorite?: boolean; editorContent?: string }>()
 
   const session = assistantService.updateSession(id, updates)
   if (!session) {
@@ -95,9 +95,10 @@ assistantRoutes.delete('/sessions/:id', async (c) => {
  */
 assistantRoutes.post('/sessions/:id/messages', async (c) => {
   const sessionId = c.req.param('id')
-  const { message, model } = await c.req.json<{
+  const { message, model, editorContent } = await c.req.json<{
     message: string
     model?: 'opus' | 'sonnet' | 'haiku'
+    editorContent?: string
   }>()
 
   if (!message || typeof message !== 'string') {
@@ -110,7 +111,7 @@ assistantRoutes.post('/sessions/:id/messages', async (c) => {
   }
 
   return streamSSE(c, async (stream) => {
-    for await (const event of assistantService.streamMessage(sessionId, message, model)) {
+    for await (const event of assistantService.streamMessage(sessionId, message, model, editorContent)) {
       await stream.writeSSE({
         event: event.type,
         data: JSON.stringify(event.data),

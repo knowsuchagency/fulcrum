@@ -167,4 +167,5 @@ export const log = {
   viewer: createLogger('Viewer'),
   deployment: createLogger('Deployment'),
   chat: createLogger('Chat'),
+  assistant: createLogger('Assistant'),
 }

@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AssistantLayout, type ClaudeModelId } from '@/components/assistant'
 import type { ChatSession, ChatMessage, Artifact } from '@/components/assistant'
 import type { AgentType } from '../../../shared/types'
+import { log } from '@/lib/logger'
 
 interface SessionsResponse {
   sessions: ChatSession[]
@@ -21,10 +22,13 @@ interface SessionWithMessages extends ChatSession {
 
 function AssistantView() {
   const queryClient = useQueryClient()
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const { chat: chatId } = Route.useSearch()
   const [isStreaming, setIsStreaming] = useState(false)
   const [provider, setProvider] = useState<AgentType>('claude')
   const [model, setModel] = useState<ClaudeModelId>('opus')
+  const [editorContent, setEditorContent] = useState('')
+  const editorSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch sessions
   const { data: sessionsData, isLoading: isLoadingSessions } = useQuery<SessionsResponse>({
@@ -38,35 +42,91 @@ function AssistantView() {
 
   // Fetch selected session with messages
   const { data: selectedSession } = useQuery<SessionWithMessages>({
-    queryKey: ['assistant-session', selectedSessionId],
+    queryKey: ['assistant-session', chatId],
     queryFn: async () => {
-      if (!selectedSessionId) throw new Error('No session selected')
-      const res = await fetch(`/api/assistant/sessions/${selectedSessionId}`)
+      if (!chatId) throw new Error('No session selected')
+      const res = await fetch(`/api/assistant/sessions/${chatId}`)
       if (!res.ok) throw new Error('Failed to fetch session')
       return res.json()
     },
-    enabled: !!selectedSessionId,
+    enabled: !!chatId,
   })
 
   // Fetch artifacts for selected session
   const { data: artifactsData } = useQuery<ArtifactsResponse>({
-    queryKey: ['assistant-artifacts', selectedSessionId],
+    queryKey: ['assistant-artifacts', chatId],
     queryFn: async () => {
       const params = new URLSearchParams()
-      if (selectedSessionId) params.set('sessionId', selectedSessionId)
+      if (chatId) params.set('sessionId', chatId)
       const res = await fetch(`/api/assistant/artifacts?${params}`)
       if (!res.ok) throw new Error('Failed to fetch artifacts')
       return res.json()
     },
-    enabled: !!selectedSessionId,
+    enabled: !!chatId,
   })
 
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null)
 
-  // Clear selected artifact when session changes
+  // Clear state when session changes (before new data loads)
   useEffect(() => {
     setSelectedArtifact(null)
-  }, [selectedSessionId])
+    setEditorContent('') // Clear editor immediately when switching sessions
+  }, [chatId])
+
+  // Load editor content from session once it's loaded
+  useEffect(() => {
+    if (selectedSession?.editorContent) {
+      setEditorContent(selectedSession.editorContent)
+    }
+  }, [selectedSession?.id, selectedSession?.editorContent])
+
+  // Save editor content mutation
+  const saveEditorContentMutation = useMutation({
+    mutationFn: async ({ sessionId, content }: { sessionId: string; content: string }) => {
+      const res = await fetch(`/api/assistant/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ editorContent: content }),
+      })
+      if (!res.ok) throw new Error('Failed to save editor content')
+      return res.json()
+    },
+  })
+
+  // Debounced save for editor content
+  const handleEditorContentChange = useCallback((content: string) => {
+    setEditorContent(content)
+
+    // Clear existing timeout
+    if (editorSaveTimeoutRef.current) {
+      clearTimeout(editorSaveTimeoutRef.current)
+    }
+
+    // Debounce save
+    if (chatId) {
+      editorSaveTimeoutRef.current = setTimeout(() => {
+        saveEditorContentMutation.mutate({ sessionId: chatId, content })
+      }, 1000) // Save after 1 second of inactivity
+    }
+  }, [chatId, saveEditorContentMutation])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (editorSaveTimeoutRef.current) {
+        clearTimeout(editorSaveTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Update URL when session changes
+  const setSelectedSessionId = useCallback((id: string | null) => {
+    navigate({
+      to: '/assistant',
+      search: (prev) => ({ ...prev, chat: id || undefined }),
+      replace: true,
+    })
+  }, [navigate])
 
   // Create session mutation
   const createSessionMutation = useMutation({
@@ -87,11 +147,17 @@ function AssistantView() {
       return res.json() as Promise<ChatSession>
     },
     onSuccess: (session) => {
+      // Optimistically set the session data with empty messages
+      // This prevents the empty state from flashing while the query loads
+      queryClient.setQueryData<SessionWithMessages>(
+        ['assistant-session', session.id],
+        { ...session, messages: [] }
+      )
       queryClient.invalidateQueries({ queryKey: ['assistant-sessions'] })
       setSelectedSessionId(session.id)
     },
     onError: (error) => {
-      console.error('Failed to create session:', error)
+      log.assistant.error('Failed to create session', { error })
     },
   })
 
@@ -103,7 +169,7 @@ function AssistantView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assistant-sessions'] })
-      if (selectedSessionId) {
+      if (chatId) {
         setSelectedSessionId(null)
       }
     },
@@ -112,14 +178,14 @@ function AssistantView() {
   // Send message handler
   const handleSendMessage = useCallback(
     async (message: string) => {
-      if (!selectedSessionId || isStreaming) return
+      if (!chatId || isStreaming) return
 
       setIsStreaming(true)
 
       // Optimistically add user message
       const userMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
-        sessionId: selectedSessionId,
+        sessionId: chatId,
         role: 'user',
         content: message,
         toolCalls: null,
@@ -131,7 +197,7 @@ function AssistantView() {
       }
 
       queryClient.setQueryData<SessionWithMessages>(
-        ['assistant-session', selectedSessionId],
+        ['assistant-session', chatId],
         (old) => {
           if (!old) return old
           return { ...old, messages: [...old.messages, userMessage] }
@@ -142,12 +208,13 @@ function AssistantView() {
       const currentModel = model
 
       try {
-        const response = await fetch(`/api/assistant/sessions/${selectedSessionId}/messages`, {
+        const response = await fetch(`/api/assistant/sessions/${chatId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message,
             model: currentModel,
+            editorContent: editorContent || undefined,
           }),
         })
 
@@ -160,11 +227,12 @@ function AssistantView() {
         const decoder = new TextDecoder()
         let assistantContent = ''
         let currentEventType = ''
+        let buffer = '' // Buffer for incomplete SSE lines
 
         // Add placeholder for assistant message
         const assistantMessage: ChatMessage = {
           id: `temp-assistant-${Date.now()}`,
-          sessionId: selectedSessionId,
+          sessionId: chatId,
           role: 'assistant',
           content: '',
           toolCalls: null,
@@ -176,101 +244,131 @@ function AssistantView() {
         }
 
         queryClient.setQueryData<SessionWithMessages>(
-          ['assistant-session', selectedSessionId],
+          ['assistant-session', chatId],
           (old) => {
             if (!old) return old
             return { ...old, messages: [...old.messages, assistantMessage] }
           }
         )
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        // Helper function to process a single SSE line
+        const processLine = (line: string) => {
+          log.assistant.debug('Processing SSE line', { line, currentEventType })
+          if (line.startsWith('event: ')) {
+            currentEventType = line.slice(7).trim()
+            log.assistant.debug('Set event type', { currentEventType })
+          } else if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              log.assistant.debug('Parsed SSE data', { currentEventType, dataKeys: Object.keys(data), data })
 
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('event: ')) {
-              // Track event type for next data line
-              currentEventType = line.slice(7).trim()
-            } else if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6))
-
-                if (currentEventType === 'content:delta' && data.text) {
-                  assistantContent += data.text
-
-                  // Update assistant message content
-                  queryClient.setQueryData<SessionWithMessages>(
-                    ['assistant-session', selectedSessionId],
-                    (old) => {
-                      if (!old) return old
-                      const messages = [...old.messages]
-                      const lastMessage = messages[messages.length - 1]
-                      if (lastMessage?.role === 'assistant') {
-                        messages[messages.length - 1] = {
-                          ...lastMessage,
-                          content: assistantContent,
-                        }
-                      }
-                      return { ...old, messages }
-                    }
-                  )
-                } else if (currentEventType === 'artifacts' && data.artifacts) {
-                  // Invalidate artifacts query to refresh
-                  queryClient.invalidateQueries({ queryKey: ['assistant-artifacts', selectedSessionId] })
-                  // Auto-select first new artifact for preview
-                  if (data.artifacts.length > 0) {
-                    setSelectedArtifact(data.artifacts[0])
-                  }
-                } else if (!currentEventType && data.text) {
-                  // Fallback for data without event type prefix
-                  assistantContent += data.text
-
-                  queryClient.setQueryData<SessionWithMessages>(
-                    ['assistant-session', selectedSessionId],
-                    (old) => {
-                      if (!old) return old
-                      const messages = [...old.messages]
-                      const lastMessage = messages[messages.length - 1]
-                      if (lastMessage?.role === 'assistant') {
-                        messages[messages.length - 1] = {
-                          ...lastMessage,
-                          content: assistantContent,
-                        }
-                      }
-                      return { ...old, messages }
-                    }
-                  )
-                }
-              } catch {
-                // Ignore parse errors
+              // Check if this is a document event
+              if (currentEventType === 'document') {
+                log.assistant.info('Found document event type', { content: data.content })
               }
+
+              if (currentEventType === 'content:delta' && data.text) {
+                assistantContent += data.text
+                queryClient.setQueryData<SessionWithMessages>(
+                  ['assistant-session', chatId],
+                  (old) => {
+                    if (!old) return old
+                    const messages = [...old.messages]
+                    const lastMessage = messages[messages.length - 1]
+                    if (lastMessage?.role === 'assistant') {
+                      messages[messages.length - 1] = {
+                        ...lastMessage,
+                        content: assistantContent,
+                      }
+                    }
+                    return { ...old, messages }
+                  }
+                )
+              } else if (currentEventType === 'artifacts' && data.artifacts) {
+                queryClient.invalidateQueries({ queryKey: ['assistant-artifacts', chatId] })
+                if (data.artifacts.length > 0) {
+                  setSelectedArtifact(data.artifacts[0])
+                }
+              } else if (currentEventType === 'document' && data.content) {
+                log.assistant.info('DOCUMENT EVENT MATCHED - updating editor', { content: data.content })
+                setEditorContent(data.content)
+                saveEditorContentMutation.mutate({ sessionId: chatId, content: data.content })
+              } else if (!currentEventType && data.text) {
+                assistantContent += data.text
+                queryClient.setQueryData<SessionWithMessages>(
+                  ['assistant-session', chatId],
+                  (old) => {
+                    if (!old) return old
+                    const messages = [...old.messages]
+                    const lastMessage = messages[messages.length - 1]
+                    if (lastMessage?.role === 'assistant') {
+                      messages[messages.length - 1] = {
+                        ...lastMessage,
+                        content: assistantContent,
+                      }
+                    }
+                    return { ...old, messages }
+                  }
+                )
+              }
+            } catch {
+              // Ignore parse errors
             }
           }
         }
+
+        // Read SSE stream
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            // Process any remaining data in buffer before exiting
+            log.assistant.debug('Stream done', { remainingBuffer: buffer })
+            if (buffer.trim()) {
+              const lines = buffer.split('\n')
+              log.assistant.debug('Processing remaining lines', { lines })
+              for (const line of lines) {
+                processLine(line)
+              }
+            }
+            break
+          }
+
+          const chunk = decoder.decode(value)
+          buffer += chunk
+
+          // Process complete lines (up to last newline)
+          const lastNewline = buffer.lastIndexOf('\n')
+          if (lastNewline === -1) continue
+
+          const completeData = buffer.slice(0, lastNewline)
+          buffer = buffer.slice(lastNewline + 1)
+
+          const lines = completeData.split('\n')
+          for (const line of lines) {
+            processLine(line)
+          }
+        }
       } catch (error) {
-        console.error('Error sending message:', error)
+        log.assistant.error('Error sending message', { error })
       } finally {
         setIsStreaming(false)
         // Refresh session data to get persisted messages
-        queryClient.invalidateQueries({ queryKey: ['assistant-session', selectedSessionId] })
-        queryClient.invalidateQueries({ queryKey: ['assistant-artifacts', selectedSessionId] })
+        queryClient.invalidateQueries({ queryKey: ['assistant-session', chatId] })
+        queryClient.invalidateQueries({ queryKey: ['assistant-artifacts', chatId] })
         queryClient.invalidateQueries({ queryKey: ['assistant-sessions'] })
       }
     },
-    [selectedSessionId, model, isStreaming, queryClient]
+    [chatId, model, isStreaming, queryClient, editorContent, saveEditorContentMutation]
   )
 
-  // Auto-select first session or create one if none exist
+  // Auto-select first session if none selected
   useEffect(() => {
-    if (sessionsData && !isLoadingSessions && !selectedSessionId) {
+    if (sessionsData && !isLoadingSessions && !chatId) {
       if (sessionsData.sessions.length > 0) {
         setSelectedSessionId(sessionsData.sessions[0].id)
       }
     }
-  }, [sessionsData, isLoadingSessions, selectedSessionId])
+  }, [sessionsData, isLoadingSessions, chatId, setSelectedSessionId])
 
   const sessions = sessionsData?.sessions || []
   const artifacts = artifactsData?.artifacts || []
@@ -285,11 +383,13 @@ function AssistantView() {
         isLoading={isStreaming}
         provider={provider}
         model={model}
+        editorContent={editorContent}
         onProviderChange={setProvider}
         onModelChange={setModel}
         onSelectSession={(session) => setSelectedSessionId(session.id)}
         onDeleteSession={(id) => deleteSessionMutation.mutate(id)}
         onSelectArtifact={setSelectedArtifact}
+        onEditorContentChange={handleEditorContentChange}
         onSendMessage={handleSendMessage}
         onCreateSession={() => createSessionMutation.mutate()}
       />
@@ -299,4 +399,9 @@ function AssistantView() {
 
 export const Route = createFileRoute('/assistant/')({
   component: AssistantView,
+  validateSearch: (search: Record<string, unknown>): { chat?: string } => {
+    return {
+      chat: typeof search.chat === 'string' ? search.chat : undefined,
+    }
+  },
 })

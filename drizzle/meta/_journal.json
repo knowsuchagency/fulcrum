@@ -309,6 +309,13 @@
       "when": 1769856800000,
       "tag": "0043_simplify_assistant_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1769943200000,
+      "tag": "0044_add_editor_content_to_chat_sessions",
+      "breakpoints": true
     }
   ]
 }
