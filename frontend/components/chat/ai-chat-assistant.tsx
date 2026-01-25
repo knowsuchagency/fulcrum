@@ -252,7 +252,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
           <div className={`relative flex flex-col rounded-3xl shadow-2xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] ${
             isDark
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-600'
-              : 'bg-gradient-to-br from-white to-zinc-50 border border-zinc-200'
+              : 'bg-white border border-zinc-200'
           }`}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-4 pb-2">
@@ -495,15 +495,15 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
               </div>
             </div>
 
-            {/* Floating Overlay */}
-            <div
-              className="absolute inset-0 rounded-3xl pointer-events-none"
-              style={{
-                background: isDark
-                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent, rgba(147, 51, 234, 0.05))'
-                  : 'linear-gradient(135deg, rgba(13, 92, 99, 0.04), transparent 40%, rgba(11, 122, 117, 0.03))',
-              }}
-            />
+            {/* Floating Overlay (dark mode only) */}
+            {isDark && (
+              <div
+                className="absolute inset-0 rounded-3xl pointer-events-none"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent, rgba(147, 51, 234, 0.05))',
+                }}
+              />
+            )}
           </div>
         </div>
       )}

@@ -69,14 +69,14 @@ export function ChatInput({
           placeholder={placeholder}
           style={{ scrollbarWidth: 'none' }}
         />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: isDark
-              ? 'linear-gradient(to top, rgba(39, 39, 42, 0.05), transparent)'
-              : 'linear-gradient(to top, rgba(244, 244, 245, 0.3), transparent)'
-          }}
-        />
+{isDark && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to top, rgba(39, 39, 42, 0.05), transparent)'
+            }}
+          />
+        )}
       </div>
 
       {/* Controls Section */}
