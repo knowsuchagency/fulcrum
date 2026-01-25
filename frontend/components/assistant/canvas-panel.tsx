@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { Code2, LayoutGrid, Eye, Edit3, Star } from 'lucide-react'
+import { Code2, FileText, Eye, Edit3, Star, Pencil, Check, X } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { ContentRenderer } from './content-renderer'
 import { MarkdownEditor } from './markdown-editor'
-import type { ChatSession, Artifact } from './types'
+import type { ChatSession, Artifact, Document } from './types'
+import { formatDistanceToNow } from 'date-fns'
 
 interface CanvasPanelProps {
   session: ChatSession | null
@@ -15,18 +18,43 @@ interface CanvasPanelProps {
   editorContent: string
   onEditorContentChange: (content: string) => void
   canvasContent: string | null
+  documents: Document[]
+  onSelectDocument: (doc: Document) => void
+  onStarDocument: (sessionId: string, starred: boolean) => void
+  onRenameDocument: (sessionId: string, newFilename: string) => void
+  activeTab?: 'viewer' | 'editor' | 'documents'
+  onTabChange?: (tab: 'viewer' | 'editor' | 'documents') => void
 }
 
 export function CanvasPanel({
   session,
-  artifacts,
+  artifacts: _artifacts,
   selectedArtifact,
-  onSelectArtifact,
+  onSelectArtifact: _onSelectArtifact,
   editorContent,
   onEditorContentChange,
   canvasContent,
+  documents,
+  onSelectDocument,
+  onStarDocument,
+  onRenameDocument,
+  activeTab: controlledActiveTab,
+  onTabChange,
 }: CanvasPanelProps) {
-  const [activeTab, setActiveTab] = useState<'viewer' | 'editor' | 'gallery'>('viewer')
+  // Note: artifacts and onSelectArtifact kept for API compatibility but unused after Gallery removal
+  void _artifacts
+  void _onSelectArtifact
+  const [internalActiveTab, setInternalActiveTab] = useState<'viewer' | 'editor' | 'documents'>('viewer')
+
+  // Use controlled or internal state
+  const activeTab = controlledActiveTab ?? internalActiveTab
+  const setActiveTab = (tab: 'viewer' | 'editor' | 'documents') => {
+    if (onTabChange) {
+      onTabChange(tab)
+    } else {
+      setInternalActiveTab(tab)
+    }
+  }
 
   if (!session) {
     return (
@@ -54,9 +82,9 @@ export function CanvasPanel({
               <Edit3 className="size-3" />
               Editor
             </TabsTrigger>
-            <TabsTrigger value="gallery" className="gap-1.5 text-xs">
-              <LayoutGrid className="size-3" />
-              Gallery
+            <TabsTrigger value="documents" className="gap-1.5 text-xs">
+              <FileText className="size-3" />
+              Documents
             </TabsTrigger>
           </TabsList>
 
@@ -82,11 +110,12 @@ export function CanvasPanel({
           />
         </TabsContent>
 
-        <TabsContent value="gallery" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
-          <ArtifactGallery
-            artifacts={artifacts}
-            selectedArtifact={selectedArtifact}
-            onSelectArtifact={onSelectArtifact}
+        <TabsContent value="documents" className="flex-1 m-0 data-[state=inactive]:hidden overflow-hidden">
+          <DocumentsTab
+            documents={documents}
+            onSelectDocument={onSelectDocument}
+            onStarDocument={onStarDocument}
+            onRenameDocument={onRenameDocument}
           />
         </TabsContent>
       </Tabs>
@@ -157,20 +186,26 @@ function EditorTab({ content, onChange }: EditorTabProps) {
   )
 }
 
-interface ArtifactGalleryProps {
-  artifacts: Artifact[]
-  selectedArtifact: Artifact | null
-  onSelectArtifact: (artifact: Artifact | null) => void
+interface DocumentsTabProps {
+  documents: Document[]
+  onSelectDocument: (doc: Document) => void
+  onStarDocument: (sessionId: string, starred: boolean) => void
+  onRenameDocument: (sessionId: string, newFilename: string) => void
 }
 
-function ArtifactGallery({ artifacts, selectedArtifact, onSelectArtifact }: ArtifactGalleryProps) {
-  if (artifacts.length === 0) {
+function DocumentsTab({
+  documents,
+  onSelectDocument,
+  onStarDocument,
+  onRenameDocument,
+}: DocumentsTabProps) {
+  if (documents.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
-          <LayoutGrid className="size-12 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">No artifacts yet</p>
-          <p className="text-xs mt-1">Charts and visualizations will be saved here</p>
+          <FileText className="size-12 mx-auto mb-4 opacity-20" />
+          <p className="text-sm">No documents yet</p>
+          <p className="text-xs mt-1">Documents created by AI will appear here</p>
         </div>
       </div>
     )
@@ -178,13 +213,14 @@ function ArtifactGallery({ artifacts, selectedArtifact, onSelectArtifact }: Arti
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-4 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {artifacts.map((artifact) => (
-          <ArtifactCard
-            key={artifact.id}
-            artifact={artifact}
-            isSelected={selectedArtifact?.id === artifact.id}
-            onSelect={() => onSelectArtifact(artifact)}
+      <div className="p-4 space-y-2">
+        {documents.map((doc) => (
+          <DocumentCard
+            key={doc.sessionId}
+            document={doc}
+            onSelect={() => onSelectDocument(doc)}
+            onStar={(starred) => onStarDocument(doc.sessionId, starred)}
+            onRename={(filename) => onRenameDocument(doc.sessionId, filename)}
           />
         ))}
       </div>
@@ -192,52 +228,130 @@ function ArtifactGallery({ artifacts, selectedArtifact, onSelectArtifact }: Arti
   )
 }
 
-interface ArtifactCardProps {
-  artifact: Artifact
-  isSelected: boolean
+interface DocumentCardProps {
+  document: Document
   onSelect: () => void
+  onStar: (starred: boolean) => void
+  onRename: (filename: string) => void
 }
 
-function ArtifactCard({ artifact, isSelected, onSelect }: ArtifactCardProps) {
-  const typeColors: Record<string, string> = {
-    chart: 'bg-green-500/10 text-green-500 border-green-500/20',
-    mermaid: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-    markdown: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-    code: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+function DocumentCard({ document, onSelect, onStar, onRename }: DocumentCardProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedFilename, setEditedFilename] = useState(document.filename)
+
+  const handleSaveRename = () => {
+    if (editedFilename && editedFilename !== document.filename) {
+      onRename(editedFilename)
+    }
+    setIsEditing(false)
+  }
+
+  const handleCancelRename = () => {
+    setEditedFilename(document.filename)
+    setIsEditing(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveRename()
+    } else if (e.key === 'Escape') {
+      handleCancelRename()
+    }
   }
 
   return (
     <div
-      onClick={onSelect}
       className={cn(
-        'group relative rounded-lg border bg-card overflow-hidden cursor-pointer transition-all',
-        isSelected
-          ? 'ring-2 ring-accent border-accent'
-          : 'hover:border-border/80 hover:shadow-md'
+        'group relative rounded-lg border bg-card p-3 transition-all',
+        'hover:border-accent/50 hover:shadow-sm cursor-pointer'
       )}
+      onClick={(e) => {
+        // Don't trigger select when clicking on controls
+        if ((e.target as HTMLElement).closest('button, input')) return
+        onSelect()
+      }}
     >
-      {/* Preview Thumbnail */}
-      <div className="aspect-video bg-muted/50 flex items-center justify-center">
-        <Code2 className="size-8 text-muted-foreground/30" />
-      </div>
+      <div className="flex items-start gap-3">
+        <FileText className="size-5 text-muted-foreground mt-0.5 shrink-0" />
 
-      {/* Info */}
-      <div className="p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h5 className="text-xs font-medium truncate">{artifact.title}</h5>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={cn('px-1.5 py-0.5 rounded text-[10px] border', typeColors[artifact.type] || typeColors.code)}>
-                {artifact.type}
-              </span>
-              <span className="text-[10px] text-muted-foreground">v{artifact.version}</span>
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <Input
+                value={editedFilename}
+                onChange={(e) => setEditedFilename(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="h-6 text-xs py-0 px-1"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-6"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleSaveRename()
+                }}
+              >
+                <Check className="size-3" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-6"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCancelRename()
+                }}
+              >
+                <X className="size-3" />
+              </Button>
             </div>
-          </div>
-
-          {artifact.isFavorite && (
-            <Star className="size-3 fill-yellow-500 text-yellow-500 flex-shrink-0" />
+          ) : (
+            <div className="flex items-center gap-1">
+              <h5 className="text-sm font-medium truncate">{document.filename}</h5>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsEditing(true)
+                }}
+              >
+                <Pencil className="size-3" />
+              </Button>
+            </div>
           )}
+
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            {document.sessionTitle}
+          </p>
+
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            {formatDistanceToNow(new Date(document.updatedAt), { addSuffix: true })}
+          </p>
         </div>
+
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn(
+            'size-6 shrink-0',
+            document.starred
+              ? 'text-yellow-500'
+              : 'text-muted-foreground opacity-0 group-hover:opacity-100'
+          )}
+          onClick={(e) => {
+            e.stopPropagation()
+            onStar(!document.starred)
+          }}
+        >
+          <Star
+            className={cn('size-4', document.starred && 'fill-yellow-500')}
+          />
+        </Button>
       </div>
     </div>
   )

@@ -143,6 +143,7 @@ export interface Settings {
     provider: AssistantProvider
     model: AssistantModel
     customInstructions: string | null
+    documentsDir: string
   }
 }
 
@@ -187,6 +188,7 @@ const DEFAULT_SETTINGS: Settings = {
     provider: 'claude',
     model: 'sonnet',
     customInstructions: null,
+    documentsDir: '~/.fulcrum/documents',
   },
 }
 
@@ -219,6 +221,7 @@ export const VALID_SETTING_PATHS = new Set([
   'assistant.provider',
   'assistant.model',
   'assistant.customInstructions',
+  'assistant.documentsDir',
 ])
 
 // Migration map from old flat keys to new nested paths
@@ -498,6 +501,9 @@ export function getSettings(): Settings {
       provider: ((parsed.assistant as Record<string, unknown>)?.provider as AssistantProvider) ?? DEFAULT_SETTINGS.assistant.provider,
       model: ((parsed.assistant as Record<string, unknown>)?.model as AssistantModel) ?? DEFAULT_SETTINGS.assistant.model,
       customInstructions: ((parsed.assistant as Record<string, unknown>)?.customInstructions as string | null) ?? null,
+      documentsDir: expandPath(
+        ((parsed.assistant as Record<string, unknown>)?.documentsDir as string) ?? DEFAULT_SETTINGS.assistant.documentsDir
+      ),
     },
   }
 

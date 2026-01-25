@@ -8,6 +8,8 @@ export interface ChatSession {
   projectId: string | null
   context: string | null
   editorContent: string | null
+  documentPath: string | null
+  documentStarred: boolean
   isFavorite: boolean
   messageCount: number
   lastMessageAt: string | null
@@ -47,4 +49,13 @@ export interface Artifact {
 
 export interface ArtifactWithContent extends Artifact {
   content: string
+}
+
+export interface Document {
+  sessionId: string
+  sessionTitle: string
+  filename: string
+  starred: boolean
+  content: string | null
+  updatedAt: string
 }

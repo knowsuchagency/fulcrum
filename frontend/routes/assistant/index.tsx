@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { AssistantLayout, type ClaudeModelId } from '@/components/assistant'
-import type { ChatSession, ChatMessage, Artifact } from '@/components/assistant'
+import type { ChatSession, ChatMessage, Artifact, Document } from '@/components/assistant'
 import type { AgentType } from '../../../shared/types'
 import { log } from '@/lib/logger'
 import { useOpencodeModels } from '@/hooks/use-opencode-models'
@@ -24,6 +24,10 @@ interface ArtifactsResponse {
   total: number
 }
 
+interface DocumentsResponse {
+  documents: Document[]
+}
+
 interface SessionWithMessages extends ChatSession {
   messages: ChatMessage[]
 }
@@ -38,6 +42,7 @@ function AssistantView() {
   const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
   const [editorContent, setEditorContent] = useState('')
   const [canvasContent, setCanvasContent] = useState<string | null>(null)
+  const [canvasActiveTab, setCanvasActiveTab] = useState<'viewer' | 'editor' | 'documents'>('viewer')
   const editorSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch OpenCode models and defaults from settings
@@ -95,6 +100,16 @@ function AssistantView() {
       return res.json()
     },
     enabled: !!chatId,
+  })
+
+  // Fetch all documents
+  const { data: documentsData } = useQuery<DocumentsResponse>({
+    queryKey: ['assistant-documents'],
+    queryFn: async () => {
+      const res = await fetch('/api/assistant/documents')
+      if (!res.ok) throw new Error('Failed to fetch documents')
+      return res.json()
+    },
   })
 
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null)
@@ -225,6 +240,44 @@ function AssistantView() {
     },
   })
 
+  // Star document mutation
+  const starDocumentMutation = useMutation({
+    mutationFn: async ({ sessionId, starred }: { sessionId: string; starred: boolean }) => {
+      const res = await fetch(`/api/assistant/documents/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ starred }),
+      })
+      if (!res.ok) throw new Error('Failed to star document')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assistant-documents'] })
+    },
+  })
+
+  // Rename document mutation
+  const renameDocumentMutation = useMutation({
+    mutationFn: async ({ sessionId, filename }: { sessionId: string; filename: string }) => {
+      const res = await fetch(`/api/assistant/documents/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename }),
+      })
+      if (!res.ok) throw new Error('Failed to rename document')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assistant-documents'] })
+    },
+  })
+
+  // Handle document selection - navigate to chat and switch to editor tab
+  const handleSelectDocument = useCallback((doc: Document) => {
+    setSelectedSessionId(doc.sessionId)
+    setCanvasActiveTab('editor')
+  }, [setSelectedSessionId])
+
   // Send message handler
   const handleSendMessage = useCallback(
     async (message: string) => {
@@ -343,6 +396,14 @@ function AssistantView() {
                 log.assistant.info('DOCUMENT EVENT MATCHED - updating editor', { content: data.content })
                 setEditorContent(data.content)
                 saveEditorContentMutation.mutate({ sessionId: chatId, content: data.content })
+                // Also save as document file and refresh documents list
+                fetch(`/api/assistant/documents/${chatId}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ content: data.content }),
+                }).then(() => {
+                  queryClient.invalidateQueries({ queryKey: ['assistant-documents'] })
+                })
               } else if (currentEventType === 'canvas' && data.content) {
                 log.assistant.info('CANVAS EVENT - updating viewer', { contentPreview: data.content.slice(0, 100) })
                 setCanvasContent(data.content)
@@ -425,6 +486,7 @@ function AssistantView() {
 
   const sessions = sessionsData?.sessions || []
   const artifacts = artifactsData?.artifacts || []
+  const documents = documentsData?.documents || []
 
   return (
     <div className="h-[calc(100vh-40px)]">
@@ -441,6 +503,9 @@ function AssistantView() {
         isOpencodeAvailable={isOpencodeAvailable}
         editorContent={editorContent}
         canvasContent={canvasContent}
+        documents={documents}
+        canvasActiveTab={canvasActiveTab}
+        onCanvasTabChange={setCanvasActiveTab}
         onProviderChange={setProvider}
         onModelChange={setModel}
         onOpencodeModelChange={setOpencodeModel}
@@ -451,6 +516,9 @@ function AssistantView() {
         onEditorContentChange={handleEditorContentChange}
         onSendMessage={handleSendMessage}
         onCreateSession={() => createSessionMutation.mutate()}
+        onSelectDocument={handleSelectDocument}
+        onStarDocument={(sessionId, starred) => starDocumentMutation.mutate({ sessionId, starred })}
+        onRenameDocument={(sessionId, filename) => renameDocumentMutation.mutate({ sessionId, filename })}
       />
     </div>
   )

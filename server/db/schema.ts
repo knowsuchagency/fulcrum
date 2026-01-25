@@ -265,6 +265,8 @@ export const chatSessions = sqliteTable('chat_sessions', {
   projectId: text('project_id'), // Optional: for organization
   context: text('context'), // JSON: initial page context
   editorContent: text('editor_content'), // Persisted editor/document content
+  documentPath: text('document_path'), // Relative path from documents dir (e.g., "my-report.md")
+  documentStarred: integer('document_starred', { mode: 'boolean' }).default(false), // Pin document to top
   isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
   messageCount: integer('message_count').default(0),
   lastMessageAt: text('last_message_at'),

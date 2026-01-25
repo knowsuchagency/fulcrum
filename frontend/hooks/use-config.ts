@@ -35,6 +35,7 @@ export const CONFIG_KEYS = {
   ASSISTANT_PROVIDER: 'assistant.provider',
   ASSISTANT_MODEL: 'assistant.model',
   ASSISTANT_CUSTOM_INSTRUCTIONS: 'assistant.customInstructions',
+  ASSISTANT_DOCUMENTS_DIR: 'assistant.documentsDir',
 } as const
 
 // Default values (client-side fallbacks)
@@ -300,6 +301,16 @@ export function useAssistantCustomInstructions() {
   return {
     ...query,
     data: (query.data?.value as string | null) ?? null,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useAssistantDocumentsDir() {
+  const query = useConfig(CONFIG_KEYS.ASSISTANT_DOCUMENTS_DIR)
+
+  return {
+    ...query,
+    data: (query.data?.value as string) ?? '~/.fulcrum/documents',
     isDefault: query.data?.isDefault ?? true,
   }
 }

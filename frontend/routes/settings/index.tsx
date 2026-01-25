@@ -54,6 +54,7 @@ import {
   useAssistantProvider,
   useAssistantModel,
   useAssistantCustomInstructions,
+  useAssistantDocumentsDir,
   NotificationSettingsConflictError,
   CONFIG_KEYS,
   CLAUDE_CODE_THEMES,
@@ -120,6 +121,7 @@ function SettingsPage() {
   const { data: assistantProvider, isLoading: assistantProviderLoading } = useAssistantProvider()
   const { data: assistantModel, isLoading: assistantModelLoading } = useAssistantModel()
   const { data: assistantCustomInstructions, isLoading: assistantInstructionsLoading } = useAssistantCustomInstructions()
+  const { data: assistantDocumentsDir, isLoading: assistantDocumentsDirLoading } = useAssistantDocumentsDir()
   const { installed: opencodeInstalled } = useOpencodeModels()
   const { version } = useFulcrumVersion()
   const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
@@ -185,6 +187,7 @@ function SettingsPage() {
   const [localAssistantProvider, setLocalAssistantProvider] = useState<AssistantProvider>('claude')
   const [localAssistantModel, setLocalAssistantModel] = useState<AssistantModel>('sonnet')
   const [localAssistantCustomInstructions, setLocalAssistantCustomInstructions] = useState<string>('')
+  const [localAssistantDocumentsDir, setLocalAssistantDocumentsDir] = useState<string>('~/.fulcrum/documents')
 
   // Developer mode restart state
   const [isRestarting, setIsRestarting] = useState(false)
@@ -272,10 +275,11 @@ function SettingsPage() {
     if (assistantProvider !== undefined) setLocalAssistantProvider(assistantProvider)
     if (assistantModel !== undefined) setLocalAssistantModel(assistantModel)
     if (assistantCustomInstructions !== undefined) setLocalAssistantCustomInstructions(assistantCustomInstructions ?? '')
-  }, [assistantProvider, assistantModel, assistantCustomInstructions])
+    if (assistantDocumentsDir !== undefined) setLocalAssistantDocumentsDir(assistantDocumentsDir)
+  }, [assistantProvider, assistantModel, assistantCustomInstructions, assistantDocumentsDir])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantProviderLoading || assistantModelLoading || assistantInstructionsLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantProviderLoading || assistantModelLoading || assistantInstructionsLoading || assistantDocumentsDirLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -299,7 +303,8 @@ function SettingsPage() {
   const hasAssistantChanges =
     localAssistantProvider !== assistantProvider ||
     localAssistantModel !== assistantModel ||
-    localAssistantCustomInstructions !== (assistantCustomInstructions ?? '')
+    localAssistantCustomInstructions !== (assistantCustomInstructions ?? '') ||
+    localAssistantDocumentsDir !== assistantDocumentsDir
 
   // Check if deployment settings have changed
   // We compare local state against server values
@@ -615,6 +620,16 @@ function SettingsPage() {
           new Promise((resolve) => {
             updateConfig.mutate(
               { key: CONFIG_KEYS.ASSISTANT_CUSTOM_INSTRUCTIONS, value: localAssistantCustomInstructions || null },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localAssistantDocumentsDir !== assistantDocumentsDir) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.ASSISTANT_DOCUMENTS_DIR, value: localAssistantDocumentsDir },
               { onSettled: resolve }
             )
           })
@@ -1532,6 +1547,25 @@ function SettingsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {t('fields.assistant.customInstructions.description')}
+                    </p>
+                  </div>
+
+                  {/* Documents directory */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                        {t('fields.assistant.documentsDir.label')}
+                      </label>
+                      <Input
+                        value={localAssistantDocumentsDir}
+                        onChange={(e) => setLocalAssistantDocumentsDir(e.target.value)}
+                        placeholder="~/.fulcrum/documents"
+                        disabled={isLoading}
+                        className="w-64 font-mono text-sm"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.assistant.documentsDir.description')}
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import { ChatPanel } from './chat-panel'
 import { CanvasPanel } from './canvas-panel'
-import type { ChatSession, Artifact } from './types'
+import type { ChatSession, Artifact, Document } from './types'
 import type { AgentType } from '../../../shared/types'
 
 export type ClaudeModelId = 'opus' | 'sonnet' | 'haiku'
@@ -23,6 +23,9 @@ interface AssistantLayoutProps {
   isOpencodeAvailable: boolean
   editorContent: string
   canvasContent: string | null
+  documents: Document[]
+  canvasActiveTab?: 'viewer' | 'editor' | 'documents'
+  onCanvasTabChange?: (tab: 'viewer' | 'editor' | 'documents') => void
   onProviderChange: (provider: AgentType) => void
   onModelChange: (model: ClaudeModelId) => void
   onOpencodeModelChange: (model: string) => void
@@ -33,6 +36,9 @@ interface AssistantLayoutProps {
   onEditorContentChange: (content: string) => void
   onSendMessage: (message: string) => void
   onCreateSession: () => void
+  onSelectDocument: (doc: Document) => void
+  onStarDocument: (sessionId: string, starred: boolean) => void
+  onRenameDocument: (sessionId: string, newFilename: string) => void
 }
 
 export function AssistantLayout({
@@ -48,6 +54,9 @@ export function AssistantLayout({
   isOpencodeAvailable,
   editorContent,
   canvasContent,
+  documents,
+  canvasActiveTab,
+  onCanvasTabChange,
   onProviderChange,
   onModelChange,
   onOpencodeModelChange,
@@ -58,6 +67,9 @@ export function AssistantLayout({
   onEditorContentChange,
   onSendMessage,
   onCreateSession,
+  onSelectDocument,
+  onStarDocument,
+  onRenameDocument,
 }: AssistantLayoutProps) {
   return (
     <div className="h-full w-full flex">
@@ -93,6 +105,12 @@ export function AssistantLayout({
           editorContent={editorContent}
           onEditorContentChange={onEditorContentChange}
           canvasContent={canvasContent}
+          documents={documents}
+          onSelectDocument={onSelectDocument}
+          onStarDocument={onStarDocument}
+          onRenameDocument={onRenameDocument}
+          activeTab={canvasActiveTab}
+          onTabChange={onCanvasTabChange}
         />
       </div>
     </div>

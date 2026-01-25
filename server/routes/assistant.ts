@@ -64,9 +64,23 @@ assistantRoutes.get('/sessions/:id', async (c) => {
  */
 assistantRoutes.patch('/sessions/:id', async (c) => {
   const id = c.req.param('id')
-  const updates = await c.req.json<{ title?: string; isFavorite?: boolean; editorContent?: string }>()
+  const updates = await c.req.json<{
+    title?: string
+    isFavorite?: boolean
+    editorContent?: string
+    saveDocument?: boolean
+  }>()
 
-  const session = assistantService.updateSession(id, updates)
+  // If saveDocument is true and there's editorContent, also save to file
+  if (updates.saveDocument && updates.editorContent) {
+    await assistantService.saveSessionDocument(id, updates.editorContent)
+  }
+
+  const session = assistantService.updateSession(id, {
+    title: updates.title,
+    isFavorite: updates.isFavorite,
+    editorContent: updates.editorContent,
+  })
   if (!session) {
     return c.json({ error: 'Session not found' }, 404)
   }
@@ -80,7 +94,7 @@ assistantRoutes.patch('/sessions/:id', async (c) => {
  */
 assistantRoutes.delete('/sessions/:id', async (c) => {
   const id = c.req.param('id')
-  const success = assistantService.deleteSession(id)
+  const success = await assistantService.deleteSession(id)
 
   if (!success) {
     return c.json({ error: 'Session not found' }, 404)
@@ -237,6 +251,99 @@ assistantRoutes.post('/artifacts/:id/fork', async (c) => {
   }
 
   return c.json(artifact)
+})
+
+// ==================== Document Routes ====================
+
+/**
+ * GET /api/assistant/documents
+ * List all documents (sessions with saved documents)
+ */
+assistantRoutes.get('/documents', async (c) => {
+  try {
+    const documents = await assistantService.listDocuments()
+    return c.json({ documents })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+/**
+ * POST /api/assistant/documents/:sessionId
+ * Save document content for a session
+ */
+assistantRoutes.post('/documents/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId')
+  const { content } = await c.req.json<{ content: string }>()
+
+  if (content === undefined) {
+    return c.json({ error: 'Content is required' }, 400)
+  }
+
+  try {
+    const documentPath = await assistantService.saveSessionDocument(sessionId, content)
+    if (!documentPath) {
+      return c.json({ error: 'Session not found' }, 404)
+    }
+    return c.json({ success: true, documentPath })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+/**
+ * PATCH /api/assistant/documents/:sessionId
+ * Update document metadata (rename or toggle starred)
+ */
+assistantRoutes.patch('/documents/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId')
+  const { filename, starred } = await c.req.json<{
+    filename?: string
+    starred?: boolean
+  }>()
+
+  const session = assistantService.getSession(sessionId)
+  if (!session?.documentPath) {
+    return c.json({ error: 'No document for this session' }, 404)
+  }
+
+  try {
+    // Rename if filename provided and different
+    if (filename && filename !== session.documentPath) {
+      await assistantService.renameSessionDocument(sessionId, filename)
+    }
+
+    // Toggle starred if provided
+    if (typeof starred === 'boolean') {
+      assistantService.updateSession(sessionId, { documentStarred: starred })
+    }
+
+    return c.json({ success: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+/**
+ * DELETE /api/assistant/documents/:sessionId
+ * Delete document from session (keeps session, removes document)
+ */
+assistantRoutes.delete('/documents/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId')
+
+  try {
+    const success = await assistantService.removeSessionDocument(sessionId)
+    if (!success) {
+      return c.json({ error: 'No document for this session' }, 404)
+    }
+    return c.json({ success: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
 })
 
 export default assistantRoutes

@@ -131,6 +131,10 @@
         "label": "自定义指令",
         "description": "添加到助手系统提示的额外指令。用于自定义行为、提供上下文或设置偏好。",
         "placeholder": "例如：始终使用 TypeScript。偏好函数式编程模式。"
+      },
+      "documentsDir": {
+        "label": "文档目录",
+        "description": "AI 生成的文档保存为 Markdown 文件的目录。"
       }
     },
     "tasks": {

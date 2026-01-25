@@ -131,6 +131,10 @@
         "label": "Custom Instructions",
         "description": "Additional instructions added to the assistant's system prompt. Use this to customize behavior, provide context, or set preferences.",
         "placeholder": "e.g., \"Always use TypeScript. Prefer functional programming patterns.\""
+      },
+      "documentsDir": {
+        "label": "Documents Directory",
+        "description": "Directory where AI-generated documents are saved as markdown files."
       }
     },
     "tasks": {

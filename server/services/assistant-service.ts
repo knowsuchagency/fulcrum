@@ -1,11 +1,12 @@
 import { nanoid } from 'nanoid'
-import { eq, desc, and, sql, like } from 'drizzle-orm'
+import { eq, desc, and, sql, like, isNotNull } from 'drizzle-orm'
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import { db, chatSessions, chatMessages, artifacts } from '../db'
 import type { ChatSession, NewChatSession, ChatMessage, NewChatMessage, Artifact, NewArtifact } from '../db/schema'
 import { getSettings } from '../lib/settings'
 import { log } from '../lib/logger'
 import type { PageContext } from '../../shared/types'
+import { saveDocument, readDocument, deleteDocument, renameDocument, generateDocumentFilename } from './document-service'
 
 type ModelId = 'opus' | 'sonnet' | 'haiku'
 
@@ -109,7 +110,10 @@ export function listSessions(options: {
 /**
  * Update a session
  */
-export function updateSession(id: string, updates: Partial<Pick<ChatSession, 'title' | 'isFavorite' | 'editorContent'>>): ChatSession | null {
+export function updateSession(
+  id: string,
+  updates: Partial<Pick<ChatSession, 'title' | 'isFavorite' | 'editorContent' | 'documentPath' | 'documentStarred'>>
+): ChatSession | null {
   const session = getSession(id)
   if (!session) return null
 
@@ -127,9 +131,22 @@ export function updateSession(id: string, updates: Partial<Pick<ChatSession, 'ti
 /**
  * Delete a session and its data
  */
-export function deleteSession(id: string): boolean {
+export async function deleteSession(id: string): Promise<boolean> {
   const session = getSession(id)
   if (!session) return false
+
+  // Delete document file if exists
+  if (session.documentPath) {
+    try {
+      await deleteDocument(session.documentPath)
+    } catch (err) {
+      log.assistant.warn('Failed to delete document file', {
+        sessionId: id,
+        documentPath: session.documentPath,
+        error: String(err),
+      })
+    }
+  }
 
   // Delete associated artifacts
   db.delete(artifacts).where(eq(artifacts.sessionId, id)).run()
@@ -744,4 +761,142 @@ export async function forkArtifact(id: string, newContent: string): Promise<Arti
     content: newContent,
     description: original.description || undefined,
   })
+}
+
+// ==================== Document Functions ====================
+
+export interface Document {
+  sessionId: string
+  sessionTitle: string
+  filename: string
+  starred: boolean
+  content: string | null
+  updatedAt: string
+}
+
+/**
+ * Save editor content as a document file
+ * Creates a new document if session doesn't have one, or updates existing
+ */
+export async function saveSessionDocument(
+  sessionId: string,
+  content: string
+): Promise<string | null> {
+  const session = getSession(sessionId)
+  if (!session) return null
+
+  let docPath = session.documentPath
+
+  // Generate filename if session doesn't have a document yet
+  if (!docPath) {
+    docPath = generateDocumentFilename(session.title)
+  }
+
+  // Save to filesystem
+  await saveDocument(docPath, content)
+
+  // Update session with document path if new
+  if (!session.documentPath) {
+    updateSession(sessionId, { documentPath: docPath })
+  }
+
+  log.assistant.info('Saved session document', { sessionId, documentPath: docPath })
+  return docPath
+}
+
+/**
+ * List all documents (sessions that have a document)
+ * Sorted by starred first, then by updatedAt
+ */
+export async function listDocuments(): Promise<Document[]> {
+  const sessions = db
+    .select()
+    .from(chatSessions)
+    .where(isNotNull(chatSessions.documentPath))
+    .orderBy(
+      desc(chatSessions.documentStarred),
+      desc(chatSessions.updatedAt)
+    )
+    .all()
+
+  const documents: Document[] = await Promise.all(
+    sessions.map(async (session) => ({
+      sessionId: session.id,
+      sessionTitle: session.title,
+      filename: session.documentPath!,
+      starred: session.documentStarred ?? false,
+      content: await readDocument(session.documentPath!),
+      updatedAt: session.updatedAt,
+    }))
+  )
+
+  return documents
+}
+
+/**
+ * Rename a document
+ */
+export async function renameSessionDocument(
+  sessionId: string,
+  newFilename: string
+): Promise<boolean> {
+  const session = getSession(sessionId)
+  if (!session?.documentPath) return false
+
+  // Ensure new filename has .md extension
+  const normalizedFilename = newFilename.endsWith('.md')
+    ? newFilename
+    : `${newFilename}.md`
+
+  // Rename file on disk
+  await renameDocument(session.documentPath, normalizedFilename)
+
+  // Update session
+  updateSession(sessionId, { documentPath: normalizedFilename })
+
+  log.assistant.info('Renamed document', {
+    sessionId,
+    from: session.documentPath,
+    to: normalizedFilename,
+  })
+
+  return true
+}
+
+/**
+ * Toggle document starred status
+ */
+export function toggleDocumentStarred(sessionId: string): boolean {
+  const session = getSession(sessionId)
+  if (!session?.documentPath) return false
+
+  const newStarred = !session.documentStarred
+  updateSession(sessionId, { documentStarred: newStarred })
+
+  log.assistant.info('Toggled document starred', { sessionId, starred: newStarred })
+  return newStarred
+}
+
+/**
+ * Remove document from session (deletes file, clears document fields)
+ */
+export async function removeSessionDocument(sessionId: string): Promise<boolean> {
+  const session = getSession(sessionId)
+  if (!session?.documentPath) return false
+
+  // Delete file
+  await deleteDocument(session.documentPath)
+
+  // Clear document fields
+  db.update(chatSessions)
+    .set({
+      documentPath: null,
+      documentStarred: false,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(chatSessions.id, sessionId))
+    .run()
+
+  log.assistant.info('Removed session document', { sessionId })
+  return true
 }
