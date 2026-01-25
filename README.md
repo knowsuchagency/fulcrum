@@ -2,37 +2,31 @@
 
 **Harness Attention. Orchestrate Agents. Leverage Your Time Wisely.**
 
-![Fulcrum Kanban Board](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/tasks-kanban-board.png)
+![Fulcrum Kanban Board with AI Assistant](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/kanban-with-assistant.png)
 
 ## What It Does
 
-Run multiple AI coding agent sessions in parallel across isolated git worktrees. Monitor them all from one screen. Close your laptop—they keep working. Deploy to production when ready. Self-hosted and open source.
+Run multiple AI coding agents in parallel across isolated git worktrees. Manage projects with tasks, dependencies, and scheduling. Deploy to production when ready. Work from anywhere—your agents keep running when you close the laptop. Self-hosted and open source.
 
-Fulcrum supports **Claude Code** and **OpenCode** with per-repository and per-task agent selection.
+**Five pillars:**
 
-- **Full Development Lifecycle** — Develop features in isolated git worktrees, then deploy to production with Docker Compose. No context switching, no vendor lock-in.
-- **Parallel Agent Orchestration** — Run multiple AI agent sessions across different tasks and worktrees. See and control all sessions in one parallel view.
-- **Work From Anywhere** — Close your laptop—your agents keep working on your behalf. Pick up where you left off from your phone.
-- **Multi-Agent Support** — Choose between Claude Code and OpenCode. Set a global default, override per-repository, or select per-task.
-- **Open Source & Self-Hosted** — Inspect the code, run it anywhere, own your data. From a $5 VPS to your home lab.
+- **Terminal-First Orchestration** — Run Claude Code, OpenCode, or other agents in real terminals. No abstraction layer, no wrapper APIs.
+- **Work From Anywhere** — Run Fulcrum on a remote server. Kick off tasks, close your laptop, check progress from your phone. Agents keep working in the background.
+- **Project Management** — Tasks with dependencies, due dates, labels, and attachments. Visual kanban boards and dependency graphs.
+- **Production Deployment** — Docker Compose with automatic Traefik routing and Cloudflare DNS/tunnels.
+- **MCP-First Architecture** — 60+ tools exposed via Model Context Protocol. Agents discover what they need.
 
-## Key Features
+## MCP-First Architecture
 
-- **Projects** — Unified view combining repositories and app deployments with workspace terminals
-- **App Deployment** — Deploy with Docker Compose, automatic Traefik routing, optional Cloudflare DNS integration
-- **Parallel Agent Orchestration** — Run multiple AI coding agent sessions across different tasks and worktrees
-- **Multi-Agent Support** — Use Claude Code or OpenCode, configurable globally, per-repo, or per-task
-- **Work From Anywhere** — Run on a remote server; agents continue working when you disconnect
-- **Git Worktree Isolation** — Safe experimentation without touching your main branch
-- **Claude Code Plugin** — Skill for task management, automatic status sync, session continuity
-- **MCP Server** — 60+ tools for tasks, projects, apps, and remote execution
-- **Kanban Task Management** — Visual task tracking from planning to done
-- **Task Dependencies** — Define prerequisite tasks; visualize with dependency graph
-- **Task & Project Context** — Attach files, add reference links, set due dates, organize with labels
-- **PR Monitoring** — Track pull requests across repositories
-- **Linear Integration** — Sync task status with Linear tickets
-- **Job Scheduling** — Create and manage systemd/launchd timers from the UI
-- **Cross-Platform** — Desktop app (Mac, Linux) or web application
+Everything in Fulcrum is exposed through MCP (Model Context Protocol):
+
+- **60+ MCP tools** for tasks, projects, apps, repos, notifications, and remote execution
+- **Smart tool discovery** — `search_tools` lets agents find relevant tools without loading everything into context
+- **Integrated assistant** — Built-in AI assistant with full context of your tasks, projects, and apps
+- **External agent support** — Connect Claude Desktop, Clawdbot, or any MCP-compatible agent
+- **No context bloat** — Agents discover and use only the tools they need
+
+Whether you use Fulcrum's built-in assistant or an external agent like Claude Desktop, AI has seamless access to your entire workflow.
 
 ## Quick Start
 
@@ -40,32 +34,16 @@ Fulcrum supports **Claude Code** and **OpenCode** with per-repository and per-ta
 npx @knowsuchagency/fulcrum@latest up
 ```
 
-That's it! Fulcrum will:
-- Check for required dependencies (bun, dtach, AI agent CLI, uv)
-- Offer to install any that are missing
-- Start the server on http://localhost:7777
-- Show getting started tips
-
-Open http://localhost:7777 in your browser.
-
-### Check Your Setup
-
-```bash
-fulcrum doctor
-```
-
-Shows the status of all dependencies with versions.
+Fulcrum will check for dependencies (bun, dtach, AI agent CLI), offer to install any that are missing, and start the server on http://localhost:7777.
 
 ### Desktop App
-
-Download the desktop app for a bundled experience:
 
 | Platform | Download |
 |----------|----------|
 | **macOS** (Apple Silicon) | [Download DMG](https://github.com/knowsuchagency/fulcrum/releases/latest/download/Fulcrum-macos-arm64.dmg) |
 | **Linux** | [Download AppImage](https://github.com/knowsuchagency/fulcrum/releases/latest/download/Fulcrum-linux-x64.AppImage) |
 
-The desktop app bundles everything—just install and run. It will start the server, install the Claude Code plugin, and check for updates automatically.
+The desktop app bundles everything—just install and run.
 
 <details>
 <summary>macOS Installation Notes</summary>
@@ -77,15 +55,13 @@ The desktop app bundles everything—just install and run. It will start the ser
 
 </details>
 
-### Install Script (Recommended for Remote Servers)
+### Install Script (Remote Servers)
 
 For remote servers or VPS, use the install script—it auto-installs all dependencies:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/install.sh | bash
 ```
-
-This installs bun, dtach, uv, Claude Code, OpenCode, GitHub CLI, Docker, cloudflared, and the fulcrum CLI + Claude Code plugin.
 
 ### Claude Code Plugin
 
@@ -98,64 +74,65 @@ claude plugin install fulcrum@fulcrum --scope user
 
 ## Features
 
-### Kanban Board
+### Kanban Board & AI Assistant
 
-Track tasks from planning to done. Create tasks that automatically spin up isolated git worktrees, and watch their status update in real-time as you work with your AI agents.
+Track tasks from planning to done. The built-in AI assistant has full context of everything you're tracking—tasks, projects, apps—and can help with planning, documentation, or running MCP tools.
 
-![Kanban Board](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/tasks-kanban-board.png)
+![Kanban Board with AI Assistant](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/kanban-with-assistant.png)
 
-### Task Terminals View
+### Parallel Agent Orchestration
 
-See all your AI agent sessions across every task in a single parallel view. Each task creates an isolated git worktree on-demand, and you can monitor and interact with all sessions simultaneously.
+Run multiple AI coding agents simultaneously across different tasks. Each task gets an isolated git worktree. Monitor and interact with all sessions from one screen.
 
-![Task Terminals View](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/terminals-view-with-tests.png)
-
-### App Deployment
-
-Deploy applications directly from Fulcrum with Docker Compose. Edit compose files inline, configure environment variables, and manage services with automatic Traefik routing and optional Cloudflare DNS integration.
-
-![App Deployment](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/app-deployment-config.png)
+![Parallel Agent Terminals](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/parallel-agent-terminals.png)
 
 ### Projects
 
-Projects unify your code repositories and app deployments into a single entity. Manage workspace terminals, task settings, and deployment configuration from one place.
+Unified view of repositories and deployments. Link repos, manage tasks, configure default agents, and see active work at a glance.
 
-![Projects](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/repositories-view.png)
+![Projects List](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/projects-list.png)
 
-### Browser Preview
+### Project Workspace
 
-Preview your app alongside the agent terminal in a split-pane view. Watch changes in real-time as your AI agent iterates on your code.
+Terminal with integrated file browser. Direct access to project files alongside your agent sessions.
 
-![Browser Preview](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/browser-preview-split-view.png)
+![Project Workspace](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/project-workspace.png)
+
+### Task Dependencies
+
+Define prerequisite tasks that must complete before others can start. Visualize with an interactive dependency graph.
+
+![Task Dependency Graph](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/task-dependency-graph.png)
+
+### AI Assistant
+
+Create documents with live preview. Generate charts and visualizations. The assistant uses the same MCP tools available to external agents.
+
+![AI Assistant Editor](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/assistant-editor.png)
 
 ### System Monitoring
 
-Keep an eye on system resources while your agents work. CPU, memory, and disk usage at a glance. The Jobs tab lets you create and manage systemd (Linux) or launchd (macOS) timers.
+Track CPU, memory, and disk usage while your agents work. The Jobs tab manages systemd (Linux) or launchd (macOS) timers.
 
-![System Monitoring](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/monitoring-system-metrics.png)
+![System Monitoring](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/system-monitoring.png)
 
 ## Supported Agents
-
-Fulcrum supports multiple AI coding agents:
 
 | Agent | Description |
 |-------|-------------|
 | **Claude Code** | Anthropic's CLI coding agent with deep MCP integration |
 | **OpenCode** | Open-source coding agent with GPT-4 and other model support |
 
-Configure your default agent globally in settings, override per-repository, or select per-task when creating new tasks.
+Configure your default agent globally, per-repository, or per-task.
 
 ## Claude Code Plugin
 
-The Fulcrum plugin for Claude Code enables seamless integration:
+The Fulcrum plugin enables seamless integration:
 
 - **Automatic Status Sync** — Task moves to "In Review" when Claude stops, "In Progress" when you respond
-- **Session Continuity** — Claude sessions are tied to task IDs
+- **Session Continuity** — Sessions tied to task IDs
 - **MCP Server** — Task management tools available directly to Claude
-- **Fulcrum Skill** — CLI documentation for task management (see `plugins/fulcrum/skills/`)
 - **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`
-
-The plugin is automatically installed when Fulcrum starts. To install manually:
 
 ```bash
 claude plugin marketplace add knowsuchagency/fulcrum
@@ -164,12 +141,6 @@ claude plugin install fulcrum@fulcrum --scope user
 
 ## OpenCode Integration
 
-The Fulcrum plugin for OpenCode enables seamless integration:
-
-- **Automatic Status Sync** — Task moves to "In Review" when OpenCode stops, "In Progress" when you respond
-- **Session Continuity** — OpenCode sessions are tied to task IDs
-- **MCP Server** — Task management tools available directly to OpenCode
-
 ```bash
 fulcrum opencode install    # Install plugin + MCP server
 fulcrum opencode uninstall  # Remove both
@@ -177,7 +148,7 @@ fulcrum opencode uninstall  # Remove both
 
 ## MCP Tools
 
-Both Claude Code and OpenCode plugins include an MCP server with 60+ tools for task management, project organization, app deployment, and remote execution:
+Both plugins include an MCP server with 60+ tools:
 
 | Category | Description |
 |----------|-------------|
@@ -207,11 +178,9 @@ For Claude Desktop, add to your `claude_desktop_config.json`:
 
 ## Remote Server Setup
 
-Run the backend on a remote server and connect from anywhere. Launch tasks, close your laptop, and your agents keep working. As AI becomes more capable of autonomous work, this becomes essential.
+Run the backend on a remote server and connect from anywhere. Launch tasks, close your laptop, and your agents keep working.
 
-### Desktop App: SSH Port Forwarding (Recommended)
-
-The desktop app connects to `localhost:7777`. Use SSH port forwarding to tunnel to your remote server:
+### SSH Port Forwarding (Recommended)
 
 ```bash
 # Forward local port 7777 to remote server's port 7777
@@ -221,36 +190,24 @@ ssh -L 7777:localhost:7777 your-server
 ssh -fN -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 7777:localhost:7777 your-server
 ```
 
-On the remote server, start Fulcrum:
+On the remote server:
 ```bash
 npx @knowsuchagency/fulcrum@latest up
 ```
 
-The desktop app will connect through the tunnel automatically. This approach is:
-- **Secure** — Backend stays bound to localhost, no exposed ports
-- **Performant** — Direct SSH connection, lower latency than overlay networks
-- **Simple** — No additional configuration needed
+The desktop app connects through the tunnel automatically. This is secure (no exposed ports), performant (direct SSH), and simple (no extra config).
 
-For persistent tunnels on macOS, use a launchd agent. See [this guide](https://gist.github.com/knowsuchagency/60656087903cd56d3a9b5d1d5c803186).
+### Browser Access
 
-### Browser: Tailscale or Cloudflare Tunnels
-
-For browser-only access, you can use Tailscale or Cloudflare Tunnels to expose your server:
-
-1. **On the remote server:**
-   ```bash
-   npx @knowsuchagency/fulcrum@latest up
-   ```
-
-2. **Access via browser** — Open the tunnel URL (e.g., `http://your-server.tailnet.ts.net:7777`)
+For browser-only access, use Tailscale or Cloudflare Tunnels to expose your server.
 
 <details>
 <summary><strong>Configuration</strong></summary>
 
 Settings are stored in `.fulcrum/settings.json`. The fulcrum directory is resolved in this order:
 
-1. `FULCRUM_DIR` environment variable (explicit override)
-2. `.fulcrum` in current working directory (per-worktree isolation)
+1. `FULCRUM_DIR` environment variable
+2. `.fulcrum` in current working directory
 3. `~/.fulcrum` (default)
 
 | Setting | Env Var | Default |
@@ -262,26 +219,22 @@ Settings are stored in `.fulcrum/settings.json`. The fulcrum directory is resolv
 | integrations.githubPat | `GITHUB_PAT` | null |
 | appearance.language | — | null (auto-detect) |
 
-Notification settings (sound, Slack, Discord, Pushover) are configured via the Settings UI or CLI.
-
-Precedence: environment variable → settings.json → default
+Notification settings (sound, Slack, Discord, Pushover) are configured via Settings UI or CLI.
 
 ### Linear Integration
 
-Fulcrum can sync task status with Linear tickets. Configure `linearApiKey` in settings or set `LINEAR_API_KEY`. When a task is linked to a Linear ticket, status changes in Fulcrum automatically update Linear.
+Sync task status with Linear tickets. Configure `linearApiKey` in settings or set `LINEAR_API_KEY`.
 
 </details>
 
 <details>
 <summary><strong>CLI Reference</strong></summary>
 
-The CLI lets AI agents working inside task worktrees query and update task status.
-
 ### Server Management
 
 ```bash
 fulcrum up                        # Start server daemon
-fulcrum up -y                     # Start with auto-install (no prompts)
+fulcrum up -y                     # Start with auto-install
 fulcrum down                      # Stop server
 fulcrum status                    # Check server status
 fulcrum doctor                    # Check all dependencies
@@ -291,14 +244,12 @@ fulcrum mcp                       # Start MCP server (stdio)
 ### Current Task (auto-detected from worktree)
 
 ```bash
-fulcrum current-task info         # Get current task info (default)
+fulcrum current-task info         # Get current task info
 fulcrum current-task review       # Mark as IN_REVIEW
 fulcrum current-task done         # Mark as DONE
 fulcrum current-task cancel       # Mark as CANCELED
-fulcrum current-task pr <url>     # Associate a PR with current task
-fulcrum current-task link <url>   # Add a reference link to the task
-fulcrum current-task link         # List all links
-fulcrum current-task link -r <id> # Remove a link
+fulcrum current-task pr <url>     # Associate a PR
+fulcrum current-task link <url>   # Add a reference link
 ```
 
 ### Agent Integration
@@ -310,29 +261,11 @@ fulcrum opencode install          # Install OpenCode plugin + MCP server
 fulcrum opencode uninstall        # Remove plugin + MCP server
 ```
 
-### Configuration
-
-```bash
-fulcrum config get <key>          # Get a config value
-fulcrum config set <key> <value>  # Set a config value
-```
-
 ### Notifications
 
 ```bash
 fulcrum notifications             # Show notification settings
-fulcrum notifications enable      # Enable notifications
-fulcrum notifications disable     # Disable notifications
-fulcrum notifications test <ch>   # Test a channel
 fulcrum notify <title> [message]  # Send a notification
-```
-
-### Global Options
-
-```bash
---port=<port>     # Server port (default: 7777)
---url=<url>       # Override full server URL
---pretty          # Pretty-print JSON output
 ```
 
 </details>
