@@ -142,7 +142,7 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
           <button
             className={cn(
               'w-full px-3 py-1.5 text-left text-xs hover:bg-accent flex items-center gap-2',
-              !value && 'bg-accent/50'
+              !value && 'bg-accent'
             )}
             onClick={() => selectProject(null)}
           >
@@ -162,7 +162,7 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
                 key={project.id}
                 className={cn(
                   'w-full px-3 py-1.5 text-left text-xs hover:bg-accent flex items-center gap-2',
-                  isSelected && 'bg-accent/50'
+                  isSelected && 'bg-accent'
                 )}
                 onClick={() => selectProject(project.id)}
               >
@@ -186,7 +186,7 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
             <button
               className={cn(
                 'w-full px-3 py-1.5 text-left text-xs hover:bg-accent flex items-center gap-2',
-                value === 'inbox' && 'bg-accent/50'
+                value === 'inbox' && 'bg-accent'
               )}
               onClick={() => selectProject('inbox')}
             >
