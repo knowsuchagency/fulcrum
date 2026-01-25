@@ -164,4 +164,5 @@ export const log = {
   deploy: createLogger('Deploy'),
   jobs: createLogger('Jobs'),
   chat: createLogger('Chat'),
+  assistant: createLogger('Assistant'),
 }

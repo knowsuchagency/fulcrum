@@ -256,6 +256,55 @@ export const projectTags = sqliteTable('project_tags', {
   createdAt: text('created_at').notNull(),
 })
 
+// Chat sessions - AI assistant conversations with worktree support
+export const chatSessions = sqliteTable('chat_sessions', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  provider: text('provider').notNull().default('claude'), // 'claude' | 'opencode'
+  model: text('model'), // Model used for this session
+  worktreePath: text('worktree_path').notNull(), // Path to sandbox worktree
+  branch: text('branch').notNull(), // Git branch name
+  devPort: integer('dev_port'), // Port for the sandbox dev server
+  projectId: text('project_id'), // Optional: for organization
+  context: text('context'), // JSON: initial page context
+  isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
+  messageCount: integer('message_count').default(0),
+  lastMessageAt: text('last_message_at'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
+// Chat messages - individual messages within a chat session
+export const chatMessages = sqliteTable('chat_messages', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull(), // FK to chatSessions
+  role: text('role').notNull(), // 'user' | 'assistant' | 'system'
+  content: text('content').notNull(),
+  toolCalls: text('tool_calls'), // JSON: tool calls made by assistant
+  artifacts: text('artifacts'), // JSON: array of artifact IDs referenced
+  model: text('model'), // Model that generated this response
+  tokensIn: integer('tokens_in'), // Input tokens
+  tokensOut: integer('tokens_out'), // Output tokens
+  createdAt: text('created_at').notNull(),
+})
+
+// Artifacts - generated content from AI assistant (React components, charts, etc.)
+export const artifacts = sqliteTable('artifacts', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id'), // FK to chatSessions (nullable - can be detached)
+  messageId: text('message_id'), // FK to chatMessages (nullable)
+  type: text('type').notNull(), // 'react' | 'chart' | 'markdown' | 'mermaid' | 'code'
+  title: text('title').notNull(),
+  description: text('description'),
+  version: integer('version').default(1),
+  previewPath: text('preview_path'), // Thumbnail path for gallery
+  contentPath: text('content_path').notNull(), // Content directory in worktree
+  isFavorite: integer('is_favorite', { mode: 'boolean' }).default(false),
+  tags: text('tags'), // JSON array of tags
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 // System metrics for monitoring - stores historical CPU, memory, disk usage
 export const systemMetrics = sqliteTable('system_metrics', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -312,3 +361,9 @@ export type ProjectTag = typeof projectTags.$inferSelect
 export type NewProjectTag = typeof projectTags.$inferInsert
 export type ProjectLink = typeof projectLinks.$inferSelect
 export type NewProjectLink = typeof projectLinks.$inferInsert
+export type ChatSession = typeof chatSessions.$inferSelect
+export type NewChatSession = typeof chatSessions.$inferInsert
+export type ChatMessage = typeof chatMessages.$inferSelect
+export type NewChatMessage = typeof chatMessages.$inferInsert
+export type Artifact = typeof artifacts.$inferSelect
+export type NewArtifact = typeof artifacts.$inferInsert
