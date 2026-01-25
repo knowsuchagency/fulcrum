@@ -253,7 +253,11 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         >
           <div className="film-grain relative flex flex-col font-sans rounded-3xl shadow-2xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] bg-popover border border-border" style={{ background: 'var(--gradient-card)' }}>
             {/* Header */}
-            <div className="flex items-center justify-end px-6 pt-4 pb-2">
+            <div className="flex items-center justify-between px-6 pt-4 pb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-medium text-muted-foreground">AI Assistant</span>
+              </div>
               <div className="flex items-center gap-2">
                 {/* Provider Toggle */}
                 {isOpencodeAvailable && (
