@@ -185,7 +185,7 @@ export function TaskCalendar({ className, projectFilter, tagsFilter }: TaskCalen
           </Button>
         </div>
         <h2 className="text-lg font-semibold">{monthYear}</h2>
-        <div className="text-sm text-muted-foreground">
+        <div className="hidden sm:block text-sm text-muted-foreground">
           {tasksWithDueDates} tasks with due dates
         </div>
       </div>

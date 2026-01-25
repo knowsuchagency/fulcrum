@@ -206,56 +206,54 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   const isOpencodeAvailable = opencodeInstalled && sortedOpencodeProviders.length > 0
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {/* Floating 3D Glowing AI Logo */}
-      <button
-        className={`floating-ai-button relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 transform ${
-          isOpen ? 'rotate-90' : 'rotate-0'
-        } hover:scale-110`}
-        onClick={toggle}
-        style={{
-          cursor: 'pointer',
-          background: isDark
-            ? 'linear-gradient(135deg, var(--destructive) 0%, color-mix(in oklch, var(--destructive) 80%, black) 100%)'
-            : 'linear-gradient(135deg, var(--accent) 0%, color-mix(in oklch, var(--accent) 80%, black) 100%)',
-          boxShadow: isDark
-            ? '0 0 20px color-mix(in oklch, var(--destructive) 50%, transparent), 0 0 40px color-mix(in oklch, var(--destructive) 30%, transparent)'
-            : '0 0 20px color-mix(in oklch, var(--accent) 50%, transparent), 0 0 40px color-mix(in oklch, var(--accent) 30%, transparent)',
-          border: '2px solid rgba(255, 255, 255, 0.2)',
-        }}
-      >
-        {/* 3D effect */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/20 to-transparent opacity-30" />
+    <>
+      {/* Floating 3D Glowing AI Logo - hidden on mobile, shown in header instead */}
+      <div className="fixed bottom-6 right-6 z-50 hidden sm:block">
+        <button
+          className={`floating-ai-button relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 transform ${
+            isOpen ? 'rotate-90' : 'rotate-0'
+          } hover:scale-110`}
+          onClick={toggle}
+          style={{
+            cursor: 'pointer',
+            background: isDark
+              ? 'linear-gradient(135deg, var(--destructive) 0%, color-mix(in oklch, var(--destructive) 80%, black) 100%)'
+              : 'linear-gradient(135deg, var(--accent) 0%, color-mix(in oklch, var(--accent) 80%, black) 100%)',
+            boxShadow: isDark
+              ? '0 0 20px color-mix(in oklch, var(--destructive) 50%, transparent), 0 0 40px color-mix(in oklch, var(--destructive) 30%, transparent)'
+              : '0 0 20px color-mix(in oklch, var(--accent) 50%, transparent), 0 0 40px color-mix(in oklch, var(--accent) 30%, transparent)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+          }}
+        >
+          {/* 3D effect */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/20 to-transparent opacity-30" />
 
-        {/* Inner glow */}
-        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+          {/* Inner glow */}
+          <div className="absolute inset-0 rounded-full border-2 border-white/10" />
 
-        {/* AI Icon */}
-        <div className="relative z-10">
-          {isOpen ? <X className="w-7 h-7 text-white" /> : <Bot className="w-8 h-8 text-white" />}
-        </div>
+          {/* AI Icon */}
+          <div className="relative z-10">
+            {isOpen ? <X className="w-7 h-7 text-white" /> : <Bot className="w-8 h-8 text-white" />}
+          </div>
 
-        {/* Breathing glow animation */}
-        <div className={`absolute inset-0 rounded-full animate-pulse opacity-30 ${isDark ? 'bg-destructive' : 'bg-accent'}`} />
-        {!isOpen && <div className={`absolute -inset-1 rounded-full animate-ping opacity-15 ${isDark ? 'bg-destructive' : 'bg-accent'}`} />}
-      </button>
+          {/* Breathing glow animation */}
+          <div className={`absolute inset-0 rounded-full animate-pulse opacity-30 ${isDark ? 'bg-destructive' : 'bg-accent'}`} />
+          {!isOpen && <div className={`absolute -inset-1 rounded-full animate-ping opacity-15 ${isDark ? 'bg-destructive' : 'bg-accent'}`} />}
+        </button>
+      </div>
 
       {/* Chat Interface */}
       {isOpen && (
         <div
           ref={chatRef}
-          className="absolute bottom-20 right-0 w-[420px] max-w-[calc(100vw-48px)] transition-all duration-300 origin-bottom-right"
+          className="fixed bottom-6 right-6 sm:bottom-24 z-50 w-[420px] max-w-[calc(100vw-48px)] transition-all duration-300 origin-bottom-right"
           style={{
             animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
           }}
         >
           <div className="film-grain relative flex flex-col font-sans rounded-3xl shadow-2xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] bg-popover border border-border" style={{ background: 'var(--gradient-card)' }}>
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-4 pb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-medium text-muted-foreground">AI Assistant</span>
-              </div>
+            <div className="flex items-center justify-end px-6 pt-4 pb-2">
               <div className="flex items-center gap-2">
                 {/* Provider Toggle */}
                 {isOpencodeAvailable && (
@@ -439,8 +437,8 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             {/* Input Section */}
             <ChatInput onSend={handleSend} isLoading={isStreaming} />
 
-            {/* Footer Info */}
-            <div className="flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 text-muted-foreground">
+            {/* Footer Info - hidden on mobile */}
+            <div className="hidden sm:flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Info className="w-3 h-3" />
                 <span>
@@ -527,6 +525,6 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 })

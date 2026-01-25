@@ -87,8 +87,11 @@ function TasksView() {
             />
           </div>
         )}
-        <ProjectFilter value={projectFilter ?? null} onChange={setProjectFilter} />
-        <TagsFilter value={tagsFilter} onChange={setTagsFilter} />
+        {/* Filters hidden on mobile - use AI assistant instead */}
+        <div className="hidden sm:contents">
+          <ProjectFilter value={projectFilter ?? null} onChange={setProjectFilter} />
+          <TagsFilter value={tagsFilter} onChange={setTagsFilter} />
+        </div>
         <div className="flex-1" />
         <ToggleGroup
           value={[viewMode]}

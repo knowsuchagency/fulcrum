@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { useTheme } from 'next-themes'
+import { Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   NavigationMenu,
@@ -22,6 +24,7 @@ import {
   More03Icon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
+import { useChat } from '@/hooks/use-chat'
 import { cn } from '@/lib/utils'
 
 interface HeaderProps {
@@ -40,9 +43,12 @@ const NAV_ITEMS = [
 export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
   const { t } = useTranslation('navigation')
   const { location } = useRouterState()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   const pathname = location.pathname
   const [createTaskOpen, setCreateTaskOpen] = useState(false)
   const [menuValue, setMenuValue] = useState('')
+  const { toggle: toggleChat, isOpen: isChatOpen } = useChat()
 
   const isActive = (to: string, matchPrefix: boolean) =>
     matchPrefix ? pathname.startsWith(to) : pathname === to
@@ -120,6 +126,25 @@ export function Header({ onNewTaskRef, onOpenCommandPalette }: HeaderProps) {
 
       <div className="flex shrink-0 items-center gap-2">
         <CreateTaskModal open={createTaskOpen} onOpenChange={setCreateTaskOpen} />
+        {/* AI Chat Button - shown on mobile, hidden on desktop where floating button is used */}
+        <button
+          onClick={toggleChat}
+          className="sm:hidden relative w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+          style={{
+            background: isDark
+              ? 'linear-gradient(135deg, var(--destructive) 0%, color-mix(in oklch, var(--destructive) 80%, black) 100%)'
+              : 'linear-gradient(135deg, var(--accent) 0%, color-mix(in oklch, var(--accent) 80%, black) 100%)',
+            boxShadow: isDark
+              ? '0 0 8px color-mix(in oklch, var(--destructive) 40%, transparent)'
+              : '0 0 8px color-mix(in oklch, var(--accent) 40%, transparent)',
+          }}
+          title="AI Assistant"
+        >
+          <Bot className={`w-4 h-4 text-white transition-transform ${isChatOpen ? 'rotate-12' : ''}`} />
+          {!isChatOpen && (
+            <div className={`absolute inset-0 rounded-full animate-pulse opacity-30 ${isDark ? 'bg-destructive' : 'bg-accent'}`} />
+          )}
+        </button>
         <Button
           variant="ghost"
           size="icon-sm"
