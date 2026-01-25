@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
-import { Bot, User, Send, Loader2, Plus, ChevronDown, Trash2, Check } from 'lucide-react'
+import { Bot, User, Send, Loader2, Plus, ChevronDown, Trash2, Check, Pencil } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import MarkdownPreview from '@uiw/react-markdown-preview'
 import { Button } from '@/components/ui/button'
@@ -299,16 +299,7 @@ export function ChatPanel({
         <DropdownMenu>
           <DropdownMenuTrigger className="flex-1 min-w-0 max-w-[180px] justify-between h-auto py-1.5 px-2 rounded-md hover:bg-muted/50 flex items-center">
               <div className="text-left min-w-0">
-                <div
-                  className="text-sm font-medium truncate cursor-pointer hover:text-accent"
-                  onClick={(e) => {
-                    if (session) {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleStartEditTitle()
-                    }
-                  }}
-                >
+                <div className="text-sm font-medium truncate">
                   {session?.title || 'Select a chat'}
                 </div>
                 {session && (
@@ -320,6 +311,25 @@ export function ChatPanel({
               <ChevronDown className="size-4 text-muted-foreground flex-shrink-0" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
+            {/* Current session actions */}
+            {session && (
+              <>
+                <DropdownMenuItem onClick={handleStartEditTitle}>
+                  <Pencil className="size-4 mr-2" />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onDeleteSession(session.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="size-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
+            {/* Session list */}
             {sessions.length === 0 ? (
               <div className="px-2 py-3 text-sm text-muted-foreground text-center">
                 No chats yet
@@ -328,8 +338,11 @@ export function ChatPanel({
               sessions.map((s) => (
                 <DropdownMenuItem
                   key={s.id}
-                  className="flex items-center justify-between gap-2"
-                  onSelect={() => onSelectSession(s)}
+                  className={cn(
+                    "flex items-center gap-2",
+                    s.id === session?.id && "bg-accent/10"
+                  )}
+                  onClick={() => onSelectSession(s)}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="text-sm truncate">{s.title}</div>
@@ -337,20 +350,14 @@ export function ChatPanel({
                       {s.messageCount} msgs · {formatDistanceToNow(new Date(s.updatedAt), { addSuffix: true })}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDeleteSession(s.id)
-                    }}
-                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
+                  {s.id === session?.id && (
+                    <Check className="size-4 text-accent flex-shrink-0" />
+                  )}
                 </DropdownMenuItem>
               ))
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={onCreateSession}>
+            <DropdownMenuItem onClick={onCreateSession}>
               <Plus className="size-4 mr-2" />
               New Chat
             </DropdownMenuItem>
