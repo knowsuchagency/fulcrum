@@ -100,7 +100,7 @@ function NewJobView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-4 border-b border-border bg-background px-4 py-3">
+      <div className="film-grain relative flex shrink-0 items-center gap-4 border-b border-border px-4 py-3" style={{ background: 'var(--gradient-header)' }}>
         <Link to="/monitoring" search={{ tab: 'jobs' }} className="text-muted-foreground hover:text-foreground">
           <HugeiconsIcon icon={ArrowLeft01Icon} size={20} strokeWidth={2} />
         </Link>

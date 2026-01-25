@@ -40,7 +40,7 @@ function ReviewPage() {
   if (!isUserLoading && !user) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex shrink-0 items-center border-b border-border bg-background px-4 py-2" />
+        <div className="film-grain relative flex shrink-0 items-center border-b border-border px-4 py-2" style={{ background: 'var(--gradient-header)' }} />
         <div className="flex flex-1 items-center justify-center p-8">
           <div className="max-w-md space-y-4 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">

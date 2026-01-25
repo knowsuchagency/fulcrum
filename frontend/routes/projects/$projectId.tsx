@@ -807,7 +807,7 @@ function ProjectDetailView() {
     <>
       <div className="flex h-full flex-col">
         {/* Header bar - matches repo detail view pattern */}
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-4 py-2">
+        <div className="film-grain relative flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-2" style={{ background: 'var(--gradient-header)' }}>
           {/* Left: Project name */}
           {isEditingName ? (
             <Input

@@ -536,7 +536,7 @@ function TaskView() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Task Header */}
-      <div className="shrink-0 border-b border-border bg-background px-4 py-2">
+      <div className="film-grain relative shrink-0 border-b border-border px-4 py-2" style={{ background: 'var(--gradient-header)' }}>
         {/* Mobile: Two-row layout */}
         <div className="flex flex-col gap-1 sm:hidden">
           {/* Row 1: Title + status + operations + delete */}

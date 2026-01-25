@@ -742,7 +742,7 @@ function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-2">
+      <div className="film-grain relative flex shrink-0 items-center justify-between border-b border-border px-4 py-2" style={{ background: 'var(--gradient-header)' }}>
         <h1 className="text-sm font-medium">{t('title')}</h1>
         <div className="flex items-center gap-2">
           {version && <span className="text-xs font-mono text-muted-foreground">v{version}</span>}

@@ -334,7 +334,7 @@ function JobDetailView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="shrink-0 border-b border-border bg-background px-4 py-3">
+      <div className="film-grain relative shrink-0 border-b border-border px-4 py-3" style={{ background: 'var(--gradient-header)' }}>
         {/* Top row: Back button, title, badges */}
         <div className="flex items-center gap-3">
           <Link to="/monitoring" search={{ tab: 'jobs' }} className="shrink-0 text-muted-foreground hover:text-foreground">
