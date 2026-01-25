@@ -63,6 +63,11 @@ function AssistantView() {
 
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null)
 
+  // Clear selected artifact when session changes
+  useEffect(() => {
+    setSelectedArtifact(null)
+  }, [selectedSessionId])
+
   // Create session mutation
   const createSessionMutation = useMutation({
     mutationFn: async () => {

@@ -124,15 +124,21 @@ interface MDXState {
  * Renders MDX content with Recharts components available in scope.
  * Used for AI-generated charts and visualizations.
  */
-export function MDXRenderer({ source, className, data = {} }: MDXRendererProps) {
+// Stable empty object for default data
+const EMPTY_DATA: Record<string, unknown> = {}
+
+export function MDXRenderer({ source, className, data }: MDXRendererProps) {
   const [state, setState] = useState<MDXState>({
     content: null,
     error: null,
     loading: true,
   })
 
-  // Memoize the scope to prevent unnecessary recompilations
-  const scope = useMemo(() => ({ ...data }), [data])
+  // Use stable reference for empty data to prevent infinite re-renders
+  const stableData = data ?? EMPTY_DATA
+
+  // Memoize the scope - only changes when data actually changes
+  const scope = useMemo(() => ({ ...stableData }), [stableData])
 
   useEffect(() => {
     let cancelled = false
@@ -141,11 +147,20 @@ export function MDXRenderer({ source, className, data = {} }: MDXRendererProps) 
       try {
         setState((s) => ({ ...s, loading: true, error: null }))
 
+        // Debug: log the source being compiled
+        console.log('MDXRenderer compiling source:', source?.slice(0, 200))
+
+        if (!source || source.trim().length === 0) {
+          throw new Error('Empty source provided to MDXRenderer')
+        }
+
         const { default: Content } = await evaluate(source, {
           ...runtime,
           baseUrl: import.meta.url,
           useMDXComponents: () => mdxComponents,
         })
+
+        console.log('MDX compiled successfully, Content:', typeof Content)
 
         if (cancelled) return
 
@@ -192,7 +207,13 @@ export function MDXRenderer({ source, className, data = {} }: MDXRendererProps) 
     )
   }
 
-  return <div className={cn('mdx-chart', className)}>{state.content}</div>
+  // Wrap in a container with explicit height so ResponsiveContainer works
+  // ResponsiveContainer requires a parent with defined width and height
+  return (
+    <div className={cn('mdx-chart w-full h-[350px]', className)}>
+      {state.content}
+    </div>
+  )
 }
 
 /**

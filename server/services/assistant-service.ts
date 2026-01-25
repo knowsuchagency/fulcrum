@@ -209,17 +209,11 @@ Use fenced code blocks with the \`chart\` language identifier. Write JSX using R
     { category: 'B', value: 55 },
     { category: 'C', value: 43 }
   ]}>
-    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-    <XAxis dataKey="category" stroke="hsl(var(--muted-foreground))" />
-    <YAxis stroke="hsl(var(--muted-foreground))" />
-    <Tooltip
-      contentStyle={{
-        backgroundColor: 'hsl(var(--card))',
-        border: '1px solid hsl(var(--border))',
-        borderRadius: '8px'
-      }}
-    />
-    <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+    <XAxis dataKey="category" stroke="var(--muted-foreground)" tick={{ fill: 'var(--muted-foreground)' }} />
+    <YAxis stroke="var(--muted-foreground)" tick={{ fill: 'var(--muted-foreground)' }} />
+    <Tooltip contentStyle={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+    <Bar dataKey="value" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
   </BarChart>
 </ResponsiveContainer>
 \`\`\`
@@ -246,19 +240,13 @@ All Recharts components are available:
     { month: 'Feb', productA: 150, productB: 120 },
     { month: 'Mar', productA: 130, productB: 140 }
   ]}>
-    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-    <YAxis stroke="hsl(var(--muted-foreground))" />
-    <Tooltip
-      contentStyle={{
-        backgroundColor: 'hsl(var(--card))',
-        border: '1px solid hsl(var(--border))',
-        borderRadius: '8px'
-      }}
-    />
-    <Legend />
-    <Line type="monotone" dataKey="productA" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4 }} />
-    <Line type="monotone" dataKey="productB" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} />
+    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+    <XAxis dataKey="month" stroke="var(--muted-foreground)" tick={{ fill: 'var(--muted-foreground)' }} />
+    <YAxis stroke="var(--muted-foreground)" tick={{ fill: 'var(--muted-foreground)' }} />
+    <Tooltip contentStyle={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+    <Legend wrapperStyle={{ color: 'var(--muted-foreground)' }} />
+    <Line type="monotone" dataKey="productA" stroke="var(--chart-1)" strokeWidth={2} dot={{ r: 4 }} />
+    <Line type="monotone" dataKey="productB" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 4 }} />
   </LineChart>
 </ResponsiveContainer>
 \`\`\`
@@ -281,32 +269,60 @@ All Recharts components are available:
       paddingAngle={2}
       dataKey="value"
     >
-      <Cell fill="hsl(var(--chart-1))" />
-      <Cell fill="hsl(var(--chart-2))" />
-      <Cell fill="hsl(var(--chart-3))" />
+      <Cell fill="var(--chart-1)" />
+      <Cell fill="var(--chart-2)" />
+      <Cell fill="var(--chart-3)" />
     </Pie>
-    <Tooltip />
-    <Legend />
+    <Tooltip contentStyle={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+    <Legend wrapperStyle={{ color: 'var(--muted-foreground)' }} />
   </PieChart>
 </ResponsiveContainer>
 \`\`\`
 
-## Styling Guidelines
+## Color Palette (CSS Variables)
 
-- Use CSS variables for theme compatibility: \`hsl(var(--chart-1))\`, \`hsl(var(--chart-2))\`, etc.
-- Use \`hsl(var(--border))\` for grid lines
-- Use \`hsl(var(--muted-foreground))\` for axis text
-- Use \`hsl(var(--card))\` for tooltip backgrounds
-- Always wrap charts in ResponsiveContainer with width="100%" and a fixed height
+ALWAYS use these CSS variables for colors - they adapt to light/dark themes:
+
+**Data colors (for bars, lines, areas, pie slices):**
+- \`var(--chart-1)\` - Primary accent (blue)
+- \`var(--chart-2)\` - Secondary accent (teal)
+- \`var(--chart-3)\` - Tertiary accent (amber)
+- \`var(--chart-4)\` - Fourth accent (rose)
+- \`var(--chart-5)\` - Fifth accent (violet)
+
+**UI colors:**
+- \`var(--foreground)\` - Primary text color
+- \`var(--muted-foreground)\` - Secondary text (axis labels, legends)
+- \`var(--border)\` - Grid lines, borders
+- \`var(--card)\` - Tooltip/card backgrounds
+- \`var(--card-foreground)\` - Text on cards/tooltips
+
+**Usage pattern:**
+\`\`\`jsx
+// Bars, lines, fills - use chart colors
+<Bar fill="var(--chart-1)" />
+<Line stroke="var(--chart-2)" />
+
+// Axis text - use muted foreground
+<XAxis stroke="var(--muted-foreground)" tick={{ fill: 'var(--muted-foreground)' }} />
+
+// Grid - use border
+<CartesianGrid stroke="var(--border)" />
+
+// Tooltips - use card colors
+<Tooltip contentStyle={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)', border: '1px solid var(--border)' }} />
+\`\`\`
+
+## Styling Rules
+
+- Always wrap charts in ResponsiveContainer with width="100%" and height={300}
+- Use strokeWidth={2} for lines
+- Use radius={[4, 4, 0, 0]} for rounded bar tops
+- Use strokeDasharray="3 3" for grid lines
 
 ## Markdown Formatting
 
-Use standard markdown for explanatory text:
-- Headings, lists, code blocks
-- Tables for data summaries
-- Bold and italic for emphasis
-
-After the chart, explain key insights or patterns.`
+Use standard markdown for explanatory text. After the chart, explain key insights or patterns.`
 }
 
 /**

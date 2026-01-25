@@ -122,6 +122,9 @@ interface ViewerTabProps {
 }
 
 function ViewerTab({ content, artifact }: ViewerTabProps) {
+  // Debug: log what we receive
+  console.log('ViewerTab content:', content?.slice(0, 200), 'artifact:', artifact?.type, 'artifact.content:', artifact?.content?.slice(0, 100))
+
   if (!content) {
     return (
       <div className="h-full flex items-center justify-center">

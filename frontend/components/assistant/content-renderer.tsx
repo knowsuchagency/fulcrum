@@ -1,5 +1,6 @@
 import MarkdownPreview from '@uiw/react-markdown-preview'
 import { cn } from '@/lib/utils'
+import { useTheme } from 'next-themes'
 import { MDXRenderer, extractChartBlocks } from './mdx-renderer'
 
 interface ContentRendererProps {
@@ -14,6 +15,9 @@ interface ContentRendererProps {
  * Parses content for ```chart blocks and renders them with Recharts via MDX
  */
 export function ContentRenderer({ content, className, contentType }: ContentRendererProps) {
+  const { resolvedTheme } = useTheme()
+  const colorMode = resolvedTheme === 'dark' ? 'dark' : 'light'
+
   // If contentType is specified, treat the entire content as that type
   // This is used for artifact content which is stored without markdown wrappers
   if (contentType === 'chart') {
@@ -33,7 +37,7 @@ export function ContentRenderer({ content, className, contentType }: ContentRend
           source={contentType === 'code' ? `\`\`\`\n${content}\n\`\`\`` : content}
           className="!bg-transparent prose prose-sm dark:prose-invert max-w-none"
           wrapperElement={{
-            'data-color-mode': 'dark',
+            'data-color-mode': colorMode,
           }}
         />
       </div>
@@ -64,7 +68,7 @@ export function ContentRenderer({ content, className, contentType }: ContentRend
             source={block.content}
             className="!bg-transparent prose prose-sm dark:prose-invert max-w-none"
             wrapperElement={{
-              'data-color-mode': 'dark',
+              'data-color-mode': colorMode,
             }}
           />
         )
