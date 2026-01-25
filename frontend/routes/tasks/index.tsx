@@ -75,7 +75,7 @@ function TasksView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2" style={{ background: 'var(--gradient-header)' }}>
+      <div className="film-grain relative flex shrink-0 items-center gap-2 border-b border-border px-4 py-2" style={{ background: 'var(--gradient-header)' }}>
         {viewMode === 'kanban' && (
           <div className="relative shrink-0">
             <HugeiconsIcon icon={Search01Icon} size={12} strokeWidth={2} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
