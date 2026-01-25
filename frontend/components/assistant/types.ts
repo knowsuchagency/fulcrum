@@ -32,7 +32,7 @@ export interface Artifact {
   id: string
   sessionId: string | null
   messageId: string | null
-  type: 'vega-lite' | 'mermaid' | 'markdown' | 'code'
+  type: 'chart' | 'mermaid' | 'markdown' | 'code'
   title: string
   description: string | null
   content: string | null

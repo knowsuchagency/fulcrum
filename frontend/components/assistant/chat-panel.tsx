@@ -298,14 +298,13 @@ export function ChatPanel({
 }
 
 /**
- * Strip vega-lite code blocks from message content and replace with a placeholder
+ * Strip chart code blocks from message content and replace with a placeholder
  * This keeps the chat clean since charts render in the canvas panel
  */
 function formatMessageForChat(content: string): string {
-  // Replace vega-lite blocks with a placeholder
-  // More flexible regex to handle different formatting styles
+  // Replace chart/mdx-chart blocks with a placeholder
   return content.replace(
-    /```vega-lite\s*[\s\S]*?```/g,
+    /```(?:chart|mdx-chart)\s*[\s\S]*?```/g,
     '*📊 Chart rendered in canvas →*'
   )
 }

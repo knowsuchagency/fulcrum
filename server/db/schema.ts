@@ -290,7 +290,7 @@ export const artifacts = sqliteTable('artifacts', {
   id: text('id').primaryKey(),
   sessionId: text('session_id'), // FK to chatSessions (nullable - can be detached)
   messageId: text('message_id'), // FK to chatMessages (nullable)
-  type: text('type').notNull(), // 'vega-lite' | 'mermaid' | 'markdown' | 'code'
+  type: text('type').notNull(), // 'chart' | 'mermaid' | 'markdown' | 'code'
   title: text('title').notNull(),
   description: text('description'),
   content: text('content'), // Content stored directly in DB

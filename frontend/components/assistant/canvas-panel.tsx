@@ -16,17 +16,17 @@ interface CanvasPanelProps {
 
 /**
  * Extract canvas content from the last assistant message
- * Looks for vega-lite blocks that should be rendered in the viewer
+ * Looks for chart blocks that should be rendered in the viewer
  */
 function extractCanvasContent(messages?: ChatMessage[]): string | null {
   if (!messages?.length) return null
 
-  // Find the last assistant message
+  // Find the last assistant message with chart content
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]
     if (msg.role === 'assistant' && msg.content) {
-      // Check if it has vega-lite content
-      if (msg.content.includes('```vega-lite')) {
+      // Check if it has chart or mdx-chart content
+      if (msg.content.includes('```chart') || msg.content.includes('```mdx-chart')) {
         return msg.content
       }
     }
@@ -222,7 +222,7 @@ interface ArtifactCardProps {
 
 function ArtifactCard({ artifact, isSelected, onSelect }: ArtifactCardProps) {
   const typeColors: Record<string, string> = {
-    'vega-lite': 'bg-green-500/10 text-green-500 border-green-500/20',
+    chart: 'bg-green-500/10 text-green-500 border-green-500/20',
     mermaid: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
     markdown: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
     code: 'bg-gray-500/10 text-gray-500 border-gray-500/20',

@@ -196,61 +196,108 @@ function buildSystemPrompt(): string {
 
 ## Canvas Output
 
-When asked to create visualizations or formatted content, output it as markdown with embedded Vega-Lite specs. The canvas viewer will render these automatically.
+When asked to create visualizations, output Recharts components inside a \`\`\`chart code block. The canvas viewer will render these automatically using MDX.
 
-### Creating Charts with Vega-Lite
+### Creating Charts with Recharts
 
-Use fenced code blocks with the \`vega-lite\` language identifier:
+Use fenced code blocks with the \`chart\` language identifier. Write JSX using Recharts components:
 
-\`\`\`vega-lite
-{
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "description": "A simple bar chart",
-  "data": {
-    "values": [
-      {"category": "A", "value": 28},
-      {"category": "B", "value": 55},
-      {"category": "C", "value": 43}
-    ]
-  },
-  "mark": "bar",
-  "encoding": {
-    "x": {"field": "category", "type": "nominal"},
-    "y": {"field": "value", "type": "quantitative"}
-  }
-}
+\`\`\`chart
+<ResponsiveContainer width="100%" height={300}>
+  <BarChart data={[
+    { category: 'A', value: 28 },
+    { category: 'B', value: 55 },
+    { category: 'C', value: 43 }
+  ]}>
+    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+    <XAxis dataKey="category" stroke="hsl(var(--muted-foreground))" />
+    <YAxis stroke="hsl(var(--muted-foreground))" />
+    <Tooltip
+      contentStyle={{
+        backgroundColor: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
+        borderRadius: '8px'
+      }}
+    />
+    <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+  </BarChart>
+</ResponsiveContainer>
 \`\`\`
 
-### Chart Types
+### Available Chart Components
 
-Vega-Lite supports many chart types:
-- **Bar charts**: \`"mark": "bar"\`
-- **Line charts**: \`"mark": "line"\`
-- **Area charts**: \`"mark": "area"\`
-- **Scatter plots**: \`"mark": "point"\`
-- **Pie/donut charts**: Use \`"mark": {"type": "arc"}\` with theta encoding
+All Recharts components are available:
+- **BarChart, Bar** - Bar charts (horizontal/vertical)
+- **LineChart, Line** - Line charts
+- **AreaChart, Area** - Area charts
+- **PieChart, Pie, Cell** - Pie/donut charts
+- **ScatterChart, Scatter** - Scatter plots
+- **RadarChart, Radar** - Radar charts
+- **ComposedChart** - Mixed chart types
+- **ResponsiveContainer** - Responsive wrapper (always use this)
+- **CartesianGrid, XAxis, YAxis, Tooltip, Legend** - Chart accessories
 
 ### Example: Multi-series Line Chart
 
-\`\`\`vega-lite
-{
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "data": {
-    "values": [
-      {"month": "Jan", "product": "A", "sales": 100},
-      {"month": "Feb", "product": "A", "sales": 150},
-      {"month": "Jan", "product": "B", "sales": 80},
-      {"month": "Feb", "product": "B", "sales": 120}
-    ]
-  },
-  "mark": "line",
-  "encoding": {
-    "x": {"field": "month", "type": "ordinal"},
-    "y": {"field": "sales", "type": "quantitative"},
-    "color": {"field": "product", "type": "nominal"}
-  }
-}
+\`\`\`chart
+<ResponsiveContainer width="100%" height={300}>
+  <LineChart data={[
+    { month: 'Jan', productA: 100, productB: 80 },
+    { month: 'Feb', productA: 150, productB: 120 },
+    { month: 'Mar', productA: 130, productB: 140 }
+  ]}>
+    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+    <YAxis stroke="hsl(var(--muted-foreground))" />
+    <Tooltip
+      contentStyle={{
+        backgroundColor: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
+        borderRadius: '8px'
+      }}
+    />
+    <Legend />
+    <Line type="monotone" dataKey="productA" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4 }} />
+    <Line type="monotone" dataKey="productB" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} />
+  </LineChart>
+</ResponsiveContainer>
 \`\`\`
+
+### Example: Pie Chart
+
+\`\`\`chart
+<ResponsiveContainer width="100%" height={300}>
+  <PieChart>
+    <Pie
+      data={[
+        { name: 'Group A', value: 400 },
+        { name: 'Group B', value: 300 },
+        { name: 'Group C', value: 200 }
+      ]}
+      cx="50%"
+      cy="50%"
+      innerRadius={60}
+      outerRadius={100}
+      paddingAngle={2}
+      dataKey="value"
+    >
+      <Cell fill="hsl(var(--chart-1))" />
+      <Cell fill="hsl(var(--chart-2))" />
+      <Cell fill="hsl(var(--chart-3))" />
+    </Pie>
+    <Tooltip />
+    <Legend />
+  </PieChart>
+</ResponsiveContainer>
+\`\`\`
+
+## Styling Guidelines
+
+- Use CSS variables for theme compatibility: \`hsl(var(--chart-1))\`, \`hsl(var(--chart-2))\`, etc.
+- Use \`hsl(var(--border))\` for grid lines
+- Use \`hsl(var(--muted-foreground))\` for axis text
+- Use \`hsl(var(--card))\` for tooltip backgrounds
+- Always wrap charts in ResponsiveContainer with width="100%" and a fixed height
 
 ## Markdown Formatting
 
@@ -259,13 +306,7 @@ Use standard markdown for explanatory text:
 - Tables for data summaries
 - Bold and italic for emphasis
 
-## Guidelines
-
-- Always include the \`$schema\` field in Vega-Lite specs
-- Provide clear data inline in the \`values\` array
-- Add descriptions to explain what the chart shows
-- Use appropriate chart types for the data being visualized
-- After the chart, explain key insights or patterns`
+After the chart, explain key insights or patterns.`
 }
 
 /**
@@ -399,21 +440,19 @@ async function extractArtifacts(sessionId: string, content: string): Promise<Art
   const extracted: Artifact[] = []
   let match
 
-  // Vega-Lite pattern
-  const vegaLitePattern = /```vega-lite\n([\s\S]*?)```/g
-  while ((match = vegaLitePattern.exec(content)) !== null) {
-    const spec = match[1].trim()
-    try {
-      const parsed = JSON.parse(spec)
+  // Chart/MDX pattern - Recharts JSX in ```chart blocks
+  const chartPattern = /```(?:chart|mdx-chart)\s*([\s\S]*?)```/g
+  let chartIndex = 1
+  while ((match = chartPattern.exec(content)) !== null) {
+    const chartContent = match[1].trim()
+    if (chartContent) {
       const artifact = await createArtifact({
         sessionId,
-        type: 'vega-lite',
-        title: parsed.description || parsed.title || 'Chart',
-        content: spec,
+        type: 'chart',
+        title: `Chart ${chartIndex++}`,
+        content: chartContent,
       })
       extracted.push(artifact)
-    } catch {
-      log.assistant.warn('Failed to parse vega-lite spec')
     }
   }
 
@@ -438,7 +477,7 @@ async function extractArtifacts(sessionId: string, content: string): Promise<Art
  */
 export async function createArtifact(options: {
   sessionId: string
-  type: 'vega-lite' | 'mermaid' | 'markdown' | 'code'
+  type: 'chart' | 'mermaid' | 'markdown' | 'code'
   title: string
   content: string
   description?: string
@@ -563,7 +602,7 @@ export async function forkArtifact(id: string, newContent: string): Promise<Arti
 
   return createArtifact({
     sessionId: original.sessionId,
-    type: original.type as 'vega-lite' | 'mermaid' | 'markdown' | 'code',
+    type: original.type as 'chart' | 'mermaid' | 'markdown' | 'code',
     title: `${original.title} (v${(original.version || 1) + 1})`,
     content: newContent,
     description: original.description || undefined,
