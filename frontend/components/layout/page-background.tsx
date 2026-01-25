@@ -1,5 +1,4 @@
 import { useRouterState } from '@tanstack/react-router'
-import { Grain } from '@/components/ui/grain'
 import { Tiles } from '@/components/ui/tiles'
 
 const ROUTES_WITH_BACKGROUND = ['/', '/tasks', '/terminals', '/worktrees', '/repositories', '/projects', '/review', '/monitoring', '/settings']
@@ -27,7 +26,6 @@ export function PageBackground() {
           `
         }}
       />
-      <Grain />
       <Tiles rows={100} cols={50} tileSize="sm" />
     </div>
   )
