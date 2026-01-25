@@ -86,7 +86,7 @@ function assertNotProductionPath(p: string, context: string): void {
 // Schema version for settings migration
 // IMPORTANT: This must match the major version in package.json
 // When bumping schema version, also bump major version with: mise run bump major
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 // Editor app types
 export type EditorApp = 'vscode' | 'cursor' | 'windsurf' | 'zed' | 'antigravity'

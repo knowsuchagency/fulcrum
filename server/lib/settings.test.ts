@@ -154,8 +154,9 @@ describe('Settings', () => {
       expect(settings.integrations.githubPat).toBe('migrated-key')
 
       // File should be updated with nested structure
+      const { CURRENT_SCHEMA_VERSION } = await import('./settings')
       const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(migrated._schemaVersion).toBe(1) // Current schema version
+      expect(migrated._schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
       expect(migrated.server?.port).toBe(8888)
       expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
       expect(migrated.integrations?.githubPat).toBe('migrated-key')
@@ -183,9 +184,10 @@ describe('Settings', () => {
     })
 
     test('skips migration if already at current schema version', async () => {
+      const { CURRENT_SCHEMA_VERSION } = await import('./settings')
       const settingsPath = join(tempDir, 'settings.json')
       const originalContent = {
-        _schemaVersion: 1, // Current schema version
+        _schemaVersion: CURRENT_SCHEMA_VERSION,
         server: { port: 8888 },
       }
       writeFileSync(settingsPath, JSON.stringify(originalContent))
@@ -569,21 +571,21 @@ describe('Settings', () => {
         })
       )
 
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./settings')
+      const { ensureLatestSettings, ensureFulcrumDir, CURRENT_SCHEMA_VERSION } = await import('./settings')
       ensureFulcrumDir()
       ensureLatestSettings()
 
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // Schema version should be set to current
-      expect(file._schemaVersion).toBe(1)
+      expect(file._schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
     })
 
     test('creates settings file with all defaults if none exists', async () => {
       const settingsPath = join(tempDir, 'settings.json')
       expect(existsSync(settingsPath)).toBe(false)
 
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./settings')
+      const { ensureLatestSettings, ensureFulcrumDir, CURRENT_SCHEMA_VERSION } = await import('./settings')
       ensureFulcrumDir()
       ensureLatestSettings()
 
@@ -591,7 +593,7 @@ describe('Settings', () => {
       const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
 
       // All default sections should exist
-      expect(file._schemaVersion).toBe(1)
+      expect(file._schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
       expect(file.server.port).toBe(7777)
       expect(file.editor.app).toBe('vscode')
       expect(file.notifications.enabled).toBe(true)
