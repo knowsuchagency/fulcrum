@@ -289,3 +289,35 @@
 .dark .film-grain::before {
   opacity: 0.08;
 }
+
+/* MDEditor fullscreen mode fixes */
+.w-md-editor-fullscreen {
+  z-index: 99999 !important;
+  background-color: var(--background) !important;
+  /* Account for Fulcrum navbar */
+  top: 40px !important;
+  height: calc(100vh - 40px) !important;
+}
+
+.w-md-editor-fullscreen .w-md-editor-toolbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100000 !important;
+  background-color: var(--background) !important;
+}
+
+.w-md-editor-fullscreen .w-md-editor-content {
+  background-color: var(--background) !important;
+}
+
+.w-md-editor-fullscreen .w-md-editor-preview {
+  background-color: var(--background) !important;
+}
+
+.w-md-editor-fullscreen .w-md-editor-area {
+  background-color: var(--background) !important;
+}
+
+.w-md-editor-fullscreen .w-md-editor-text {
+  background-color: var(--background) !important;
+}
