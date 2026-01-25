@@ -5,6 +5,8 @@ import { AssistantLayout, type ClaudeModelId } from '@/components/assistant'
 import type { ChatSession, ChatMessage, Artifact } from '@/components/assistant'
 import type { AgentType } from '../../../shared/types'
 import { log } from '@/lib/logger'
+import { useOpencodeModels } from '@/hooks/use-opencode-models'
+import { useOpencodeModel as useOpencodeModelSetting, useAssistantProvider, useAssistantModel } from '@/hooks/use-config'
 
 interface SessionsResponse {
   sessions: ChatSession[]
@@ -26,10 +28,33 @@ function AssistantView() {
   const { chat: chatId } = Route.useSearch()
   const [isStreaming, setIsStreaming] = useState(false)
   const [provider, setProvider] = useState<AgentType>('claude')
-  const [model, setModel] = useState<ClaudeModelId>('opus')
+  const [model, setModel] = useState<ClaudeModelId>('sonnet')
+  const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
   const [editorContent, setEditorContent] = useState('')
   const [canvasContent, setCanvasContent] = useState<string | null>(null)
   const editorSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Fetch OpenCode models and defaults from settings
+  const { providers: opencodeProviders, installed: opencodeInstalled } = useOpencodeModels()
+  const { data: defaultOpencodeModel } = useOpencodeModelSetting()
+  const { data: defaultProvider } = useAssistantProvider()
+  const { data: defaultModel } = useAssistantModel()
+
+  // Check if OpenCode is available
+  const isOpencodeAvailable = opencodeInstalled && Object.keys(opencodeProviders).length > 0
+
+  // Initialize from settings on mount
+  useEffect(() => {
+    if (defaultProvider) setProvider(defaultProvider)
+    if (defaultModel) setModel(defaultModel)
+  }, [defaultProvider, defaultModel])
+
+  // Initialize OpenCode model from settings when switching to opencode
+  useEffect(() => {
+    if (provider === 'opencode' && !opencodeModel && defaultOpencodeModel) {
+      setOpencodeModel(defaultOpencodeModel)
+    }
+  }, [provider, opencodeModel, defaultOpencodeModel])
 
   // Fetch sessions
   const { data: sessionsData, isLoading: isLoadingSessions } = useQuery<SessionsResponse>({
@@ -388,10 +413,14 @@ function AssistantView() {
         isLoading={isStreaming}
         provider={provider}
         model={model}
+        opencodeModel={opencodeModel}
+        opencodeProviders={opencodeProviders}
+        isOpencodeAvailable={isOpencodeAvailable}
         editorContent={editorContent}
         canvasContent={canvasContent}
         onProviderChange={setProvider}
         onModelChange={setModel}
+        onOpencodeModelChange={setOpencodeModel}
         onSelectSession={(session) => setSelectedSessionId(session.id)}
         onDeleteSession={(id) => deleteSessionMutation.mutate(id)}
         onSelectArtifact={setSelectedArtifact}

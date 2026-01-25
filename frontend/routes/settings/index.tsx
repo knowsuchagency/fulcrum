@@ -51,6 +51,7 @@ import {
   useDefaultTaskType,
   useStartWorktreeTasksImmediately,
   useTimezone,
+  useAssistantProvider,
   useAssistantModel,
   useAssistantCustomInstructions,
   NotificationSettingsConflictError,
@@ -60,6 +61,7 @@ import {
   type EditorApp,
   type ClaudeCodeTheme,
   type TaskType,
+  type AssistantProvider,
   type AssistantModel,
 } from '@/hooks/use-config'
 import { useQueryClient } from '@tanstack/react-query'
@@ -71,6 +73,7 @@ import {
 } from '@/hooks/use-apps'
 import { useLanguageSync } from '@/hooks/use-language-sync'
 import { useThemeSync } from '@/hooks/use-theme-sync'
+import { useOpencodeModels } from '@/hooks/use-opencode-models'
 
 export const Route = createFileRoute('/settings/')({
   component: SettingsPage,
@@ -114,8 +117,10 @@ function SettingsPage() {
   const { data: defaultTaskType, isLoading: taskTypeLoading } = useDefaultTaskType()
   const { data: startWorktreeTasksImmediately, isLoading: startImmediatelyLoading } = useStartWorktreeTasksImmediately()
   const { data: timezone, isLoading: timezoneLoading } = useTimezone()
+  const { data: assistantProvider, isLoading: assistantProviderLoading } = useAssistantProvider()
   const { data: assistantModel, isLoading: assistantModelLoading } = useAssistantModel()
   const { data: assistantCustomInstructions, isLoading: assistantInstructionsLoading } = useAssistantCustomInstructions()
+  const { installed: opencodeInstalled } = useOpencodeModels()
   const { version } = useFulcrumVersion()
   const { data: versionCheck, isLoading: versionCheckLoading } = useVersionCheck()
   const refreshVersionCheck = useRefreshVersionCheck()
@@ -177,6 +182,7 @@ function SettingsPage() {
   const [localTimezone, setLocalTimezone] = useState<string | null>(null)
 
   // Assistant settings local state
+  const [localAssistantProvider, setLocalAssistantProvider] = useState<AssistantProvider>('claude')
   const [localAssistantModel, setLocalAssistantModel] = useState<AssistantModel>('sonnet')
   const [localAssistantCustomInstructions, setLocalAssistantCustomInstructions] = useState<string>('')
 
@@ -263,12 +269,13 @@ function SettingsPage() {
 
   // Sync assistant settings
   useEffect(() => {
+    if (assistantProvider !== undefined) setLocalAssistantProvider(assistantProvider)
     if (assistantModel !== undefined) setLocalAssistantModel(assistantModel)
     if (assistantCustomInstructions !== undefined) setLocalAssistantCustomInstructions(assistantCustomInstructions ?? '')
-  }, [assistantModel, assistantCustomInstructions])
+  }, [assistantProvider, assistantModel, assistantCustomInstructions])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantModelLoading || assistantInstructionsLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantProviderLoading || assistantModelLoading || assistantInstructionsLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -290,6 +297,7 @@ function SettingsPage() {
   const hasTimezoneChanges = localTimezone !== timezone
 
   const hasAssistantChanges =
+    localAssistantProvider !== assistantProvider ||
     localAssistantModel !== assistantModel ||
     localAssistantCustomInstructions !== (assistantCustomInstructions ?? '')
 
@@ -582,6 +590,16 @@ function SettingsPage() {
 
     // Save assistant settings
     if (hasAssistantChanges) {
+      if (localAssistantProvider !== assistantProvider) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.ASSISTANT_PROVIDER, value: localAssistantProvider },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
       if (localAssistantModel !== assistantModel) {
         promises.push(
           new Promise((resolve) => {
@@ -1420,32 +1438,82 @@ function SettingsPage() {
               {/* AI Assistant */}
               <SettingsSection title={t('sections.assistant')}>
                 <div className="space-y-4">
-                  {/* Default model */}
+                  {/* Default provider */}
                   <div className="space-y-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
-                        {t('fields.assistant.model.label')}
+                        {t('fields.assistant.provider.label')}
                       </label>
                       <Select
-                        value={localAssistantModel}
-                        onValueChange={(v) => setLocalAssistantModel(v as AssistantModel)}
+                        value={localAssistantProvider}
+                        onValueChange={(v) => setLocalAssistantProvider(v as AssistantProvider)}
                       >
                         <SelectTrigger className="w-48">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {ASSISTANT_MODELS.map((model) => (
-                            <SelectItem key={model} value={model}>
-                              {t(`fields.assistant.model.options.${model}`)}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="claude">Claude</SelectItem>
+                          {opencodeInstalled && (
+                            <SelectItem value="opencode">OpenCode</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
                     <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
-                      {t('fields.assistant.model.description')}
+                      {t('fields.assistant.provider.description')}
                     </p>
                   </div>
+
+                  {/* Claude model (shown when provider is Claude) */}
+                  {localAssistantProvider === 'claude' && (
+                    <div className="space-y-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                          {t('fields.assistant.model.label')}
+                        </label>
+                        <Select
+                          value={localAssistantModel}
+                          onValueChange={(v) => setLocalAssistantModel(v as AssistantModel)}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ASSISTANT_MODELS.map((model) => (
+                              <SelectItem key={model} value={model}>
+                                {t(`fields.assistant.model.options.${model}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                        {t('fields.assistant.model.description')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* OpenCode model (shown when provider is OpenCode) */}
+                  {localAssistantProvider === 'opencode' && (
+                    <div className="space-y-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                          {t('fields.assistant.opencodeModel.label')}
+                        </label>
+                        <ModelPicker
+                          value={globalOpencodeModel}
+                          onChange={(v) => {
+                            updateConfig.mutate({ key: CONFIG_KEYS.OPENCODE_MODEL, value: v })
+                          }}
+                          placeholder={t('fields.assistant.opencodeModel.placeholder')}
+                          className="w-64"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                        {t('fields.assistant.opencodeModel.description')}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Custom instructions */}
                   <div className="space-y-1">

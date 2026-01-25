@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { Bot, User, Send, Loader2, Plus, ChevronDown, Trash2, Check } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import MarkdownPreview from '@uiw/react-markdown-preview'
@@ -31,24 +31,33 @@ const CLAUDE_MODEL_NAMES: Record<string, string> = {
   haiku: 'Haiku',
 }
 
-// Model Dropdown Component (matches ai-chat-assistant styling)
+// Model Dropdown Component (supports both Claude and OpenCode)
 function ModelDropdown({
   provider,
   model,
+  opencodeModel,
+  opencodeProviders,
   onModelChange,
+  onOpencodeModelChange,
 }: {
   provider: AgentType
   model: ClaudeModelId
+  opencodeModel: string | null
+  opencodeProviders: Record<string, string[]>
   onModelChange: (model: ClaudeModelId) => void
+  onOpencodeModelChange: (model: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [modelFilter, setModelFilter] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const filterInputRef = useRef<HTMLInputElement>(null)
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
+        setModelFilter('')
       }
     }
 
@@ -58,42 +67,135 @@ function ModelDropdown({
     }
   }, [isOpen])
 
-  // Only show for Claude provider
-  if (provider !== 'claude') return null
+  // Focus filter input when dropdown opens for OpenCode
+  useEffect(() => {
+    if (isOpen && provider === 'opencode' && filterInputRef.current) {
+      setTimeout(() => filterInputRef.current?.focus(), 50)
+    }
+  }, [isOpen, provider])
 
-  const currentModel = CLAUDE_MODELS.find((m) => m.id === model)
+  // Get current model display label
+  const getModelLabel = () => {
+    if (provider === 'claude') {
+      const currentModel = CLAUDE_MODELS.find((m) => m.id === model)
+      return currentModel?.label || 'Opus'
+    }
+    if (opencodeModel) {
+      const parts = opencodeModel.split('/')
+      return parts.length > 1 ? parts[1] : opencodeModel
+    }
+    return 'Select model'
+  }
+
+  // Sort and filter OpenCode providers
+  const sortedOpencodeProviders = useMemo(() => {
+    const sorted = Object.entries(opencodeProviders).sort(([a], [b]) => a.localeCompare(b))
+    if (!modelFilter.trim()) return sorted
+
+    const filter = modelFilter.toLowerCase()
+    return sorted
+      .map(([providerName, models]) => {
+        const filteredModels = models.filter(
+          (modelName) =>
+            modelName.toLowerCase().includes(filter) ||
+            providerName.toLowerCase().includes(filter)
+        )
+        return [providerName, filteredModels] as [string, string[]]
+      })
+      .filter(([, models]) => models.length > 0)
+  }, [opencodeProviders, modelFilter])
 
   return (
     <div ref={dropdownRef} className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const newState = !isOpen
+          setIsOpen(newState)
+          if (!newState) setModelFilter('')
+        }}
         className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-2xl transition-colors bg-muted/60 text-foreground hover:bg-muted"
       >
-        <span>{currentModel?.label || 'Opus'}</span>
+        <span className="max-w-[80px] truncate">{getModelLabel()}</span>
         <ChevronDown className={cn('w-3 h-3 transition-transform flex-shrink-0', isOpen && 'rotate-180')} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 w-36 rounded-xl shadow-xl backdrop-blur-sm z-50 animate-in fade-in-0 slide-in-from-top-1 duration-150 bg-popover/95 border border-border">
-          {CLAUDE_MODELS.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => {
-                onModelChange(option.id)
-                setIsOpen(false)
-              }}
-              className={cn(
-                'w-full px-3 py-2 text-left transition-colors flex items-center justify-between hover:bg-muted/50 first:rounded-t-xl last:rounded-b-xl',
-                model === option.id ? 'bg-accent/10 text-accent' : 'text-foreground'
-              )}
-            >
-              <div>
-                <div className="font-medium text-xs">{option.label}</div>
-                <div className="text-[10px] text-muted-foreground">{option.description}</div>
+        <div className="absolute top-full right-0 mt-1 w-48 max-h-64 overflow-y-auto rounded-xl shadow-xl backdrop-blur-sm z-50 animate-in fade-in-0 slide-in-from-top-1 duration-150 scrollbar-thin bg-popover/95 border border-border scrollbar-thumb-muted">
+          {/* Claude Models */}
+          {provider === 'claude' && (
+            <>
+              {CLAUDE_MODELS.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => {
+                    onModelChange(option.id)
+                    setIsOpen(false)
+                  }}
+                  className={cn(
+                    'w-full px-3 py-2 text-left transition-colors flex items-center justify-between hover:bg-muted/50',
+                    model === option.id ? 'bg-accent/10 text-accent' : 'text-foreground'
+                  )}
+                >
+                  <div>
+                    <div className="font-medium text-xs">{option.label}</div>
+                    <div className="text-[10px] text-muted-foreground">{option.description}</div>
+                  </div>
+                  {model === option.id && <Check className="w-3.5 h-3.5 flex-shrink-0 text-accent" />}
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* OpenCode Models */}
+          {provider === 'opencode' && (
+            <>
+              {/* Filter Input */}
+              <div className="sticky top-0 p-2 bg-popover/95">
+                <input
+                  ref={filterInputRef}
+                  type="text"
+                  value={modelFilter}
+                  onChange={(e) => setModelFilter(e.target.value)}
+                  placeholder="Filter models..."
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg outline-none transition-colors bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
               </div>
-              {model === option.id && <Check className="w-3.5 h-3.5 flex-shrink-0 text-accent" />}
-            </button>
-          ))}
+              {sortedOpencodeProviders.length === 0 && modelFilter && (
+                <div className="px-3 py-4 text-xs text-center text-muted-foreground">
+                  No models match "{modelFilter}"
+                </div>
+              )}
+              {sortedOpencodeProviders.map(([providerName, models]) => (
+                <div key={providerName}>
+                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/50">
+                    {providerName}
+                  </div>
+                  {models.map((modelName) => {
+                    const fullModelId = `${providerName}/${modelName}`
+                    const isSelected = opencodeModel === fullModelId
+                    return (
+                      <button
+                        key={fullModelId}
+                        onClick={() => {
+                          onOpencodeModelChange(fullModelId)
+                          setIsOpen(false)
+                          setModelFilter('')
+                        }}
+                        className={cn(
+                          'w-full px-3 py-1.5 text-left transition-colors flex items-center justify-between hover:bg-muted/50',
+                          isSelected ? 'bg-accent/10 text-accent' : 'text-foreground'
+                        )}
+                      >
+                        <span className="text-xs truncate">{modelName}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0 ml-2 text-accent" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -106,8 +208,12 @@ interface ChatPanelProps {
   isLoading: boolean
   provider: AgentType
   model: ClaudeModelId
+  opencodeModel: string | null
+  opencodeProviders: Record<string, string[]>
+  isOpencodeAvailable: boolean
   onProviderChange: (provider: AgentType) => void
   onModelChange: (model: ClaudeModelId) => void
+  onOpencodeModelChange: (model: string) => void
   onSendMessage: (message: string) => void
   onSelectSession: (session: ChatSession) => void
   onCreateSession: () => void
@@ -120,8 +226,12 @@ export function ChatPanel({
   isLoading,
   provider,
   model,
+  opencodeModel,
+  opencodeProviders,
+  isOpencodeAvailable,
   onProviderChange,
   onModelChange,
+  onOpencodeModelChange,
   onSendMessage,
   onSelectSession,
   onCreateSession,
@@ -204,36 +314,41 @@ export function ChatPanel({
         </DropdownMenu>
 
         {/* Provider Toggle */}
-        <div className="flex items-center rounded-full p-0.5 bg-muted/60">
-          <button
-            onClick={() => onProviderChange('claude')}
-            className={cn(
-              'px-2 py-1 text-[10px] font-medium rounded-full transition-all',
-              provider === 'claude'
-                ? 'bg-accent/20 text-accent'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Claude
-          </button>
-          <button
-            onClick={() => onProviderChange('opencode')}
-            className={cn(
-              'px-2 py-1 text-[10px] font-medium rounded-full transition-all',
-              provider === 'opencode'
-                ? 'bg-accent/20 text-accent'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            OpenCode
-          </button>
-        </div>
+        {isOpencodeAvailable && (
+          <div className="flex items-center rounded-full p-0.5 bg-muted/60">
+            <button
+              onClick={() => onProviderChange('claude')}
+              className={cn(
+                'px-2 py-1 text-[10px] font-medium rounded-full transition-all',
+                provider === 'claude'
+                  ? 'bg-accent/20 text-accent'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Claude
+            </button>
+            <button
+              onClick={() => onProviderChange('opencode')}
+              className={cn(
+                'px-2 py-1 text-[10px] font-medium rounded-full transition-all',
+                provider === 'opencode'
+                  ? 'bg-accent/20 text-accent'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              OpenCode
+            </button>
+          </div>
+        )}
 
         {/* Model Dropdown */}
         <ModelDropdown
           provider={provider}
           model={model}
+          opencodeModel={opencodeModel}
+          opencodeProviders={opencodeProviders}
           onModelChange={onModelChange}
+          onOpencodeModelChange={onOpencodeModelChange}
         />
 
         <Button size="icon-sm" variant="ghost" onClick={onCreateSession} title="New chat">

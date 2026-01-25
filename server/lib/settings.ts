@@ -99,7 +99,8 @@ export const CLAUDE_CODE_THEMES: ClaudeCodeTheme[] = ['light', 'light-ansi', 'li
 // Task type for defaults
 export type TaskType = 'worktree' | 'non-worktree'
 
-// Assistant model types
+// Assistant provider and model types
+export type AssistantProvider = 'claude' | 'opencode'
 export type AssistantModel = 'opus' | 'sonnet' | 'haiku'
 
 export interface Settings {
@@ -139,6 +140,7 @@ export interface Settings {
     claudeCodeDarkTheme: ClaudeCodeTheme
   }
   assistant: {
+    provider: AssistantProvider
     model: AssistantModel
     customInstructions: string | null
   }
@@ -182,6 +184,7 @@ const DEFAULT_SETTINGS: Settings = {
     claudeCodeDarkTheme: 'dark-ansi',
   },
   assistant: {
+    provider: 'claude',
     model: 'sonnet',
     customInstructions: null,
   },
@@ -464,6 +467,7 @@ export function getSettings(): Settings {
       claudeCodeDarkTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeDarkTheme as ClaudeCodeTheme) ?? 'dark-ansi',
     },
     assistant: {
+      provider: ((parsed.assistant as Record<string, unknown>)?.provider as AssistantProvider) ?? DEFAULT_SETTINGS.assistant.provider,
       model: ((parsed.assistant as Record<string, unknown>)?.model as AssistantModel) ?? DEFAULT_SETTINGS.assistant.model,
       customInstructions: ((parsed.assistant as Record<string, unknown>)?.customInstructions as string | null) ?? null,
     },

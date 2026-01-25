@@ -109,14 +109,23 @@
       }
     },
     "assistant": {
+      "provider": {
+        "label": "Default Provider",
+        "description": "The AI provider to use for assistant conversations"
+      },
       "model": {
-        "label": "Default Model",
+        "label": "Claude Model",
         "description": "The Claude model to use for AI assistant conversations",
         "options": {
           "opus": "Opus (Most capable)",
           "sonnet": "Sonnet (Balanced)",
           "haiku": "Haiku (Fastest)"
         }
+      },
+      "opencodeModel": {
+        "label": "OpenCode Model",
+        "description": "The model to use when OpenCode is selected as the provider",
+        "placeholder": "Select model"
       },
       "customInstructions": {
         "label": "Custom Instructions",

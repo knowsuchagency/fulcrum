@@ -18,10 +18,14 @@ interface AssistantLayoutProps {
   isLoading: boolean
   provider: AgentType
   model: ClaudeModelId
+  opencodeModel: string | null
+  opencodeProviders: Record<string, string[]>
+  isOpencodeAvailable: boolean
   editorContent: string
   canvasContent: string | null
   onProviderChange: (provider: AgentType) => void
   onModelChange: (model: ClaudeModelId) => void
+  onOpencodeModelChange: (model: string) => void
   onSelectSession: (session: ChatSession) => void
   onDeleteSession: (id: string) => void
   onSelectArtifact: (artifact: Artifact | null) => void
@@ -38,10 +42,14 @@ export function AssistantLayout({
   isLoading,
   provider,
   model,
+  opencodeModel,
+  opencodeProviders,
+  isOpencodeAvailable,
   editorContent,
   canvasContent,
   onProviderChange,
   onModelChange,
+  onOpencodeModelChange,
   onSelectSession,
   onDeleteSession,
   onSelectArtifact,
@@ -59,8 +67,12 @@ export function AssistantLayout({
           isLoading={isLoading}
           provider={provider}
           model={model}
+          opencodeModel={opencodeModel}
+          opencodeProviders={opencodeProviders}
+          isOpencodeAvailable={isOpencodeAvailable}
           onProviderChange={onProviderChange}
           onModelChange={onModelChange}
+          onOpencodeModelChange={onOpencodeModelChange}
           onSendMessage={onSendMessage}
           onSelectSession={onSelectSession}
           onCreateSession={onCreateSession}

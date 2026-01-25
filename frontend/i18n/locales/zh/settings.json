@@ -109,14 +109,23 @@
       }
     },
     "assistant": {
+      "provider": {
+        "label": "默认提供商",
+        "description": "助手对话使用的 AI 提供商"
+      },
       "model": {
-        "label": "默认模型",
+        "label": "Claude 模型",
         "description": "AI 助手对话使用的 Claude 模型",
         "options": {
           "opus": "Opus（最强大）",
           "sonnet": "Sonnet（平衡）",
           "haiku": "Haiku（最快）"
         }
+      },
+      "opencodeModel": {
+        "label": "OpenCode 模型",
+        "description": "选择 OpenCode 作为提供商时使用的模型",
+        "placeholder": "选择模型"
       },
       "customInstructions": {
         "label": "自定义指令",
