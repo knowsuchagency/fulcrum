@@ -72,7 +72,7 @@
     --tile: oklch(0 0 0 / 0.1);
     --status-todo: oklch(0.6000 0 0);
     --status-in-progress: oklch(0.5500 0.2300 260.0000);
-    --status-in-review: oklch(0.6500 0.2200 30.0000);
+    --status-in-review: oklch(0.6000 0.2200 30.0000);
     --status-done: oklch(0.4800 0.2200 260.0000);
     --status-canceled: oklch(0.5800 0.2600 25.0000);
     --gradient-subtle: linear-gradient(135deg, var(--accent) 0%, transparent 50%, var(--destructive) 100%);
