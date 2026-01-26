@@ -28,7 +28,7 @@ export const TerminalModel = types
     positionInTab: types.optional(types.number, 0),
   })
   .volatile(() => ({
-    /** The terminal instance (xterm.js or Ghostty) */
+    /** The xterm.js terminal instance */
     xterm: null as AnyTerminal | null,
     /** Cleanup function for xterm attachment */
     attachCleanup: null as (() => void) | null,
@@ -74,7 +74,7 @@ export const TerminalModel = types
       if (data.positionInTab !== undefined) self.positionInTab = data.positionInTab
     },
 
-    /** Set the terminal instance (xterm.js or Ghostty) */
+    /** Set the xterm.js terminal instance */
     setXterm(xterm: AnyTerminal | null) {
       self.xterm = xterm
     },

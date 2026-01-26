@@ -5,7 +5,6 @@ import type { ITerminal, ITerminalSnapshot, ITab, ITabSnapshot } from './models'
 import { log } from '@/lib/logger'
 import { generateRequestId, generateTempId, type PendingUpdate } from './sync'
 import type { AnyTerminal } from '@/components/terminal/terminal-types'
-import { isGhosttyTerminal, USE_GHOSTTY_TERMINAL } from '@/components/terminal/terminal-types'
 
 /**
  * Environment injected into the store.
@@ -526,7 +525,7 @@ export const RootStore = types
       },
 
       /**
-       * Attach a terminal instance (xterm.js or Ghostty) to a terminal.
+       * Attach an xterm.js terminal instance to a terminal.
        * Sets up input handlers, registers callbacks, and requests buffer from server.
        * Returns a cleanup function to detach the terminal.
        */
@@ -566,7 +565,6 @@ export const RootStore = types
         terminal.setXterm(xterm)
 
         // Handle Shift+Enter to insert a newline for Claude Code multi-line input
-        // Note: attachCustomKeyEventHandler is xterm.js specific - Ghostty may not have it
         if (typeof xterm.attachCustomKeyEventHandler === 'function') {
           xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
             if (event.type === 'keydown' && event.shiftKey && event.key === 'Enter') {
@@ -1010,22 +1008,17 @@ export const RootStore = types
                 terminal.setCursorVisible(false)
               }
 
-              if (USE_GHOSTTY_TERMINAL && isGhosttyTerminal(xterm)) {
-                // Ghostty handles scrolling natively
-                xterm.write(data)
-              } else {
-                // xterm.js: only scroll to bottom if cursor is visible
-                // When cursor is hidden (TUI app managing viewport), skip auto-scroll
-                // to avoid interfering with the TUI's viewport management
-                // (fixes cursor position issues in xterm 6.0.0+)
-                xterm.write(data, () => {
-                  if (terminal.cursorVisible) {
-                    requestAnimationFrame(() => {
-                      xterm.scrollToBottom()
-                    })
-                  }
-                })
-              }
+              // Only scroll to bottom if cursor is visible
+              // When cursor is hidden (TUI app managing viewport), skip auto-scroll
+              // to avoid interfering with the TUI's viewport management
+              // (fixes cursor position issues in xterm 6.0.0+)
+              xterm.write(data, () => {
+                if (terminal.cursorVisible) {
+                  requestAnimationFrame(() => {
+                    xterm.scrollToBottom()
+                  })
+                }
+              })
             } else {
               getWs().log.ws.warn('terminal:output but no xterm', { terminalId })
             }
