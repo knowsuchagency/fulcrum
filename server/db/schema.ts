@@ -340,6 +340,17 @@ export const messagingSessionMappings = sqliteTable('messaging_session_mappings'
   lastMessageAt: text('last_message_at').notNull(),
 })
 
+// Email authorized threads - tracks email threads that have been authorized
+// by an allowlisted sender CCing the assistant
+export const emailAuthorizedThreads = sqliteTable('email_authorized_threads', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id').notNull(), // FK to messagingConnections
+  threadId: text('thread_id').notNull(), // Email thread identifier (Message-ID or References chain root)
+  authorizedBy: text('authorized_by').notNull(), // Email address of the allowlisted sender who CC'd the assistant
+  subject: text('subject'), // Email subject for display
+  createdAt: text('created_at').notNull(),
+})
+
 // Type inference helpers
 export type Repository = typeof repositories.$inferSelect
 export type NewRepository = typeof repositories.$inferInsert
@@ -394,3 +405,5 @@ export type MessagingConnection = typeof messagingConnections.$inferSelect
 export type NewMessagingConnection = typeof messagingConnections.$inferInsert
 export type MessagingSessionMapping = typeof messagingSessionMappings.$inferSelect
 export type NewMessagingSessionMapping = typeof messagingSessionMappings.$inferInsert
+export type EmailAuthorizedThread = typeof emailAuthorizedThreads.$inferSelect
+export type NewEmailAuthorizedThread = typeof emailAuthorizedThreads.$inferInsert

@@ -91,6 +91,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
   // Form state - simplified to just email + password
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [allowedSenders, setAllowedSenders] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [smtpHost, setSmtpHost] = useState('')
   const [smtpPort, setSmtpPort] = useState(465)
@@ -127,6 +128,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
       setImapPort(config.imap?.port || 993)
       setImapSecure(config.imap?.secure ?? true)
       setPollInterval(config.pollIntervalSeconds || 30)
+      setAllowedSenders(config.allowedSenders?.join(', ') || '')
       // Show advanced if custom settings were used
       const detected = getProviderSettings(config.smtp?.user || '')
       if (config.smtp?.host && config.smtp.host !== detected.smtp.host) {
@@ -142,6 +144,12 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
       imap: { host: imapHost, port: imapPort, secure: imapSecure },
     } : providerInfo
 
+    // Parse allowed senders (comma or newline separated)
+    const parsedAllowedSenders = allowedSenders
+      .split(/[,\n]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0)
+
     return {
       smtp: {
         ...settings.smtp,
@@ -154,6 +162,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
         password,
       },
       pollIntervalSeconds: pollInterval,
+      allowedSenders: parsedAllowedSenders.length > 0 ? parsedAllowedSenders : undefined,
     }
   }
 
@@ -298,6 +307,22 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+          </div>
+
+          {/* Allowed Senders */}
+          <div className="space-y-2">
+            <Label htmlFor="allowedSenders">Allowed Senders</Label>
+            <Input
+              id="allowedSenders"
+              placeholder="you@example.com, *@company.com"
+              value={allowedSenders}
+              onChange={(e) => setAllowedSenders(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Email addresses that can interact with the assistant. Use *@domain.com for wildcards.
+              Others will receive a polite rejection. You can CC the assistant into threads to allow
+              all participants.
+            </p>
           </div>
 
           {/* Server info (auto-detected) */}
@@ -496,6 +521,18 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
             Disable Email
           </Button>
 
+          {/* Allowed senders */}
+          {status?.config?.allowedSenders && status.config.allowedSenders.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                Allowed Senders
+              </h4>
+              <div className="text-xs text-muted-foreground font-mono">
+                {status.config.allowedSenders.join(', ')}
+              </div>
+            </div>
+          )}
+
           {/* Active sessions */}
           {sessions && sessions.length > 0 && (
             <div className="mt-4">
@@ -525,8 +562,9 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
 
       {/* Help text */}
       <p className="ml-4 sm:ml-44 text-xs text-muted-foreground">
-        Send emails to your configured address to chat with the AI assistant. Use
-        /reset in the email body to start a fresh conversation.
+        Send emails to your configured address to chat with the AI assistant.
+        Only allowed senders can interact directly. CC the assistant into threads to allow all
+        participants. Use /reset in the email body to start a fresh conversation.
       </p>
     </div>
   )

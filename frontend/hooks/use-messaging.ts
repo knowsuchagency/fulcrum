@@ -136,6 +136,7 @@ export interface EmailCredentials {
     password: string
   }
   pollIntervalSeconds: number
+  allowedSenders?: string[]
 }
 
 export interface EmailTestResult {

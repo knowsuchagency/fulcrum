@@ -330,6 +330,13 @@
       "when": 1770116000000,
       "tag": "0046_messaging_channels",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1770202400000,
+      "tag": "0047_email_authorized_threads",
+      "breakpoints": true
     }
   ]
 }

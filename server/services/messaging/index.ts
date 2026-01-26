@@ -283,7 +283,8 @@ async function sendResponse(
   const parts = splitMessage(content, maxLength)
 
   for (const part of parts) {
-    await channel.sendMessage(originalMsg.senderId, part)
+    // Pass metadata for email threading (ignored by other channels)
+    await channel.sendMessage(originalMsg.senderId, part, originalMsg.metadata)
     // Small delay between parts to maintain order
     if (parts.length > 1) {
       await new Promise((resolve) => setTimeout(resolve, 500))

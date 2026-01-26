@@ -1,12 +1,18 @@
 /**
  * Email channel implementation using nodemailer (SMTP) and imapflow (IMAP).
  * Handles sending via SMTP and receiving via IMAP polling.
+ *
+ * Authorization model:
+ * 1. Allowlisted sender → always respond
+ * 2. CC'd by allowlisted person → authorize the thread, respond
+ * 3. Reply in an authorized thread → respond (even from non-allowlisted senders)
+ * 4. Otherwise → ignore
  */
 
 import { createTransport, type Transporter } from 'nodemailer'
 import { ImapFlow } from 'imapflow'
-import { eq } from 'drizzle-orm'
-import { db, messagingConnections } from '../../db'
+import { eq, and } from 'drizzle-orm'
+import { db, messagingConnections, emailAuthorizedThreads } from '../../db'
 import { log } from '../../lib/logger'
 import type {
   MessagingChannel,
@@ -34,6 +40,21 @@ const QUOTED_REPLY_PATTERNS = [
   /^To: .+$/m, // "To: recipient@example.com"
   /^Subject: .+$/m, // "Subject: Re: ..."
 ]
+
+/**
+ * Parsed email headers for authorization and threading
+ */
+interface EmailHeaders {
+  messageId: string | null
+  inReplyTo: string | null
+  references: string[]
+  from: string | null
+  fromName: string | null
+  to: string[]
+  cc: string[]
+  subject: string | null
+  date: Date | null
+}
 
 export class EmailChannel implements MessagingChannel {
   readonly type = 'email' as const
@@ -194,13 +215,32 @@ export class EmailChannel implements MessagingChannel {
 
           this.lastSeenUid = Math.max(this.lastSeenUid, message.uid)
 
-          const envelope = message.envelope
-          const fromAddress = envelope?.from?.[0]?.address
+          // Parse full headers from source
+          const headers = this.parseEmailHeaders(message.source, message.envelope)
 
-          if (!fromAddress) continue
+          if (!headers.from) continue
 
           // Skip emails from ourselves (to avoid loops)
-          if (fromAddress.toLowerCase() === this.credentials!.smtp.user.toLowerCase()) {
+          if (headers.from.toLowerCase() === this.credentials!.smtp.user.toLowerCase()) {
+            continue
+          }
+
+          // Check authorization
+          const authResult = await this.checkAuthorization(headers)
+
+          if (!authResult.authorized) {
+            log.messaging.info('Email rejected - not authorized', {
+              connectionId: this.connectionId,
+              from: headers.from,
+              subject: headers.subject,
+              reason: authResult.reason,
+            })
+
+            // Send canned response to unauthorized sender
+            await this.sendUnauthorizedResponse(headers)
+
+            // Mark as read to avoid reprocessing
+            await client.messageFlagsAdd({ uid: message.uid }, ['\\Seen'])
             continue
           }
 
@@ -211,17 +251,27 @@ export class EmailChannel implements MessagingChannel {
           const incomingMessage: IncomingMessage = {
             channelType: 'email',
             connectionId: this.connectionId,
-            senderId: fromAddress,
-            senderName: envelope?.from?.[0]?.name || undefined,
+            senderId: headers.from,
+            senderName: headers.fromName || undefined,
             content,
-            timestamp: envelope?.date ? new Date(envelope.date) : new Date(),
+            timestamp: headers.date || new Date(),
+            // Include thread info for reply threading
+            metadata: {
+              messageId: headers.messageId,
+              inReplyTo: headers.inReplyTo,
+              references: headers.references,
+              subject: headers.subject,
+              threadId: authResult.threadId,
+            },
           }
 
           log.messaging.info('Email received', {
             connectionId: this.connectionId,
-            from: fromAddress,
-            subject: envelope?.subject,
+            from: headers.from,
+            subject: headers.subject,
             contentLength: content.length,
+            threadId: authResult.threadId,
+            authorizedBy: authResult.authorizedBy,
           })
 
           // Mark as read
@@ -253,6 +303,176 @@ export class EmailChannel implements MessagingChannel {
         this.updateStatus('credentials_required')
       }
     }
+  }
+
+  /**
+   * Parse email headers from raw source
+   */
+  private parseEmailHeaders(source: Buffer, envelope: { from?: { address?: string; name?: string }[]; subject?: string; date?: string | Date }): EmailHeaders {
+    const raw = source.toString('utf-8')
+    const headerEnd = raw.indexOf('\r\n\r\n')
+    const headerSection = headerEnd > 0 ? raw.slice(0, headerEnd) : raw
+
+    // Helper to extract header value
+    const getHeader = (name: string): string | null => {
+      const regex = new RegExp(`^${name}:\\s*(.+?)(?=\\r?\\n(?:[^\\s]|$))`, 'im')
+      const match = headerSection.match(regex)
+      return match ? match[1].replace(/\r?\n\s+/g, ' ').trim() : null
+    }
+
+    // Parse addresses from header value
+    const parseAddresses = (header: string | null): string[] => {
+      if (!header) return []
+      const addresses: string[] = []
+      // Match email addresses in various formats
+      const regex = /<?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})>?/g
+      let match
+      while ((match = regex.exec(header)) !== null) {
+        addresses.push(match[1].toLowerCase())
+      }
+      return addresses
+    }
+
+    // Parse References header (space-separated Message-IDs)
+    const referencesHeader = getHeader('References')
+    const references = referencesHeader
+      ? referencesHeader.split(/\s+/).filter(r => r.startsWith('<') || r.includes('@'))
+      : []
+
+    return {
+      messageId: getHeader('Message-ID'),
+      inReplyTo: getHeader('In-Reply-To'),
+      references,
+      from: envelope?.from?.[0]?.address?.toLowerCase() || parseAddresses(getHeader('From'))[0] || null,
+      fromName: envelope?.from?.[0]?.name || null,
+      to: parseAddresses(getHeader('To')),
+      cc: parseAddresses(getHeader('Cc')),
+      subject: envelope?.subject || getHeader('Subject'),
+      date: envelope?.date ? new Date(envelope.date) : null,
+    }
+  }
+
+  /**
+   * Check if the email should be processed based on authorization rules.
+   * Returns the thread ID if authorized.
+   */
+  private async checkAuthorization(headers: EmailHeaders): Promise<{
+    authorized: boolean
+    reason?: string
+    threadId?: string
+    authorizedBy?: string
+  }> {
+    const allowedSenders = this.credentials?.allowedSenders || []
+    const myEmail = this.credentials?.smtp.user.toLowerCase()
+
+    // Determine thread ID from email chain
+    // Use the root Message-ID from References, or In-Reply-To, or current Message-ID
+    const threadId = headers.references[0] || headers.inReplyTo || headers.messageId || null
+
+    // 1. Check if sender is in allowlist
+    if (this.isAllowedSender(headers.from, allowedSenders)) {
+      log.messaging.debug('Sender is allowlisted', { from: headers.from })
+      return { authorized: true, threadId: threadId || undefined, authorizedBy: headers.from || undefined }
+    }
+
+    // 2. Check if this is a reply in an already-authorized thread
+    if (threadId) {
+      const authorizedThread = db
+        .select()
+        .from(emailAuthorizedThreads)
+        .where(and(
+          eq(emailAuthorizedThreads.connectionId, this.connectionId),
+          eq(emailAuthorizedThreads.threadId, threadId)
+        ))
+        .get()
+
+      if (authorizedThread) {
+        log.messaging.debug('Thread is already authorized', {
+          threadId,
+          authorizedBy: authorizedThread.authorizedBy
+        })
+        return {
+          authorized: true,
+          threadId,
+          authorizedBy: authorizedThread.authorizedBy
+        }
+      }
+    }
+
+    // 3. Check if an allowlisted sender CC'd us into this thread
+    // This happens when: we're in To or CC, and an allowlisted sender is in From/To/CC
+    const weAreRecipient = headers.to.includes(myEmail!) || headers.cc.includes(myEmail!)
+
+    if (weAreRecipient) {
+      // Check if any allowlisted sender is in the conversation
+      const allParticipants = [headers.from, ...headers.to, ...headers.cc].filter(Boolean) as string[]
+      const allowlistedParticipant = allParticipants.find(addr =>
+        this.isAllowedSender(addr, allowedSenders) && addr !== myEmail
+      )
+
+      if (allowlistedParticipant) {
+        // Authorize this thread for future messages
+        const newThreadId = threadId || headers.messageId || `thread-${Date.now()}`
+
+        db.insert(emailAuthorizedThreads).values({
+          id: crypto.randomUUID(),
+          connectionId: this.connectionId,
+          threadId: newThreadId,
+          authorizedBy: allowlistedParticipant,
+          subject: headers.subject || null,
+          createdAt: new Date().toISOString(),
+        }).run()
+
+        log.messaging.info('Thread authorized by CC from allowlisted sender', {
+          connectionId: this.connectionId,
+          threadId: newThreadId,
+          authorizedBy: allowlistedParticipant,
+          subject: headers.subject,
+        })
+
+        return {
+          authorized: true,
+          threadId: newThreadId,
+          authorizedBy: allowlistedParticipant
+        }
+      }
+    }
+
+    // Not authorized
+    return {
+      authorized: false,
+      reason: allowedSenders.length === 0
+        ? 'No allowed senders configured'
+        : 'Sender not in allowlist and thread not authorized'
+    }
+  }
+
+  /**
+   * Check if an email address matches the allowlist.
+   * Supports exact matches and wildcard domains (*@example.com).
+   */
+  private isAllowedSender(email: string | null, allowedSenders: string[]): boolean {
+    if (!email) return false
+    const normalizedEmail = email.toLowerCase()
+
+    for (const pattern of allowedSenders) {
+      const normalizedPattern = pattern.toLowerCase().trim()
+
+      // Exact match
+      if (normalizedEmail === normalizedPattern) {
+        return true
+      }
+
+      // Wildcard domain match (*@example.com)
+      if (normalizedPattern.startsWith('*@')) {
+        const domain = normalizedPattern.slice(2)
+        if (normalizedEmail.endsWith(`@${domain}`)) {
+          return true
+        }
+      }
+    }
+
+    return false
   }
 
   private async parseEmailContent(source: Buffer): Promise<string | null> {
@@ -374,7 +594,52 @@ export class EmailChannel implements MessagingChannel {
     })
   }
 
-  async sendMessage(recipientId: string, content: string): Promise<boolean> {
+  /**
+   * Send a canned response to unauthorized senders.
+   */
+  private async sendUnauthorizedResponse(headers: EmailHeaders): Promise<void> {
+    if (!this.transporter || !this.credentials || !headers.from) return
+
+    const response = `Sorry, I'm not able to respond to messages from your email address.
+
+If you believe this is an error, please contact the owner of this email address.`
+
+    try {
+      // Build threading headers
+      const emailHeaders: Record<string, string> = {}
+      if (headers.messageId) {
+        emailHeaders['In-Reply-To'] = headers.messageId
+        emailHeaders['References'] = headers.messageId
+      }
+
+      let subject = 'Unable to Process Your Request'
+      if (headers.subject) {
+        subject = headers.subject.startsWith('Re:') ? headers.subject : `Re: ${headers.subject}`
+      }
+
+      await this.transporter.sendMail({
+        from: this.credentials.smtp.user,
+        to: headers.from,
+        subject,
+        text: response,
+        html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6;"><p>${response.replace(/\n/g, '<br>')}</p></div>`,
+        headers: emailHeaders,
+      })
+
+      log.messaging.info('Sent unauthorized response', {
+        connectionId: this.connectionId,
+        to: headers.from,
+      })
+    } catch (err) {
+      log.messaging.error('Failed to send unauthorized response', {
+        connectionId: this.connectionId,
+        to: headers.from,
+        error: String(err),
+      })
+    }
+  }
+
+  async sendMessage(recipientId: string, content: string, metadata?: Record<string, unknown>): Promise<boolean> {
     if (!this.transporter || !this.credentials) {
       log.messaging.warn('Cannot send email - not connected', {
         connectionId: this.connectionId,
@@ -387,18 +652,46 @@ export class EmailChannel implements MessagingChannel {
       // Convert markdown-like formatting to HTML
       const htmlContent = this.formatAsHtml(content)
 
+      // Build email headers for proper threading
+      const headers: Record<string, string> = {}
+
+      if (metadata?.messageId) {
+        headers['In-Reply-To'] = metadata.messageId as string
+
+        // Build References chain
+        const refs: string[] = []
+        if (metadata.references && Array.isArray(metadata.references)) {
+          refs.push(...metadata.references)
+        }
+        if (metadata.messageId) {
+          refs.push(metadata.messageId as string)
+        }
+        if (refs.length > 0) {
+          headers['References'] = refs.join(' ')
+        }
+      }
+
+      // Use original subject with Re: prefix if replying
+      let subject = 'Fulcrum AI Assistant'
+      if (metadata?.subject) {
+        const originalSubject = metadata.subject as string
+        subject = originalSubject.startsWith('Re:') ? originalSubject : `Re: ${originalSubject}`
+      }
+
       await this.transporter.sendMail({
         from: this.credentials.smtp.user,
         to: recipientId,
-        subject: 'Re: Fulcrum AI Assistant',
+        subject,
         text: content,
         html: htmlContent,
+        headers,
       })
 
       log.messaging.info('Email sent', {
         connectionId: this.connectionId,
         to: recipientId,
         contentLength: content.length,
+        subject,
       })
 
       return true
@@ -414,7 +707,7 @@ export class EmailChannel implements MessagingChannel {
 
   private formatAsHtml(content: string): string {
     // Basic markdown to HTML conversion
-    let html = content
+    const html = content
       // Escape HTML
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -471,9 +764,6 @@ export async function testEmailCredentials(credentials: EmailAuthState): Promise
   imapOk: boolean
   error?: string
 }> {
-  let smtpOk = false
-  let imapOk = false
-
   // Test SMTP
   try {
     const transporter = createTransport({
@@ -487,7 +777,6 @@ export async function testEmailCredentials(credentials: EmailAuthState): Promise
     })
 
     await transporter.verify()
-    smtpOk = true
     transporter.close()
   } catch (err) {
     return {
@@ -513,7 +802,6 @@ export async function testEmailCredentials(credentials: EmailAuthState): Promise
 
     await client.connect()
     await client.logout()
-    imapOk = true
   } catch (err) {
     return {
       success: false,

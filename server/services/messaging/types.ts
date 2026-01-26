@@ -19,6 +19,7 @@ export interface IncomingMessage {
   senderName?: string   // Display name if available
   content: string       // Message text content
   timestamp: Date
+  metadata?: Record<string, unknown>  // Channel-specific metadata (e.g., email threading info)
 }
 
 /**
@@ -57,9 +58,10 @@ export interface MessagingChannel {
    * Send a message to a recipient.
    * @param recipientId The recipient identifier (phone, user ID, etc.)
    * @param content The message content to send
+   * @param metadata Optional channel-specific metadata (e.g., email threading info)
    * @returns true if message was sent successfully
    */
-  sendMessage(recipientId: string, content: string): Promise<boolean>
+  sendMessage(recipientId: string, content: string, metadata?: Record<string, unknown>): Promise<boolean>
 
   /**
    * Get the current connection status.
@@ -105,4 +107,11 @@ export interface EmailAuthState {
     password: string
   }
   pollIntervalSeconds: number
+  /**
+   * List of email addresses or domain patterns that can always interact with the assistant.
+   * Supports exact matches (user@example.com) and wildcard domains (*@example.com).
+   * Emails from non-allowlisted senders are only processed if they're part of a thread
+   * that was initialized by an allowlisted sender CCing the assistant.
+   */
+  allowedSenders?: string[]
 }
