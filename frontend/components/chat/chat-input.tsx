@@ -64,7 +64,7 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
           rows={3}
           disabled={isLoading}
-          className="w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-sans font-normal leading-relaxed min-h-[100px] disabled:opacity-50 text-foreground placeholder-muted-foreground"
+          className="w-full px-6 py-4 bg-transparent border-none outline-none resize-none text-base font-sans font-normal leading-relaxed min-h-[100px] disabled:opacity-50 text-foreground placeholder-muted-foreground caret-current"
           placeholder={finalPlaceholder}
           style={{ scrollbarWidth: 'none' }}
         />

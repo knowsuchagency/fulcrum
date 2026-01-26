@@ -453,7 +453,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             )}
 
             {/* Input Section */}
-            <ChatInput onSend={handleSend} isLoading={isStreaming} />
+            <ChatInput onSend={handleSend} isLoading={isStreaming} placeholder={hasMessages ? ' ' : undefined} />
 
             {/* Footer Info - hidden on mobile */}
             <div className="hidden sm:flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 text-muted-foreground">

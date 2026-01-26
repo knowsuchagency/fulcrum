@@ -467,6 +467,7 @@ User message: ${userMessage}`
             url: `http://localhost:${port}/mcp`,
           },
         },
+        tools: { type: 'preset', preset: 'claude_code' },
         systemPrompt,
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
