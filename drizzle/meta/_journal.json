@@ -323,6 +323,13 @@
       "when": 1770029600000,
       "tag": "0045_add_document_fields_to_chat_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1770116000000,
+      "tag": "0046_messaging_channels",
+      "breakpoints": true
     }
   ]
 }

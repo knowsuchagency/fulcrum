@@ -8,13 +8,14 @@
 
 Run multiple AI coding agents in parallel across isolated git worktrees. Manage projects with tasks, dependencies, and scheduling. Deploy to production when ready. Work from anywhere—your agents keep running when you close the laptop. Self-hosted and open source.
 
-**Five pillars:**
+**Six pillars:**
 
 - **Terminal-First Orchestration** — Run Claude Code, OpenCode, or other agents in real terminals. No abstraction layer, no wrapper APIs.
 - **Work From Anywhere** — Run Fulcrum on a remote server. Kick off tasks, close your laptop, check progress from your phone. Agents keep working in the background.
 - **Project Management** — Tasks with dependencies, due dates, labels, and attachments. Visual kanban boards and dependency graphs.
 - **Production Deployment** — Docker Compose with automatic Traefik routing and Cloudflare DNS/tunnels.
 - **MCP-First Architecture** — 60+ tools exposed via Model Context Protocol. Agents discover what they need.
+- **Chat From Anywhere** — Talk to the AI assistant via WhatsApp. Link with QR code, chat from your phone.
 
 ## MCP-First Architecture
 
@@ -109,6 +110,16 @@ Define prerequisite tasks that must complete before others can start. Visualize 
 Create documents with live preview. Generate charts and visualizations. The assistant uses the same MCP tools available to external agents.
 
 ![AI Assistant Editor](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/assistant-editor.png)
+
+### WhatsApp Integration
+
+Chat with the AI assistant from your phone via WhatsApp. Link your account with a QR code, then use WhatsApp's "Message yourself" feature to talk to Claude from anywhere.
+
+- **Persistent sessions** — Conversation context maintained across messages
+- **Commands** — `/reset` (new conversation), `/help`, `/status`
+- **Channel abstraction** — Architecture supports future channels (Discord, Telegram)
+
+Enable in Settings → Messaging, then scan the QR code with WhatsApp mobile.
 
 ### System Monitoring
 

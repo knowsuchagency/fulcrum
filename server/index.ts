@@ -12,6 +12,7 @@ import { ensureLatestSettings, getSettingByKey } from './lib/settings'
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { startGitWatcher, stopGitWatcher } from './services/git-watcher'
+import { startMessagingChannels, stopMessagingChannels } from './services/messaging'
 import { log } from './lib/logger'
 import { clearSensitiveEnvVars } from './lib/env'
 
@@ -108,22 +109,27 @@ startMetricsCollector()
 // Start git watcher for auto-deploy
 startGitWatcher()
 
+// Start messaging channels (WhatsApp, etc.)
+startMessagingChannels()
+
 // Graceful shutdown - detach PTYs but keep dtach sessions running for persistence
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   log.server.info('Shutting down (terminals will persist)')
   stopPRMonitor()
   stopMetricsCollector()
   stopGitWatcher()
+  await stopMessagingChannels()
   ptyManager.detachAll()
   server.close()
   process.exit(0)
 })
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   log.server.info('Shutting down (terminals will persist)')
   stopPRMonitor()
   stopMetricsCollector()
   stopGitWatcher()
+  await stopMessagingChannels()
   ptyManager.detachAll()
   server.close()
   process.exit(0)

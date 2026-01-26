@@ -365,6 +365,31 @@ export interface ThemeSyncedMessage {
   }
 }
 
+// Messaging channel events
+export interface MessagingStatusMessage {
+  type: 'messaging:status'
+  payload: {
+    connectionId: string
+    status: 'disconnected' | 'connecting' | 'connected' | 'qr_pending'
+  }
+}
+
+export interface MessagingQRMessage {
+  type: 'messaging:qr'
+  payload: {
+    connectionId: string
+    qrDataUrl: string
+  }
+}
+
+export interface MessagingDisplayNameMessage {
+  type: 'messaging:displayName'
+  payload: {
+    connectionId: string
+    displayName: string
+  }
+}
+
 export type ServerMessage =
   | TerminalCreatedMessage
   | TerminalOutputMessage
@@ -385,3 +410,6 @@ export type ServerMessage =
   | NotificationMessage
   | SyncStaleMessage
   | ThemeSyncedMessage
+  | MessagingStatusMessage
+  | MessagingQRMessage
+  | MessagingDisplayNameMessage

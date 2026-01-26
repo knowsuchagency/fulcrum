@@ -401,15 +401,26 @@ ${customInstructions}`
   return basePrompt
 }
 
+export interface StreamMessageOptions {
+  modelId?: ModelId
+  editorContent?: string
+  systemPromptOverride?: string
+}
+
 /**
  * Stream a message response
  */
 export async function* streamMessage(
   sessionId: string,
   userMessage: string,
-  modelId?: ModelId,
+  modelIdOrOptions?: ModelId | StreamMessageOptions,
   editorContent?: string
 ): AsyncGenerator<{ type: string; data: unknown }> {
+  // Support both old signature (modelId, editorContent) and new (options object)
+  const options: StreamMessageOptions =
+    typeof modelIdOrOptions === 'object'
+      ? modelIdOrOptions
+      : { modelId: modelIdOrOptions, editorContent }
   const session = getSession(sessionId)
   if (!session) {
     yield { type: 'error', data: { message: 'Session not found' } }
@@ -427,7 +438,7 @@ export async function* streamMessage(
   const port = settings.server.port
 
   // Use provided model or fall back to default from settings
-  const effectiveModelId: ModelId = modelId ?? settings.assistant.model
+  const effectiveModelId: ModelId = options.modelId ?? settings.assistant.model
 
   // Get or create session state
   let state = sessionState.get(sessionId)
@@ -440,16 +451,18 @@ export async function* streamMessage(
     log.assistant.debug('Starting assistant query', {
       sessionId,
       hasResume: !!state.claudeSessionId,
-      hasEditorContent: !!editorContent,
+      hasEditorContent: !!options.editorContent,
+      hasSystemPromptOverride: !!options.systemPromptOverride,
     })
 
-    const systemPrompt = buildSystemPrompt()
+    // Use override if provided, otherwise build default system prompt
+    const systemPrompt = options.systemPromptOverride ?? buildSystemPrompt()
 
     // Build the full prompt, including editor content if present
     let fullPrompt = userMessage
-    if (editorContent && editorContent.trim()) {
+    if (options.editorContent && options.editorContent.trim()) {
       fullPrompt = `<editor_content>
-${editorContent}
+${options.editorContent}
 </editor_content>
 
 User message: ${userMessage}`

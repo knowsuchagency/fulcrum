@@ -31,6 +31,7 @@ import versionRoutes from './routes/version'
 import mcpRoutes from './routes/mcp'
 import chatRoutes from './routes/chat'
 import assistantRoutes from './routes/assistant'
+import messagingRoutes from './routes/messaging'
 import { writeEntry } from './lib/logger'
 import type { LogEntry } from '../shared/logger'
 
@@ -92,6 +93,9 @@ export function createApp() {
   // AI Chat assistant routes
   app.route('/api/chat', chatRoutes)
   app.route('/api/assistant', assistantRoutes)
+
+  // Messaging channels (WhatsApp, etc.)
+  app.route('/api/messaging', messagingRoutes)
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {

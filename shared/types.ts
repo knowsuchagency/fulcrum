@@ -689,3 +689,27 @@ export interface PageContext {
   }
   activeTab?: string
 }
+
+// Messaging channel types
+export type MessagingChannelType = 'whatsapp' | 'discord' | 'telegram'
+export type MessagingConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr_pending'
+
+export interface MessagingConnection {
+  id: string
+  channelType: MessagingChannelType
+  enabled: boolean
+  displayName: string | null
+  status: MessagingConnectionStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MessagingSessionMapping {
+  id: string
+  connectionId: string
+  channelUserId: string
+  channelUserName: string | null
+  sessionId: string
+  createdAt: string
+  lastMessageAt: string
+}

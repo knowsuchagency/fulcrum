@@ -317,6 +317,29 @@ export const systemMetrics = sqliteTable('system_metrics', {
   diskTotalBytes: integer('disk_total_bytes').notNull(),
 })
 
+// Messaging channel connections - stores channel auth state and configuration
+export const messagingConnections = sqliteTable('messaging_connections', {
+  id: text('id').primaryKey(),
+  channelType: text('channel_type').notNull(), // 'whatsapp' | 'discord' | 'telegram'
+  enabled: integer('enabled', { mode: 'boolean' }).default(false),
+  authState: text('auth_state'), // JSON: Baileys auth credentials for WhatsApp
+  displayName: text('display_name'), // Connected account name (phone number, username, etc.)
+  status: text('status').notNull().default('disconnected'), // 'disconnected' | 'connecting' | 'connected' | 'qr_pending'
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
+// Messaging session mappings - maps channel users to AI chat sessions
+export const messagingSessionMappings = sqliteTable('messaging_session_mappings', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id').notNull(), // FK to messagingConnections
+  channelUserId: text('channel_user_id').notNull(), // Phone number, Discord user ID, etc.
+  channelUserName: text('channel_user_name'), // Display name of the user
+  sessionId: text('session_id').notNull(), // FK to chatSessions
+  createdAt: text('created_at').notNull(),
+  lastMessageAt: text('last_message_at').notNull(),
+})
+
 // Type inference helpers
 export type Repository = typeof repositories.$inferSelect
 export type NewRepository = typeof repositories.$inferInsert
@@ -367,3 +390,7 @@ export type ChatMessage = typeof chatMessages.$inferSelect
 export type NewChatMessage = typeof chatMessages.$inferInsert
 export type Artifact = typeof artifacts.$inferSelect
 export type NewArtifact = typeof artifacts.$inferInsert
+export type MessagingConnection = typeof messagingConnections.$inferSelect
+export type NewMessagingConnection = typeof messagingConnections.$inferInsert
+export type MessagingSessionMapping = typeof messagingSessionMappings.$inferSelect
+export type NewMessagingSessionMapping = typeof messagingSessionMappings.$inferInsert

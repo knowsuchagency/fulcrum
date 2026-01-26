@@ -165,4 +165,5 @@ export const log = {
   jobs: createLogger('Jobs'),
   chat: createLogger('Chat'),
   assistant: createLogger('Assistant'),
+  messaging: createLogger('Messaging'),
 }

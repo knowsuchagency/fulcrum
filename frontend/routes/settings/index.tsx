@@ -69,6 +69,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { AGENT_DISPLAY_NAMES, type AgentType } from '@/types'
 import { ModelPicker } from '@/components/opencode/model-picker'
+import { WhatsAppSetup } from '@/components/messaging/whatsapp-setup'
 import {
   useDeploymentSettings,
   useUpdateDeploymentSettings,
@@ -1909,6 +1910,11 @@ function SettingsPage() {
                     )}
                   </div>
                 </div>
+              </SettingsSection>
+
+              {/* Messaging Channels */}
+              <SettingsSection title="Messaging">
+                <WhatsAppSetup isLoading={isLoading} />
               </SettingsSection>
 
               {/* Appearance */}
