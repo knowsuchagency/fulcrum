@@ -10,6 +10,9 @@ import type { MessagingConnection } from '../../db/schema'
 import { log } from '../../lib/logger'
 import { broadcast } from '../../websocket/terminal-ws'
 import { WhatsAppChannel } from './whatsapp-channel'
+import { DiscordChannel } from './discord-channel'
+import { TelegramChannel } from './telegram-channel'
+import { SlackChannel } from './slack-channel'
 import { getOrCreateSession, resetSession } from './session-mapper'
 import * as assistantService from '../assistant-service'
 import type {
@@ -97,6 +100,15 @@ async function startChannel(conn: MessagingConnection): Promise<void> {
   switch (conn.channelType) {
     case 'whatsapp':
       channel = new WhatsAppChannel(conn.id)
+      break
+    case 'discord':
+      channel = new DiscordChannel(conn.id)
+      break
+    case 'telegram':
+      channel = new TelegramChannel(conn.id)
+      break
+    case 'slack':
+      channel = new SlackChannel(conn.id)
       break
     default:
       log.messaging.warn('Unknown channel type', {
@@ -505,6 +517,387 @@ export function getWhatsAppStatus(): MessagingConnection | null {
     .select()
     .from(messagingConnections)
     .where(eq(messagingConnections.channelType, 'whatsapp'))
+    .get() ?? null
+}
+
+// ==================== Discord API Functions ====================
+
+/**
+ * Get or create a Discord connection.
+ */
+export function getOrCreateDiscordConnection(): MessagingConnection {
+  const existing = db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.channelType, 'discord'))
+    .get()
+
+  if (existing) return existing
+
+  const now = new Date().toISOString()
+  const id = nanoid()
+
+  const newConn = {
+    id,
+    channelType: 'discord' as const,
+    enabled: false,
+    status: 'disconnected' as const,
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  db.insert(messagingConnections).values(newConn).run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, id))
+    .get()!
+}
+
+/**
+ * Enable Discord with a bot token and start the channel.
+ */
+export async function enableDiscord(botToken: string): Promise<MessagingConnection> {
+  const conn = getOrCreateDiscordConnection()
+
+  const authState = JSON.stringify({ botToken })
+
+  db.update(messagingConnections)
+    .set({
+      enabled: true,
+      authState,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  await startChannel({ ...conn, enabled: true, authState })
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Disable Discord and stop the channel.
+ */
+export async function disableDiscord(): Promise<MessagingConnection> {
+  const conn = getOrCreateDiscordConnection()
+
+  await stopChannel(conn.id)
+
+  db.update(messagingConnections)
+    .set({
+      enabled: false,
+      status: 'disconnected',
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Disconnect Discord (logout and clear auth).
+ */
+export async function disconnectDiscord(): Promise<MessagingConnection> {
+  const conn = getOrCreateDiscordConnection()
+  const channel = activeChannels.get(conn.id)
+
+  if (channel?.logout) {
+    await channel.logout()
+  }
+
+  await stopChannel(conn.id)
+
+  db.update(messagingConnections)
+    .set({
+      enabled: false,
+      status: 'disconnected',
+      displayName: null,
+      authState: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Get Discord connection status.
+ */
+export function getDiscordStatus(): MessagingConnection | null {
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.channelType, 'discord'))
+    .get() ?? null
+}
+
+// ==================== Telegram API Functions ====================
+
+/**
+ * Get or create a Telegram connection.
+ */
+export function getOrCreateTelegramConnection(): MessagingConnection {
+  const existing = db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.channelType, 'telegram'))
+    .get()
+
+  if (existing) return existing
+
+  const now = new Date().toISOString()
+  const id = nanoid()
+
+  const newConn = {
+    id,
+    channelType: 'telegram' as const,
+    enabled: false,
+    status: 'disconnected' as const,
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  db.insert(messagingConnections).values(newConn).run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, id))
+    .get()!
+}
+
+/**
+ * Enable Telegram with a bot token and start the channel.
+ */
+export async function enableTelegram(botToken: string): Promise<MessagingConnection> {
+  const conn = getOrCreateTelegramConnection()
+
+  const authState = JSON.stringify({ botToken })
+
+  db.update(messagingConnections)
+    .set({
+      enabled: true,
+      authState,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  await startChannel({ ...conn, enabled: true, authState })
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Disable Telegram and stop the channel.
+ */
+export async function disableTelegram(): Promise<MessagingConnection> {
+  const conn = getOrCreateTelegramConnection()
+
+  await stopChannel(conn.id)
+
+  db.update(messagingConnections)
+    .set({
+      enabled: false,
+      status: 'disconnected',
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Disconnect Telegram (logout and clear auth).
+ */
+export async function disconnectTelegram(): Promise<MessagingConnection> {
+  const conn = getOrCreateTelegramConnection()
+  const channel = activeChannels.get(conn.id)
+
+  if (channel?.logout) {
+    await channel.logout()
+  }
+
+  await stopChannel(conn.id)
+
+  db.update(messagingConnections)
+    .set({
+      enabled: false,
+      status: 'disconnected',
+      displayName: null,
+      authState: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Get Telegram connection status.
+ */
+export function getTelegramStatus(): MessagingConnection | null {
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.channelType, 'telegram'))
+    .get() ?? null
+}
+
+// ==================== Slack API Functions ====================
+
+/**
+ * Get or create a Slack connection.
+ */
+export function getOrCreateSlackConnection(): MessagingConnection {
+  const existing = db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.channelType, 'slack'))
+    .get()
+
+  if (existing) return existing
+
+  const now = new Date().toISOString()
+  const id = nanoid()
+
+  const newConn = {
+    id,
+    channelType: 'slack' as const,
+    enabled: false,
+    status: 'disconnected' as const,
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  db.insert(messagingConnections).values(newConn).run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, id))
+    .get()!
+}
+
+/**
+ * Enable Slack with bot and app tokens and start the channel.
+ */
+export async function enableSlack(botToken: string, appToken: string): Promise<MessagingConnection> {
+  const conn = getOrCreateSlackConnection()
+
+  const authState = JSON.stringify({ botToken, appToken })
+
+  db.update(messagingConnections)
+    .set({
+      enabled: true,
+      authState,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  await startChannel({ ...conn, enabled: true, authState })
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Disable Slack and stop the channel.
+ */
+export async function disableSlack(): Promise<MessagingConnection> {
+  const conn = getOrCreateSlackConnection()
+
+  await stopChannel(conn.id)
+
+  db.update(messagingConnections)
+    .set({
+      enabled: false,
+      status: 'disconnected',
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Disconnect Slack (logout and clear auth).
+ */
+export async function disconnectSlack(): Promise<MessagingConnection> {
+  const conn = getOrCreateSlackConnection()
+  const channel = activeChannels.get(conn.id)
+
+  if (channel?.logout) {
+    await channel.logout()
+  }
+
+  await stopChannel(conn.id)
+
+  db.update(messagingConnections)
+    .set({
+      enabled: false,
+      status: 'disconnected',
+      displayName: null,
+      authState: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(messagingConnections.id, conn.id))
+    .run()
+
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.id, conn.id))
+    .get()!
+}
+
+/**
+ * Get Slack connection status.
+ */
+export function getSlackStatus(): MessagingConnection | null {
+  return db
+    .select()
+    .from(messagingConnections)
+    .where(eq(messagingConnections.channelType, 'slack'))
     .get() ?? null
 }
 

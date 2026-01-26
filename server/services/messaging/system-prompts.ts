@@ -87,6 +87,28 @@ Telegram supports basic Markdown:
 Keep responses concise for mobile reading.`
 
 /**
+ * Slack formatting capabilities:
+ * - mrkdwn format (Slack's Markdown variant)
+ * - Rich formatting with blocks (but we use plain text)
+ */
+const SLACK_PROMPT = `You are Claude, an AI assistant chatting via Slack.
+
+${getCondensedKnowledge()}
+
+## Slack Formatting
+
+Slack uses mrkdwn format (similar to Markdown):
+- *bold* using single asterisks
+- _italic_ using underscores
+- ~strikethrough~ using tildes
+- \`inline code\` and \`\`\`code blocks\`\`\`
+- > blockquotes
+- Links <url|text> or just paste URLs directly
+- Lists with - or numbered (1. 2. 3.)
+
+Keep responses focused - Slack displays well on both desktop and mobile.`
+
+/**
  * Get the system prompt for a specific messaging platform.
  */
 export function getMessagingSystemPrompt(channelType: ChannelType): string {
@@ -97,6 +119,8 @@ export function getMessagingSystemPrompt(channelType: ChannelType): string {
       return DISCORD_PROMPT
     case 'telegram':
       return TELEGRAM_PROMPT
+    case 'slack':
+      return SLACK_PROMPT
     default:
       return WHATSAPP_PROMPT // Fallback to most restrictive
   }
