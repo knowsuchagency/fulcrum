@@ -17,6 +17,7 @@ interface TasksSearch {
   project?: string // 'inbox' for tasks without project, or project ID
   tags?: string // comma-separated tag names
   view?: ViewMode
+  task?: string // task ID for non-worktree task modal
 }
 
 export const Route = createFileRoute('/tasks/')({
@@ -25,12 +26,13 @@ export const Route = createFileRoute('/tasks/')({
     project: typeof search.project === 'string' ? search.project : undefined,
     tags: typeof search.tags === 'string' ? search.tags : undefined,
     view: search.view === 'graph' ? 'graph' : search.view === 'calendar' ? 'calendar' : undefined,
+    task: typeof search.task === 'string' ? search.task : undefined,
   }),
 })
 
 function TasksView() {
   const { t } = useTranslation('tasks')
-  const { project: projectFilter, tags: tagsParam, view: viewMode = 'kanban' } = Route.useSearch()
+  const { project: projectFilter, tags: tagsParam, view: viewMode = 'kanban', task: selectedTaskId } = Route.useSearch()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -115,7 +117,7 @@ function TasksView() {
       </div>
       <div className="flex-1 overflow-hidden">
         {viewMode === 'kanban' && (
-          <KanbanBoard projectFilter={projectFilter ?? null} searchQuery={searchQuery} tagsFilter={tagsFilter} />
+          <KanbanBoard projectFilter={projectFilter ?? null} searchQuery={searchQuery} tagsFilter={tagsFilter} selectedTaskId={selectedTaskId} />
         )}
         {viewMode === 'calendar' && <TaskCalendar projectFilter={projectFilter ?? null} tagsFilter={tagsFilter} />}
         {viewMode === 'graph' && <TaskDependencyGraph projectFilter={projectFilter ?? null} tagsFilter={tagsFilter} />}

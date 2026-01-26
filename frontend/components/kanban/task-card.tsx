@@ -14,7 +14,6 @@ import type { Task } from '@/types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { FolderLibraryIcon, GitPullRequestIcon, Calendar03Icon, AlertDiamondIcon, Alert02Icon } from '@hugeicons/core-free-icons'
-import { NonWorktreeTaskModal } from '@/components/task/non-worktree-task-modal'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useIsOverdue } from '@/hooks/use-date-utils'
 
@@ -36,7 +35,6 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
   const [isDragging, setIsDragging] = useState(false)
   const [closestEdge, setClosestEdge] = useState<Edge | null>(null)
   const [previewContainer, setPreviewContainer] = useState<HTMLElement | null>(null)
-  const [taskModalOpen, setTaskModalOpen] = useState(false)
 
   // Determine if this is a code task (has worktree or is configured with a repository)
   const isCodeTask = !!(task.worktreePath || task.repositoryId)
@@ -134,11 +132,15 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
     }
 
     // For active code tasks (has worktree), navigate to detail page
-    // For non-code tasks and pending code tasks, open the modal
+    // For non-code tasks and pending code tasks, open the modal via URL param
     if (isActiveWorktreeTask) {
       navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
     } else {
-      setTaskModalOpen(true)
+      navigate({
+        to: '/tasks',
+        search: (prev) => ({ ...prev, task: task.id }),
+        replace: true,
+      })
     }
     hasDragged.current = false
   }
@@ -291,13 +293,6 @@ export function TaskCard({ task, isDragPreview, isBlocked, isBlocking }: TaskCar
           <TaskCard task={task} isDragPreview />
         </div>,
         previewContainer
-      )}
-      {!isActiveWorktreeTask && (
-        <NonWorktreeTaskModal
-          task={task}
-          open={taskModalOpen}
-          onOpenChange={setTaskModalOpen}
-        />
       )}
     </>
   )

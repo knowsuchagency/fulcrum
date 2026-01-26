@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
@@ -8,6 +8,7 @@ import { KanbanColumn } from './kanban-column'
 import { DragProvider, useDrag } from './drag-context'
 import { SelectionProvider, useSelection } from './selection-context'
 import { BulkActionsToolbar } from './bulk-actions-toolbar'
+import { NonWorktreeTaskModal } from '@/components/task/non-worktree-task-modal'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTasks, useUpdateTaskStatus, useTaskDependencyGraph } from '@/hooks/use-tasks'
 import { useProjects } from '@/hooks/use-projects'
@@ -62,9 +63,10 @@ interface KanbanBoardProps {
   projectFilter?: string | null // 'inbox' for tasks without project, or project ID
   searchQuery?: string
   tagsFilter?: string[]
+  selectedTaskId?: string // task ID for non-worktree task modal (from URL param)
 }
 
-function KanbanBoardInner({ projectFilter, searchQuery, tagsFilter }: KanbanBoardProps) {
+function KanbanBoardInner({ projectFilter, searchQuery, tagsFilter, selectedTaskId }: KanbanBoardProps) {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const { data: allTasks = [], isLoading } = useTasks()
@@ -74,6 +76,29 @@ function KanbanBoardInner({ projectFilter, searchQuery, tagsFilter }: KanbanBoar
   const { activeTask } = useDrag()
   const { clearSelection, selectedIds } = useSelection()
   const [activeTab, setActiveTab] = useState<TaskStatus>('IN_PROGRESS')
+
+  // Find the selected task for the modal (from URL param)
+  const selectedTask = useMemo(() => {
+    if (!selectedTaskId) return null
+    return allTasks.find((t) => t.id === selectedTaskId) ?? null
+  }, [selectedTaskId, allTasks])
+
+  // Check if the selected task is a non-worktree task (should show modal)
+  const showTaskModal = selectedTask && !selectedTask.worktreePath
+
+  // Callback to close the modal by removing the task param from URL
+  const handleTaskModalClose = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        navigate({
+          to: '/tasks',
+          search: (prev) => ({ ...prev, task: undefined }),
+          replace: true,
+        })
+      }
+    },
+    [navigate]
+  )
 
   // Compute which tasks are blocked (have incomplete dependencies) and blocking (blocking other tasks)
   const { blockedTaskIds, blockingTaskIds } = useMemo(() => {
@@ -359,6 +384,15 @@ function KanbanBoardInner({ projectFilter, searchQuery, tagsFilter }: KanbanBoar
 
       {/* Bulk actions toolbar - shown when tasks are selected */}
       <BulkActionsToolbar />
+
+      {/* Non-worktree task modal - controlled by URL param */}
+      {showTaskModal && selectedTask && (
+        <NonWorktreeTaskModal
+          task={selectedTask}
+          open={true}
+          onOpenChange={handleTaskModalClose}
+        />
+      )}
     </div>
   )
 }
