@@ -8,13 +8,6 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Loading03Icon,
@@ -35,29 +28,58 @@ interface EmailSetupProps {
   isLoading?: boolean
 }
 
-// Provider presets for common email services
-const PROVIDER_PRESETS = {
-  gmail: {
-    name: 'Gmail',
+// Well-known email provider settings (auto-detected from email domain)
+const KNOWN_PROVIDERS: Record<string, {
+  smtp: { host: string; port: number; secure: boolean }
+  imap: { host: string; port: number; secure: boolean }
+  note?: string
+}> = {
+  'gmail.com': {
     smtp: { host: 'smtp.gmail.com', port: 465, secure: true },
     imap: { host: 'imap.gmail.com', port: 993, secure: true },
-    note: 'Requires an App Password (not your regular password). Go to Google Account > Security > 2-Step Verification > App passwords.',
+    note: 'Requires an App Password. Go to Google Account > Security > 2-Step Verification > App passwords.',
   },
-  outlook: {
-    name: 'Outlook / Hotmail',
+  'googlemail.com': {
+    smtp: { host: 'smtp.gmail.com', port: 465, secure: true },
+    imap: { host: 'imap.gmail.com', port: 993, secure: true },
+    note: 'Requires an App Password. Go to Google Account > Security > 2-Step Verification > App passwords.',
+  },
+  'outlook.com': {
     smtp: { host: 'smtp-mail.outlook.com', port: 587, secure: false },
     imap: { host: 'outlook.office365.com', port: 993, secure: true },
-    note: 'May require an App Password depending on your account settings.',
   },
-  custom: {
-    name: 'Custom',
-    smtp: { host: '', port: 465, secure: true },
-    imap: { host: '', port: 993, secure: true },
-    note: '',
+  'hotmail.com': {
+    smtp: { host: 'smtp-mail.outlook.com', port: 587, secure: false },
+    imap: { host: 'outlook.office365.com', port: 993, secure: true },
+  },
+  'live.com': {
+    smtp: { host: 'smtp-mail.outlook.com', port: 587, secure: false },
+    imap: { host: 'outlook.office365.com', port: 993, secure: true },
+  },
+  'yahoo.com': {
+    smtp: { host: 'smtp.mail.yahoo.com', port: 465, secure: true },
+    imap: { host: 'imap.mail.yahoo.com', port: 993, secure: true },
+  },
+  'icloud.com': {
+    smtp: { host: 'smtp.mail.me.com', port: 587, secure: false },
+    imap: { host: 'imap.mail.me.com', port: 993, secure: true },
+    note: 'Requires an App-Specific Password from appleid.apple.com.',
   },
 }
 
-type ProviderKey = keyof typeof PROVIDER_PRESETS
+// Get provider settings from email domain, or generate defaults
+function getProviderSettings(email: string) {
+  const domain = email.split('@')[1]?.toLowerCase()
+  if (domain && KNOWN_PROVIDERS[domain]) {
+    return { ...KNOWN_PROVIDERS[domain], isKnown: true }
+  }
+  // Default: try common patterns for unknown domains
+  return {
+    smtp: { host: `smtp.${domain || 'example.com'}`, port: 465, secure: true },
+    imap: { host: `imap.${domain || 'example.com'}`, port: 993, secure: true },
+    isKnown: false,
+  }
+}
 
 export function EmailSetup({ isLoading = false }: EmailSetupProps) {
   const { data: status, refetch: refetchStatus } = useEmailStatus()
@@ -66,10 +88,10 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
   const testCredentials = useTestEmailCredentials()
   const disableEmailMutation = useDisableEmail()
 
-  // Form state
-  const [provider, setProvider] = useState<ProviderKey>('gmail')
+  // Form state - simplified to just email + password
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [smtpHost, setSmtpHost] = useState('')
   const [smtpPort, setSmtpPort] = useState(465)
   const [smtpSecure, setSmtpSecure] = useState(true)
@@ -90,6 +112,9 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
   const isConnecting = status?.status === 'connecting'
   const isEnabled = status?.enabled ?? false
 
+  // Get provider info for current email
+  const providerInfo = getProviderSettings(email)
+
   // Initialize form from existing config
   useEffect(() => {
     if (status?.config) {
@@ -102,48 +127,35 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
       setImapPort(config.imap?.port || 993)
       setImapSecure(config.imap?.secure ?? true)
       setPollInterval(config.pollIntervalSeconds || 30)
-
-      // Detect provider
-      if (config.smtp?.host === 'smtp.gmail.com') {
-        setProvider('gmail')
-      } else if (config.smtp?.host === 'smtp-mail.outlook.com') {
-        setProvider('outlook')
-      } else if (config.smtp?.host) {
-        setProvider('custom')
+      // Show advanced if custom settings were used
+      const detected = getProviderSettings(config.smtp?.user || '')
+      if (config.smtp?.host && config.smtp.host !== detected.smtp.host) {
+        setShowAdvanced(true)
       }
     }
   }, [status?.config])
 
-  // Update server settings when provider changes
-  useEffect(() => {
-    if (provider !== 'custom') {
-      const preset = PROVIDER_PRESETS[provider]
-      setSmtpHost(preset.smtp.host)
-      setSmtpPort(preset.smtp.port)
-      setSmtpSecure(preset.smtp.secure)
-      setImapHost(preset.imap.host)
-      setImapPort(preset.imap.port)
-      setImapSecure(preset.imap.secure)
-    }
-  }, [provider])
+  const buildCredentials = () => {
+    // Use custom settings if advanced mode, otherwise auto-detect
+    const settings = showAdvanced ? {
+      smtp: { host: smtpHost, port: smtpPort, secure: smtpSecure },
+      imap: { host: imapHost, port: imapPort, secure: imapSecure },
+    } : providerInfo
 
-  const buildCredentials = () => ({
-    smtp: {
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpSecure,
-      user: email,
-      password,
-    },
-    imap: {
-      host: imapHost,
-      port: imapPort,
-      secure: imapSecure,
-      user: email,
-      password,
-    },
-    pollIntervalSeconds: pollInterval,
-  })
+    return {
+      smtp: {
+        ...settings.smtp,
+        user: email,
+        password,
+      },
+      imap: {
+        ...settings.imap,
+        user: email,
+        password,
+      },
+      pollIntervalSeconds: pollInterval,
+    }
+  }
 
   const handleTest = async () => {
     setTestResult(null)
@@ -251,37 +263,6 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
       {/* Configuration form (shown when not connected) */}
       {!isConnected && (
         <div className="ml-4 sm:ml-44 space-y-4 max-w-md">
-          {/* Provider selection */}
-          <div className="space-y-2">
-            <Label htmlFor="provider">Email Provider</Label>
-            <Select
-              value={provider}
-              onValueChange={(value) => setProvider(value as ProviderKey)}
-            >
-              <SelectTrigger id="provider">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(PROVIDER_PRESETS).map(([key, preset]) => (
-                  <SelectItem key={key} value={key}>
-                    {preset.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {PROVIDER_PRESETS[provider].note && (
-              <p className="text-xs text-muted-foreground flex items-start gap-1">
-                <HugeiconsIcon
-                  icon={Alert02Icon}
-                  size={14}
-                  strokeWidth={2}
-                  className="shrink-0 mt-0.5 text-yellow-500"
-                />
-                {PROVIDER_PRESETS[provider].note}
-              </p>
-            )}
-          </div>
-
           {/* Email address */}
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
@@ -292,33 +273,67 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {providerInfo.note && email.includes('@') && (
+              <p className="text-xs text-muted-foreground flex items-start gap-1">
+                <HugeiconsIcon
+                  icon={Alert02Icon}
+                  size={14}
+                  strokeWidth={2}
+                  className="shrink-0 mt-0.5 text-yellow-500"
+                />
+                {providerInfo.note}
+              </p>
+            )}
           </div>
 
           {/* Password */}
           <div className="space-y-2">
             <Label htmlFor="password">
-              {provider === 'gmail' ? 'App Password' : 'Password'}
+              {email.includes('@gmail.com') || email.includes('@icloud.com') ? 'App Password' : 'Password'}
             </Label>
             <Input
               id="password"
               type="password"
-              placeholder={provider === 'gmail' ? '16-character app password' : 'Password'}
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
-          {/* Custom server settings (only for custom provider) */}
-          {provider === 'custom' && (
+          {/* Server info (auto-detected) */}
+          {email.includes('@') && (
+            <div className="text-xs text-muted-foreground">
+              <span>SMTP: {providerInfo.smtp.host}:{providerInfo.smtp.port}</span>
+              <span className="mx-2">|</span>
+              <span>IMAP: {providerInfo.imap.host}:{providerInfo.imap.port}</span>
+              {!providerInfo.isKnown && (
+                <span className="ml-2 text-yellow-600">(auto-detected)</span>
+              )}
+            </div>
+          )}
+
+          {/* Advanced settings toggle */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              {showAdvanced ? '- Hide advanced settings' : '+ Show advanced settings'}
+            </button>
+          </div>
+
+          {/* Advanced: Custom server settings */}
+          {showAdvanced && (
             <>
-              <div className="border-t border-border pt-4 mt-4">
+              <div className="border-t border-border pt-4">
                 <h4 className="text-sm font-medium mb-3">SMTP Settings (Outgoing)</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 space-y-2">
                     <Label htmlFor="smtpHost">Host</Label>
                     <Input
                       id="smtpHost"
-                      placeholder="smtp.example.com"
+                      placeholder={providerInfo.smtp.host}
                       value={smtpHost}
                       onChange={(e) => setSmtpHost(e.target.value)}
                     />
@@ -328,7 +343,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
                     <Input
                       id="smtpPort"
                       type="number"
-                      value={smtpPort}
+                      value={smtpPort || providerInfo.smtp.port}
                       onChange={(e) => setSmtpPort(parseInt(e.target.value) || 465)}
                     />
                   </div>
@@ -350,7 +365,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
                     <Label htmlFor="imapHost">Host</Label>
                     <Input
                       id="imapHost"
-                      placeholder="imap.example.com"
+                      placeholder={providerInfo.imap.host}
                       value={imapHost}
                       onChange={(e) => setImapHost(e.target.value)}
                     />
@@ -360,7 +375,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
                     <Input
                       id="imapPort"
                       type="number"
-                      value={imapPort}
+                      value={imapPort || providerInfo.imap.port}
                       onChange={(e) => setImapPort(parseInt(e.target.value) || 993)}
                     />
                   </div>
@@ -374,25 +389,25 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Poll interval */}
+              <div className="space-y-2">
+                <Label htmlFor="pollInterval">Check for new emails every</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="pollInterval"
+                    type="number"
+                    className="w-20"
+                    min={10}
+                    max={300}
+                    value={pollInterval}
+                    onChange={(e) => setPollInterval(parseInt(e.target.value) || 30)}
+                  />
+                  <span className="text-sm text-muted-foreground">seconds</span>
+                </div>
+              </div>
             </>
           )}
-
-          {/* Poll interval */}
-          <div className="space-y-2">
-            <Label htmlFor="pollInterval">Check for new emails every</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="pollInterval"
-                type="number"
-                className="w-20"
-                min={10}
-                max={300}
-                value={pollInterval}
-                onChange={(e) => setPollInterval(parseInt(e.target.value) || 30)}
-              />
-              <span className="text-sm text-muted-foreground">seconds</span>
-            </div>
-          </div>
 
           {/* Test result */}
           {testResult && (
@@ -431,7 +446,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
               variant="outline"
               size="sm"
               onClick={handleTest}
-              disabled={isPending || !email || !password || !smtpHost || !imapHost}
+              disabled={isPending || !email || !password}
             >
               {testCredentials.isPending ? (
                 <HugeiconsIcon
@@ -453,7 +468,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
             <Button
               size="sm"
               onClick={handleConfigure}
-              disabled={isPending || !email || !password || !smtpHost || !imapHost}
+              disabled={isPending || !email || !password}
             >
               {configureEmail.isPending ? (
                 <HugeiconsIcon
