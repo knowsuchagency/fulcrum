@@ -1,9 +1,29 @@
 import { Hono } from 'hono'
-import { eq, or, and } from 'drizzle-orm'
+import { eq, or, and, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
-import { db, tasks, taskRelationships } from '../db'
+import { db, tasks, taskRelationships, taskTags, tags } from '../db'
 
 const app = new Hono()
+
+// Helper to get tags for multiple tasks efficiently
+function getTagsForTasks(taskIds: string[]): Map<string, string[]> {
+  if (taskIds.length === 0) return new Map()
+
+  const joins = db
+    .select({ taskId: taskTags.taskId, tagName: tags.name })
+    .from(taskTags)
+    .innerJoin(tags, eq(taskTags.tagId, tags.id))
+    .where(inArray(taskTags.taskId, taskIds))
+    .all()
+
+  const result = new Map<string, string[]>()
+  for (const { taskId, tagName } of joins) {
+    const existing = result.get(taskId) || []
+    existing.push(tagName)
+    result.set(taskId, existing)
+  }
+  return result
+}
 
 // GET /api/task-dependencies/graph - Get all dependencies for graph visualization
 app.get('/graph', (c) => {
@@ -14,6 +34,9 @@ app.get('/graph', (c) => {
     .where(eq(taskRelationships.type, 'depends_on'))
     .all()
   const allTasks = db.select().from(tasks).all()
+
+  // Get tags for all tasks in one query
+  const taskTagsMap = getTagsForTasks(allTasks.map((t) => t.id))
 
   // Build maps for filtering
   const taskMap = new Map(allTasks.map((t) => [t.id, t]))
@@ -38,7 +61,7 @@ app.get('/graph', (c) => {
       title: t.title,
       status: t.status,
       projectId: t.projectId,
-      tags: t.tags ? JSON.parse(t.tags) : [],
+      tags: taskTagsMap.get(t.id) || [],
       dueDate: t.dueDate,
     })),
     edges: validEdges.map((d) => ({

@@ -40,3 +40,21 @@ export function isDateOverdue(
   const today = getTodayInTimezone(timezone)
   return dueDate < today
 }
+
+/**
+ * Check if a due date is today based on configured timezone.
+ * @param dueDate - The due date in YYYY-MM-DD format
+ * @param timezone - IANA timezone string or null for system timezone
+ * @param status - The task status
+ */
+export function isDueToday(
+  dueDate: string | null,
+  timezone: string | null,
+  status: string
+): boolean {
+  if (!dueDate) return false
+  if (status === 'DONE' || status === 'CANCELED') return false
+
+  const today = getTodayInTimezone(timezone)
+  return dueDate === today
+}

@@ -16,7 +16,7 @@ import ReactFlow, {
 import dagre from '@dagrejs/dagre'
 import { useTaskDependencyGraph, useTasks, type TaskGraphNode } from '@/hooks/use-tasks'
 import { useProjects } from '@/hooks/use-projects'
-import { useIsOverdue } from '@/hooks/use-date-utils'
+import { useIsOverdue, useIsDueToday } from '@/hooks/use-date-utils'
 import type { Task, TaskStatus } from '@/types'
 import { NonWorktreeTaskModal } from '@/components/task/non-worktree-task-modal'
 import 'reactflow/dist/style.css'
@@ -31,15 +31,17 @@ const STATUS_COLORS: Record<TaskStatus, { bg: string; border: string; text: stri
 
 interface TaskNodeData {
   task: TaskGraphNode
+  projectName: string | null
   isBlocked: boolean
   isBlocking: boolean
   direction: 'TB' | 'LR'
 }
 
 function TaskNode({ data }: { data: TaskNodeData }) {
-  const { task, isBlocked, direction } = data
+  const { task, projectName, isBlocked, direction } = data
   const colors = STATUS_COLORS[task.status]
   const isOverdue = useIsOverdue(task.dueDate, task.status)
+  const isDueToday = useIsDueToday(task.dueDate, task.status)
 
   // Handle positions based on layout direction
   const targetPosition = direction === 'LR' ? Position.Left : Position.Top
@@ -58,6 +60,11 @@ function TaskNode({ data }: { data: TaskNodeData }) {
     >
       <Handle type="target" position={targetPosition} className="!bg-gray-400 !w-2 !h-2" />
       <div className="flex flex-col gap-1">
+        {projectName && (
+          <div className="text-[10px] text-gray-500 font-medium truncate">
+            {projectName}
+          </div>
+        )}
         <div
           className="font-medium text-sm leading-tight line-clamp-2"
           style={{ color: colors.text }}
@@ -105,7 +112,7 @@ function TaskNode({ data }: { data: TaskNodeData }) {
         {task.dueDate && (
           <div
             className="text-[10px] mt-0.5"
-            style={{ color: isOverdue ? '#dd403a' : '#6b7280' }}
+            style={{ color: isOverdue ? '#dd403a' : isDueToday ? '#d97706' : '#6b7280' }}
           >
             Due: {new Date(task.dueDate).toLocaleDateString()}
           </div>
@@ -336,12 +343,16 @@ export function TaskDependencyGraph({ className, projectFilter, tagsFilter }: Ta
       (edge) => nodesInFilteredChains.has(edge.source) && nodesInFilteredChains.has(edge.target)
     )
 
+    // Create a map of project IDs to names for quick lookup
+    const projectNameMap = new Map(projects.map((p) => [p.id, p.name]))
+
     const nodes: Node<TaskNodeData>[] = filteredTasks.map((task) => ({
       id: task.id,
       type: 'task',
       position: { x: 0, y: 0 },
       data: {
         task,
+        projectName: task.projectId ? projectNameMap.get(task.projectId) ?? null : null,
         isBlocked: blockedNodes.has(task.id),
         isBlocking: blockingNodes.has(task.id),
         direction,
@@ -369,7 +380,7 @@ export function TaskDependencyGraph({ className, projectFilter, tagsFilter }: Ta
     // Apply automatic layout (LR on desktop, TB on mobile)
     const layouted = getLayoutedElements(nodes, edges, direction)
     return { initialNodes: layouted.nodes as Node<TaskNodeData>[], initialEdges: layouted.edges }
-  }, [graphData, blockedNodes, blockingNodes, direction, taskMatchesProjectFilter, taskMatchesTagsFilter, projectFilter, tagsFilter])
+  }, [graphData, blockedNodes, blockingNodes, direction, taskMatchesProjectFilter, taskMatchesTagsFilter, projectFilter, tagsFilter, projects])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
