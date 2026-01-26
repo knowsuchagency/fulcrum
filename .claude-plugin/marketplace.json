@@ -8,7 +8,7 @@
       "name": "fulcrum",
       "source": "./plugins/fulcrum",
       "description": "Task orchestration for Claude Code",
-      "version": "2.1.4"
+      "version": "2.1.5"
     }
   ]
 }
