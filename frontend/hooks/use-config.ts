@@ -24,6 +24,7 @@ export const CONFIG_KEYS = {
   OPENCODE_MODEL: 'agent.opencodeModel',
   OPENCODE_DEFAULT_AGENT: 'agent.opencodeDefaultAgent',
   OPENCODE_PLAN_AGENT: 'agent.opencodePlanAgent',
+  AGENT_AUTO_SCROLL_TO_BOTTOM: 'agent.autoScrollToBottom',
   LANGUAGE: 'appearance.language',
   THEME: 'appearance.theme',
   TIMEZONE: 'appearance.timezone',
@@ -170,6 +171,17 @@ export function useOpencodePlanAgent() {
   return {
     ...query,
     data: (query.data?.value as string) ?? 'plan',
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
+export function useAutoScrollToBottom() {
+  const query = useConfig(CONFIG_KEYS.AGENT_AUTO_SCROLL_TO_BOTTOM)
+
+  return {
+    ...query,
+    // Default to true when value is undefined (preserve existing behavior)
+    data: query.data?.value === undefined ? true : Boolean(query.data.value),
     isDefault: query.data?.isDefault ?? true,
   }
 }

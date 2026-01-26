@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/header'
 import { useTaskSync } from '@/hooks/use-task-sync'
 import { useLanguageSync } from '@/hooks/use-language-sync'
 import { useThemeSync } from '@/hooks/use-theme-sync'
+import { useAutoScrollSync } from '@/hooks/use-auto-scroll-sync'
 import { useTerminalViewState } from '@/hooks/use-terminal-view-state'
 import { KeyboardProvider } from '@/contexts/keyboard-context'
 import { CommandPalette } from '@/components/command-palette/command-palette'
@@ -31,6 +32,11 @@ function LanguageSync() {
 
 function ThemeSync() {
   useThemeSync()
+  return null
+}
+
+function AutoScrollSync() {
+  useAutoScrollSync()
   return null
 }
 
@@ -111,6 +117,7 @@ function RootLayout() {
         <TaskSync />
         <LanguageSync />
         <ThemeSync />
+        <AutoScrollSync />
         <ViewTracking />
         <DesktopBridge />
         <ConnectionStatusBanner />

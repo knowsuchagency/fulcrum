@@ -36,6 +36,7 @@ export const CONFIG_KEYS = {
   OPENCODE_MODEL: 'agent.opencodeModel',
   OPENCODE_DEFAULT_AGENT: 'agent.opencodeDefaultAgent',
   OPENCODE_PLAN_AGENT: 'agent.opencodePlanAgent',
+  AGENT_AUTO_SCROLL_TO_BOTTOM: 'agent.autoScrollToBottom',
   DEFAULT_TASK_TYPE: 'tasks.defaultTaskType',
   START_WORKTREE_TASKS_IMMEDIATELY: 'tasks.startWorktreeTasksImmediately',
   LANGUAGE: 'appearance.language',
@@ -392,6 +393,10 @@ app.put('/:key', async (c) => {
         return c.json({ error: 'OpenCode agent name must be a non-empty string' }, 400)
       }
       value = value.trim()
+    } else if (path === CONFIG_KEYS.AGENT_AUTO_SCROLL_TO_BOTTOM) {
+      if (typeof value !== 'boolean') {
+        return c.json({ error: 'Auto-scroll to bottom must be a boolean' }, 400)
+      }
     } else if (path === CONFIG_KEYS.DEFAULT_TASK_TYPE) {
       const validTaskTypes = ['worktree', 'non-worktree']
       if (!validTaskTypes.includes(value as string)) {

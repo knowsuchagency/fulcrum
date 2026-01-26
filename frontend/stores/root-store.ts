@@ -215,6 +215,12 @@ export const RootStore = types
      * Consumed by use-theme-sync hook to apply theme.
      */
     broadcastedTheme: null as 'light' | 'dark' | 'system' | null,
+    /**
+     * Auto-scroll to bottom setting.
+     * When true, terminals auto-scroll to bottom when cursor is visible.
+     * When false, auto-scroll is disabled.
+     */
+    autoScrollToBottom: true,
   }))
   .views((self) => ({
     /** Whether the store is ready for use */
@@ -274,6 +280,11 @@ export const RootStore = types
       /** Set current reconnection attempt (called by StoreProvider) */
       setReconnectAttempt(attempt: number) {
         self.reconnectAttempt = attempt
+      },
+
+      /** Set auto-scroll to bottom setting */
+      setAutoScrollToBottom(enabled: boolean) {
+        self.autoScrollToBottom = enabled
       },
 
       /** Set max reconnection attempts (called by StoreProvider on mount) */
@@ -1008,12 +1019,14 @@ export const RootStore = types
                 terminal.setCursorVisible(false)
               }
 
-              // Only scroll to bottom if cursor is visible
+              // Only scroll to bottom if:
+              // 1. Cursor is visible (not a TUI app managing viewport)
+              // 2. Auto-scroll setting is enabled
               // When cursor is hidden (TUI app managing viewport), skip auto-scroll
               // to avoid interfering with the TUI's viewport management
               // (fixes cursor position issues in xterm 6.0.0+)
               xterm.write(data, () => {
-                if (terminal.cursorVisible) {
+                if (terminal.cursorVisible && self.autoScrollToBottom) {
                   requestAnimationFrame(() => {
                     xterm.scrollToBottom()
                   })

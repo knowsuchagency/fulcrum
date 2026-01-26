@@ -32,6 +32,7 @@ import {
   useOpencodeModel,
   useOpencodeDefaultAgent,
   useOpencodePlanAgent,
+  useAutoScrollToBottom,
   useTriggerUpdate,
   useUpdateConfig,
   useResetConfig,
@@ -104,6 +105,7 @@ function SettingsPage() {
   const { data: globalOpencodeModel, isLoading: opcodeModelLoading } = useOpencodeModel()
   const { data: globalOpencodeDefaultAgent, isLoading: opcodeDefaultAgentLoading } = useOpencodeDefaultAgent()
   const { data: globalOpencodePlanAgent, isLoading: opencodePlanAgentLoading } = useOpencodePlanAgent()
+  const { data: autoScrollToBottom, isLoading: autoScrollLoading } = useAutoScrollToBottom()
   const { data: notificationSettings, isLoading: notificationsLoading } = useNotificationSettings()
   const { data: zAiSettings, isLoading: zAiLoading } = useZAiSettings()
   const { data: deploymentSettings, isLoading: deploymentLoading } = useDeploymentSettings()
@@ -143,6 +145,7 @@ function SettingsPage() {
   const [localOpencodeModel, setLocalOpencodeModel] = useState<string | null>(null)
   const [localOpencodeDefaultAgent, setLocalOpencodeDefaultAgent] = useState<string>('build')
   const [localOpencodePlanAgent, setLocalOpencodePlanAgent] = useState<string>('plan')
+  const [localAutoScrollToBottom, setLocalAutoScrollToBottom] = useState(true)
   const [reposDirBrowserOpen, setReposDirBrowserOpen] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -208,7 +211,8 @@ function SettingsPage() {
     if (globalOpencodeModel !== undefined) setLocalOpencodeModel(globalOpencodeModel)
     if (globalOpencodeDefaultAgent !== undefined) setLocalOpencodeDefaultAgent(globalOpencodeDefaultAgent)
     if (globalOpencodePlanAgent !== undefined) setLocalOpencodePlanAgent(globalOpencodePlanAgent)
-  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, githubPat, defaultAgent, globalOpencodeModel, globalOpencodeDefaultAgent, globalOpencodePlanAgent])
+    if (autoScrollToBottom !== undefined) setLocalAutoScrollToBottom(autoScrollToBottom)
+  }, [port, defaultGitReposDir, editorApp, editorHost, editorSshPort, githubPat, defaultAgent, globalOpencodeModel, globalOpencodeDefaultAgent, globalOpencodePlanAgent, autoScrollToBottom])
 
   // Sync notification settings
   useEffect(() => {
@@ -278,7 +282,7 @@ function SettingsPage() {
   }, [assistantProvider, assistantModel, assistantCustomInstructions, assistantDocumentsDir])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantProviderLoading || assistantModelLoading || assistantInstructionsLoading || assistantDocumentsDirLoading
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || autoScrollLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantProviderLoading || assistantModelLoading || assistantInstructionsLoading || assistantDocumentsDirLoading
 
   const hasZAiChanges = zAiSettings && (
     zAiEnabled !== zAiSettings.enabled ||
@@ -337,10 +341,11 @@ function SettingsPage() {
     localEditorHost !== editorHost ||
     localEditorSshPort !== String(editorSshPort)
 
-  const hasAgentChanges = localDefaultAgent !== defaultAgent || 
+  const hasAgentChanges = localDefaultAgent !== defaultAgent ||
     localOpencodeModel !== (globalOpencodeModel ?? null) ||
     localOpencodeDefaultAgent !== globalOpencodeDefaultAgent ||
-    localOpencodePlanAgent !== globalOpencodePlanAgent
+    localOpencodePlanAgent !== globalOpencodePlanAgent ||
+    localAutoScrollToBottom !== autoScrollToBottom
 
   const hasChanges =
     localPort !== String(port) ||
@@ -468,6 +473,17 @@ function SettingsPage() {
         new Promise((resolve) => {
           updateConfig.mutate(
             { key: CONFIG_KEYS.OPENCODE_PLAN_AGENT, value: localOpencodePlanAgent },
+            { onSettled: resolve }
+          )
+        })
+      )
+    }
+
+    if (localAutoScrollToBottom !== autoScrollToBottom) {
+      promises.push(
+        new Promise((resolve) => {
+          updateConfig.mutate(
+            { key: CONFIG_KEYS.AGENT_AUTO_SCROLL_TO_BOTTOM, value: localAutoScrollToBottom },
             { onSettled: resolve }
           )
         })
@@ -1447,6 +1463,23 @@ function SettingsPage() {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* Auto-scroll to bottom */}
+                <div className="mt-4 space-y-1 border-t border-border pt-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0">
+                      {t('fields.agent.autoScrollToBottom.label')}
+                    </label>
+                    <Switch
+                      checked={localAutoScrollToBottom}
+                      onCheckedChange={setLocalAutoScrollToBottom}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                    {t('fields.agent.autoScrollToBottom.description')}
+                  </p>
+                </div>
               </SettingsSection>
 
               {/* AI Assistant */}

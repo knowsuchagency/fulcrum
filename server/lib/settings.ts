@@ -126,6 +126,7 @@ export interface Settings {
     opencodeModel: string | null
     opencodeDefaultAgent: string
     opencodePlanAgent: string
+    autoScrollToBottom: boolean
   }
   tasks: {
     defaultTaskType: TaskType
@@ -171,6 +172,7 @@ const DEFAULT_SETTINGS: Settings = {
     opencodeModel: null,
     opencodeDefaultAgent: 'build',
     opencodePlanAgent: 'plan',
+    autoScrollToBottom: true,
   },
   tasks: {
     defaultTaskType: 'worktree',
@@ -210,6 +212,7 @@ export const VALID_SETTING_PATHS = new Set([
   'agent.opencodeModel',
   'agent.opencodeDefaultAgent',
   'agent.opencodePlanAgent',
+  'agent.autoScrollToBottom',
   'tasks.defaultTaskType',
   'tasks.startWorktreeTasksImmediately',
   'appearance.language',
@@ -483,6 +486,7 @@ export function getSettings(): Settings {
       opencodeModel: ((parsed.agent as Record<string, unknown>)?.opencodeModel as string | null) ?? null,
       opencodeDefaultAgent: ((parsed.agent as Record<string, unknown>)?.opencodeDefaultAgent as string) ?? DEFAULT_SETTINGS.agent.opencodeDefaultAgent,
       opencodePlanAgent: ((parsed.agent as Record<string, unknown>)?.opencodePlanAgent as string) ?? DEFAULT_SETTINGS.agent.opencodePlanAgent,
+      autoScrollToBottom: ((parsed.agent as Record<string, unknown>)?.autoScrollToBottom as boolean) ?? DEFAULT_SETTINGS.agent.autoScrollToBottom,
     },
     tasks: {
       // Migrate old 'code'/'non-code' values to 'worktree'/'non-worktree'
