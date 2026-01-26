@@ -1,0 +1,81 @@
+name: Update Claude Agent SDK
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Daily at 6 AM UTC
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  check-and-update:
+    name: Check and Update SDK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Check for updates
+        id: check
+        run: |
+          # Extract current version from bun.lock (format: "@anthropic-ai/claude-agent-sdk@0.1.77")
+          CURRENT=$(grep -oP '@anthropic-ai/claude-agent-sdk@\K[0-9.]+' bun.lock | head -1)
+          LATEST=$(npm view @anthropic-ai/claude-agent-sdk version)
+
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+
+          if [ "$CURRENT" != "$LATEST" ]; then
+            echo "has_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update SDK
+        if: steps.check.outputs.has_update == 'true'
+        run: bun update @anthropic-ai/claude-agent-sdk
+
+      - name: Install dependencies
+        if: steps.check.outputs.has_update == 'true'
+        run: bun install
+
+      - name: Run build
+        if: steps.check.outputs.has_update == 'true'
+        run: mise run build
+
+      - name: Run tests
+        if: steps.check.outputs.has_update == 'true'
+        run: mise run test
+
+      - name: Create Pull Request
+        if: steps.check.outputs.has_update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          commit-message: "chore(deps): update @anthropic-ai/claude-agent-sdk to ${{ steps.check.outputs.latest }}"
+          title: "chore(deps): update @anthropic-ai/claude-agent-sdk to ${{ steps.check.outputs.latest }}"
+          body: |
+            Updates `@anthropic-ai/claude-agent-sdk` from `${{ steps.check.outputs.current }}` to `${{ steps.check.outputs.latest }}`.
+
+            **Verification:** Build and tests passed in this workflow before PR creation.
+
+            This PR will auto-merge once CI passes.
+          branch: deps/update-claude-agent-sdk
+          delete-branch: true
+          labels: dependencies
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number
+        run: gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
