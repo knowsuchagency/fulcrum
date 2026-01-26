@@ -81,7 +81,7 @@ export class SlackChannel implements MessagingChannel {
       })
 
       // Handle messages
-      this.app.message(async ({ message, say }) => {
+      this.app.message(async ({ message }) => {
         await this.handleMessage(message)
       })
 
