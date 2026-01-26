@@ -43,6 +43,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { labelKey: 'commandPalette', shortcut: 'meta+k' },
       { labelKey: 'newTask', shortcut: 'meta+j' },
       { labelKey: 'openInEditor', shortcut: 'meta+e' },
+      { labelKey: 'openAiAssistant', shortcut: 'meta+x' },
       { labelKey: 'keyboardShortcuts', shortcut: 'meta+/' },
     ],
   },

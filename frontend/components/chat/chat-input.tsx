@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Send, Loader2 } from 'lucide-react'
 
@@ -8,15 +8,25 @@ interface ChatInputProps {
   placeholder?: string
 }
 
-export function ChatInput({
-  onSend,
-  isLoading,
-  placeholder,
-}: ChatInputProps) {
+export interface ChatInputHandle {
+  focus: () => void
+}
+
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput(
+  { onSend, isLoading, placeholder },
+  ref
+) {
   const { t } = useTranslation('assistant')
   const finalPlaceholder = placeholder ?? t('input.placeholder')
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Expose focus method to parent
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      textareaRef.current?.focus()
+    },
+  }))
 
   // Auto-resize textarea
   const adjustHeight = useCallback(() => {
@@ -100,4 +110,4 @@ export function ChatInput({
       </div>
     </div>
   )
-}
+})

@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes'
 import { Bot, X, Trash2, Info, ChevronDown, Check } from 'lucide-react'
 import MarkdownPreview from '@uiw/react-markdown-preview'
 import { ChatMessage } from './chat-message'
-import { ChatInput } from './chat-input'
+import { ChatInput, type ChatInputHandle } from './chat-input'
 import { useChat } from '@/hooks/use-chat'
 import { usePageContext } from '@/hooks/use-page-context'
 import { useOpencodeModels } from '@/hooks/use-opencode-models'
@@ -37,6 +37,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     model,
     opencodeModel,
     toggle,
+    open,
     close,
     sendMessage,
     clearMessages,
@@ -52,6 +53,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const chatInputRef = useRef<ChatInputHandle>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null)
   const [modelFilter, setModelFilter] = useState('')
@@ -114,6 +116,25 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         e.preventDefault()
         toggle()
       }
+      // Cmd+X to toggle chat (only when not in an editable element outside the chat)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'x') {
+        const target = e.target as Element
+        const isInChat = chatRef.current?.contains(target)
+        const isEditable = target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          (target as HTMLElement).isContentEditable
+        // Allow toggle if: not in editable element, OR in chat's own input (to close)
+        if (!isEditable || isInChat) {
+          e.preventDefault()
+          if (isOpen) {
+            close()
+          } else {
+            open()
+            // Focus input after a small delay to allow the UI to render
+            setTimeout(() => chatInputRef.current?.focus(), 100)
+          }
+        }
+      }
       // Escape to close (but not if modal is open - let modal handle it first)
       if (e.key === 'Escape' && isOpen && !expandedMessageId) {
         close()
@@ -122,7 +143,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggle, close, isOpen, expandedMessageId])
+  }, [toggle, open, close, isOpen, expandedMessageId])
 
   // Close chat when clicking outside
   useEffect(() => {
@@ -453,7 +474,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             )}
 
             {/* Input Section */}
-            <ChatInput onSend={handleSend} isLoading={isStreaming} placeholder={hasMessages ? ' ' : undefined} />
+            <ChatInput ref={chatInputRef} onSend={handleSend} isLoading={isStreaming} placeholder={hasMessages ? ' ' : undefined} />
 
             {/* Footer Info - hidden on mobile */}
             <div className="hidden sm:flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 text-muted-foreground">
