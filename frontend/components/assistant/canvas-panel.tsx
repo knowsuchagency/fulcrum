@@ -76,25 +76,25 @@ export function CanvasPanel({
     <div className="h-full flex flex-col bg-muted/20">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="h-full flex flex-col">
         {/* Tab Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background">
+        <div className="flex items-center justify-between gap-2 px-2 sm:px-4 py-2 border-b border-border bg-background">
           <TabsList className="h-8">
-            <TabsTrigger value="viewer" className="gap-1.5 text-xs">
+            <TabsTrigger value="viewer" className="gap-1 sm:gap-1.5 text-xs px-1.5 sm:px-2">
               <Eye className="size-3" />
-              {t('canvas.tabs.canvas')}
+              <span className="hidden sm:inline">{t('canvas.tabs.canvas')}</span>
             </TabsTrigger>
-            <TabsTrigger value="editor" className="gap-1.5 text-xs">
+            <TabsTrigger value="editor" className="gap-1 sm:gap-1.5 text-xs px-1.5 sm:px-2">
               <Edit3 className="size-3" />
-              {t('canvas.tabs.editor')}
+              <span className="hidden sm:inline">{t('canvas.tabs.editor')}</span>
             </TabsTrigger>
-            <TabsTrigger value="documents" className="gap-1.5 text-xs">
+            <TabsTrigger value="documents" className="gap-1 sm:gap-1.5 text-xs px-1.5 sm:px-2">
               <FileText className="size-3" />
-              {t('canvas.tabs.documents')}
+              <span className="hidden sm:inline">{t('canvas.tabs.documents')}</span>
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {selectedArtifact && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground hidden sm:block truncate max-w-[120px]">
                 {selectedArtifact.title}
               </div>
             )}

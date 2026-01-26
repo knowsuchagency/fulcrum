@@ -16,7 +16,7 @@ export function GitStatusBadge({ worktreePath }: GitStatusBadgeProps) {
 
   if (status.clean) {
     return (
-      <Badge className="bg-accent/20 text-accent border-transparent">
+      <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-transparent">
         <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
         Clean
       </Badge>

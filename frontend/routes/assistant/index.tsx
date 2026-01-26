@@ -33,11 +33,12 @@ interface SessionWithMessages extends ChatSession {
 }
 
 type CanvasTab = 'viewer' | 'editor' | 'documents'
+type MobilePanel = 'chat' | 'canvas'
 
 function AssistantView() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const { chat: chatId, tab: canvasActiveTab = 'viewer' } = Route.useSearch()
+  const { chat: chatId, tab: canvasActiveTab = 'viewer', panel: mobileView = 'chat' } = Route.useSearch()
   const [isStreaming, setIsStreaming] = useState(false)
   const [provider, setProvider] = useState<AgentType>('claude')
   const [model, setModel] = useState<ClaudeModelId>('sonnet')
@@ -50,7 +51,16 @@ function AssistantView() {
   const setCanvasActiveTab = useCallback((tab: 'viewer' | 'editor' | 'documents') => {
     navigate({
       to: '/assistant',
-      search: (prev) => ({ ...prev, tab }),
+      search: (prev) => ({ chat: prev.chat, panel: prev.panel as MobilePanel | undefined, tab }),
+      replace: true,
+    })
+  }, [navigate])
+
+  // Set mobile panel via URL
+  const setMobileView = useCallback((panel: MobilePanel) => {
+    navigate({
+      to: '/assistant',
+      search: (prev) => ({ chat: prev.chat, tab: prev.tab as CanvasTab | undefined, panel }),
       replace: true,
     })
   }, [navigate])
@@ -185,7 +195,7 @@ function AssistantView() {
   const setSelectedSessionId = useCallback((id: string | null) => {
     navigate({
       to: '/assistant',
-      search: (prev) => ({ chat: id || undefined, tab: prev.tab as CanvasTab | undefined }),
+      search: (prev) => ({ chat: id || undefined, tab: prev.tab as CanvasTab | undefined, panel: prev.panel as MobilePanel | undefined }),
       replace: true,
     })
   }, [navigate])
@@ -290,7 +300,7 @@ function AssistantView() {
   const handleSelectDocument = useCallback((doc: Document) => {
     navigate({
       to: '/assistant',
-      search: (prev) => ({ ...prev, chat: doc.sessionId, tab: 'editor' as const }),
+      search: (prev) => ({ chat: doc.sessionId, tab: 'editor' as const, panel: prev.panel as MobilePanel | undefined }),
       replace: true,
     })
   }, [navigate])
@@ -523,6 +533,8 @@ function AssistantView() {
         documents={documents}
         canvasActiveTab={canvasActiveTab}
         onCanvasTabChange={setCanvasActiveTab}
+        mobileView={mobileView}
+        onMobileViewChange={setMobileView}
         onProviderChange={setProvider}
         onModelChange={setModel}
         onOpencodeModelChange={setOpencodeModel}
@@ -543,14 +555,19 @@ function AssistantView() {
 
 export const Route = createFileRoute('/assistant/')({
   component: AssistantView,
-  validateSearch: (search: Record<string, unknown>): { chat?: string; tab?: CanvasTab } => {
+  validateSearch: (search: Record<string, unknown>): { chat?: string; tab?: CanvasTab; panel?: MobilePanel } => {
     const validTabs: CanvasTab[] = ['viewer', 'editor', 'documents']
+    const validPanels: MobilePanel[] = ['chat', 'canvas']
     const tab = typeof search.tab === 'string' && validTabs.includes(search.tab as CanvasTab)
       ? (search.tab as CanvasTab)
+      : undefined
+    const panel = typeof search.panel === 'string' && validPanels.includes(search.panel as MobilePanel)
+      ? (search.panel as MobilePanel)
       : undefined
     return {
       chat: typeof search.chat === 'string' ? search.chat : undefined,
       tab,
+      panel,
     }
   },
 })

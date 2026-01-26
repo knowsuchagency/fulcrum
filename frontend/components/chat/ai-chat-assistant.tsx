@@ -257,12 +257,12 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
         >
           <div className="film-grain relative flex flex-col font-sans rounded-3xl shadow-2xl overflow-hidden max-h-[min(600px,calc(100vh-140px))] bg-popover border border-border" style={{ background: 'var(--gradient-card)' }}>
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-4 pb-2">
+            <div className="flex items-center justify-between px-3 sm:px-6 pt-3 sm:pt-4 pb-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-xs font-medium text-muted-foreground">{t('title')}</span>
                 <Tooltip>
-                  <TooltipTrigger className="flex items-center">
+                  <TooltipTrigger className="flex items-center ml-1">
                     <Badge variant="destructive" className="text-[0.55rem] h-3.5 px-1 cursor-help leading-none border border-destructive/30">
                       {t('preview.badge')}
                     </Badge>
@@ -273,9 +273,9 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                 </Tooltip>
               </div>
               <div className="flex items-center gap-2">
-                {/* Provider Toggle */}
+                {/* Provider Toggle - hidden on very small screens */}
                 {isOpencodeAvailable && (
-                  <div className="flex items-center rounded-full p-0.5 bg-muted/60">
+                  <div className="hidden sm:flex items-center rounded-full p-0.5 bg-muted/60">
                     <button
                       onClick={() => setProvider('claude')}
                       className={`px-2 py-1 text-[10px] font-medium rounded-full transition-all ${
@@ -309,7 +309,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
                     }}
                     className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-2xl transition-colors bg-muted/60 text-foreground hover:bg-muted"
                   >
-                    <span className="max-w-[80px] truncate">{getModelLabel()}</span>
+                    <span className="max-w-[60px] sm:max-w-[80px] truncate">{getModelLabel()}</span>
                     <ChevronDown
                       className={`w-3 h-3 transition-transform flex-shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`}
                     />
