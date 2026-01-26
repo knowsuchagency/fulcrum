@@ -120,7 +120,7 @@ export function DiscordSetup({ isLoading = false }: DiscordSetupProps) {
       {showTokenInput && !isConnected && (
         <div className="ml-4 sm:ml-44 space-y-3">
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">Bot Token</label>
+            <label className="block text-xs text-muted-foreground">Bot Token</label>
             <Input
               type="password"
               placeholder="Enter your Discord bot token"
@@ -191,18 +191,27 @@ export function DiscordSetup({ isLoading = false }: DiscordSetupProps) {
       )}
 
       {/* Help text */}
-      <p className="ml-4 sm:ml-44 text-xs text-muted-foreground">
-        Create a Discord bot at{' '}
-        <a
-          href="https://discord.com/developers/applications"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          Discord Developer Portal
-        </a>
-        . Enable the Message Content intent and invite the bot to your server. DM the bot to chat with the AI assistant.
-      </p>
+      <details className="ml-4 sm:ml-44 text-sm text-muted-foreground">
+        <summary className="cursor-pointer hover:text-foreground">Setup instructions</summary>
+        <ol className="mt-2 ml-4 space-y-1 list-decimal">
+          <li>
+            Go to the{' '}
+            <a
+              href="https://discord.com/developers/applications"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Discord Developer Portal
+            </a>
+          </li>
+          <li>Create a new application and add a Bot</li>
+          <li>Enable the <strong>Message Content Intent</strong> under Bot settings</li>
+          <li>Copy the bot token and paste it above</li>
+          <li>Invite the bot to your server using OAuth2 URL Generator</li>
+          <li>DM the bot to chat with the AI assistant</li>
+        </ol>
+      </details>
     </div>
   )
 }

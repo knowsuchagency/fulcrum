@@ -1952,10 +1952,12 @@ function SettingsPage() {
 
               {/* Messaging Channels */}
               <SettingsSection title="Messaging">
-                <WhatsAppSetup isLoading={isLoading} />
-                <DiscordSetup isLoading={isLoading} />
-                <TelegramSetup isLoading={isLoading} />
-                <SlackSetup isLoading={isLoading} />
+                <div className="space-y-8">
+                  <WhatsAppSetup isLoading={isLoading} />
+                  <DiscordSetup isLoading={isLoading} />
+                  <TelegramSetup isLoading={isLoading} />
+                  <SlackSetup isLoading={isLoading} />
+                </div>
               </SettingsSection>
 
               {/* Appearance */}

@@ -130,7 +130,7 @@ export function SlackSetup({ isLoading = false }: SlackSetupProps) {
       {showTokenInput && !isConnected && (
         <div className="ml-4 sm:ml-44 space-y-3">
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">Bot Token (xoxb-...)</label>
+            <label className="block text-xs text-muted-foreground">Bot Token (xoxb-...)</label>
             <Input
               type="password"
               placeholder="xoxb-your-bot-token"
@@ -140,7 +140,7 @@ export function SlackSetup({ isLoading = false }: SlackSetupProps) {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">App Token (xapp-...)</label>
+            <label className="block text-xs text-muted-foreground">App Token (xapp-...)</label>
             <Input
               type="password"
               placeholder="xapp-your-app-token"
@@ -212,20 +212,36 @@ export function SlackSetup({ isLoading = false }: SlackSetupProps) {
       )}
 
       {/* Help text */}
-      <p className="ml-4 sm:ml-44 text-xs text-muted-foreground">
-        Create a Slack app at{' '}
-        <a
-          href="https://api.slack.com/apps"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          api.slack.com
-        </a>
-        . Enable Socket Mode to get an App Token (xapp-...) and install the app to get a Bot Token (xoxb-...).
-        Required scopes: chat:write, im:history, im:read, im:write, users:read.
-        DM the bot to chat with the AI assistant.
-      </p>
+      <details className="ml-4 sm:ml-44 text-sm text-muted-foreground">
+        <summary className="cursor-pointer hover:text-foreground">Setup instructions</summary>
+        <ol className="mt-2 ml-4 space-y-1 list-decimal">
+          <li>
+            Go to{' '}
+            <a
+              href="https://api.slack.com/apps"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              api.slack.com/apps
+            </a>{' '}
+            and create a new app
+          </li>
+          <li>Under <strong>Socket Mode</strong>, enable it and create an App Token (xapp-...)</li>
+          <li>
+            Under <strong>OAuth &amp; Permissions</strong>, add these scopes:{' '}
+            <code className="bg-muted px-1 rounded text-xs">chat:write</code>,{' '}
+            <code className="bg-muted px-1 rounded text-xs">im:history</code>,{' '}
+            <code className="bg-muted px-1 rounded text-xs">im:read</code>,{' '}
+            <code className="bg-muted px-1 rounded text-xs">im:write</code>,{' '}
+            <code className="bg-muted px-1 rounded text-xs">users:read</code>
+          </li>
+          <li>Install the app to your workspace to get the Bot Token (xoxb-...)</li>
+          <li>Under <strong>Event Subscriptions</strong>, subscribe to <code className="bg-muted px-1 rounded text-xs">message.im</code></li>
+          <li>Paste both tokens above and click Connect</li>
+          <li>DM the bot in Slack to chat with the AI assistant</li>
+        </ol>
+      </details>
     </div>
   )
 }

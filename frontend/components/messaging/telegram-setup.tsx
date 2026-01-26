@@ -120,7 +120,7 @@ export function TelegramSetup({ isLoading = false }: TelegramSetupProps) {
       {showTokenInput && !isConnected && (
         <div className="ml-4 sm:ml-44 space-y-3">
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">Bot Token</label>
+            <label className="block text-xs text-muted-foreground">Bot Token</label>
             <Input
               type="password"
               placeholder="Enter your Telegram bot token"
@@ -191,18 +191,26 @@ export function TelegramSetup({ isLoading = false }: TelegramSetupProps) {
       )}
 
       {/* Help text */}
-      <p className="ml-4 sm:ml-44 text-xs text-muted-foreground">
-        Create a Telegram bot by messaging{' '}
-        <a
-          href="https://t.me/BotFather"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          @BotFather
-        </a>
-        . Use the /newbot command to create a bot and get your token. Then DM your bot to chat with the AI assistant.
-      </p>
+      <details className="ml-4 sm:ml-44 text-sm text-muted-foreground">
+        <summary className="cursor-pointer hover:text-foreground">Setup instructions</summary>
+        <ol className="mt-2 ml-4 space-y-1 list-decimal">
+          <li>
+            Open Telegram and message{' '}
+            <a
+              href="https://t.me/BotFather"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              @BotFather
+            </a>
+          </li>
+          <li>Send <code className="bg-muted px-1 rounded">/newbot</code> and follow the prompts</li>
+          <li>Copy the bot token provided by BotFather</li>
+          <li>Paste the token above and click Connect</li>
+          <li>Find your new bot in Telegram and start a chat</li>
+        </ol>
+      </details>
     </div>
   )
 }
