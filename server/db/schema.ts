@@ -322,7 +322,7 @@ export const messagingConnections = sqliteTable('messaging_connections', {
   id: text('id').primaryKey(),
   channelType: text('channel_type').notNull(), // 'whatsapp' | 'discord' | 'telegram'
   enabled: integer('enabled', { mode: 'boolean' }).default(false),
-  authState: text('auth_state'), // JSON: Baileys auth credentials for WhatsApp
+  authState: text('auth_state', { mode: 'json' }), // JSON: Channel-specific auth credentials
   displayName: text('display_name'), // Connected account name (phone number, username, etc.)
   status: text('status').notNull().default('disconnected'), // 'disconnected' | 'connecting' | 'connected' | 'qr_pending'
   createdAt: text('created_at').notNull(),

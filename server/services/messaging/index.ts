@@ -570,7 +570,7 @@ export async function configureEmail(credentials: EmailAuthState): Promise<Messa
     .set({
       enabled: true,
       authState: credentials,
-      displayName: credentials.smtp.user,
+      displayName: credentials.sendAs || credentials.smtp.user,
       status: 'connecting',
       updatedAt: new Date().toISOString(),
     })
@@ -647,6 +647,8 @@ export function getEmailConfig(): {
   smtp: { host: string; port: number; secure: boolean; user: string } | null
   imap: { host: string; port: number; secure: boolean; user: string } | null
   pollIntervalSeconds: number
+  sendAs?: string
+  allowedSenders?: string[]
 } | null {
   const conn = getEmailStatus()
   if (!conn?.authState) return null
@@ -666,6 +668,8 @@ export function getEmailConfig(): {
       user: auth.imap.user,
     },
     pollIntervalSeconds: auth.pollIntervalSeconds,
+    sendAs: auth.sendAs,
+    allowedSenders: auth.allowedSenders,
   }
 }
 

@@ -136,6 +136,7 @@ export interface EmailCredentials {
     password: string
   }
   pollIntervalSeconds: number
+  sendAs?: string
   allowedSenders?: string[]
 }
 

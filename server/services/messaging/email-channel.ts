@@ -618,7 +618,7 @@ If you believe this is an error, please contact the owner of this email address.
       }
 
       await this.transporter.sendMail({
-        from: this.credentials.smtp.user,
+        from: this.getFromAddress(),
         to: headers.from,
         subject,
         text: response,
@@ -679,7 +679,7 @@ If you believe this is an error, please contact the owner of this email address.
       }
 
       await this.transporter.sendMail({
-        from: this.credentials.smtp.user,
+        from: this.getFromAddress(),
         to: recipientId,
         subject,
         text: content,
@@ -703,6 +703,18 @@ If you believe this is an error, please contact the owner of this email address.
       })
       return false
     }
+  }
+
+  /**
+   * Get the email address to use in the From header.
+   * Uses sendAs if configured (e.g., for AWS SES where SMTP user is an access key),
+   * otherwise falls back to the SMTP user.
+   */
+  private getFromAddress(): string {
+    if (!this.credentials) {
+      throw new Error('Not connected - no credentials available')
+    }
+    return this.credentials.sendAs || this.credentials.smtp.user
   }
 
   private formatAsHtml(content: string): string {
