@@ -566,3 +566,143 @@
 .animate-ping-slow {
   animation: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* Background blob animations - lava lamp style with fade in/out, max 30% opacity */
+@keyframes blob-1 {
+  0%, 100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    transform: translate(0%, 0%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.3;
+  }
+  25% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    transform: translate(40%, 20%);
+    opacity: 0.3;
+  }
+  50% {
+    border-radius: 50% 60% 30% 60% / 30% 40% 70% 50%;
+    transform: translate(60%, 50%);
+    opacity: 0.3;
+  }
+  75% {
+    border-radius: 40% 30% 60% 50% / 60% 50% 40% 30%;
+    transform: translate(20%, 30%);
+    opacity: 0.3;
+  }
+  90% {
+    opacity: 0;
+  }
+}
+
+@keyframes blob-2 {
+  0%, 100% {
+    border-radius: 40% 60% 60% 40% / 70% 30% 50% 50%;
+    transform: translate(0%, 0%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.3;
+  }
+  30% {
+    border-radius: 50% 40% 30% 60% / 40% 60% 50% 40%;
+    transform: translate(-50%, 30%);
+    opacity: 0.3;
+  }
+  55% {
+    border-radius: 60% 30% 50% 50% / 50% 50% 40% 60%;
+    transform: translate(-30%, 60%);
+    opacity: 0.3;
+  }
+  80% {
+    border-radius: 30% 50% 60% 40% / 60% 40% 60% 30%;
+    transform: translate(-10%, 20%);
+    opacity: 0.3;
+  }
+  95% {
+    opacity: 0;
+  }
+}
+
+@keyframes blob-3 {
+  0%, 100% {
+    border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%;
+    transform: translate(0%, 0%);
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.3;
+  }
+  33% {
+    border-radius: 40% 60% 50% 50% / 60% 40% 60% 40%;
+    transform: translate(30%, -50%);
+    opacity: 0.3;
+  }
+  66% {
+    border-radius: 60% 40% 60% 40% / 50% 50% 40% 60%;
+    transform: translate(50%, -30%);
+    opacity: 0.3;
+  }
+  85% {
+    opacity: 0;
+  }
+}
+
+@keyframes blob-4 {
+  0%, 100% {
+    border-radius: 45% 55% 55% 45% / 55% 45% 45% 55%;
+    transform: translate(0%, 0%);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.3;
+  }
+  35% {
+    border-radius: 55% 45% 40% 60% / 45% 55% 60% 40%;
+    transform: translate(-40%, -40%);
+    opacity: 0.3;
+  }
+  60% {
+    border-radius: 50% 50% 55% 45% / 40% 60% 55% 45%;
+    transform: translate(-60%, -20%);
+    opacity: 0.3;
+  }
+  80% {
+    border-radius: 40% 60% 50% 50% / 55% 45% 50% 50%;
+    transform: translate(-20%, -50%);
+    opacity: 0.3;
+  }
+  92% {
+    opacity: 0;
+  }
+}
+
+.animate-blob-1 {
+  animation: blob-1 50s ease-in-out infinite;
+}
+
+.animate-blob-2 {
+  animation: blob-2 60s ease-in-out infinite;
+  animation-delay: -20s;
+}
+
+.animate-blob-3 {
+  animation: blob-3 45s ease-in-out infinite;
+  animation-delay: -30s;
+}
+
+.animate-blob-4 {
+  animation: blob-4 55s ease-in-out infinite;
+  animation-delay: -10s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob-1,
+  .animate-blob-2,
+  .animate-blob-3,
+  .animate-blob-4 {
+    animation: none;
+  }
+}

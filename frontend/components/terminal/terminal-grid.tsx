@@ -195,27 +195,51 @@ const TerminalPane = observer(function TerminalPane({ terminal, taskInfo, repoIn
 function EmptyPane({ onAdd, message }: { onAdd?: () => void; message?: string }) {
   return (
     <div className="relative flex h-full items-center justify-center bg-terminal-background overflow-hidden">
-      {/* Amorphous gradient blobs */}
-      <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse 80% 50% at 20% 40%, var(--gradient-glow) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 40% at 80% 30%, var(--gradient-glow) 0%, transparent 45%),
-            radial-gradient(ellipse 70% 60% at 60% 90%, var(--gradient-glow) 0%, transparent 40%)
-          `
-        }}
-      />
+      {/* Lava lamp style animated blobs in each corner */}
+      <div className="absolute inset-0 blur-3xl pointer-events-none">
+        <div
+          className="absolute w-[40%] h-[50%] animate-blob-1"
+          style={{
+            background: 'var(--gradient-glow)',
+            left: '0%',
+            top: '0%',
+          }}
+        />
+        <div
+          className="absolute w-[35%] h-[45%] animate-blob-2"
+          style={{
+            background: 'var(--gradient-glow)',
+            right: '0%',
+            top: '0%',
+          }}
+        />
+        <div
+          className="absolute w-[38%] h-[48%] animate-blob-3"
+          style={{
+            background: 'var(--gradient-glow)',
+            left: '0%',
+            bottom: '0%',
+          }}
+        />
+        <div
+          className="absolute w-[42%] h-[45%] animate-blob-4"
+          style={{
+            background: 'var(--gradient-glow)',
+            right: '0%',
+            bottom: '0%',
+          }}
+        />
+      </div>
       <div className="absolute inset-0 pointer-events-none">
         <Tiles rows={100} cols={50} tileSize="sm" />
       </div>
       {onAdd ? (
-        <Button variant="outline" size="sm" onClick={onAdd} className="gap-2 relative z-10">
+        <Button variant="outline" size="sm" onClick={onAdd} className="gap-2 relative z-10 bg-background">
           <HugeiconsIcon icon={PlusSignIcon} size={14} strokeWidth={2} />
           New Terminal
         </Button>
       ) : (
-        <p className="text-xs text-muted-foreground relative z-10">{message || 'No terminals'}</p>
+        <p className="text-xs text-muted-foreground relative z-10 bg-background/80 px-2 py-1 rounded">{message || 'No terminals'}</p>
       )}
     </div>
   )
