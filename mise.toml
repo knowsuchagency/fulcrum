@@ -17,7 +17,7 @@ run = "bun install"
 description = "Bump version (major, minor, or patch)"
 usage = '''
 arg "[type]" help="Version type: major, minor, or patch" default="patch"
-flag "-c" "--commit" help="Auto-commit after bumping"
+flag "-c --commit" help="Auto-commit after bumping"
 '''
 run = """
 #!/usr/bin/env bash

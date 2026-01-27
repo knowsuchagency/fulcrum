@@ -1,7 +1,7 @@
 {
   "name": "@knowsuchagency/fulcrum",
   "private": true,
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "Harness Attention. Orchestrate Agents. Ship.",
   "license": "PolyForm-Perimeter-1.0.0",
   "type": "module",
