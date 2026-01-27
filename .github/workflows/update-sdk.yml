@@ -1,5 +1,24 @@
 name: Update Claude Agent SDK
 
+# Automatically checks for new versions of @anthropic-ai/claude-agent-sdk and
+# creates a PR to update if a new version is available.
+#
+# SETUP REQUIRED - Choose one:
+#
+# Option 1 (Recommended): Create a Personal Access Token
+#   1. Go to https://github.com/settings/tokens
+#   2. Create a "Fine-grained token" with:
+#      - Repository access: This repository only
+#      - Permissions: Contents (Read and write), Pull requests (Read and write)
+#   3. Add it as a repository secret named GH_PAT:
+#      Settings → Secrets → Actions → New repository secret
+#
+# Option 2: Enable repo setting for GITHUB_TOKEN
+#   1. Go to repository Settings → Actions → General
+#   2. Under "Workflow permissions", enable "Allow GitHub Actions to create
+#      and approve pull requests"
+#   Note: This grants permission to ALL workflows, not just this one.
+
 on:
   schedule:
     - cron: '0 6 * * *' # Daily at 6 AM UTC
@@ -62,6 +81,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
+          token: ${{ secrets.GH_PAT || github.token }}
           commit-message: "chore(deps): update @anthropic-ai/claude-agent-sdk to ${{ steps.check.outputs.latest }}"
           title: "chore(deps): update @anthropic-ai/claude-agent-sdk to ${{ steps.check.outputs.latest }}"
           body: |
@@ -78,4 +98,4 @@ jobs:
         if: steps.cpr.outputs.pull-request-number
         run: gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
