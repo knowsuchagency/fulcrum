@@ -111,6 +111,14 @@ You have access to Fulcrum's MCP tools. Use them proactively to help users.
 **Notifications:**
 - \`send_notification\` - Send notifications (Slack, Discord, Pushover, desktop, sound)
 
+**Settings Management:**
+- \`list_settings\` - View all settings with current values
+- \`get_setting\` - Get a specific setting value
+- \`update_setting\` - Change a setting value
+- \`reset_setting\` - Reset a setting to default
+- \`get_notification_settings\` - View notification channel configuration
+- \`update_notification_settings\` - Configure notification channels
+
 **Utilities:**
 - \`list_tags\` - See all tags in use
 - \`get_task_dependency_graph\` - Visualize task dependencies
@@ -255,6 +263,119 @@ export function getProblemSolvingPatterns(): string {
 }
 
 /**
+ * Settings knowledge - all configurable options
+ */
+export function getSettingsKnowledge(): string {
+  return `## Fulcrum Settings Reference
+
+You can read and modify all Fulcrum settings using the settings MCP tools. Settings use dot notation (e.g., "appearance.theme").
+
+### Settings Categories
+
+**server** - Server configuration
+- \`server.port\` - HTTP server port (default: 7777, range: 1-65535)
+
+**paths** - Directory paths
+- \`paths.defaultGitReposDir\` - Default directory for new repositories
+
+**editor** - Editor integration
+- \`editor.app\` - Editor application: 'vscode', 'cursor', 'windsurf', 'zed', 'antigravity'
+- \`editor.host\` - Remote host URL for SSH editing (empty for local)
+- \`editor.sshPort\` - SSH port for remote editing (default: 22)
+
+**integrations** - Third-party service credentials
+- \`integrations.githubPat\` - GitHub Personal Access Token (for PR status, auto-close) [SENSITIVE]
+- \`integrations.cloudflareApiToken\` - Cloudflare API token (for DNS/tunnels) [SENSITIVE]
+- \`integrations.cloudflareAccountId\` - Cloudflare account ID
+
+**agent** - AI agent configuration
+- \`agent.defaultAgent\` - Default agent: 'claude' or 'opencode'
+- \`agent.opencodeModel\` - OpenCode model override (null for default)
+- \`agent.opencodeDefaultAgent\` - OpenCode default agent profile (default: 'build')
+- \`agent.opencodePlanAgent\` - OpenCode planning agent profile (default: 'plan')
+- \`agent.autoScrollToBottom\` - Auto-scroll terminal output (default: true)
+- \`agent.claudeCodePath\` - Custom path to Claude Code binary
+
+**tasks** - Task defaults
+- \`tasks.defaultTaskType\` - Default task type: 'worktree' or 'non-worktree'
+- \`tasks.startWorktreeTasksImmediately\` - Auto-start worktree tasks (default: true)
+
+**appearance** - UI customization
+- \`appearance.language\` - UI language: 'en', 'zh', or null (system default)
+- \`appearance.theme\` - Color theme: 'system', 'light', 'dark', or null
+- \`appearance.timezone\` - IANA timezone (e.g., 'America/New_York'), null for system
+- \`appearance.syncClaudeCodeTheme\` - Sync theme to Claude Code (default: false)
+- \`appearance.claudeCodeLightTheme\` - Light theme for Claude Code: 'light', 'light-ansi', 'light-daltonized', 'dark', 'dark-ansi', 'dark-daltonized'
+- \`appearance.claudeCodeDarkTheme\` - Dark theme for Claude Code (same options)
+
+**assistant** - Built-in assistant settings
+- \`assistant.provider\` - AI provider: 'claude' or 'opencode'
+- \`assistant.model\` - Model tier: 'opus', 'sonnet', 'haiku'
+- \`assistant.customInstructions\` - Custom system prompt additions
+- \`assistant.documentsDir\` - Directory for assistant documents
+
+### Notification Settings
+
+Notification settings are managed separately via \`get_notification_settings\` and \`update_notification_settings\`.
+
+**Global:**
+- \`enabled\` - Master toggle for all notifications
+
+**Channels:**
+- \`toast\` - In-app toast notifications
+  - \`enabled\` - Enable/disable toasts
+- \`desktop\` - OS desktop notifications
+  - \`enabled\` - Enable/disable desktop notifications
+- \`sound\` - Audio alerts
+  - \`enabled\` - Enable/disable sounds
+  - \`customSoundFile\` - Path to custom sound file
+- \`slack\` - Slack integration
+  - \`enabled\` - Enable/disable Slack
+  - \`webhookUrl\` - Slack incoming webhook URL [SENSITIVE]
+- \`discord\` - Discord integration
+  - \`enabled\` - Enable/disable Discord
+  - \`webhookUrl\` - Discord webhook URL [SENSITIVE]
+- \`pushover\` - Pushover notifications
+  - \`enabled\` - Enable/disable Pushover
+  - \`appToken\` - Pushover application token [SENSITIVE]
+  - \`userKey\` - Pushover user key [SENSITIVE]
+
+### Common Configuration Tasks
+
+**Change the UI theme:**
+\`\`\`
+update_setting key="appearance.theme" value="dark"
+\`\`\`
+
+**Set up GitHub integration:**
+\`\`\`
+update_setting key="integrations.githubPat" value="ghp_xxxx"
+\`\`\`
+
+**Enable Slack notifications:**
+\`\`\`
+update_notification_settings slack={enabled: true, webhookUrl: "https://hooks.slack.com/..."}
+\`\`\`
+
+**Change default editor:**
+\`\`\`
+update_setting key="editor.app" value="cursor"
+\`\`\`
+
+**View all current settings:**
+\`\`\`
+list_settings
+\`\`\`
+
+### Important Notes
+
+- Sensitive values (API tokens, webhooks) are masked when displayed
+- Use \`reset_setting\` to restore any setting to its default
+- Changes take effect immediately
+- Some settings (like server.port) require a server restart to take effect`
+}
+
+/**
  * Get the complete Fulcrum knowledge for the main assistant prompt
  */
 export function getFullKnowledge(): string {
@@ -263,6 +384,8 @@ export function getFullKnowledge(): string {
 ${getDataModel()}
 
 ${getMcpToolCapabilities()}
+
+${getSettingsKnowledge()}
 
 ${getOrchestrationCapabilities()}
 

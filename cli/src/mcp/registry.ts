@@ -5,7 +5,7 @@
  * Core tools are always loaded; deferred tools are loaded on-demand after search.
  */
 
-export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec'
+export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings'
 
 export interface ToolMetadata {
   name: string
@@ -470,6 +470,73 @@ export const toolRegistry: ToolMetadata[] = [
     category: 'tasks',
     keywords: ['task', 'attachment', 'file', 'path', 'read'],
     deferred: false,
+  },
+
+  // Settings tools
+  {
+    name: 'list_settings',
+    description: 'List all Fulcrum settings with current values',
+    category: 'settings',
+    keywords: ['settings', 'config', 'configuration', 'preferences', 'list', 'all'],
+    deferred: false,
+  },
+  {
+    name: 'get_setting',
+    description: 'Get the value of a specific setting',
+    category: 'settings',
+    keywords: ['settings', 'config', 'get', 'read', 'value'],
+    deferred: false,
+  },
+  {
+    name: 'update_setting',
+    description: 'Update a setting value',
+    category: 'settings',
+    keywords: ['settings', 'config', 'update', 'set', 'change', 'modify'],
+    deferred: false,
+  },
+  {
+    name: 'reset_setting',
+    description: 'Reset a setting to its default value',
+    category: 'settings',
+    keywords: ['settings', 'config', 'reset', 'default', 'clear'],
+    deferred: false,
+  },
+  {
+    name: 'get_notification_settings',
+    description: 'Get notification channel settings',
+    category: 'settings',
+    keywords: ['settings', 'notifications', 'slack', 'discord', 'pushover', 'sound', 'alert'],
+    deferred: false,
+  },
+  {
+    name: 'update_notification_settings',
+    description: 'Update notification channel settings',
+    category: 'settings',
+    keywords: ['settings', 'notifications', 'slack', 'discord', 'pushover', 'sound', 'update', 'enable', 'disable'],
+    deferred: false,
+  },
+
+  // Project link tools
+  {
+    name: 'list_project_links',
+    description: 'List all URL links attached to a project',
+    category: 'projects',
+    keywords: ['project', 'link', 'url', 'list'],
+    deferred: true,
+  },
+  {
+    name: 'add_project_link',
+    description: 'Add a URL link to a project',
+    category: 'projects',
+    keywords: ['project', 'link', 'url', 'add'],
+    deferred: true,
+  },
+  {
+    name: 'remove_project_link',
+    description: 'Remove a URL link from a project',
+    category: 'projects',
+    keywords: ['project', 'link', 'url', 'remove', 'delete'],
+    deferred: true,
   },
 ]
 
