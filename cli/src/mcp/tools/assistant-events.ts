@@ -6,7 +6,7 @@ import type { ToolRegistrar } from './types'
 import { formatSuccess, handleToolError } from '../utils'
 
 const ActionableEventStatusSchema = z.enum(['pending', 'acted_upon', 'dismissed', 'monitoring'])
-const ChannelSchema = z.enum(['email', 'whatsapp', 'telegram', 'slack', 'all'])
+const ChannelSchema = z.enum(['email', 'whatsapp', 'discord', 'telegram', 'slack', 'all'])
 
 export const registerAssistantEventTools: ToolRegistrar = (server, client) => {
   // message - Send a message to a channel
@@ -14,7 +14,7 @@ export const registerAssistantEventTools: ToolRegistrar = (server, client) => {
     'message',
     'Send a message to a messaging channel (email, WhatsApp, etc.). Use this to reply to messages or send proactive communications.',
     {
-      channel: ChannelSchema.describe('Target channel: email, whatsapp, telegram, slack, or all'),
+      channel: ChannelSchema.describe('Target channel: email, whatsapp, discord, telegram, slack, or all'),
       to: z.string().describe('Recipient (email address, phone number, or channel ID)'),
       body: z.string().describe('Message content'),
       subject: z.optional(z.string()).describe('Email subject (for email channel only)'),

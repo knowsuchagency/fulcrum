@@ -3,7 +3,7 @@
  * Handles bot connection, message sending/receiving via DMs.
  */
 
-import { Client, GatewayIntentBits, type Message } from 'discord.js'
+import { Client, GatewayIntentBits, Partials, type Message } from 'discord.js'
 import { eq } from 'drizzle-orm'
 import { db, messagingConnections } from '../../db'
 import { log } from '../../lib/logger'
@@ -70,12 +70,16 @@ export class DiscordChannel implements MessagingChannel {
     try {
       this.updateStatus('connecting')
 
-      // Create Discord client with required intents for DMs
+      // Create Discord client with required intents and partials for DMs
+      // Guilds intent is needed for proper channel resolution
+      // Partials.Channel is required to receive DMs (DM channels aren't cached by default)
       this.client = new Client({
         intents: [
+          GatewayIntentBits.Guilds,
           GatewayIntentBits.DirectMessages,
           GatewayIntentBits.MessageContent,
         ],
+        partials: [Partials.Channel],
       })
 
       // Handle ready event

@@ -205,11 +205,14 @@ export function DiscordSetup({ isLoading = false }: DiscordSetupProps) {
               Discord Developer Portal
             </a>
           </li>
-          <li>Create a new application and add a Bot</li>
-          <li>Enable the <strong>Message Content Intent</strong> under Bot settings</li>
-          <li>Copy the bot token and paste it above</li>
-          <li>Invite the bot to your server using OAuth2 URL Generator</li>
-          <li>DM the bot to chat with the AI assistant</li>
+          <li>Create a new application and click <strong>Bot</strong> in the sidebar</li>
+          <li>Click <strong>Reset Token</strong> to generate a bot token, then copy it</li>
+          <li>Enable <strong>Message Content Intent</strong> under Privileged Gateway Intents</li>
+          <li>Go to <strong>OAuth2 → URL Generator</strong> in the sidebar</li>
+          <li>Select the <strong>bot</strong> scope (no permissions needed for DMs)</li>
+          <li>Copy the generated URL and open it to invite the bot to a server you're in</li>
+          <li>Paste the bot token above and click Connect</li>
+          <li>DM the bot in Discord to chat with the AI assistant</li>
         </ol>
       </details>
     </div>

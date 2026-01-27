@@ -1368,7 +1368,7 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<voi
  * Unified interface for sending messages across all supported channels.
  */
 export async function sendMessageToChannel(
-  channel: 'email' | 'whatsapp' | 'telegram' | 'slack',
+  channel: 'email' | 'whatsapp' | 'discord' | 'telegram' | 'slack',
   to: string,
   body: string,
   options?: {
@@ -1405,6 +1405,34 @@ export async function sendMessageToChannel(
         return { success: true }
       } catch (err) {
         log.messaging.error('Failed to send WhatsApp message', { to, error: String(err) })
+        return { success: false, error: String(err) }
+      }
+    }
+
+    case 'discord': {
+      const discordStatus = getDiscordStatus()
+      if (!discordStatus?.enabled || discordStatus.status !== 'connected') {
+        return { success: false, error: 'Discord channel not connected' }
+      }
+
+      // Find the active Discord channel
+      const discordChannel = Array.from(activeChannels.values()).find(
+        (ch) => ch.type === 'discord'
+      )
+      if (!discordChannel) {
+        return { success: false, error: 'Discord channel not active' }
+      }
+
+      try {
+        const success = await discordChannel.sendMessage(to, body)
+        if (success) {
+          log.messaging.info('Sent Discord message', { to })
+          return { success: true }
+        } else {
+          return { success: false, error: 'Failed to send Discord message' }
+        }
+      } catch (err) {
+        log.messaging.error('Failed to send Discord message', { to, error: String(err) })
         return { success: false, error: String(err) }
       }
     }

@@ -357,7 +357,7 @@ function countOpenTasks(): number {
  * Used by the MCP `message` tool and internally by the concierge.
  */
 export async function sendMessageToChannel(
-  channel: 'email' | 'whatsapp' | 'telegram' | 'slack',
+  channel: 'email' | 'whatsapp' | 'discord' | 'telegram' | 'slack',
   to: string,
   body: string,
   options?: {
@@ -366,7 +366,7 @@ export async function sendMessageToChannel(
   }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   // Import the messaging module to access active channels
-  const { getEmailStatus, getWhatsAppStatus } = await import('./channels')
+  const { getEmailStatus, getWhatsAppStatus, getDiscordStatus } = await import('./channels')
 
   // Channel-specific sending
   switch (channel) {
@@ -404,6 +404,17 @@ export async function sendMessageToChannel(
         log.assistant.error('Failed to send WhatsApp message', { to, error: String(err) })
         return { success: false, error: String(err) }
       }
+    }
+
+    case 'discord': {
+      const discordStatus = getDiscordStatus()
+      if (!discordStatus?.enabled || discordStatus.status !== 'connected') {
+        return { success: false, error: 'Discord channel not connected' }
+      }
+
+      // Use the sendMessageToChannel from channels module
+      const { sendMessageToChannel: sendViaChannel } = await import('./channels')
+      return sendViaChannel('discord', to, body)
     }
 
     case 'telegram':
