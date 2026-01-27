@@ -346,6 +346,7 @@ run = "bun run drizzle-kit studio"
 
 [tasks."db:generate"]
 description = "Generate migrations"
+raw = true  # drizzle-kit may prompt for table rename decisions
 run = "bun run drizzle-kit generate"
 
 [tasks."db:migrate"]
