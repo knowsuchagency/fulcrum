@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bot, User, Send, Loader2, Plus, ChevronDown, Trash2, Check, Pencil, Paperclip, X } from 'lucide-react'
+import { Bot, User, Send, Loader2, Plus, ChevronDown, Trash2, Check, Pencil, Paperclip, X, Square } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import MarkdownPreview from '@uiw/react-markdown-preview'
 import { Button } from '@/components/ui/button'
@@ -216,6 +216,7 @@ interface ChatPanelProps {
   onCreateSession: () => void
   onDeleteSession: (id: string) => void
   onUpdateSessionTitle: (id: string, title: string) => void
+  onStopStreaming?: () => void
 }
 
 export function ChatPanel({
@@ -235,6 +236,7 @@ export function ChatPanel({
   onCreateSession,
   onDeleteSession,
   onUpdateSessionTitle,
+  onStopStreaming,
 }: ChatPanelProps) {
   const { t } = useTranslation('assistant')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -462,7 +464,7 @@ export function ChatPanel({
           </div>
 
           {/* Input */}
-          <ChatInput onSend={onSendMessage} isLoading={isLoading} />
+          <ChatInput onSend={onSendMessage} isLoading={isLoading} onCancel={onStopStreaming} />
         </>
       )}
     </div>
@@ -562,9 +564,10 @@ const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp
 interface ChatInputProps {
   onSend: (message: string, images?: ImageAttachment[]) => void
   isLoading: boolean
+  onCancel?: () => void
 }
 
-function ChatInput({ onSend, isLoading }: ChatInputProps) {
+function ChatInput({ onSend, isLoading, onCancel }: ChatInputProps) {
   const { t } = useTranslation('assistant')
   const [value, setValue] = useState('')
   const [images, setImages] = useState<ImageAttachment[]>([])
@@ -740,17 +743,27 @@ function ChatInput({ onSend, isLoading }: ChatInputProps) {
           style={{ scrollbarWidth: 'none' }}
         />
 
-        <button
-          onClick={handleSubmit}
-          disabled={!hasContent || isLoading}
-          className="p-3 rounded-xl transition-all bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
-        </button>
+        {isLoading && onCancel ? (
+          <button
+            onClick={onCancel}
+            className="p-3 rounded-xl transition-all bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            title="Stop generating"
+          >
+            <Square className="w-5 h-5 fill-current" />
+          </button>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={!hasContent || isLoading}
+            className="p-3 rounded-xl transition-all bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        )}
       </div>
 
       <p className="mt-2 text-[10px] text-muted-foreground text-center">

@@ -5,6 +5,8 @@ import type { Logger } from '../../shared/logger'
 import type { PageContext } from '../../shared/types'
 import type { ImageAttachment } from '@/components/chat/chat-input'
 
+const STORAGE_KEY = 'fulcrum-chat-session'
+
 export type ProviderId = 'claude' | 'opencode'
 export type ClaudeModelId = 'opus' | 'sonnet' | 'haiku'
 
@@ -84,6 +86,8 @@ export const ChatStore = types
     eventSource: null as EventSource | null,
     /** Abort controller for fetch requests */
     abortController: null as AbortController | null,
+    /** Active stream reader for cancellation */
+    streamReader: null as ReadableStreamDefaultReader<Uint8Array> | null,
   }))
   .views((self) => ({
     get hasMessages(): boolean {
@@ -140,11 +144,31 @@ export const ChatStore = types
 
           const { sessionId }: { sessionId: string } = yield response.json()
           self.sessionId = sessionId
+          localStorage.setItem(STORAGE_KEY, sessionId)
           log.info('Created chat session', { sessionId, provider: self.provider })
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err)
           log.error('Failed to create chat session', { error: errorMsg })
           self.error = errorMsg
+        }
+      }),
+
+      loadSession: flow(function* () {
+        const log = getLog()
+        const stored = localStorage.getItem(STORAGE_KEY)
+        if (!stored) return
+
+        try {
+          const response: Response = yield fetch(`${API_BASE}/api/chat/${stored}`)
+          if (response.ok) {
+            self.sessionId = stored
+            log.info('Restored chat session', { sessionId: stored })
+          } else {
+            localStorage.removeItem(STORAGE_KEY)
+            log.debug('Removed stale session from storage', { sessionId: stored })
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY)
         }
       }),
 
@@ -170,6 +194,7 @@ export const ChatStore = types
 
             const { sessionId }: { sessionId: string } = yield sessionResponse.json()
             self.sessionId = sessionId
+            localStorage.setItem(STORAGE_KEY, sessionId)
             log.info('Created chat session', { sessionId, provider: self.provider })
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err)
@@ -178,6 +203,9 @@ export const ChatStore = types
             return
           }
         }
+
+        // Create abort controller for this request
+        self.abortController = new AbortController()
 
         // Build display content (show [image] placeholders for attached images)
         let displayContent = message
@@ -221,6 +249,8 @@ export const ChatStore = types
             lastMsg.isStreaming = false
           }
           self.isStreaming = false
+          self.abortController = null
+          self.streamReader = null
         }
 
         const handleError = (errorMsg: string) => {
@@ -263,6 +293,7 @@ export const ChatStore = types
               provider: self.provider,
               images: imageData,
             }),
+            signal: self.abortController?.signal,
           })
 
           if (!response.ok) {
@@ -273,6 +304,9 @@ export const ChatStore = types
           if (!reader) {
             throw new Error('No response body')
           }
+
+          // Store reader for cancellation
+          self.streamReader = reader
 
           const decoder = new TextDecoder()
           let buffer = ''
@@ -318,16 +352,45 @@ export const ChatStore = types
           // Mark streaming as complete
           finishStreaming()
         } catch (err) {
+          // Handle abort gracefully (user cancelled)
+          if (err instanceof Error && err.name === 'AbortError') {
+            log.debug('Chat stream aborted by user')
+            finishStreaming()
+            return
+          }
           const errorMsg = err instanceof Error ? err.message : String(err)
           log.error('Failed to send message', { error: errorMsg })
           handleError(errorMsg)
         }
       }),
 
+      cancelStream() {
+        const log = getLog()
+        if (self.streamReader) {
+          self.streamReader.cancel().catch(() => {
+            // Ignore cancellation errors
+          })
+          self.streamReader = null
+        }
+        if (self.abortController) {
+          self.abortController.abort()
+          self.abortController = null
+        }
+
+        // Mark streaming as complete
+        const lastMsg = self.messages[self.messages.length - 1]
+        if (lastMsg && lastMsg.role === 'assistant') {
+          lastMsg.isStreaming = false
+        }
+        self.isStreaming = false
+        log.info('Cancelled streaming response')
+      },
+
       clearMessages() {
         self.messages.clear()
         self.sessionId = null // Clear session so a new one is created
         self.error = null
+        localStorage.removeItem(STORAGE_KEY)
       },
 
       endSession: flow(function* () {
@@ -353,6 +416,7 @@ export const ChatStore = types
         self.messages.clear()
         self.isStreaming = false
         self.error = null
+        localStorage.removeItem(STORAGE_KEY)
       }),
 
       reset() {

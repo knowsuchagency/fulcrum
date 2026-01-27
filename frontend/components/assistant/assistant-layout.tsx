@@ -43,6 +43,7 @@ interface AssistantLayoutProps {
   onSelectDocument: (doc: Document) => void
   onStarDocument: (sessionId: string, starred: boolean) => void
   onRenameDocument: (sessionId: string, newFilename: string) => void
+  onStopStreaming?: () => void
 }
 
 export function AssistantLayout({
@@ -76,6 +77,7 @@ export function AssistantLayout({
   onSelectDocument,
   onStarDocument,
   onRenameDocument,
+  onStopStreaming,
 }: AssistantLayoutProps) {
   return (
     <div className="h-full w-full flex flex-col">
@@ -128,6 +130,7 @@ export function AssistantLayout({
             onCreateSession={onCreateSession}
             onDeleteSession={onDeleteSession}
             onUpdateSessionTitle={onUpdateSessionTitle}
+            onStopStreaming={onStopStreaming}
           />
         </div>
 

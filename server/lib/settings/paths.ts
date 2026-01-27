@@ -140,3 +140,31 @@ export function initializeFulcrumDirectories(): void {
   ensureFulcrumDir()
   ensureWorktreesDir()
 }
+
+/**
+ * Get instance context for system prompts.
+ * Helps AI agents understand which Fulcrum instance they're running in.
+ */
+export function getInstanceContext(): string {
+  const fulcrumDir = getFulcrumDir()
+  const port = process.env.PORT || '7777'
+  const defaultFulcrumDir = path.join(getHomeDir(), '.fulcrum')
+  const isDevInstance = fulcrumDir !== defaultFulcrumDir
+
+  let context = `## Fulcrum Instance Context
+
+FULCRUM_DIR: ${fulcrumDir}
+Server port: ${port}
+Instance type: ${isDevInstance ? 'DEVELOPMENT' : 'PRODUCTION'}`
+
+  if (isDevInstance) {
+    context += `
+
+**IMPORTANT**: You are running in a DEVELOPMENT instance.
+- The production Fulcrum is at ${defaultFulcrumDir} (port 7777)
+- Do NOT interact with production data or services
+- All operations should stay within this instance's context`
+  }
+
+  return context
+}

@@ -1,6 +1,7 @@
 import { query, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 import { getSettings } from '../lib/settings'
 import { getClaudeCodePathForSdk } from '../lib/claude-code-path'
+import { getInstanceContext } from '../lib/settings/paths'
 import { log } from '../lib/logger'
 import { db, tasks, projects, repositories, apps, projectRepositories } from '../db'
 import { eq } from 'drizzle-orm'
@@ -75,7 +76,8 @@ export function endSession(id: string): boolean {
  * Build the system prompt for the chat assistant with page context
  */
 async function buildSystemPrompt(context?: PageContext): Promise<string> {
-  let prompt = getFullKnowledge() + `
+  const instanceContext = getInstanceContext()
+  let prompt = instanceContext + '\n\n' + getFullKnowledge() + `
 
 ## Guidelines
 

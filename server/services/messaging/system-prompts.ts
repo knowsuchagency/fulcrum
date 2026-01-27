@@ -5,6 +5,7 @@
 
 import type { ChannelType } from './types'
 import { getCondensedKnowledge } from '../assistant-knowledge'
+import { getInstanceContext } from '../../lib/settings/paths'
 
 /**
  * WhatsApp formatting capabilities:
@@ -119,18 +120,27 @@ The user initiated this conversation via email, so slightly longer response time
  * Get the system prompt for a specific messaging platform.
  */
 export function getMessagingSystemPrompt(channelType: ChannelType): string {
+  const instanceContext = getInstanceContext()
+  let basePrompt: string
+
   switch (channelType) {
     case 'whatsapp':
-      return WHATSAPP_PROMPT
+      basePrompt = WHATSAPP_PROMPT
+      break
     case 'discord':
-      return DISCORD_PROMPT
+      basePrompt = DISCORD_PROMPT
+      break
     case 'telegram':
-      return TELEGRAM_PROMPT
+      basePrompt = TELEGRAM_PROMPT
+      break
     case 'email':
-      return EMAIL_PROMPT
+      basePrompt = EMAIL_PROMPT
+      break
     default:
-      return WHATSAPP_PROMPT // Fallback to most restrictive
+      basePrompt = WHATSAPP_PROMPT // Fallback to most restrictive
   }
+
+  return instanceContext + '\n\n' + basePrompt
 }
 
 // ==================== Concierge Prompts ====================
@@ -155,10 +165,13 @@ export interface ConciergeMessageContext {
  * The assistant decides whether to respond, create events, tasks, etc.
  */
 export function getConciergeSystemPrompt(channelType: ChannelType, context: ConciergeMessageContext): string {
+  const instanceContext = getInstanceContext()
   const baseKnowledge = getCondensedKnowledge()
   const formattingGuide = getFormattingGuide(channelType)
 
-  return `You are Fulcrum's proactive digital concierge. A message has arrived:
+  return `${instanceContext}
+
+You are Fulcrum's proactive digital concierge. A message has arrived:
 
 **Channel**: ${context.channel}
 **From**: ${context.sender}${context.senderName ? ` (${context.senderName})` : ''}
@@ -210,7 +223,11 @@ export function getSweepSystemPrompt(context: {
   pendingCount: number
   openTaskCount: number
 }): string {
-  return `You are Fulcrum's proactive digital concierge performing your hourly sweep.
+  const instanceContext = getInstanceContext()
+
+  return `${instanceContext}
+
+You are Fulcrum's proactive digital concierge performing your hourly sweep.
 
 ## Context
 
@@ -261,12 +278,15 @@ After completing your sweep, provide a brief summary of:
  * Get the system prompt for daily rituals (morning/evening).
  */
 export function getRitualSystemPrompt(type: 'morning' | 'evening', defaultChannels: string[]): string {
+  const instanceContext = getInstanceContext()
   const channelList = defaultChannels.length > 0
     ? defaultChannels.join(', ')
     : 'no channels configured'
 
   if (type === 'morning') {
-    return `You are Fulcrum's proactive digital concierge performing your morning ritual.
+    return `${instanceContext}
+
+You are Fulcrum's proactive digital concierge performing your morning ritual.
 
 ## Your Task
 
@@ -295,7 +315,9 @@ Use the \`message\` tool to send your summary. Make it:
 - \`message\`: Send the briefing`
   }
 
-  return `You are Fulcrum's proactive digital concierge performing your evening ritual.
+  return `${instanceContext}
+
+You are Fulcrum's proactive digital concierge performing your evening ritual.
 
 ## Your Task
 

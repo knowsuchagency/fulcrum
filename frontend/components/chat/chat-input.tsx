@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Send, Loader2, Paperclip, X } from 'lucide-react'
+import { Send, Loader2, Paperclip, X, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface ImageAttachment {
@@ -14,6 +14,7 @@ interface ChatInputProps {
   onSend: (message: string, images?: ImageAttachment[]) => void
   isLoading?: boolean
   placeholder?: string
+  onCancel?: () => void
 }
 
 export interface ChatInputHandle {
@@ -24,7 +25,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const
 
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput(
-  { onSend, isLoading, placeholder },
+  { onSend, isLoading, placeholder, onCancel },
   ref
 ) {
   const { t } = useTranslation('assistant')
@@ -216,29 +217,50 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
             <Paperclip className="w-5 h-5" />
           </button>
 
-          {/* Send Button */}
-          <button
-            onClick={handleSubmit}
-            disabled={!hasContent || isLoading}
-            className="group relative p-3 border-none rounded-lg cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg bg-accent text-accent-foreground hover:bg-accent/90"
-            style={{
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--accent) 30%, transparent)',
-            }}
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:rotate-12" />
-            )}
+          {/* Send/Stop Button */}
+          {isLoading && onCancel ? (
+            <button
+              onClick={onCancel}
+              className="group relative p-3 border-none rounded-lg cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              style={{
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--destructive) 30%, transparent)',
+              }}
+              title="Stop generating"
+            >
+              <Square className="w-5 h-5 fill-current" />
 
-            {/* Animated background glow */}
-            <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 bg-accent" />
+              {/* Animated background glow */}
+              <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 bg-destructive" />
 
-            {/* Ripple effect on click */}
-            <div className="absolute inset-0 rounded-lg overflow-hidden">
-              <div className="absolute inset-0 bg-white/20 transform scale-0 group-active:scale-100 transition-transform duration-200 rounded-lg" />
-            </div>
-          </button>
+              {/* Ripple effect on click */}
+              <div className="absolute inset-0 rounded-lg overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 transform scale-0 group-active:scale-100 transition-transform duration-200 rounded-lg" />
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!hasContent || isLoading}
+              className="group relative p-3 border-none rounded-lg cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg bg-accent text-accent-foreground hover:bg-accent/90"
+              style={{
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--accent) 30%, transparent)',
+              }}
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:rotate-12" />
+              )}
+
+              {/* Animated background glow */}
+              <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 bg-accent" />
+
+              {/* Ripple effect on click */}
+              <div className="absolute inset-0 rounded-lg overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 transform scale-0 group-active:scale-100 transition-transform duration-200 rounded-lg" />
+              </div>
+            </button>
+          )}
         </div>
       </div>
     </div>

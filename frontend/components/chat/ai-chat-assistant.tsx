@@ -44,6 +44,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
     setProvider,
     setModel,
     setOpencodeModel,
+    cancelStream,
   } = useChat()
 
   const pageContext = usePageContext()
@@ -474,7 +475,7 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
             )}
 
             {/* Input Section */}
-            <ChatInput ref={chatInputRef} onSend={handleSend} isLoading={isStreaming} placeholder={hasMessages ? ' ' : undefined} />
+            <ChatInput ref={chatInputRef} onSend={handleSend} isLoading={isStreaming} placeholder={hasMessages ? ' ' : undefined} onCancel={cancelStream} />
 
             {/* Footer Info - hidden on mobile */}
             <div className="hidden sm:flex items-center justify-between px-4 pb-3 pt-1 text-xs gap-4 text-muted-foreground">

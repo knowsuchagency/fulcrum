@@ -5,6 +5,7 @@ import { db, chatSessions, chatMessages, artifacts } from '../db'
 import type { ChatSession, NewChatSession, ChatMessage, NewChatMessage, Artifact, NewArtifact } from '../db/schema'
 import { getSettings } from '../lib/settings'
 import { getClaudeCodePathForSdk } from '../lib/claude-code-path'
+import { getInstanceContext } from '../lib/settings/paths'
 import { log } from '../lib/logger'
 import type { PageContext } from '../../shared/types'
 import { saveDocument, readDocument, deleteDocument, renameDocument, generateDocumentFilename } from './document-service'
@@ -212,6 +213,7 @@ export function getMessages(sessionId: string): ChatMessage[] {
  * Build system prompt for assistant
  */
 function buildSystemPrompt(): string {
+  const instanceContext = getInstanceContext()
   const fulcrumKnowledge = getFullKnowledge()
 
   const uiFeatures = `## UI Features
@@ -286,7 +288,9 @@ This will automatically update the editor. Always provide the COMPLETE document,
 - Adding new content
 - Any request that involves changing the document`
 
-  const basePrompt = `${fulcrumKnowledge}
+  const basePrompt = `${instanceContext}
+
+${fulcrumKnowledge}
 
 ${uiFeatures}`
 
