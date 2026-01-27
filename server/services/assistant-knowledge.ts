@@ -335,13 +335,18 @@ You can read and modify all Fulcrum settings using the settings MCP tools. Setti
 - \`assistant.model\` - Model tier: 'opus', 'sonnet', 'haiku'
 - \`assistant.customInstructions\` - Custom system prompt additions
 - \`assistant.documentsDir\` - Directory for assistant documents
+- \`assistant.ritualsEnabled\` - Enable/disable daily rituals (morning/evening briefings)
+- \`assistant.morningRitual.time\` - Time for morning ritual (24h format, e.g., "09:00")
+- \`assistant.morningRitual.prompt\` - Custom prompt for morning ritual
+- \`assistant.eveningRitual.time\` - Time for evening ritual (24h format, e.g., "18:00")
+- \`assistant.eveningRitual.prompt\` - Custom prompt for evening ritual
 
-**concierge** - Daily rituals settings (assistant proactively sends briefings)
-- \`concierge.ritualsEnabled\` - Enable/disable daily rituals (morning/evening briefings)
-- \`concierge.morningRitual.time\` - Time for morning ritual (24h format, e.g., "09:00")
-- \`concierge.morningRitual.prompt\` - Custom prompt for morning ritual
-- \`concierge.eveningRitual.time\` - Time for evening ritual (24h format, e.g., "18:00")
-- \`concierge.eveningRitual.prompt\` - Custom prompt for evening ritual
+**channels** - Messaging channel configuration
+- \`channels.email.enabled\` - Enable/disable email channel
+- \`channels.email.smtp.*\` - SMTP server settings (host, port, secure, user, password)
+- \`channels.email.imap.*\` - IMAP server settings (host, port, secure, user, password)
+- \`channels.email.sendAs\` - Email address to send from
+- \`channels.email.allowedSenders\` - Sender allowlist patterns
 
 ### Notification Settings
 

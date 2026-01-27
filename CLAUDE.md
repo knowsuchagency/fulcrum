@@ -76,7 +76,7 @@ fulcrum notify <title> <message>  # Send notification
 
 ### Key Services (`server/services/`)
 - `messaging/` - Chat with AI via external channels (WhatsApp, Email)
-- `concierge-scheduler.ts` - Proactive assistant with hourly sweeps and daily rituals
+- `assistant-scheduler.ts` - Proactive assistant with hourly sweeps and daily rituals
 - `notification-service.ts` - Multi-channel notifications (Slack, Discord, Pushover, desktop, sound)
 - `pr-monitor.ts` - GitHub PR status polling, auto-close tasks on merge
 - `metrics-collector.ts` - System metrics collection (CPU, memory, disk)
@@ -160,8 +160,8 @@ Settings stored in `~/.fulcrum/settings.json`. See `server/lib/settings/types.ts
 - `agent` - AI agent defaults (Claude Code, OpenCode)
 - `tasks` - Task creation defaults
 - `appearance` - UI theme and language
-- `assistant` - Built-in assistant settings
-- `concierge` - Proactive assistant settings (sweeps, rituals)
+- `assistant` - Built-in assistant settings (including daily rituals)
+- `channels` - Messaging channels (email configuration)
 
 **Separate config files:**
 - `notifications.json` - Multi-channel notification settings
@@ -206,35 +206,29 @@ Chat with the AI assistant via external messaging platforms:
 
 **Auth storage**: `$FULCRUM_DIR/whatsapp-auth/<connectionId>/`
 
-Enable in Settings → Messaging.
+Enable in Settings → Channels.
 
-## Concierge Mode
+## Daily Rituals
 
-Proactive digital concierge that transforms the messaging assistant from reactive to proactive:
+The assistant can send proactive daily briefings:
 
-**When enabled** (`concierge.enabled: true`):
-- Assistant decides whether to respond, create events, or stay silent
-- Simple conversations (hi, thanks, questions) get direct replies without tracking
-- Actionable requests get tracked in `actionableEvents` table
-- Can link events to Fulcrum tasks
+**Configuration** (under `assistant` in settings.json):
+- `assistant.ritualsEnabled` - Enable/disable daily rituals
+- `assistant.morningRitual.time` - Time for morning briefing (24h format, e.g., "09:00")
+- `assistant.morningRitual.prompt` - Custom prompt for morning ritual
+- `assistant.eveningRitual.time` - Time for evening summary (24h format, e.g., "18:00")
+- `assistant.eveningRitual.prompt` - Custom prompt for evening ritual
 
-**Hourly Sweeps** (`concierge.hourlySweepEnabled: true`):
+**Hourly Sweeps**:
 - Reviews pending actionable events
 - Checks open tasks for updates needed
 - Logs sweep results in `sweepRuns` table
-
-**Daily Rituals**:
-- `morningRitual`: Morning briefing with today's priorities
-- `eveningRitual`: Evening summary with accomplishments and pending items
-- Configurable time (24h format, e.g., "09:00")
-- Custom prompts for personalization
-- Sends summaries to `defaultChannels` (e.g., email)
 
 **MCP Tools**:
 - `message`: Send to email/WhatsApp directly
 - `create_actionable_event`, `list_actionable_events`: Track decisions
 - `update_actionable_event`: Update status, link to tasks
-- `get_concierge_stats`, `get_last_sweep`: View statistics
+- `get_assistant_stats`, `get_last_sweep`: View statistics
 
 ## Desktop App
 

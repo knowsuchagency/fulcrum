@@ -123,7 +123,7 @@ Chat with the AI assistant from anywhere via WhatsApp or Email.
 - **Commands** — `/reset` (new conversation), `/help`, `/status`
 - **Channel abstraction** — Architecture supports additional channels
 
-Enable in Settings → Messaging.
+Enable in Settings → Channels.
 
 ### System Monitoring
 
