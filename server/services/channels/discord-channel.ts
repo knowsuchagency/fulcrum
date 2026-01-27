@@ -1,9 +1,19 @@
 /**
  * Discord channel implementation using discord.js library.
  * Handles bot connection, message sending/receiving via DMs.
+ * Supports slash commands for /reset, /help, /status.
  */
 
-import { Client, GatewayIntentBits, Partials, type Message } from 'discord.js'
+import {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  type Message,
+  type ChatInputCommandInteraction,
+} from 'discord.js'
 import { eq } from 'drizzle-orm'
 import { db, messagingConnections } from '../../db'
 import { log } from '../../lib/logger'
@@ -14,6 +24,19 @@ import type {
   IncomingMessage,
   DiscordAuthState,
 } from './types'
+
+// Slash command definitions
+const SLASH_COMMANDS = [
+  new SlashCommandBuilder()
+    .setName('reset')
+    .setDescription('Start a fresh conversation with the AI assistant'),
+  new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Show available commands and how to use this bot'),
+  new SlashCommandBuilder()
+    .setName('status')
+    .setDescription('Show your current session status'),
+]
 
 export class DiscordChannel implements MessagingChannel {
   readonly type = 'discord' as const
@@ -83,7 +106,7 @@ export class DiscordChannel implements MessagingChannel {
       })
 
       // Handle ready event
-      this.client.once('ready', () => {
+      this.client.once('ready', async () => {
         log.messaging.info('Discord bot connected', {
           connectionId: this.connectionId,
           username: this.client?.user?.tag,
@@ -101,7 +124,18 @@ export class DiscordChannel implements MessagingChannel {
             .where(eq(messagingConnections.id, this.connectionId))
             .run()
           this.events?.onDisplayNameChange?.(displayName)
+
+          // Register slash commands
+          await this.registerSlashCommands()
         }
+      })
+
+      // Handle slash command interactions
+      this.client.on('interactionCreate', async (interaction) => {
+        if (!interaction.isChatInputCommand()) return
+        if (!interaction.channel?.isDMBased()) return // Only handle DM commands
+
+        await this.handleSlashCommand(interaction)
       })
 
       // Handle messages
@@ -180,6 +214,86 @@ export class DiscordChannel implements MessagingChannel {
 
     if (!this.isShuttingDown) {
       this.scheduleReconnect()
+    }
+  }
+
+  /**
+   * Register slash commands with Discord.
+   * Commands are registered globally (available in all DMs).
+   */
+  private async registerSlashCommands(): Promise<void> {
+    if (!this.client?.user || !this.botToken) return
+
+    try {
+      const rest = new REST({ version: '10' }).setToken(this.botToken)
+      const commands = SLASH_COMMANDS.map((cmd) => cmd.toJSON())
+
+      // Register commands globally (available in DMs)
+      await rest.put(Routes.applicationCommands(this.client.user.id), {
+        body: commands,
+      })
+
+      log.messaging.info('Discord slash commands registered', {
+        connectionId: this.connectionId,
+        commands: SLASH_COMMANDS.map((c) => c.name),
+      })
+    } catch (err) {
+      log.messaging.error('Failed to register Discord slash commands', {
+        connectionId: this.connectionId,
+        error: String(err),
+      })
+    }
+  }
+
+  /**
+   * Handle slash command interactions.
+   * Commands are processed and responded to directly in the interaction.
+   */
+  private async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+    const commandName = interaction.commandName
+
+    log.messaging.info('Discord slash command received', {
+      connectionId: this.connectionId,
+      command: commandName,
+      userId: interaction.user.id,
+      username: interaction.user.username,
+    })
+
+    // Convert slash command to a message for the standard command handler
+    // This allows the session mapper and other handlers to process it normally
+    const incomingMessage: IncomingMessage = {
+      channelType: 'discord',
+      connectionId: this.connectionId,
+      senderId: interaction.user.id,
+      senderName: interaction.user.username,
+      content: `/${commandName}`,
+      timestamp: new Date(),
+      metadata: {
+        isSlashCommand: true,
+        interactionId: interaction.id,
+      },
+    }
+
+    try {
+      // Process the command through the normal message handler
+      // The handler will send the response via sendMessage
+      await this.events?.onMessage(incomingMessage)
+
+      // Acknowledge the interaction (ephemeral so it doesn't clutter the chat)
+      await interaction.reply({
+        content: `✓ Command received`,
+        ephemeral: true,
+      })
+    } catch (err) {
+      log.messaging.error('Error processing Discord slash command', {
+        connectionId: this.connectionId,
+        command: commandName,
+        error: String(err),
+      })
+      await interaction.reply({
+        content: 'Sorry, something went wrong processing your command.',
+        ephemeral: true,
+      })
     }
   }
 
