@@ -21,7 +21,7 @@ import {
   searchImapEmails,
   fetchAndStoreEmails,
   type EmailAuthState,
-} from '../services/messaging'
+} from '../services/channels'
 import { db, emails } from '../db'
 import { eq } from 'drizzle-orm'
 import { log } from '../lib/logger'
