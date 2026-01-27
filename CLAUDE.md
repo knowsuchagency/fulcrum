@@ -121,7 +121,8 @@ fulcrum notify <title> <message>  # Send notification
 | `tunnels` | Cloudflare Tunnels for app exposure |
 | `systemMetrics` | CPU/memory/disk metrics (24h rolling) |
 | `messagingConnections` | Messaging channel connections (WhatsApp, Email) with auth state |
-| `messagingSessionMappings` | Maps channel users (phone numbers) to AI chat sessions |
+| `messagingSessionMappings` | Maps channel users (phone numbers, email threads) to AI chat sessions |
+| `emails` | Stored emails (sent/received) with threading, content, and metadata |
 
 Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 
@@ -185,9 +186,20 @@ Chat with the AI assistant via external messaging platforms:
 
 - **WhatsApp**: Link via QR code, chat with Claude through "Message yourself"
 - **Email**: Configure SMTP/IMAP credentials to chat via email (Gmail, Outlook, or custom)
-- **Session persistence**: Conversations map to `chatSessions` table, one session per user
-- **Commands**: `/reset` (new conversation), `/help`, `/status`
-- **Auth storage**: `$FULCRUM_DIR/whatsapp-auth/<connectionId>/`
+
+**Session behavior:**
+- WhatsApp: One session per phone number
+- Email: One session per email thread (replies stay in context, new emails start fresh)
+
+**Commands**: `/help`, `/status`
+- `/reset` (WhatsApp only - for email, start a new email thread)
+
+**Email features:**
+- Local storage of sent/received emails in `emails` table
+- IMAP search for finding emails beyond what's stored
+- MCP tools: `list_emails`, `get_email`, `search_emails`, `fetch_emails`
+
+**Auth storage**: `$FULCRUM_DIR/whatsapp-auth/<connectionId>/`
 
 Enable in Settings → Messaging.
 
@@ -236,6 +248,8 @@ server/
   db/              # Drizzle schema
   lib/             # Utilities (settings, logger)
 shared/            # Shared types
-cli/               # CLI source and build output
+cli/
+  src/mcp/         # MCP server implementation
+    tools/         # Modular tool definitions (by category)
 desktop/           # Neutralino desktop app
 ```
