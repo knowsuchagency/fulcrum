@@ -714,19 +714,21 @@ export interface MessagingSessionMapping {
   lastMessageAt: string
 }
 
-// Email channel configuration (without password for API responses)
+// Email channel configuration (passwords masked with ******** in API responses)
 export interface EmailChannelConfig {
   smtp: {
     host: string
     port: number
     secure: boolean
     user: string
+    password: string  // '••••••••' when set, '' when not set
   }
   imap: {
     host: string
     port: number
     secure: boolean
     user: string
+    password: string  // '••••••••' when set, '' when not set
   }
   pollIntervalSeconds: number
   sendAs?: string

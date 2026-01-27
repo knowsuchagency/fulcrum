@@ -765,11 +765,11 @@ export function getEmailStatus(): {
 }
 
 /**
- * Get email configuration (without password).
+ * Get email configuration (passwords masked with ********).
  */
 export function getEmailConfig(): {
-  smtp: { host: string; port: number; secure: boolean; user: string } | null
-  imap: { host: string; port: number; secure: boolean; user: string } | null
+  smtp: { host: string; port: number; secure: boolean; user: string; password: string } | null
+  imap: { host: string; port: number; secure: boolean; user: string; password: string } | null
   pollIntervalSeconds: number
   sendAs: string | null
   allowedSenders: string[]
@@ -787,12 +787,14 @@ export function getEmailConfig(): {
       port: emailConfig.smtp.port,
       secure: emailConfig.smtp.secure,
       user: emailConfig.smtp.user,
+      password: emailConfig.smtp.password ? '••••••••' : '',
     } : null,
     imap: emailConfig.imap.host ? {
       host: emailConfig.imap.host,
       port: emailConfig.imap.port,
       secure: emailConfig.imap.secure,
       user: emailConfig.imap.user,
+      password: emailConfig.imap.password ? '••••••••' : '',
     } : null,
     pollIntervalSeconds: emailConfig.pollIntervalSeconds,
     sendAs: emailConfig.sendAs,

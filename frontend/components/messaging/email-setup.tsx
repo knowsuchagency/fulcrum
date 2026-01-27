@@ -132,14 +132,18 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
       const config = status.config
       // For display name, prefer IMAP user (your Gmail) over SMTP user (might be SES key)
       setEmail(config.imap?.user || config.smtp?.user || '')
+      // For simple mode, use IMAP password (same as email password typically)
+      setPassword(config.imap?.password || config.smtp?.password || '')
       setSmtpHost(config.smtp?.host || '')
       setSmtpPort(config.smtp?.port || 465)
       setSmtpSecure(config.smtp?.secure ?? true)
       setSmtpUser(config.smtp?.user || '')
+      setSmtpPassword(config.smtp?.password || '')  // Will be '••••••••' if set
       setImapHost(config.imap?.host || '')
       setImapPort(config.imap?.port || 993)
       setImapSecure(config.imap?.secure ?? true)
       setImapUser(config.imap?.user || '')
+      setImapPassword(config.imap?.password || '')  // Will be '••••••••' if set
       setSendAs(config.sendAs || '')
       setPollInterval(config.pollIntervalSeconds || 30)
       setAllowedSenders(config.allowedSenders?.join(', ') || '')
@@ -200,9 +204,16 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
   }
 
   const handleTest = async () => {
+    // Validate that passwords aren't masked placeholders
+    const creds = buildCredentials()
+    if (creds.smtp.password === '••••••••' || creds.imap.password === '••••••••') {
+      toast.error('Please enter actual passwords to test connection')
+      return
+    }
+
     setTestResult(null)
     try {
-      const result = await testCredentials.mutateAsync(buildCredentials())
+      const result = await testCredentials.mutateAsync(creds)
       setTestResult(result)
       if (result.success) {
         toast.success('Connection test successful')
@@ -215,8 +226,15 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
   }
 
   const handleConfigure = async () => {
+    // Validate that passwords aren't masked placeholders
+    const creds = buildCredentials()
+    if (creds.smtp.password === '••••••••' || creds.imap.password === '••••••••') {
+      toast.error('Please enter actual passwords, not the masked placeholder')
+      return
+    }
+
     try {
-      await configureEmail.mutateAsync(buildCredentials())
+      await configureEmail.mutateAsync(creds)
       toast.success('Email configured successfully')
       setPassword('') // Clear password from form
       refetchStatus()
