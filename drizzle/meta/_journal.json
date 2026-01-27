@@ -337,6 +337,13 @@
       "when": 1770202400000,
       "tag": "0047_email_authorized_threads",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1770288800000,
+      "tag": "0048_emails_table",
+      "breakpoints": true
     }
   ]
 }

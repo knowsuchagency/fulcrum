@@ -702,3 +702,56 @@ export function getEmailConfig(): {
 // Re-export types
 export * from './types'
 export * from './session-mapper'
+
+// ==========================================================================
+// Email Search & Storage API
+// ==========================================================================
+
+/**
+ * Get stored emails from the local database.
+ */
+export function getStoredEmails(options?: {
+  limit?: number
+  offset?: number
+  direction?: 'incoming' | 'outgoing'
+  threadId?: string
+  search?: string
+  folder?: string
+}) {
+  const channel = activeChannels.get('email') as EmailChannel | undefined
+  if (!channel) {
+    return []
+  }
+  return channel.getStoredEmails(options)
+}
+
+/**
+ * Search emails via IMAP and return matching UIDs.
+ */
+export async function searchImapEmails(criteria: {
+  subject?: string
+  from?: string
+  to?: string
+  since?: Date
+  before?: Date
+  text?: string
+  seen?: boolean
+  flagged?: boolean
+}): Promise<number[]> {
+  const channel = activeChannels.get('email') as EmailChannel | undefined
+  if (!channel) {
+    throw new Error('Email channel not configured')
+  }
+  return channel.searchImapEmails(criteria)
+}
+
+/**
+ * Fetch emails by UID from IMAP and store them locally.
+ */
+export async function fetchAndStoreEmails(uids: number[], options?: { limit?: number }) {
+  const channel = activeChannels.get('email') as EmailChannel | undefined
+  if (!channel) {
+    throw new Error('Email channel not configured')
+  }
+  return channel.fetchAndStoreEmails(uids, options)
+}

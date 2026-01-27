@@ -98,6 +98,32 @@ export interface UpdateProjectInput {
   status?: 'active' | 'archived'
 }
 
+// Email types
+export interface StoredEmail {
+  id: string
+  connectionId: string
+  messageId: string
+  threadId: string | null
+  inReplyTo: string | null
+  references: string[] | null
+  direction: 'incoming' | 'outgoing'
+  fromAddress: string
+  fromName: string | null
+  toAddresses: string[] | null
+  ccAddresses: string[] | null
+  subject: string | null
+  textContent: string | null
+  htmlContent: string | null
+  snippet: string | null
+  emailDate: string | null
+  folder: string | null
+  isRead: boolean | null
+  isStarred: boolean | null
+  labels: string[] | null
+  imapUid: number | null
+  createdAt: string
+}
+
 export interface DeleteProjectOptions {
   deleteDirectory?: boolean
   deleteApp?: boolean
@@ -910,6 +936,62 @@ export class FulcrumClient {
   async deleteBackup(name: string): Promise<{ success: boolean; deleted: string }> {
     return this.fetch(`/api/backup/${encodeURIComponent(name)}`, {
       method: 'DELETE',
+    })
+  }
+
+  // Email
+  async listEmails(options?: {
+    limit?: number
+    offset?: number
+    direction?: 'incoming' | 'outgoing'
+    threadId?: string
+    search?: string
+    folder?: string
+  }): Promise<{ emails: StoredEmail[]; count: number }> {
+    const params = new URLSearchParams()
+    if (options?.limit) params.set('limit', String(options.limit))
+    if (options?.offset) params.set('offset', String(options.offset))
+    if (options?.direction) params.set('direction', options.direction)
+    if (options?.threadId) params.set('threadId', options.threadId)
+    if (options?.search) params.set('search', options.search)
+    if (options?.folder) params.set('folder', options.folder)
+    const query = params.toString()
+    return this.fetch(`/api/messaging/email/emails${query ? `?${query}` : ''}`)
+  }
+
+  async getEmail(id: string): Promise<StoredEmail> {
+    return this.fetch(`/api/messaging/email/emails/${id}`)
+  }
+
+  async searchEmails(criteria: {
+    subject?: string
+    from?: string
+    to?: string
+    since?: string
+    before?: string
+    text?: string
+    seen?: boolean
+    flagged?: boolean
+    fetchLimit?: number
+  }): Promise<{
+    matchingUids: number[]
+    matchCount: number
+    fetched: number
+    emails: StoredEmail[]
+  }> {
+    return this.fetch('/api/messaging/email/search', {
+      method: 'POST',
+      body: JSON.stringify(criteria),
+    })
+  }
+
+  async fetchEmails(uids: number[], limit?: number): Promise<{
+    fetched: number
+    emails: StoredEmail[]
+  }> {
+    return this.fetch('/api/messaging/email/fetch', {
+      method: 'POST',
+      body: JSON.stringify({ uids, limit }),
     })
   }
 }

@@ -11,8 +11,9 @@
 
 import { createTransport, type Transporter } from 'nodemailer'
 import { ImapFlow } from 'imapflow'
-import { eq, and } from 'drizzle-orm'
-import { db, messagingConnections, emailAuthorizedThreads } from '../../db'
+import { eq, and, desc, like, or } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
+import { db, messagingConnections, emailAuthorizedThreads, emails } from '../../db'
 import { log } from '../../lib/logger'
 import { sendNotification } from '../notification-service'
 import type {
@@ -281,6 +282,25 @@ export class EmailChannel implements MessagingChannel {
             threadId: authResult.threadId,
             authorizedBy: authResult.authorizedBy,
           })
+
+          // Store the incoming email locally
+          if (headers.messageId) {
+            this.storeEmail({
+              messageId: headers.messageId,
+              threadId: authResult.threadId,
+              inReplyTo: headers.inReplyTo ?? undefined,
+              references: headers.references.length > 0 ? headers.references : undefined,
+              direction: 'incoming',
+              fromAddress: headers.from || 'unknown',
+              fromName: headers.fromName ?? undefined,
+              toAddresses: headers.to.length > 0 ? headers.to : undefined,
+              ccAddresses: headers.cc.length > 0 ? headers.cc : undefined,
+              subject: headers.subject ?? undefined,
+              textContent: content,
+              emailDate: headers.date ?? undefined,
+              imapUid: message.uid,
+            })
+          }
 
           // Process message
           try {
@@ -687,7 +707,7 @@ If you believe this is an error, please contact the owner of this email address.
         subject = originalSubject.startsWith('Re:') ? originalSubject : `Re: ${originalSubject}`
       }
 
-      await this.transporter.sendMail({
+      const sentMail = await this.transporter.sendMail({
         from: this.getFromAddress(),
         to: recipientId,
         subject,
@@ -701,6 +721,23 @@ If you believe this is an error, please contact the owner of this email address.
         to: recipientId,
         contentLength: content.length,
         subject,
+      })
+
+      // Store the outgoing email locally
+      const outgoingMessageId = sentMail.messageId || `outgoing-${nanoid()}`
+      this.storeEmail({
+        messageId: outgoingMessageId,
+        threadId: metadata?.threadId as string,
+        inReplyTo: metadata?.messageId as string,
+        references: metadata?.references as string[],
+        direction: 'outgoing',
+        fromAddress: this.getFromAddress(),
+        toAddresses: [recipientId],
+        subject,
+        textContent: content,
+        htmlContent,
+        emailDate: new Date(),
+        folder: 'sent',
       })
 
       return true
@@ -772,6 +809,265 @@ If you believe this is an error, please contact the owner of this email address.
 
     // Notify listeners
     this.events?.onConnectionChange(status)
+  }
+
+  /**
+   * Store an email in the local database.
+   */
+  storeEmail(params: {
+    messageId: string
+    threadId?: string
+    inReplyTo?: string
+    references?: string[]
+    direction: 'incoming' | 'outgoing'
+    fromAddress: string
+    fromName?: string
+    toAddresses?: string[]
+    ccAddresses?: string[]
+    subject?: string
+    textContent?: string
+    htmlContent?: string
+    emailDate?: Date
+    imapUid?: number
+    folder?: string
+  }): void {
+    const now = new Date().toISOString()
+
+    // Check if email already exists (by messageId)
+    const existing = db
+      .select()
+      .from(emails)
+      .where(eq(emails.messageId, params.messageId))
+      .get()
+
+    if (existing) {
+      log.messaging.debug('Email already stored', {
+        connectionId: this.connectionId,
+        messageId: params.messageId,
+      })
+      return
+    }
+
+    // Generate snippet from text content
+    const snippet = params.textContent
+      ? params.textContent.slice(0, 200).replace(/\s+/g, ' ').trim()
+      : undefined
+
+    db.insert(emails)
+      .values({
+        id: nanoid(),
+        connectionId: this.connectionId,
+        messageId: params.messageId,
+        threadId: params.threadId,
+        inReplyTo: params.inReplyTo,
+        references: params.references,
+        direction: params.direction,
+        fromAddress: params.fromAddress,
+        fromName: params.fromName,
+        toAddresses: params.toAddresses,
+        ccAddresses: params.ccAddresses,
+        subject: params.subject,
+        textContent: params.textContent,
+        htmlContent: params.htmlContent,
+        snippet,
+        emailDate: params.emailDate?.toISOString(),
+        folder: params.folder ?? (params.direction === 'outgoing' ? 'sent' : 'inbox'),
+        isRead: params.direction === 'outgoing', // Outgoing are automatically "read"
+        imapUid: params.imapUid,
+        createdAt: now,
+      })
+      .run()
+
+    log.messaging.debug('Email stored', {
+      connectionId: this.connectionId,
+      messageId: params.messageId,
+      direction: params.direction,
+    })
+  }
+
+  /**
+   * Search emails via IMAP.
+   * Returns matching email UIDs that can then be fetched.
+   */
+  async searchImapEmails(criteria: {
+    subject?: string
+    from?: string
+    to?: string
+    since?: Date
+    before?: Date
+    text?: string
+    seen?: boolean
+    flagged?: boolean
+  }): Promise<number[]> {
+    if (!this.credentials) {
+      throw new Error('Not connected - no credentials available')
+    }
+
+    const client = new ImapFlow({
+      host: this.credentials.imap.host,
+      port: this.credentials.imap.port,
+      secure: this.credentials.imap.secure,
+      auth: {
+        user: this.credentials.imap.user,
+        pass: this.credentials.imap.password,
+      },
+      logger: false,
+    })
+
+    try {
+      await client.connect()
+      const lock = await client.getMailboxLock('INBOX')
+
+      try {
+        // Build IMAP search query
+        const searchQuery: Record<string, unknown> = {}
+
+        if (criteria.subject) searchQuery.subject = criteria.subject
+        if (criteria.from) searchQuery.from = criteria.from
+        if (criteria.to) searchQuery.to = criteria.to
+        if (criteria.since) searchQuery.since = criteria.since
+        if (criteria.before) searchQuery.before = criteria.before
+        if (criteria.text) searchQuery.body = criteria.text
+        if (criteria.seen !== undefined) {
+          searchQuery.seen = criteria.seen
+        }
+        if (criteria.flagged !== undefined) {
+          searchQuery.flagged = criteria.flagged
+        }
+
+        const uids = await client.search(searchQuery, { uid: true })
+        return uids as number[]
+      } finally {
+        lock.release()
+      }
+    } finally {
+      await client.logout()
+    }
+  }
+
+  /**
+   * Fetch emails by UID from IMAP and store them locally.
+   * Returns the stored email records.
+   */
+  async fetchAndStoreEmails(uids: number[], options?: { limit?: number }): Promise<typeof emails.$inferSelect[]> {
+    if (!this.credentials || uids.length === 0) {
+      return []
+    }
+
+    const limit = options?.limit ?? 50
+    const uidsToFetch = uids.slice(0, limit)
+
+    const client = new ImapFlow({
+      host: this.credentials.imap.host,
+      port: this.credentials.imap.port,
+      secure: this.credentials.imap.secure,
+      auth: {
+        user: this.credentials.imap.user,
+        pass: this.credentials.imap.password,
+      },
+      logger: false,
+    })
+
+    const storedEmails: typeof emails.$inferSelect[] = []
+
+    try {
+      await client.connect()
+      const lock = await client.getMailboxLock('INBOX')
+
+      try {
+        for await (const message of client.fetch(uidsToFetch, {
+          uid: true,
+          source: true,
+          envelope: true,
+        })) {
+          const headers = this.parseEmailHeaders(message.source.toString('utf-8'))
+
+          if (!headers.messageId) continue
+
+          // Parse content
+          const content = await this.parseEmailContent(message.source)
+
+          // Store the email
+          this.storeEmail({
+            messageId: headers.messageId,
+            threadId: headers.references[0] || headers.inReplyTo || headers.messageId,
+            inReplyTo: headers.inReplyTo ?? undefined,
+            references: headers.references.length > 0 ? headers.references : undefined,
+            direction: 'incoming',
+            fromAddress: headers.from || 'unknown',
+            fromName: headers.fromName ?? undefined,
+            toAddresses: headers.to.length > 0 ? headers.to : undefined,
+            ccAddresses: headers.cc.length > 0 ? headers.cc : undefined,
+            subject: headers.subject ?? undefined,
+            textContent: content ?? undefined,
+            emailDate: headers.date ?? undefined,
+            imapUid: message.uid,
+          })
+
+          // Retrieve the stored email
+          const stored = db
+            .select()
+            .from(emails)
+            .where(eq(emails.messageId, headers.messageId))
+            .get()
+
+          if (stored) {
+            storedEmails.push(stored)
+          }
+        }
+      } finally {
+        lock.release()
+      }
+    } finally {
+      await client.logout()
+    }
+
+    return storedEmails
+  }
+
+  /**
+   * Get locally stored emails with optional filters.
+   */
+  getStoredEmails(options?: {
+    limit?: number
+    offset?: number
+    direction?: 'incoming' | 'outgoing'
+    threadId?: string
+    search?: string
+    folder?: string
+  }): typeof emails.$inferSelect[] {
+    let query = db.select().from(emails).where(eq(emails.connectionId, this.connectionId))
+
+    if (options?.direction) {
+      query = query.where(eq(emails.direction, options.direction)) as typeof query
+    }
+
+    if (options?.threadId) {
+      query = query.where(eq(emails.threadId, options.threadId)) as typeof query
+    }
+
+    if (options?.folder) {
+      query = query.where(eq(emails.folder, options.folder)) as typeof query
+    }
+
+    if (options?.search) {
+      const searchTerm = `%${options.search}%`
+      query = query.where(
+        or(
+          like(emails.subject, searchTerm),
+          like(emails.textContent, searchTerm),
+          like(emails.fromAddress, searchTerm)
+        )
+      ) as typeof query
+    }
+
+    const results = query
+      .orderBy(desc(emails.createdAt))
+      .limit(options?.limit ?? 50)
+      .offset(options?.offset ?? 0)
+      .all()
+
+    return results
   }
 }
 

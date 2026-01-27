@@ -351,6 +351,32 @@ export const emailAuthorizedThreads = sqliteTable('email_authorized_threads', {
   createdAt: text('created_at').notNull(),
 })
 
+// Stored emails - local copy of emails for AI agent access and search
+export const emails = sqliteTable('emails', {
+  id: text('id').primaryKey(),
+  connectionId: text('connection_id').notNull(), // FK to messagingConnections
+  messageId: text('message_id').notNull(), // Email Message-ID header (unique per email)
+  threadId: text('thread_id'), // Thread identifier for grouping conversations
+  inReplyTo: text('in_reply_to'), // In-Reply-To header
+  references: text('references', { mode: 'json' }).$type<string[]>(), // References header chain
+  direction: text('direction').notNull(), // 'incoming' | 'outgoing'
+  fromAddress: text('from_address').notNull(), // Sender email address
+  fromName: text('from_name'), // Sender display name
+  toAddresses: text('to_addresses', { mode: 'json' }).$type<string[]>(), // Recipient addresses
+  ccAddresses: text('cc_addresses', { mode: 'json' }).$type<string[]>(), // CC addresses
+  subject: text('subject'),
+  textContent: text('text_content'), // Plain text body
+  htmlContent: text('html_content'), // HTML body (if available)
+  snippet: text('snippet'), // Short preview for list views
+  emailDate: text('email_date'), // Date header from email
+  folder: text('folder').default('inbox'), // inbox, sent, drafts, etc.
+  isRead: integer('is_read', { mode: 'boolean' }).default(false),
+  isStarred: integer('is_starred', { mode: 'boolean' }).default(false),
+  labels: text('labels', { mode: 'json' }).$type<string[]>(), // Custom labels/tags
+  imapUid: integer('imap_uid'), // IMAP UID for sync purposes
+  createdAt: text('created_at').notNull(), // When we stored this email
+})
+
 // Type inference helpers
 export type Repository = typeof repositories.$inferSelect
 export type NewRepository = typeof repositories.$inferInsert
@@ -407,3 +433,5 @@ export type MessagingSessionMapping = typeof messagingSessionMappings.$inferSele
 export type NewMessagingSessionMapping = typeof messagingSessionMappings.$inferInsert
 export type EmailAuthorizedThread = typeof emailAuthorizedThreads.$inferSelect
 export type NewEmailAuthorizedThread = typeof emailAuthorizedThreads.$inferInsert
+export type Email = typeof emails.$inferSelect
+export type NewEmail = typeof emails.$inferInsert

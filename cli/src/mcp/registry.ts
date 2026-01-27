@@ -5,7 +5,7 @@
  * Core tools are always loaded; deferred tools are loaded on-demand after search.
  */
 
-export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup'
+export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup' | 'email'
 
 export interface ToolMetadata {
   name: string
@@ -573,6 +573,36 @@ export const toolRegistry: ToolMetadata[] = [
     description: 'Delete a backup',
     category: 'backup',
     keywords: ['backup', 'delete', 'remove', 'cleanup'],
+    deferred: false,
+  },
+
+  // Email tools
+  {
+    name: 'list_emails',
+    description: 'List stored emails from the local database',
+    category: 'email',
+    keywords: ['email', 'list', 'inbox', 'sent', 'message', 'mail'],
+    deferred: false,
+  },
+  {
+    name: 'get_email',
+    description: 'Get a specific email by ID',
+    category: 'email',
+    keywords: ['email', 'get', 'read', 'view', 'message', 'mail'],
+    deferred: false,
+  },
+  {
+    name: 'search_emails',
+    description: 'Search emails via IMAP and store results locally',
+    category: 'email',
+    keywords: ['email', 'search', 'find', 'query', 'imap', 'message', 'mail'],
+    deferred: false,
+  },
+  {
+    name: 'fetch_emails',
+    description: 'Fetch specific emails by IMAP UID and store locally',
+    category: 'email',
+    keywords: ['email', 'fetch', 'download', 'imap', 'uid', 'message', 'mail'],
     deferred: false,
   },
 ]
