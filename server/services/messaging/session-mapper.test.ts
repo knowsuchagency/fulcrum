@@ -99,7 +99,7 @@ describe('Session Mapper', () => {
 
       const result = getOrCreateSession(connectionId, channelUserId)
 
-      expect(result.session.title).toBe(`WhatsApp ${channelUserId}`)
+      expect(result.session.title).toBe(`Chat ${channelUserId}`)
     })
 
     test('handles LID format user IDs', () => {
