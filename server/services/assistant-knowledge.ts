@@ -347,6 +347,13 @@ You can read and modify all Fulcrum settings using the settings MCP tools. Setti
 - \`channels.email.imap.*\` - IMAP server settings (host, port, secure, user, password)
 - \`channels.email.sendAs\` - Email address to send from
 - \`channels.email.allowedSenders\` - Sender allowlist patterns
+- \`channels.slack.enabled\` - Enable/disable Slack channel
+- \`channels.slack.botToken\` - Slack bot token (xoxb-...) [SENSITIVE]
+- \`channels.slack.appToken\` - Slack app token (xapp-...) [SENSITIVE]
+- \`channels.discord.enabled\` - Enable/disable Discord channel
+- \`channels.discord.botToken\` - Discord bot token [SENSITIVE]
+- \`channels.telegram.enabled\` - Enable/disable Telegram channel
+- \`channels.telegram.botToken\` - Telegram bot token [SENSITIVE]
 
 ### Notification Settings
 
