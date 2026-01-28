@@ -7,7 +7,8 @@
     "fulcrum": "Fulcrum Servers",
     "worktrees": "Worktrees",
     "jobs": "Jobs",
-    "usage": "Usage Limits"
+    "usage": "Usage Limits",
+    "assistant": "Assistant"
   },
   "claude": {
     "showAllInstances": "Show all instances",
@@ -102,5 +103,29 @@
     "weekProgress": "{{percent}}% through week",
     "unavailable": "Claude Code usage data not available. Make sure you're logged in to Claude Code.",
     "error": "Failed to load usage data: {{message}}"
+  },
+  "assistant": {
+    "stats": {
+      "pending": "Pending",
+      "actedUpon": "Acted Upon",
+      "dismissed": "Dismissed",
+      "monitoring": "Monitoring"
+    },
+    "events": {
+      "title": "Actionable Events",
+      "empty": "No events recorded",
+      "source": "Source",
+      "linkedTask": "View task"
+    },
+    "sweeps": {
+      "title": "Recent Sweeps",
+      "empty": "No sweeps recorded",
+      "hourly": "Hourly",
+      "morningRitual": "Morning Ritual",
+      "eveningRitual": "Evening Ritual",
+      "eventsProcessed": "{{count}} events",
+      "tasksUpdated": "{{count}} tasks",
+      "messagesSent": "{{count}} messages"
+    }
   }
 }

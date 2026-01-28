@@ -1,5 +1,8 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
+import { db } from '../db'
+import { actionableEvents, sweepRuns, tasks } from '../db/schema'
+import { eq, desc, sql, and, count } from 'drizzle-orm'
 import * as assistantService from '../services/assistant-service'
 import type { PageContext } from '../../shared/types'
 import type { ImageData } from './chat'
@@ -347,6 +350,191 @@ assistantRoutes.delete('/documents/:sessionId', async (c) => {
       return c.json({ error: 'No document for this session' }, 404)
     }
     return c.json({ success: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+// ==================== Events & Sweeps Routes ====================
+
+/**
+ * GET /api/assistant/events
+ * List actionable events with optional filtering
+ */
+assistantRoutes.get('/events', async (c) => {
+  const status = c.req.query('status')
+  const channel = c.req.query('channel')
+  const limit = parseInt(c.req.query('limit') || '50')
+  const offset = parseInt(c.req.query('offset') || '0')
+
+  try {
+    const conditions = []
+    if (status) {
+      conditions.push(eq(actionableEvents.status, status))
+    }
+    if (channel) {
+      conditions.push(eq(actionableEvents.sourceChannel, channel))
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+    const events = db
+      .select()
+      .from(actionableEvents)
+      .where(whereClause)
+      .orderBy(desc(actionableEvents.createdAt))
+      .limit(limit)
+      .offset(offset)
+      .all()
+
+    const [{ total }] = db
+      .select({ total: count() })
+      .from(actionableEvents)
+      .where(whereClause)
+      .all()
+
+    return c.json({ events, total })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+/**
+ * GET /api/assistant/events/:id
+ * Get single event with linked task details
+ */
+assistantRoutes.get('/events/:id', async (c) => {
+  const id = c.req.param('id')
+
+  try {
+    const event = db.select().from(actionableEvents).where(eq(actionableEvents.id, id)).get()
+
+    if (!event) {
+      return c.json({ error: 'Event not found' }, 404)
+    }
+
+    // Include linked task if present
+    let linkedTask = null
+    if (event.linkedTaskId) {
+      linkedTask = db.select().from(tasks).where(eq(tasks.id, event.linkedTaskId)).get()
+    }
+
+    return c.json({ ...event, linkedTask })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+/**
+ * GET /api/assistant/sweeps
+ * List sweep runs with optional filtering
+ */
+assistantRoutes.get('/sweeps', async (c) => {
+  const type = c.req.query('type')
+  const limit = parseInt(c.req.query('limit') || '20')
+
+  try {
+    const whereClause = type ? eq(sweepRuns.type, type) : undefined
+
+    const runs = db
+      .select()
+      .from(sweepRuns)
+      .where(whereClause)
+      .orderBy(desc(sweepRuns.startedAt))
+      .limit(limit)
+      .all()
+
+    return c.json({ runs })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+/**
+ * GET /api/assistant/sweeps/:id
+ * Get single sweep run details
+ */
+assistantRoutes.get('/sweeps/:id', async (c) => {
+  const id = c.req.param('id')
+
+  try {
+    const sweep = db.select().from(sweepRuns).where(eq(sweepRuns.id, id)).get()
+
+    if (!sweep) {
+      return c.json({ error: 'Sweep not found' }, 404)
+    }
+
+    return c.json(sweep)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return c.json({ error: message }, 500)
+  }
+})
+
+/**
+ * GET /api/assistant/stats
+ * Get assistant statistics for dashboard
+ */
+assistantRoutes.get('/stats', async (c) => {
+  try {
+    // Count events by status
+    const eventCounts = db
+      .select({
+        status: actionableEvents.status,
+        count: count(),
+      })
+      .from(actionableEvents)
+      .groupBy(actionableEvents.status)
+      .all()
+
+    const eventStats = {
+      pending: 0,
+      actedUpon: 0,
+      dismissed: 0,
+      monitoring: 0,
+      total: 0,
+    }
+
+    for (const row of eventCounts) {
+      const cnt = Number(row.count)
+      eventStats.total += cnt
+      if (row.status === 'pending') eventStats.pending = cnt
+      else if (row.status === 'acted_upon') eventStats.actedUpon = cnt
+      else if (row.status === 'dismissed') eventStats.dismissed = cnt
+      else if (row.status === 'monitoring') eventStats.monitoring = cnt
+    }
+
+    // Get last sweep time for each type
+    const lastSweeps = {
+      hourly: null as string | null,
+      morningRitual: null as string | null,
+      eveningRitual: null as string | null,
+    }
+
+    const latestSweeps = db
+      .select({
+        type: sweepRuns.type,
+        completedAt: sql<string>`MAX(${sweepRuns.completedAt})`.as('completedAt'),
+      })
+      .from(sweepRuns)
+      .where(eq(sweepRuns.status, 'completed'))
+      .groupBy(sweepRuns.type)
+      .all()
+
+    for (const sweep of latestSweeps) {
+      if (sweep.type === 'hourly') lastSweeps.hourly = sweep.completedAt
+      else if (sweep.type === 'morning_ritual') lastSweeps.morningRitual = sweep.completedAt
+      else if (sweep.type === 'evening_ritual') lastSweeps.eveningRitual = sweep.completedAt
+    }
+
+    return c.json({
+      events: eventStats,
+      lastSweeps,
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return c.json({ error: message }, 500)

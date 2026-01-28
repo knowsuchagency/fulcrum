@@ -10,6 +10,7 @@ import {
   ChartLineData01Icon,
   BrowserIcon,
   GridIcon,
+  AiInnovation01Icon,
 } from '@hugeicons/core-free-icons'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
@@ -20,12 +21,13 @@ import {
   WorktreesTab,
   UsageTab,
   JobsTab,
+  AssistantTab,
 } from '@/components/monitoring/tabs'
 import { useJobsAvailable } from '@/hooks/use-jobs'
 
-type MonitoringTab = 'system' | 'processes' | 'claude' | 'fulcrum' | 'worktrees' | 'usage' | 'jobs'
+type MonitoringTab = 'system' | 'processes' | 'claude' | 'fulcrum' | 'worktrees' | 'usage' | 'jobs' | 'assistant'
 
-const VALID_TABS: MonitoringTab[] = ['system', 'processes', 'claude', 'fulcrum', 'worktrees', 'usage', 'jobs']
+const VALID_TABS: MonitoringTab[] = ['system', 'processes', 'claude', 'fulcrum', 'worktrees', 'usage', 'jobs', 'assistant']
 
 type JobScope = 'all' | 'user' | 'system'
 
@@ -101,6 +103,10 @@ function MonitoringPage() {
               <HugeiconsIcon icon={ChartLineData01Icon} size={14} strokeWidth={2} />
               <span className="max-sm:hidden">{t('tabs.usage')}</span>
             </TabsTrigger>
+            <TabsTrigger value="assistant" className="gap-1.5 data-[state=active]:bg-muted">
+              <HugeiconsIcon icon={AiInnovation01Icon} size={14} strokeWidth={2} />
+              <span className="max-sm:hidden">{t('tabs.assistant')}</span>
+            </TabsTrigger>
           </TabsList>
           </div>
 
@@ -133,6 +139,10 @@ function MonitoringPage() {
 
             <TabsContent value="usage" className="m-0">
               <UsageTab />
+            </TabsContent>
+
+            <TabsContent value="assistant" className="m-0">
+              <AssistantTab />
             </TabsContent>
           </div>
         </Tabs>
