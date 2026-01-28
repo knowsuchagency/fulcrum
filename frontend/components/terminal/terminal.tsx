@@ -193,7 +193,7 @@ export function Terminal({ className, onReady, onResize, onContainerReady, termi
       <div className="relative min-h-0 flex-1">
         <div
           ref={containerRef}
-          className={cn('h-full w-full max-w-full overflow-hidden p-2 bg-terminal-background', className)}
+          className={cn('h-full w-full max-w-full overflow-hidden p-2 bg-terminal-background touch-none', className)}
         />
         <button
           onClick={handleScrollToBottom}
