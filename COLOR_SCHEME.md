@@ -117,9 +117,11 @@ Task status indicators use semantic colors:
 |--------|-------|------|-------------|
 | Todo | `oklch(0.6000 0 0)` | `oklch(0.4000 0 0)` | Gray |
 | In Progress | `oklch(0.5500 0.2300 260)` | `oklch(0.6500 0.2100 260)` | Purple |
-| In Review | `oklch(0.6000 0.2200 30)` | N/A | Orange |
-| Done | `oklch(0.4800 0.2200 260)` | N/A | Purple |
-| Canceled | `oklch(0.5800 0.2600 25)` | N/A | Red |
+| In Review | `oklch(0.6000 0.2200 30)` | Inherits from light | Orange |
+| Done | `oklch(0.4800 0.2200 260)` | Inherits from light | Purple |
+| Canceled | `oklch(0.5800 0.2600 25)` | Inherits from light | Red |
+
+Note: Status colors for In Review, Done, and Canceled are only explicitly defined in light mode. Dark mode inherits these values as they remain visible on dark backgrounds.
 
 ## Sidebar Colors
 
@@ -129,7 +131,8 @@ The sidebar has its own dedicated color tokens:
 |-------|-------|------|
 | `--sidebar` | `oklch(0 0 0)` | `oklch(0 0 0)` |
 | `--sidebar-foreground` | `oklch(1 0 0)` | `oklch(1 0 0)` |
-| `--sidebar-accent` | Purple accent | Purple accent |
+| `--sidebar-accent` | `oklch(0.4800 0.2200 260)` | `oklch(0.5500 0.2300 260)` |
+| `--sidebar-accent-foreground` | `oklch(1.0000 0 0)` | `oklch(1.0000 0 0)` |
 | `--sidebar-border` | `oklch(0.2000 0 0)` | `oklch(0.2400 0 0)` |
 
 ## Diff Viewer Colors
@@ -239,7 +242,9 @@ Colors are accessed via CSS variables:
 background-color: var(--background);
 color: var(--foreground);
 border-color: var(--border);
+```
 
+```jsx
 /* Use with Tailwind */
 <div className="bg-background text-foreground border-border">
 ```
