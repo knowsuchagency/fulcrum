@@ -87,16 +87,13 @@ export class SlackChannel implements MessagingChannel {
         await this.handleSlashCommand(command, respond)
       })
 
-      // Handle messages
+      // Handle DM messages only
+      // Note: app.message() handles all message events including DMs
+      // We filter to only process direct messages (im channel type)
       this.app.message(async ({ message }) => {
-        await this.handleMessage(message)
-      })
-
-      // Handle DMs (im:message events)
-      this.app.event('message', async ({ event }) => {
-        // Only process direct messages (IMs)
-        if (event.channel_type === 'im') {
-          await this.handleMessage(event)
+        // Only process DMs, ignore channel/group messages
+        if ((message as Record<string, unknown>).channel_type === 'im') {
+          await this.handleMessage(message)
         }
       })
 
