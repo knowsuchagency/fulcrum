@@ -52,7 +52,7 @@ function ResizableHandle({
       {...props}
     >
       {withHandle && (
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 bg-muted/90 border border-border rounded-full px-1 py-3 opacity-70 group-hover:opacity-100 group-focus:opacity-100 transition-opacity shadow-sm">
+        <div className="pointer-events-none absolute z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 bg-muted/90 border border-border rounded-full px-1 py-3 opacity-70 group-hover:opacity-100 group-focus:opacity-100 transition-opacity shadow-sm">
           <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground" />
           <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground" />
           <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground" />
