@@ -499,7 +499,13 @@ User message: ${userMessage}`
           yield { type: 'message:complete', data: { content: textContent } }
         }
       } else if (message.type === 'result') {
-        const resultMsg = message as { type: 'result'; subtype?: string; total_cost_usd?: number; is_error?: boolean; errors?: string[] }
+        const resultMsg = message as {
+          type: 'result'
+          subtype?: string
+          total_cost_usd?: number
+          is_error?: boolean
+          errors?: string[]
+        }
 
         if (resultMsg.subtype?.startsWith('error_')) {
           const errors = resultMsg.errors || ['Unknown error']

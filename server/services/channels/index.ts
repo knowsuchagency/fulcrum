@@ -24,7 +24,7 @@ import type {
   EmailAuthState,
   ChannelFactory,
 } from './types'
-import { getConciergeSystemPrompt, type ConciergeMessageContext } from './system-prompts'
+import { getMessagingSystemPrompt, type MessagingContext } from './system-prompts'
 
 // Active channel instances
 const activeChannels = new Map<string, MessagingChannel>()
@@ -245,7 +245,7 @@ async function handleIncomingMessage(msg: IncomingMessage): Promise<void> {
   try {
     // Build context for intelligent message handling
     // The assistant decides whether to respond, create events, or ignore
-    const context: ConciergeMessageContext = {
+    const context: MessagingContext = {
       channel: msg.channelType,
       sender: msg.senderId,
       senderName: msg.senderName,
@@ -256,14 +256,14 @@ async function handleIncomingMessage(msg: IncomingMessage): Promise<void> {
         messageId: msg.metadata?.messageId as string | undefined,
       },
     }
-    const systemPrompt = getConciergeSystemPrompt(msg.channelType, context)
+    const systemPrompt = getMessagingSystemPrompt(msg.channelType, context)
 
-    // Stream the response - assistant handles everything via tools
+    // Stream the response - assistant handles everything via MCP tools
     const stream = assistantService.streamMessage(session.id, content, {
       systemPromptOverride: systemPrompt,
     })
 
-    // Consume stream - responses are sent via the message tool
+    // Consume stream - responses are sent via the message MCP tool
     for await (const event of stream) {
       if (event.type === 'error') {
         const errorMsg = (event.data as { message: string }).message
@@ -1402,11 +1402,11 @@ export async function fetchAndStoreEmails(uids: number[], options?: { limit?: nu
   return activeEmailChannel.fetchAndStoreEmails(uids, options)
 }
 
-// ==================== Send Message Functions (for concierge) ====================
+// ==================== Send Message Functions ====================
 
 /**
  * Send an email message directly.
- * Used by the concierge scheduler for proactive messaging.
+ * Used by the assistant scheduler for proactive messaging.
  */
 export async function sendEmailMessage(
   to: string,
@@ -1461,6 +1461,7 @@ export async function sendMessageToChannel(
   options?: {
     subject?: string
     replyToMessageId?: string
+    slackBlocks?: Array<Record<string, unknown>>
   }
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   switch (channel) {
@@ -1542,9 +1543,11 @@ export async function sendMessageToChannel(
       }
 
       try {
-        const success = await slackChannel.sendMessage(to, body)
+        // Pass blocks metadata for Block Kit formatting
+        const metadata = options?.slackBlocks ? { blocks: options.slackBlocks } : undefined
+        const success = await slackChannel.sendMessage(to, body, metadata)
         if (success) {
-          log.messaging.info('Sent Slack message', { to })
+          log.messaging.info('Sent Slack message', { to, hasBlocks: !!options?.slackBlocks })
           return { success: true }
         } else {
           return { success: false, error: 'Failed to send Slack message' }

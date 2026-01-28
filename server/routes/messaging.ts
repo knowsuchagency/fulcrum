@@ -524,6 +524,7 @@ app.post('/send', async (c) => {
       body: string
       subject?: string
       replyToMessageId?: string
+      slackBlocks?: Array<Record<string, unknown>>
     }>()
 
     if (!body.channel || !body.to || !body.body) {
@@ -537,6 +538,7 @@ app.post('/send', async (c) => {
       {
         subject: body.subject,
         replyToMessageId: body.replyToMessageId,
+        slackBlocks: body.slackBlocks,
       }
     )
 

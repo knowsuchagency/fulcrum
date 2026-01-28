@@ -138,42 +138,12 @@ Email allows for longer, more detailed responses than messaging apps:
 
 The user initiated this conversation via email, so slightly longer response times are expected. Take time to provide complete, well-structured answers.`
 
-/**
- * Get the system prompt for a specific messaging platform.
- */
-export function getMessagingSystemPrompt(channelType: ChannelType): string {
-  const instanceContext = getInstanceContext()
-  let basePrompt: string
-
-  switch (channelType) {
-    case 'whatsapp':
-      basePrompt = WHATSAPP_PROMPT
-      break
-    case 'discord':
-      basePrompt = DISCORD_PROMPT
-      break
-    case 'telegram':
-      basePrompt = TELEGRAM_PROMPT
-      break
-    case 'slack':
-      basePrompt = SLACK_PROMPT
-      break
-    case 'email':
-      basePrompt = EMAIL_PROMPT
-      break
-    default:
-      basePrompt = WHATSAPP_PROMPT // Fallback to most restrictive
-  }
-
-  return instanceContext + '\n\n' + basePrompt
-}
-
-// ==================== Concierge Prompts ====================
+// ==================== Messaging Prompts ====================
 
 /**
- * Context passed to concierge prompts
+ * Context passed to incoming message prompts
  */
-export interface ConciergeMessageContext {
+export interface MessagingContext {
   channel: string
   sender: string
   senderName?: string
@@ -189,7 +159,7 @@ export interface ConciergeMessageContext {
  * Get the system prompt for real-time message handling with agency.
  * The assistant decides whether to respond, create events, tasks, etc.
  */
-export function getConciergeSystemPrompt(channelType: ChannelType, context: ConciergeMessageContext): string {
+export function getMessagingSystemPrompt(channelType: ChannelType, context: MessagingContext): string {
   const instanceContext = getInstanceContext()
   const baseKnowledge = getCondensedKnowledge()
   const formattingGuide = getFormattingGuide(channelType)
@@ -386,14 +356,59 @@ WhatsApp does NOT render full Markdown. Keep formatting simple:
 - Keep responses concise for mobile`
 
     case 'slack':
-      return `## Slack Formatting
+      return `## Slack Formatting & Block Kit
 
-Use Slack's mrkdwn format:
-- *bold* with single asterisks, _italic_ with underscores
-- \`code\` and \`\`\`code blocks\`\`\`
-- > blockquotes, lists with - or numbers
-- Links: <url|text> or paste URLs directly
-- Keep responses focused for desktop and mobile`
+Your response will be sent using Slack Block Kit for rich formatting. Structure your response as JSON with:
+
+- **body**: Plain text message (required, shown in notifications and as fallback)
+- **blocks**: Array of Block Kit blocks for rich formatting (optional)
+
+### Block Kit Blocks
+
+**Section Block** - Main content:
+\`\`\`json
+{ "type": "section", "text": { "type": "mrkdwn", "text": "*Bold* and _italic_" } }
+\`\`\`
+
+**Section with Fields** - Multi-column layout:
+\`\`\`json
+{ "type": "section", "fields": [
+  { "type": "mrkdwn", "text": "*Status:*\\nIn Progress" },
+  { "type": "mrkdwn", "text": "*Due:*\\nToday" }
+] }
+\`\`\`
+
+**Header Block** - Large text headers:
+\`\`\`json
+{ "type": "header", "text": { "type": "plain_text", "text": "Task Summary", "emoji": true } }
+\`\`\`
+
+**Divider Block** - Horizontal rule:
+\`\`\`json
+{ "type": "divider" }
+\`\`\`
+
+**Context Block** - Small muted text:
+\`\`\`json
+{ "type": "context", "elements": [{ "type": "mrkdwn", "text": "Last updated 5 min ago" }] }
+\`\`\`
+
+### mrkdwn Syntax
+- *bold* with single asterisks
+- _italic_ with underscores
+- ~strikethrough~ with tildes
+- \`code\` with backticks
+- > blockquotes
+- Links: <url|text>
+- Lists: Use • or numbered (1. 2. 3.)
+
+### When to Use Blocks
+- **Lists/Status**: Use section blocks with bullet points or fields
+- **Structured Data**: Use fields for key-value pairs side by side
+- **Headers**: Use header blocks for major sections
+- **Simple Responses**: Just use plain text body, no blocks needed
+
+Use the \`message\` tool with the \`slack_blocks\` parameter to send Block Kit formatted messages.`
 
     case 'discord':
       return `## Discord Formatting

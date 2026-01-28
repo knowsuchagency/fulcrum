@@ -19,8 +19,11 @@ export const registerAssistantEventTools: ToolRegistrar = (server, client) => {
       body: z.string().describe('Message content'),
       subject: z.optional(z.string()).describe('Email subject (for email channel only)'),
       replyToMessageId: z.optional(z.string()).describe('Message ID to reply to (for threading)'),
+      slack_blocks: z.optional(z.array(z.record(z.string(), z.any()))).describe(
+        'Slack Block Kit blocks for rich formatting (Slack channel only). Array of block objects.'
+      ),
     },
-    async ({ channel, to, body, subject, replyToMessageId }) => {
+    async ({ channel, to, body, subject, replyToMessageId, slack_blocks }) => {
       try {
         const result = await client.sendMessage({
           channel,
@@ -28,6 +31,7 @@ export const registerAssistantEventTools: ToolRegistrar = (server, client) => {
           body,
           subject,
           replyToMessageId,
+          slackBlocks: slack_blocks,
         })
         return formatSuccess(result)
       } catch (err) {

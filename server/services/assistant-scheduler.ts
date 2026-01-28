@@ -1,6 +1,6 @@
 /**
- * Concierge Scheduler - Manages hourly sweeps and daily rituals.
- * Transforms the messaging assistant into a proactive digital concierge.
+ * Assistant Scheduler - Manages hourly sweeps and daily rituals.
+ * Enables proactive messaging assistant behavior.
  */
 
 import { nanoid } from 'nanoid'
@@ -21,9 +21,9 @@ let hourlyIntervalId: ReturnType<typeof setInterval> | null = null
 let morningTimeoutId: ReturnType<typeof setTimeout> | null = null
 let eveningTimeoutId: ReturnType<typeof setTimeout> | null = null
 
-// Dedicated session IDs for concierge operations
-const SWEEP_SESSION_PREFIX = 'concierge-sweep'
-const RITUAL_SESSION_PREFIX = 'concierge-ritual'
+// Dedicated session IDs for assistant operations
+const SWEEP_SESSION_PREFIX = 'assistant-sweep'
+const RITUAL_SESSION_PREFIX = 'assistant-ritual'
 
 /**
  * Start the assistant scheduler.
@@ -32,7 +32,7 @@ const RITUAL_SESSION_PREFIX = 'concierge-ritual'
 export function startAssistantScheduler(): void {
   const settings = getSettings()
 
-  log.assistant.info('Starting concierge scheduler', {
+  log.assistant.info('Starting assistant scheduler', {
     ritualsEnabled: settings.assistant.ritualsEnabled,
   })
 
@@ -72,7 +72,7 @@ export function stopAssistantScheduler(): void {
     eveningTimeoutId = null
   }
 
-  log.assistant.info('Concierge scheduler stopped')
+  log.assistant.info('Assistant scheduler stopped')
 }
 
 /**
@@ -96,7 +96,7 @@ async function runHourlySweep(): Promise<void> {
     const { session } = getOrCreateSession(
       SWEEP_SESSION_PREFIX,
       'sweep-agent',
-      'Concierge Sweep'
+      'Assistant Sweep'
     )
 
     // Build the prompt
@@ -181,7 +181,7 @@ async function runDailyRitual(type: 'morning' | 'evening'): Promise<void> {
     const { session } = getOrCreateSession(
       RITUAL_SESSION_PREFIX,
       `${type}-ritual-agent`,
-      `Concierge ${type} Ritual`
+      `Assistant ${type} Ritual`
     )
 
     // Use the user's customizable prompt
@@ -354,7 +354,7 @@ function countOpenTasks(): number {
 
 /**
  * Send a message to a channel.
- * Used by the MCP `message` tool and internally by the concierge.
+ * Used by the MCP `message` tool and internally by the assistant scheduler.
  */
 export async function sendMessageToChannel(
   channel: 'email' | 'whatsapp' | 'discord' | 'telegram' | 'slack',
