@@ -54,6 +54,7 @@ export async function configureEmail(credentials: EmailAuthState): Promise<{
   updateSettingByPath('channels.email.pollIntervalSeconds', credentials.pollIntervalSeconds)
   updateSettingByPath('channels.email.sendAs', credentials.sendAs || null)
   updateSettingByPath('channels.email.allowedSenders', credentials.allowedSenders || [])
+  updateSettingByPath('channels.email.bcc', credentials.bcc || null)
 
   // Start the channel
   await startEmailChannel()
@@ -205,6 +206,7 @@ export function getEmailConfig(): {
   pollIntervalSeconds: number
   sendAs: string | null
   allowedSenders: string[]
+  bcc: string | null
 } | null {
   const settings = getSettings()
   const emailConfig = settings.channels.email
@@ -231,6 +233,7 @@ export function getEmailConfig(): {
     pollIntervalSeconds: emailConfig.pollIntervalSeconds,
     sendAs: emailConfig.sendAs,
     allowedSenders: emailConfig.allowedSenders,
+    bcc: emailConfig.bcc,
   }
 }
 

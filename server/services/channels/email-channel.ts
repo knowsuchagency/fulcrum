@@ -69,6 +69,7 @@ export class EmailChannel implements MessagingChannel {
         pollIntervalSeconds: emailConfig.pollIntervalSeconds,
         sendAs: emailConfig.sendAs || undefined,
         allowedSenders: emailConfig.allowedSenders,
+        bcc: emailConfig.bcc || undefined,
       }
     }
 
@@ -232,7 +233,8 @@ export class EmailChannel implements MessagingChannel {
                 this.transporter,
                 this.connectionId,
                 this.getFromAddress(),
-                headers
+                headers,
+                this.credentials?.bcc
               )
             }
 
@@ -366,7 +368,8 @@ export class EmailChannel implements MessagingChannel {
       this.getFromAddress(),
       recipientId,
       content,
-      metadata
+      metadata,
+      this.credentials?.bcc
     )
   }
 

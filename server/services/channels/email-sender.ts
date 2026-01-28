@@ -48,7 +48,8 @@ export async function sendEmail(
   fromAddress: string,
   recipientId: string,
   content: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  bcc?: string | null
 ): Promise<boolean> {
   try {
     // Convert markdown-like formatting to HTML
@@ -83,6 +84,7 @@ export async function sendEmail(
     const sentMail = await transporter.sendMail({
       from: fromAddress,
       to: recipientId,
+      bcc: bcc || undefined,
       subject,
       text: content,
       html: htmlContent,
@@ -132,7 +134,8 @@ export async function sendUnauthorizedResponse(
   transporter: Transporter,
   connectionId: string,
   fromAddress: string,
-  headers: EmailHeaders
+  headers: EmailHeaders,
+  bcc?: string | null
 ): Promise<void> {
   if (!headers.from) return
 
@@ -156,6 +159,7 @@ If you believe this is an error, please contact the owner of this email address.
     await transporter.sendMail({
       from: fromAddress,
       to: headers.from,
+      bcc: bcc || undefined,
       subject,
       text: response,
       html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6;"><p>${response.replace(/\n/g, '<br>')}</p></div>`,

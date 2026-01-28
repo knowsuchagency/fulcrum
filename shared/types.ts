@@ -733,4 +733,5 @@ export interface EmailChannelConfig {
   pollIntervalSeconds: number
   sendAs?: string
   allowedSenders?: string[]
+  bcc?: string
 }

@@ -142,6 +142,11 @@ export interface EmailAuthState {
    * that was initialized by an allowlisted sender CCing the assistant.
    */
   allowedSenders?: string[]
+  /**
+   * BCC address that will be copied on all outgoing emails from the assistant.
+   * Useful for compliance, archiving, or monitoring purposes.
+   */
+  bcc?: string
 }
 
 /**

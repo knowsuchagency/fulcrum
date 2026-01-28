@@ -109,6 +109,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
   const [imapUser, setImapUser] = useState('')
   const [imapPassword, setImapPassword] = useState('')
   const [sendAs, setSendAs] = useState('')
+  const [bcc, setBcc] = useState('')
   const [pollInterval, setPollInterval] = useState(30)
 
   // Test results
@@ -145,6 +146,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
       setImapUser(config.imap?.user || '')
       setImapPassword(config.imap?.password || '')  // Will be '••••••••' if set
       setSendAs(config.sendAs || '')
+      setBcc(config.bcc || '')
       setPollInterval(config.pollIntervalSeconds || 30)
       setAllowedSenders(config.allowedSenders?.join(', ') || '')
       // Show advanced if custom settings were used or different users for SMTP/IMAP
@@ -182,6 +184,7 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
         },
         pollIntervalSeconds: pollInterval,
         sendAs: sendAs || undefined,
+        bcc: bcc || undefined,
         allowedSenders: parsedAllowedSenders.length > 0 ? parsedAllowedSenders : undefined,
       }
     }
@@ -538,6 +541,22 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
                 </p>
               </div>
 
+              {/* BCC address */}
+              <div className="space-y-2">
+                <Label htmlFor="bcc">BCC (Copy All Outgoing)</Label>
+                <Input
+                  id="bcc"
+                  type="email"
+                  placeholder="archive@yourdomain.com"
+                  value={bcc}
+                  onChange={(e) => setBcc(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Optional. All outgoing emails from the assistant will be blind copied to this address.
+                  Useful for compliance, archiving, or monitoring.
+                </p>
+              </div>
+
               {/* Poll interval */}
               <div className="space-y-2">
                 <Label htmlFor="pollInterval">Check for new emails every</Label>
@@ -656,6 +675,18 @@ export function EmailSetup({ isLoading = false }: EmailSetupProps) {
               </h4>
               <div className="text-xs text-muted-foreground font-mono">
                 {status.config.allowedSenders.join(', ')}
+              </div>
+            </div>
+          )}
+
+          {/* BCC */}
+          {status?.config?.bcc && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                BCC (Copy All Outgoing)
+              </h4>
+              <div className="text-xs text-muted-foreground font-mono">
+                {status.config.bcc}
               </div>
             </div>
           )}

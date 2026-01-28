@@ -61,6 +61,11 @@ export interface EmailSettings {
    * Supports exact matches (user@example.com) and wildcard domains (*@example.com).
    */
   allowedSenders: string[]
+  /**
+   * BCC address that will be copied on all outgoing emails from the assistant.
+   * Useful for compliance, archiving, or monitoring purposes.
+   */
+  bcc: string | null
 }
 
 // Slack messaging settings
@@ -215,6 +220,7 @@ export const DEFAULT_SETTINGS: Settings = {
       pollIntervalSeconds: 30,
       sendAs: null,
       allowedSenders: [],
+      bcc: null,
     },
     slack: {
       enabled: false,
@@ -283,6 +289,7 @@ export const VALID_SETTING_PATHS = new Set([
   'channels.email.pollIntervalSeconds',
   'channels.email.sendAs',
   'channels.email.allowedSenders',
+  'channels.email.bcc',
   'channels.slack.enabled',
   'channels.slack.botToken',
   'channels.slack.appToken',
