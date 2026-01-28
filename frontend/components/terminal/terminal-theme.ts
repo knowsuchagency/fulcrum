@@ -40,7 +40,6 @@ export function getTerminalTheme(isDark: boolean): ITheme {
   // Read theme colors from CSS variables
   const background = getCssVarHex('--terminal-background')
   const foreground = getCssVarHex('--foreground')
-  const card = getCssVarHex('--card')
   const muted = getCssVarHex('--muted-foreground')
   const accent = getCssVarHex('--accent')
   const destructive = getCssVarHex('--destructive')
@@ -51,7 +50,7 @@ export function getTerminalTheme(isDark: boolean): ITheme {
       foreground,
       cursor: foreground,
       cursorAccent: background,
-      selectionBackground: card,
+      selectionBackground: '#3f3f46',
       black: background,
       red: destructive,
       green: accent,
