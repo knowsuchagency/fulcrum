@@ -126,7 +126,7 @@ async function runHourlySweep(): Promise<void> {
         // Count tool usage from the response
         // The actual counts come from what the assistant did via MCP tools
         // For now, we just capture the summary
-        summary = content.slice(0, 500)
+        summary = content
 
         // Parse basic metrics from the response
         const processedMatch = content.match(/(\d+)\s*events?\s*(reviewed|processed)/i)
@@ -201,7 +201,7 @@ async function runDailyRitual(type: 'morning' | 'evening'): Promise<void> {
     for await (const event of stream) {
       if (event.type === 'message:complete') {
         const content = (event.data as { content: string }).content
-        summary = content.slice(0, 500)
+        summary = content
 
         const messagesMatch = content.match(/(\d+)\s*messages?\s*sent/i)
         if (messagesMatch) messagesSent = parseInt(messagesMatch[1])
