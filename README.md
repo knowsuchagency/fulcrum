@@ -343,6 +343,8 @@ Available in English and Chinese. Set the `language` setting or let it auto-dete
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, architecture, and contributing guidelines.
 
+For information about the project's design system and color palette, see [COLOR_SCHEME.md](COLOR_SCHEME.md).
+
 ## License
 
 [PolyForm Perimeter 1.0.0](LICENSE)
