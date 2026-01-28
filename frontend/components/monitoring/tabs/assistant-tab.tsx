@@ -13,12 +13,20 @@ import {
   MessageMultiple01Icon,
   SentIcon,
   ViewIcon,
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  AlertCircleIcon,
 } from '@hugeicons/core-free-icons'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
+import { ContentRenderer } from '@/components/assistant/content-renderer'
 import { useActionableEvents, useSweepRuns, useAssistantStats } from '@/hooks/use-assistant'
 import type { ActionableEvent, SweepRun } from '@/hooks/use-assistant'
+
+// Sweeps running longer than 5 minutes are considered stale (likely from dev server restart)
+const STALE_THRESHOLD_MS = 5 * 60 * 1000
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
@@ -51,7 +59,8 @@ function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destr
   }
 }
 
-function getSweepStatusIcon(status: string) {
+function getSweepStatusIcon(status: string, isStale: boolean) {
+  if (isStale) return AlertCircleIcon
   switch (status) {
     case 'completed':
       return CheckmarkCircle02Icon
@@ -64,7 +73,8 @@ function getSweepStatusIcon(status: string) {
   }
 }
 
-function getSweepStatusColor(status: string): string {
+function getSweepStatusColor(status: string, isStale: boolean): string {
+  if (isStale) return 'text-yellow-500'
   switch (status) {
     case 'completed':
       return 'text-green-500'
@@ -75,6 +85,13 @@ function getSweepStatusColor(status: string): string {
     default:
       return 'text-muted-foreground'
   }
+}
+
+function isSweepStale(sweep: SweepRun): boolean {
+  if (sweep.status !== 'running') return false
+  const startedAt = new Date(sweep.startedAt).getTime()
+  const now = Date.now()
+  return now - startedAt > STALE_THRESHOLD_MS
 }
 
 function getChannelIcon(channel: string) {
@@ -146,8 +163,10 @@ function EventRow({ event }: { event: ActionableEvent }) {
 
 function SweepRow({ sweep }: { sweep: SweepRun }) {
   const { t } = useTranslation('monitoring')
-  const StatusIcon = getSweepStatusIcon(sweep.status)
-  const statusColor = getSweepStatusColor(sweep.status)
+  const [isOpen, setIsOpen] = useState(false)
+  const stale = isSweepStale(sweep)
+  const StatusIcon = getSweepStatusIcon(sweep.status, stale)
+  const statusColor = getSweepStatusColor(sweep.status, stale)
 
   const typeLabel = sweep.type === 'hourly'
     ? t('assistant.sweeps.hourly')
@@ -155,34 +174,58 @@ function SweepRow({ sweep }: { sweep: SweepRun }) {
     ? t('assistant.sweeps.morningRitual')
     : t('assistant.sweeps.eveningRitual')
 
+  const hasSummary = sweep.summary && sweep.summary.trim().length > 0
+
   return (
-    <div className="flex items-center gap-3 p-3 border-b last:border-b-0">
-      <HugeiconsIcon icon={StatusIcon} size={16} strokeWidth={2} className={statusColor} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
-          <span className="text-xs text-muted-foreground">
-            {formatRelativeTime(sweep.startedAt)}
-          </span>
-        </div>
-        {sweep.status === 'completed' && (
-          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            {sweep.eventsProcessed !== null && (
-              <span>{t('assistant.sweeps.eventsProcessed', { count: sweep.eventsProcessed })}</span>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild disabled={!hasSummary}>
+        <div className={`flex items-center gap-3 p-3 border-b last:border-b-0 ${hasSummary ? 'cursor-pointer hover:bg-muted/50' : ''}`}>
+          <HugeiconsIcon icon={StatusIcon} size={16} strokeWidth={2} className={statusColor} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
+              <span className="text-xs text-muted-foreground">
+                {formatRelativeTime(sweep.startedAt)}
+              </span>
+              {stale && (
+                <Badge variant="secondary" className="text-xs">stale</Badge>
+              )}
+            </div>
+            {sweep.status === 'completed' && (
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                {sweep.eventsProcessed !== null && (
+                  <span>{t('assistant.sweeps.eventsProcessed', { count: sweep.eventsProcessed })}</span>
+                )}
+                {sweep.tasksUpdated !== null && sweep.tasksUpdated > 0 && (
+                  <span>{t('assistant.sweeps.tasksUpdated', { count: sweep.tasksUpdated })}</span>
+                )}
+                {sweep.messagesSent !== null && sweep.messagesSent > 0 && (
+                  <span>{t('assistant.sweeps.messagesSent', { count: sweep.messagesSent })}</span>
+                )}
+              </div>
             )}
-            {sweep.tasksUpdated !== null && sweep.tasksUpdated > 0 && (
-              <span>{t('assistant.sweeps.tasksUpdated', { count: sweep.tasksUpdated })}</span>
-            )}
-            {sweep.messagesSent !== null && sweep.messagesSent > 0 && (
-              <span>{t('assistant.sweeps.messagesSent', { count: sweep.messagesSent })}</span>
+            {hasSummary && !isOpen && (
+              <div className="mt-1 text-xs text-muted-foreground truncate">{sweep.summary}</div>
             )}
           </div>
-        )}
-        {sweep.summary && (
-          <div className="mt-1 text-xs text-muted-foreground truncate">{sweep.summary}</div>
-        )}
-      </div>
-    </div>
+          {hasSummary && (
+            <HugeiconsIcon
+              icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
+              size={14}
+              strokeWidth={2}
+              className="text-muted-foreground shrink-0"
+            />
+          )}
+        </div>
+      </CollapsibleTrigger>
+      {hasSummary && (
+        <CollapsibleContent>
+          <div className="px-3 pb-3 pt-1 border-b last:border-b-0 bg-muted/30">
+            <ContentRenderer content={sweep.summary!} className="text-sm" />
+          </div>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
   )
 }
 
