@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid'
-import { eq, desc, and, sql, like, isNotNull, isNull, or, not } from 'drizzle-orm'
+import { eq, desc, and, sql, like, notInArray } from 'drizzle-orm'
 import { query } from '@anthropic-ai/claude-agent-sdk'
-import { db, chatSessions, chatMessages, artifacts } from '../db'
+import { db, chatSessions, chatMessages, artifacts, tasks, projects, repositories, apps, projectRepositories, messagingSessionMappings } from '../db'
 import type { ChatSession, NewChatSession, ChatMessage, NewChatMessage, Artifact, NewArtifact } from '../db/schema'
 import { getSettings } from '../lib/settings'
 import { getClaudeCodePathForSdk } from '../lib/claude-code-path'
@@ -77,12 +77,17 @@ export function listSessions(options: {
   const conditions = []
 
   // Exclude internal assistant sessions (sweeps, rituals)
-  conditions.push(
-    or(
-      isNull(chatSessions.connectionId),
-      not(like(chatSessions.connectionId, 'assistant-%'))
-    )
-  )
+  // These sessions are linked via messagingSessionMappings with connectionId starting with 'assistant-'
+  const assistantSessionIds = db
+    .select({ sessionId: messagingSessionMappings.sessionId })
+    .from(messagingSessionMappings)
+    .where(like(messagingSessionMappings.connectionId, 'assistant-%'))
+    .all()
+    .map((row) => row.sessionId)
+
+  if (assistantSessionIds.length > 0) {
+    conditions.push(notInArray(chatSessions.id, assistantSessionIds))
+  }
 
   if (projectId) {
     conditions.push(eq(chatSessions.projectId, projectId))
@@ -334,6 +339,150 @@ export interface StreamMessageOptions {
   /** Use condensed knowledge instead of full knowledge (for channels) */
   condensedKnowledge?: boolean
   images?: ImageData[]
+  /** Page context for UI assistant (used when no systemPromptAdditions) */
+  context?: PageContext
+}
+
+/**
+ * Build a context string from PageContext for the system prompt
+ */
+function buildPageContextString(context: PageContext): string {
+  const contextParts: string[] = []
+  contextParts.push(`Current page: ${context.path}`)
+
+  switch (context.pageType) {
+    case 'task': {
+      if (context.taskId) {
+        const task = db.select().from(tasks).where(eq(tasks.id, context.taskId)).get()
+        if (task) {
+          contextParts.push(`Viewing task: "${task.title}"`)
+          contextParts.push(`Status: ${task.status}`)
+          if (task.branch) contextParts.push(`Branch: ${task.branch}`)
+          if (task.repoName) contextParts.push(`Repository: ${task.repoName}`)
+          if (task.description) contextParts.push(`Description: ${task.description}`)
+          if (task.worktreePath) contextParts.push(`Worktree: ${task.worktreePath}`)
+        }
+      }
+      break
+    }
+
+    case 'tasks': {
+      contextParts.push('Viewing the tasks kanban board')
+      if (context.filters?.project) {
+        if (context.filters.project === 'inbox') {
+          contextParts.push('Filtered to: Inbox (tasks without a project)')
+        } else {
+          const project = db.select().from(projects).where(eq(projects.id, context.filters.project)).get()
+          if (project) {
+            contextParts.push(`Filtered to project: "${project.name}"`)
+          }
+        }
+      }
+      if (context.filters?.tags?.length) {
+        contextParts.push(`Filtered by tags: ${context.filters.tags.join(', ')}`)
+      }
+      if (context.filters?.view) {
+        contextParts.push(`View mode: ${context.filters.view}`)
+      }
+      break
+    }
+
+    case 'project': {
+      if (context.projectId) {
+        const project = db.select().from(projects).where(eq(projects.id, context.projectId)).get()
+        if (project) {
+          contextParts.push(`Viewing project: "${project.name}"`)
+          if (project.description) contextParts.push(`Description: ${project.description}`)
+          if (project.status) contextParts.push(`Status: ${project.status}`)
+
+          // Count repositories
+          const repoLinks = db
+            .select()
+            .from(projectRepositories)
+            .where(eq(projectRepositories.projectId, context.projectId))
+            .all()
+          if (repoLinks.length > 0) {
+            contextParts.push(`Linked repositories: ${repoLinks.length}`)
+          }
+        }
+      }
+      break
+    }
+
+    case 'projects': {
+      contextParts.push('Viewing the projects list')
+      break
+    }
+
+    case 'repository': {
+      if (context.repositoryId) {
+        const repo = db.select().from(repositories).where(eq(repositories.id, context.repositoryId)).get()
+        if (repo) {
+          contextParts.push(`Viewing repository: "${repo.displayName}"`)
+          contextParts.push(`Path: ${repo.path}`)
+          if (repo.defaultAgent) contextParts.push(`Default agent: ${repo.defaultAgent}`)
+          if (repo.remoteUrl) contextParts.push(`Remote: ${repo.remoteUrl}`)
+        }
+      }
+      break
+    }
+
+    case 'repositories': {
+      contextParts.push('Viewing the repositories list')
+      break
+    }
+
+    case 'app': {
+      if (context.appId) {
+        const app = db.select().from(apps).where(eq(apps.id, context.appId)).get()
+        if (app) {
+          contextParts.push(`Viewing app: "${app.name}"`)
+          contextParts.push(`Status: ${app.status}`)
+          contextParts.push(`Branch: ${app.branch}`)
+          if (app.lastDeployedAt) contextParts.push(`Last deployed: ${app.lastDeployedAt}`)
+        }
+      }
+      break
+    }
+
+    case 'apps': {
+      contextParts.push('Viewing the apps deployment list')
+      break
+    }
+
+    case 'monitoring': {
+      contextParts.push('Viewing the monitoring dashboard')
+      if (context.activeTab) {
+        contextParts.push(`Active tab: ${context.activeTab}`)
+      }
+      break
+    }
+
+    case 'terminals': {
+      contextParts.push('Viewing the persistent terminals page')
+      break
+    }
+
+    case 'jobs':
+    case 'job': {
+      contextParts.push(context.pageType === 'jobs' ? 'Viewing scheduled jobs list' : `Viewing job details`)
+      if (context.jobId) {
+        contextParts.push(`Job ID: ${context.jobId}`)
+      }
+      break
+    }
+
+    case 'settings': {
+      contextParts.push('Viewing the settings page')
+      break
+    }
+  }
+
+  if (contextParts.length > 0) {
+    return `\n\nCurrent Context:\n${contextParts.map((p) => `- ${p}`).join('\n')}`
+  }
+
+  return ''
 }
 
 /**
@@ -386,7 +535,7 @@ export async function* streamMessage(
     })
 
     // Build system prompt: baseline + optional additions
-    // For UI: full knowledge + UI features
+    // For UI: full knowledge + UI features + page context
     // For channels: condensed knowledge + channel-specific additions
     let systemPrompt: string
     if (options.systemPromptAdditions) {
@@ -398,6 +547,11 @@ ${options.systemPromptAdditions}`
     } else {
       // UI mode: full prompt with UI features
       systemPrompt = buildSystemPrompt()
+
+      // Add page context if provided
+      if (options.context) {
+        systemPrompt += buildPageContextString(options.context)
+      }
     }
 
     // Build the full prompt, including editor content if present
