@@ -10,7 +10,7 @@ Fulcrum is your AI-powered command center for shipping software. Built for techn
 
 Run Claude Code across multiple tasks in parallel. Stay connected to your agents via WhatsApp, Email, Discord, Telegram, or Slack. Let your AI assistant monitor messages, filter signal from noise, and send daily briefings—all while you focus on what matters.
 
-Fulcrum doesn't replace your tools—it gives you leverage over them. You configure Claude Code with the integrations you need (Notion, Linear, Asana, whatever). Fulcrum is your window into Claude Code and a literal fulcrum: a small input that moves mountains.
+Fulcrum doesn't replace your tools—it gives you leverage over them. You configure Claude Code with the integrations you need (Notion, Linear, Stripe, whatever). Fulcrum is your window into Claude Code and a literal fulcrum: a small input that moves mountains.
 
 **Six pillars:**
 
