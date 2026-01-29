@@ -52,6 +52,12 @@ export function parseEmailHeaders(
     cc: parseAddresses(getHeader('Cc')),
     subject: envelope?.subject || getHeader('Subject'),
     date: envelope?.date ? new Date(envelope.date) : null,
+    // Headers for automated email detection (RFC 3834 compliance)
+    autoSubmitted: getHeader('Auto-Submitted'),
+    precedence: getHeader('Precedence'),
+    listUnsubscribe: getHeader('List-Unsubscribe'),
+    xAutoResponseSuppress: getHeader('X-Auto-Response-Suppress'),
+    returnPath: getHeader('Return-Path'),
   }
 }
 

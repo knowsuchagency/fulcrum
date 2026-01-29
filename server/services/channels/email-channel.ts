@@ -28,6 +28,7 @@ import { parseEmailHeaders, parseEmailContent } from './email-parser'
 import { checkAuthorization } from './email-auth'
 import { storeEmail, getStoredEmails as getStoredEmailsFromDb } from './email-storage'
 import { sendEmail, sendUnauthorizedResponse } from './email-sender'
+import { isAutomatedEmail } from './email-types'
 
 export class EmailChannel implements MessagingChannel {
   readonly type = 'email' as const
@@ -217,22 +218,34 @@ export class EmailChannel implements MessagingChannel {
           )
 
           if (!authResult.authorized) {
-            log.messaging.info('Email rejected - not authorized', {
-              connectionId: this.connectionId,
-              from: headers.from,
-              subject: headers.subject,
-              reason: authResult.reason,
-            })
+            // Check if this is an automated email before sending a response
+            const automatedCheck = isAutomatedEmail(headers)
 
-            // Send canned response to unauthorized sender
-            if (this.transporter) {
-              await sendUnauthorizedResponse(
-                this.transporter,
-                this.connectionId,
-                this.getFromAddress(),
-                headers,
-                this.credentials?.bcc
-              )
+            if (automatedCheck.isAutomated) {
+              log.messaging.info('Email skipped - automated sender', {
+                connectionId: this.connectionId,
+                from: headers.from,
+                subject: headers.subject,
+                reason: automatedCheck.reason,
+              })
+            } else {
+              log.messaging.info('Email rejected - not authorized', {
+                connectionId: this.connectionId,
+                from: headers.from,
+                subject: headers.subject,
+                reason: authResult.reason,
+              })
+
+              // Send canned response to unauthorized human sender
+              if (this.transporter) {
+                await sendUnauthorizedResponse(
+                  this.transporter,
+                  this.connectionId,
+                  this.getFromAddress(),
+                  headers,
+                  this.credentials?.bcc
+                )
+              }
             }
 
             // Mark as read to avoid reprocessing
