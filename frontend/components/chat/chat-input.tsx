@@ -221,16 +221,16 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
           {isLoading && onCancel ? (
             <button
               onClick={onCancel}
-              className="group relative p-3 border-none rounded-lg cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="group relative p-3 border-none rounded-lg cursor-pointer transition-all duration-300 shadow-lg hover:scale-105 hover:shadow-xl active:scale-95 transform bg-accent text-accent-foreground hover:bg-accent/90"
               style={{
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--destructive) 30%, transparent)',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 0 0 color-mix(in oklch, var(--accent) 30%, transparent)',
               }}
               title="Stop generating"
             >
               <Square className="w-5 h-5 fill-current" />
 
               {/* Animated background glow */}
-              <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 bg-destructive" />
+              <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-50 transition-opacity duration-300 blur-lg transform scale-110 bg-accent" />
 
               {/* Ripple effect on click */}
               <div className="absolute inset-0 rounded-lg overflow-hidden">
