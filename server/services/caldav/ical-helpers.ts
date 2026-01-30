@@ -28,8 +28,14 @@ export function parseIcalEvent(ical: string): ParsedEvent {
   const lines = unfoldIcal(ical)
   const result: ParsedEvent = { allDay: false }
   const attendees: string[] = []
+  let inVevent = false
 
   for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') { inVevent = true; continue }
+    if (line === 'END:VEVENT') { inVevent = false; continue }
+    // Only parse properties within VEVENT — ignore VTIMEZONE, VALARM, etc.
+    if (!inVevent) continue
+
     const [key, ...valueParts] = line.split(':')
     const value = valueParts.join(':')
 
@@ -50,14 +56,14 @@ export function parseIcalEvent(ical: string): ParsedEvent {
       case 'LOCATION':
         result.location = unescapeIcal(value)
         break
-      case 'DTSTART':
-        result.dtstart = value
-        if (params.includes('VALUE=DATE') && !params.includes('VALUE=DATE-TIME')) {
-          result.allDay = true
-        }
+      case 'DTSTART': {
+        const isAllDay = params.includes('VALUE=DATE') && !params.includes('VALUE=DATE-TIME')
+        result.allDay = isAllDay
+        result.dtstart = normalizeIcalDate(value, isAllDay)
         break
+      }
       case 'DTEND':
-        result.dtend = value
+        result.dtend = normalizeIcalDate(value, result.allDay)
         break
       case 'DURATION':
         result.duration = value
@@ -109,14 +115,14 @@ export function generateIcalEvent(event: {
   ]
 
   if (event.allDay) {
-    lines.push(`DTSTART;VALUE=DATE:${event.dtstart}`)
+    lines.push(`DTSTART;VALUE=DATE:${toIcalDate(event.dtstart, true)}`)
     if (event.dtend) {
-      lines.push(`DTEND;VALUE=DATE:${event.dtend}`)
+      lines.push(`DTEND;VALUE=DATE:${toIcalDate(event.dtend, true)}`)
     }
   } else {
-    lines.push(`DTSTART:${event.dtstart}`)
+    lines.push(`DTSTART:${toIcalDate(event.dtstart)}`)
     if (event.dtend) {
-      lines.push(`DTEND:${event.dtend}`)
+      lines.push(`DTEND:${toIcalDate(event.dtend)}`)
     }
   }
 
@@ -223,8 +229,8 @@ function propertyToIcalLine(key: string, value: unknown): string | null {
     case 'summary': return `SUMMARY:${escapeIcal(String(value))}`
     case 'description': return `DESCRIPTION:${escapeIcal(String(value))}`
     case 'location': return `LOCATION:${escapeIcal(String(value))}`
-    case 'dtstart': return `DTSTART:${value}`
-    case 'dtend': return `DTEND:${value}`
+    case 'dtstart': return `DTSTART:${toIcalDate(String(value))}`
+    case 'dtend': return `DTEND:${toIcalDate(String(value))}`
     case 'duration': return `DURATION:${value}`
     case 'recurrenceRule': return `RRULE:${value}`
     case 'status': return `STATUS:${value}`
@@ -268,4 +274,50 @@ function unescapeIcal(text: string): string {
 
 function formatIcalDate(date: Date): string {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+}
+
+/**
+ * Convert ISO date to iCal format for writing to CalDAV servers.
+ * - "2026-01-30" → "20260130" (all-day)
+ * - "2026-01-30T09:00:00Z" → "20260130T090000Z"
+ * - Already iCal format: returned as-is
+ */
+function toIcalDate(value: string, allDay?: boolean): string {
+  // Already in iCal format (no dashes)
+  if (!value.includes('-')) return value
+
+  if (allDay) {
+    // YYYY-MM-DD → YYYYMMDD
+    return value.replace(/-/g, '').slice(0, 8)
+  }
+
+  // ISO → iCal: remove dashes and colons, strip milliseconds
+  return value.replace(/-/g, '').replace(/:/g, '').replace(/\.\d{3}/, '')
+}
+
+/**
+ * Convert iCal date formats to ISO 8601.
+ * - All-day: "20260130" → "2026-01-30"
+ * - Date-time: "20260130T090000Z" → "2026-01-30T09:00:00Z"
+ * - With timezone: "20260130T090000" → "2026-01-30T09:00:00" (no Z, local time)
+ * - Already ISO: returned as-is
+ */
+function normalizeIcalDate(value: string, allDay?: boolean): string {
+  // Already looks like ISO (contains dashes)
+  if (value.includes('-')) return value
+
+  if (allDay && /^\d{8}$/.test(value)) {
+    // YYYYMMDD → YYYY-MM-DD
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`
+  }
+
+  // YYYYMMDDTHHmmssZ or YYYYMMDDTHHmmss
+  const match = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/)
+  if (match) {
+    const [, y, m, d, H, M, S, z] = match
+    return `${y}-${m}-${d}T${H}:${M}:${S}${z}`
+  }
+
+  // Fallback: return as-is
+  return value
 }

@@ -537,9 +537,6 @@ async function syncAllCalendars(): Promise<void> {
       const ctag = remoteCal.ctag ?? remoteCal.syncToken ?? null
 
       if (existing) {
-        // Check if calendar has changed (via ctag)
-        const changed = !ctag || ctag !== existing.ctag
-
         db.update(caldavCalendars)
           .set({
             displayName: remoteCal.displayName ?? existing.displayName,
@@ -551,7 +548,7 @@ async function syncAllCalendars(): Promise<void> {
           .where(eq(caldavCalendars.id, existing.id))
           .run()
 
-        if (changed && existing.enabled) {
+        if (existing.enabled) {
           await syncCalendarEvents(existing.id, remoteCal)
         }
       } else {
@@ -625,29 +622,28 @@ async function syncCalendarEvents(
       .get()
 
     if (existing) {
-      // Update if etag changed
-      if (obj.etag !== existing.etag) {
-        db.update(caldavEvents)
-          .set({
-            uid: parsed.uid ?? existing.uid,
-            etag: obj.etag ?? existing.etag,
-            summary: parsed.summary ?? existing.summary,
-            description: parsed.description ?? existing.description,
-            location: parsed.location ?? existing.location,
-            dtstart: parsed.dtstart ?? existing.dtstart,
-            dtend: parsed.dtend ?? existing.dtend,
-            duration: parsed.duration ?? existing.duration,
-            allDay: parsed.allDay,
-            recurrenceRule: parsed.recurrenceRule ?? existing.recurrenceRule,
-            status: parsed.status ?? existing.status,
-            organizer: parsed.organizer ?? existing.organizer,
-            attendees: parsed.attendees ?? existing.attendees,
-            rawIcal: obj.data,
-            updatedAt: now,
-          })
-          .where(eq(caldavEvents.id, existing.id))
-          .run()
-      }
+      // Always re-parse from raw iCal data to pick up parser improvements.
+      // Use etag to detect content changes on the server side.
+      db.update(caldavEvents)
+        .set({
+          uid: parsed.uid ?? existing.uid,
+          etag: obj.etag ?? existing.etag,
+          summary: parsed.summary ?? existing.summary,
+          description: parsed.description ?? existing.description,
+          location: parsed.location ?? existing.location,
+          dtstart: parsed.dtstart ?? existing.dtstart,
+          dtend: parsed.dtend ?? existing.dtend,
+          duration: parsed.duration ?? existing.duration,
+          allDay: parsed.allDay,
+          recurrenceRule: parsed.recurrenceRule ?? null,
+          status: parsed.status ?? existing.status,
+          organizer: parsed.organizer ?? existing.organizer,
+          attendees: parsed.attendees ?? existing.attendees,
+          rawIcal: obj.data,
+          updatedAt: now,
+        })
+        .where(eq(caldavEvents.id, existing.id))
+        .run()
     } else {
       // New event
       db.insert(caldavEvents)
