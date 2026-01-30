@@ -21,7 +21,7 @@ import {
   useDisableCaldav,
   useSyncCaldav,
 } from '@/hooks/use-caldav'
-import { useConfig, useUpdateConfig } from '@/hooks/use-config'
+import { useConfig, useUpdateConfig, usePort } from '@/hooks/use-config'
 
 interface CaldavSetupProps {
   isLoading?: boolean
@@ -38,6 +38,7 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
   const disable = useDisableCaldav()
   const sync = useSyncCaldav()
   const updateConfig = useUpdateConfig()
+  const backendPort = usePort()
 
   // Read current settings to detect if credentials exist
   const { data: enabledConfig } = useConfig('caldav.enabled')
@@ -277,8 +278,8 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
         <div className="ml-4 sm:ml-44">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
-              <TabsTrigger value="basic">{t('caldav.tabBasic')}</TabsTrigger>
               <TabsTrigger value="google">{t('caldav.tabGoogle')}</TabsTrigger>
+              <TabsTrigger value="basic">{t('caldav.tabBasic')}</TabsTrigger>
             </TabsList>
 
             {/* Basic CalDAV tab */}
@@ -434,7 +435,7 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
                     <li>{t('caldav.googleStep4')}</li>
                     <li>{t('caldav.googleStep5')}</li>
                     <li className="pl-4 font-mono text-[11px] bg-muted/50 rounded px-2 py-1 w-fit">
-                      {t('caldav.googleCallbackNote', { callbackUrl: `${window.location.origin}/api/caldav/oauth/callback` })}
+                      {t('caldav.googleCallbackNote', { callbackUrl: `http://${window.location.hostname}:${backendPort.data}/api/caldav/oauth/callback` })}
                     </li>
                     <li>{t('caldav.googleStep6')}</li>
                   </ol>
