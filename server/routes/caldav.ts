@@ -136,8 +136,10 @@ caldavRoutes.get('/oauth/authorize', (c) => {
     return c.json({ error: 'Google Client ID not configured. Call /configure-google first.' }, 400)
   }
 
-  const port = settings.server.port
-  const redirectUri = `http://localhost:${port}/api/caldav/oauth/callback`
+  // Derive redirect URI from the request's Host header so it works in both
+  // production (port from settings) and dev mode (arbitrary PORT env var).
+  const host = c.req.header('host') ?? `localhost:${settings.server.port}`
+  const redirectUri = `http://${host}/api/caldav/oauth/callback`
 
   const params = new URLSearchParams({
     client_id: googleClientId,
@@ -167,8 +169,9 @@ caldavRoutes.get('/oauth/callback', async (c) => {
 
   const settings = getSettings()
   const { googleClientId, googleClientSecret } = settings.caldav
-  const port = settings.server.port
-  const redirectUri = `http://localhost:${port}/api/caldav/oauth/callback`
+  // Must match the redirect_uri used in the authorize request
+  const host = c.req.header('host') ?? `localhost:${settings.server.port}`
+  const redirectUri = `http://${host}/api/caldav/oauth/callback`
 
   if (!googleClientId || !googleClientSecret) {
     return c.html('<html><body><h2>Google OAuth not configured</h2><script>setTimeout(()=>window.close(),3000)</script></body></html>', 400)
