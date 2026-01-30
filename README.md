@@ -153,6 +153,17 @@ Create documents with live preview. Generate charts and visualizations. The assi
 
 ![AI Assistant Editor](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/assistant-editor-dark.png)
 
+### Calendar Integration
+
+Connect your calendars via CalDAV so the AI assistant knows your schedule. Google Calendar is supported out of the box with OAuth2.
+
+- **Google Calendar** — OAuth2 flow, no password needed
+- **Any CalDAV server** — Nextcloud, Radicale, Baikal, iCloud
+- **Automatic sync** — Calendars sync on a configurable interval
+- **Assistant awareness** — The AI assistant uses your calendar context for planning and scheduling
+
+Enable in Settings → Calendar Integration.
+
 ### Messaging Integrations
 
 Chat with the AI assistant from anywhere via your favorite messaging platform.

@@ -24,7 +24,8 @@ Fulcrum isn't just a task manager or an AI wrapper. It's the hub where you organ
 - Spin up AI agents to work on tasks (in isolated git worktrees for code work)
 - Deploy Docker apps with automatic tunnels for public access
 - Execute any command on the system - scheduling, automation, integrations
-- Get notified via Slack, Discord, Pushover, or desktop alerts`
+- Get notified via Slack, Discord, Pushover, or desktop alerts
+- Calendar integration via CalDAV (Google Calendar, Nextcloud, etc.) for schedule awareness`
 }
 
 /**
@@ -64,7 +65,14 @@ export function getDataModel(): string {
 **Channel Messages** - Unified message storage
 - Captures all incoming/outgoing messages across channels
 - Channels: WhatsApp, Discord, Telegram, Slack, Email
-- Used for message history, monitoring, and audit trails`
+- Used for message history, monitoring, and audit trails
+
+**Calendars & Events** - CalDAV calendar sync
+- Synced from CalDAV servers (Google Calendar, Nextcloud, Radicale, etc.)
+- Calendars with display name, color, sync state
+- Events with summary, start/end times, location, all-day flag
+- Timezone-aware storage and display
+- Used to give the assistant schedule awareness for planning`
 }
 
 /**
@@ -212,6 +220,7 @@ Fulcrum is a local orchestration tool. Some capabilities require external servic
 
 | User Need | What Fulcrum Does | What User Provides |
 |-----------|-------------------|--------------------|
+| Calendar sync | Built-in CalDAV integration | Google OAuth credentials (Client ID/Secret) or CalDAV server credentials |
 | Chat via email | Built-in Email messaging channel | SMTP/IMAP credentials (or Gmail app password) |
 | Email automation | Task worktree + scheduling | Same SMTP/IMAP credentials |
 | Cloud deployment | Docker Compose + execute_command | Cloud provider credentials (AWS, GCP, Azure) |
@@ -264,6 +273,11 @@ export function getProblemSolvingPatterns(): string {
 3. Create tasks for milestones/features
 4. Set up dependencies between tasks
 5. Track progress as tasks move through statuses
+
+**"What's on my calendar?":**
+1. Calendar events are synced from CalDAV and available in assistant context
+2. Reference upcoming events when planning tasks or scheduling work
+3. Warn about conflicts when suggesting meeting times or deadlines
 
 ### Development Workflows
 
@@ -345,6 +359,15 @@ You can read and modify all Fulcrum settings using the settings MCP tools. Setti
 - \`assistant.morningRitual.prompt\` - Custom prompt for morning ritual
 - \`assistant.eveningRitual.time\` - Time for evening ritual (24h format, e.g., "18:00")
 - \`assistant.eveningRitual.prompt\` - Custom prompt for evening ritual
+
+**caldav** - Calendar integration
+- \`caldav.enabled\` - Enable/disable CalDAV sync
+- \`caldav.serverUrl\` - CalDAV server URL (default: Google Calendar endpoint)
+- \`caldav.authType\` - Auth method: 'google-oauth' or 'basic'
+- \`caldav.username\` / \`caldav.password\` - Basic auth credentials
+- \`caldav.googleClientId\` / \`caldav.googleClientSecret\` - Google OAuth2 credentials [SENSITIVE]
+- \`caldav.oauthTokens\` - OAuth tokens (managed automatically)
+- \`caldav.syncIntervalMinutes\` - Sync interval (default: 15)
 
 **channels** - Messaging channel configuration
 - \`channels.email.enabled\` - Enable/disable email channel
@@ -455,6 +478,7 @@ Fulcrum is your digital concierge - a personal command center where you track ev
 - Scheduling and automation via system commands
 - Deploying apps with Docker Compose
 - Sending notifications to Slack, Discord, Pushover
+- Calendar awareness via CalDAV sync (Google Calendar, etc.)
 
 **Key tools available:**
 - list_tasks, create_task, update_task, move_task

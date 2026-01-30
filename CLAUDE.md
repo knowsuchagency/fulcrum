@@ -39,6 +39,7 @@ Fulcrum is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating 
 - Tasks/worktrees → `server/routes/tasks.ts`, `server/services/task-service.ts`
 - Messaging channels → `server/services/channels/`, `server/routes/messaging.ts`
 - App deployment → `server/routes/apps.ts`, `server/services/` (docker/cloudflare/traefik)
+- Calendar integration → `server/services/caldav/`, `server/routes/caldav.ts`, `frontend/components/caldav/`
 - Settings → `server/lib/settings/`, `frontend/routes/settings/`
 
 **UI components:**
@@ -114,6 +115,7 @@ fulcrum notify <title> <message>  # Send notification
 - **bun-pty** for PTY management
 
 ### Key Services (`server/services/`)
+- `caldav/` - CalDAV calendar sync (Google Calendar OAuth2, generic CalDAV)
 - `channels/` - Chat with AI via external channels (WhatsApp, Discord, Telegram, Slack, Email)
 - `notification-service.ts` - Multi-channel notifications (Slack, Discord, Pushover, desktop, sound)
 - `pr-monitor.ts` - GitHub PR status polling, auto-close tasks on merge
@@ -131,6 +133,7 @@ fulcrum notify <title> <message>  # Send notification
 - `/api/deployments/*` - Deployment history
 - `/api/repositories/*` - Repository management
 - `/api/messaging/*` - Messaging channel management (WhatsApp, Discord, Telegram, Slack)
+- `/api/caldav/*` - CalDAV calendar integration (config, sync, OAuth)
 - `/ws/terminal` - Terminal I/O multiplexing
 
 ### Frontend Pages
@@ -162,6 +165,8 @@ fulcrum notify <title> <message>  # Send notification
 | `messagingConnections` | Messaging channel runtime state (connection status, display names) |
 | `messagingSessionMappings` | Maps channel users to AI chat sessions |
 | `channelMessages` | Unified storage for all channel messages (WhatsApp, Discord, Telegram, Slack, Email) |
+| `caldavCalendars` | Synced CalDAV calendars (URL, display name, color, sync state) |
+| `caldavEvents` | Calendar events (summary, start/end, location, all-day flag) |
 
 Task statuses: `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 
@@ -196,6 +201,7 @@ Settings stored in `~/.fulcrum/settings.json`. See `server/lib/settings/types.ts
 - `tasks` - Task creation defaults
 - `appearance` - UI theme and language
 - `assistant` - Built-in assistant settings
+- `caldav` - CalDAV calendar integration (server URL, auth type, OAuth tokens, sync interval)
 
 **Separate config files:**
 - `notifications.json` - Multi-channel notification settings
