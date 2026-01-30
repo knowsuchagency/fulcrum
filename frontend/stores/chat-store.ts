@@ -385,6 +385,8 @@ export const ChatStore = types
               context,
               provider: self.provider,
               images: imageData,
+              // Sticky widget uses compact mode (no canvas/editor/chart instructions)
+              ...(self.provider === 'claude' && { uiMode: 'compact' as const }),
             }),
             signal: self.abortController?.signal,
           })

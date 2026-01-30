@@ -331,6 +331,23 @@ This will automatically update the editor. Always provide the COMPLETE document,
 ${uiFeatures}`
 }
 
+/**
+ * Build system prompt for compact UI (sticky widget) — baseline knowledge, no canvas/editor/chart
+ */
+function buildCompactPrompt(): string {
+  const baseline = buildBaselinePrompt(false)
+
+  const compactInstructions = `## Response Format
+
+You are responding in a compact chat widget. Format all content inline as markdown.
+Use tables, lists, and headers directly in your response.
+Keep responses concise — the chat area is small.`
+
+  return `${baseline}
+
+${compactInstructions}`
+}
+
 export interface StreamMessageOptions {
   modelId?: ModelId
   editorContent?: string
@@ -341,6 +358,8 @@ export interface StreamMessageOptions {
   images?: ImageData[]
   /** Page context for UI assistant (used when no systemPromptAdditions) */
   context?: PageContext
+  /** UI mode: 'full' includes canvas/editor/chart instructions, 'compact' uses inline markdown only */
+  uiMode?: 'full' | 'compact'
 }
 
 /**
@@ -545,8 +564,8 @@ export async function* streamMessage(
 
 ${options.systemPromptAdditions}`
     } else {
-      // UI mode: full prompt with UI features
-      systemPrompt = buildSystemPrompt()
+      // UI mode: full prompt with UI features, or compact for sticky widget
+      systemPrompt = options.uiMode === 'compact' ? buildCompactPrompt() : buildSystemPrompt()
 
       // Add page context if provided
       if (options.context) {

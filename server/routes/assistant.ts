@@ -114,12 +114,13 @@ assistantRoutes.delete('/sessions/:id', async (c) => {
  */
 assistantRoutes.post('/sessions/:id/messages', async (c) => {
   const sessionId = c.req.param('id')
-  const { message, model, editorContent, images, context } = await c.req.json<{
+  const { message, model, editorContent, images, context, uiMode } = await c.req.json<{
     message: string
     model?: 'opus' | 'sonnet' | 'haiku'
     editorContent?: string
     images?: ImageData[]
     context?: PageContext
+    uiMode?: 'full' | 'compact'
   }>()
 
   // Allow empty message if images are present
@@ -138,6 +139,7 @@ assistantRoutes.post('/sessions/:id/messages', async (c) => {
       editorContent,
       images,
       context,
+      uiMode,
     })) {
       await stream.writeSSE({
         event: event.type,
