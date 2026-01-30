@@ -226,7 +226,8 @@ export function getMessages(sessionId: string): ChatMessage[] {
  * Build the baseline system prompt that's always present.
  * @param condensed - Use condensed knowledge (for channels) vs full knowledge (for UI)
  */
-function buildBaselinePrompt(condensed = false): string {
+/** @internal Exported for testing */
+export function buildBaselinePrompt(condensed = false): string {
   const settings = getSettings()
   const instanceContext = getInstanceContext(settings.assistant.documentsDir)
   const knowledge = condensed ? getCondensedKnowledge() : getFullKnowledge()
@@ -251,7 +252,8 @@ ${customInstructions}`
 /**
  * Build system prompt for UI assistant (baseline + UI features)
  */
-function buildSystemPrompt(): string {
+/** @internal Exported for testing */
+export function buildSystemPrompt(): string {
   const baseline = buildBaselinePrompt(false)
 
   const uiFeatures = `## UI Features
@@ -334,7 +336,8 @@ ${uiFeatures}`
 /**
  * Build system prompt for compact UI (sticky widget) — baseline knowledge, no canvas/editor/chart
  */
-function buildCompactPrompt(): string {
+/** @internal Exported for testing */
+export function buildCompactPrompt(): string {
   const baseline = buildBaselinePrompt(false)
 
   const compactInstructions = `## Response Format
