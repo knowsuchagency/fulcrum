@@ -3,7 +3,13 @@
  *
  * Extracts event properties from raw iCalendar text and generates
  * iCalendar strings for creating/updating events.
+ *
+ * All parsed dates are normalized to UTC (ISO 8601 with Z suffix for timed
+ * events, YYYY-MM-DD for all-day). Timezone conversion to/from the user's
+ * local timezone happens at the API boundary (see timezone.ts).
  */
+
+import { icalDateToUTC } from './timezone'
 
 export interface ParsedEvent {
   uid?: string
@@ -57,14 +63,16 @@ export function parseIcalEvent(ical: string): ParsedEvent {
         result.location = unescapeIcal(value)
         break
       case 'DTSTART': {
-        const isAllDay = params.includes('VALUE=DATE') && !params.includes('VALUE=DATE-TIME')
-        result.allDay = isAllDay
-        result.dtstart = normalizeIcalDate(value, isAllDay)
+        const parsed = icalDateToUTC(value, params)
+        result.allDay = parsed.allDay
+        result.dtstart = parsed.iso
         break
       }
-      case 'DTEND':
-        result.dtend = normalizeIcalDate(value, result.allDay)
+      case 'DTEND': {
+        const parsed = icalDateToUTC(value, params)
+        result.dtend = parsed.iso
         break
+      }
       case 'DURATION':
         result.duration = value
         break
@@ -295,29 +303,3 @@ function toIcalDate(value: string, allDay?: boolean): string {
   return value.replace(/-/g, '').replace(/:/g, '').replace(/\.\d{3}/, '')
 }
 
-/**
- * Convert iCal date formats to ISO 8601.
- * - All-day: "20260130" → "2026-01-30"
- * - Date-time: "20260130T090000Z" → "2026-01-30T09:00:00Z"
- * - With timezone: "20260130T090000" → "2026-01-30T09:00:00" (no Z, local time)
- * - Already ISO: returned as-is
- */
-function normalizeIcalDate(value: string, allDay?: boolean): string {
-  // Already looks like ISO (contains dashes)
-  if (value.includes('-')) return value
-
-  if (allDay && /^\d{8}$/.test(value)) {
-    // YYYYMMDD → YYYY-MM-DD
-    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`
-  }
-
-  // YYYYMMDDTHHmmssZ or YYYYMMDDTHHmmss
-  const match = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/)
-  if (match) {
-    const [, y, m, d, H, M, S, z] = match
-    return `${y}-${m}-${d}T${H}:${M}:${S}${z}`
-  }
-
-  // Fallback: return as-is
-  return value
-}

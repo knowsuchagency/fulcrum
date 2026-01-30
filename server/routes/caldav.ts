@@ -24,6 +24,8 @@ import {
   deleteEvent,
 } from '../services/caldav'
 import { getSettings } from '../lib/settings'
+import { getUserTimezone, toUserTimezone, fromUserTimezone } from '../services/caldav/timezone'
+import type { CaldavEvent } from '../db'
 
 // Google OAuth constants
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -31,6 +33,16 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_CALDAV_SCOPE = 'https://www.googleapis.com/auth/calendar'
 
 const caldavRoutes = new Hono()
+
+/** Convert event dates from UTC (DB) to user's configured timezone. */
+function localizeEvent(event: CaldavEvent, tz: string): CaldavEvent & { timezone: string } {
+  return {
+    ...event,
+    dtstart: event.dtstart ? toUserTimezone(event.dtstart, tz) : null,
+    dtend: event.dtend ? toUserTimezone(event.dtend, tz) : null,
+    timezone: tz,
+  }
+}
 
 // GET /api/caldav/status
 caldavRoutes.get('/status', (c) => {
@@ -237,9 +249,14 @@ caldavRoutes.get('/events', (c) => {
   const to = c.req.query('to')
   const limitStr = c.req.query('limit')
   const limit = limitStr ? parseInt(limitStr, 10) : undefined
+  const tz = getUserTimezone()
 
-  const events = listEvents({ calendarId: calendarId ?? undefined, from: from ?? undefined, to: to ?? undefined, limit })
-  return c.json(events)
+  // Convert user-local from/to to UTC for DB query
+  const utcFrom = from ? fromUserTimezone(from, tz) : undefined
+  const utcTo = to ? fromUserTimezone(to, tz) : undefined
+
+  const events = listEvents({ calendarId: calendarId ?? undefined, from: utcFrom, to: utcTo, limit })
+  return c.json(events.map(e => localizeEvent(e, tz)))
 })
 
 // GET /api/caldav/events/:id
@@ -248,7 +265,7 @@ caldavRoutes.get('/events/:id', (c) => {
   if (!event) {
     return c.json({ error: 'Event not found' }, 404)
   }
-  return c.json(event)
+  return c.json(localizeEvent(event, getUserTimezone()))
 })
 
 // POST /api/caldav/events
@@ -270,9 +287,17 @@ caldavRoutes.post('/events', async (c) => {
     return c.json({ error: 'calendarId, summary, and dtstart are required' }, 400)
   }
 
+  // Convert user-local dates to UTC for storage
+  const tz = getUserTimezone()
+  const utcBody = {
+    ...body,
+    dtstart: fromUserTimezone(body.dtstart, tz),
+    dtend: body.dtend ? fromUserTimezone(body.dtend, tz) : undefined,
+  }
+
   try {
-    const event = await createEvent(body)
-    return c.json(event, 201)
+    const event = await createEvent(utcBody)
+    return c.json(localizeEvent(event, tz), 201)
   } catch (err) {
     return c.json(
       { error: err instanceof Error ? err.message : 'Failed to create event' },
@@ -296,9 +321,17 @@ caldavRoutes.patch('/events/:id', async (c) => {
     status?: string
   }>()
 
+  // Convert user-local dates to UTC for storage
+  const tz = getUserTimezone()
+  const utcBody = {
+    ...body,
+    dtstart: body.dtstart ? fromUserTimezone(body.dtstart, tz) : undefined,
+    dtend: body.dtend ? fromUserTimezone(body.dtend, tz) : undefined,
+  }
+
   try {
-    const event = await updateEvent(id, body)
-    return c.json(event)
+    const event = await updateEvent(id, utcBody)
+    return c.json(localizeEvent(event, tz))
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to update event'
     if (message.includes('not found')) {
