@@ -420,6 +420,44 @@ export const sweepRuns = sqliteTable('sweep_runs', {
   status: text('status').notNull(), // 'running' | 'completed' | 'failed'
 })
 
+// CalDAV calendars - cached calendar metadata from CalDAV server
+export const caldavCalendars = sqliteTable('caldav_calendars', {
+  id: text('id').primaryKey(),
+  remoteUrl: text('remote_url').notNull().unique(),
+  displayName: text('display_name'),
+  color: text('color'),
+  ctag: text('ctag'),
+  syncToken: text('sync_token'),
+  timezone: text('timezone'),
+  enabled: integer('enabled', { mode: 'boolean' }).default(true),
+  lastSyncedAt: text('last_synced_at'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
+// CalDAV events - cached event data from CalDAV server
+export const caldavEvents = sqliteTable('caldav_events', {
+  id: text('id').primaryKey(),
+  calendarId: text('calendar_id').notNull(), // FK to caldavCalendars
+  remoteUrl: text('remote_url').notNull().unique(),
+  uid: text('uid'),
+  etag: text('etag'),
+  summary: text('summary'),
+  description: text('description'),
+  location: text('location'),
+  dtstart: text('dtstart'),
+  dtend: text('dtend'),
+  duration: text('duration'),
+  allDay: integer('all_day', { mode: 'boolean' }).default(false),
+  recurrenceRule: text('recurrence_rule'),
+  status: text('status'),
+  organizer: text('organizer'),
+  attendees: text('attendees', { mode: 'json' }).$type<string[]>(),
+  rawIcal: text('raw_ical'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 // Type inference helpers
 export type Repository = typeof repositories.$inferSelect
 export type NewRepository = typeof repositories.$inferInsert
@@ -482,3 +520,7 @@ export type ActionableEvent = typeof actionableEvents.$inferSelect
 export type NewActionableEvent = typeof actionableEvents.$inferInsert
 export type SweepRun = typeof sweepRuns.$inferSelect
 export type NewSweepRun = typeof sweepRuns.$inferInsert
+export type CaldavCalendar = typeof caldavCalendars.$inferSelect
+export type NewCaldavCalendar = typeof caldavCalendars.$inferInsert
+export type CaldavEvent = typeof caldavEvents.$inferSelect
+export type NewCaldavEvent = typeof caldavEvents.$inferInsert

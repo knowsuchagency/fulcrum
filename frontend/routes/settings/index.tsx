@@ -80,6 +80,7 @@ import { DiscordSetup } from '@/components/messaging/discord-setup'
 import { TelegramSetup } from '@/components/messaging/telegram-setup'
 import { SlackSetup } from '@/components/messaging/slack-setup'
 import { EmailSetup } from '@/components/messaging/email-setup'
+import { CaldavSetup } from '@/components/caldav/caldav-setup'
 import {
   useDeploymentSettings,
   useUpdateDeploymentSettings,
@@ -2136,6 +2137,11 @@ function SettingsPage() {
                   <SlackSetup isLoading={isLoading} />
                   <EmailSetup isLoading={isLoading} />
                 </div>
+              </SettingsSection>
+
+              {/* CalDAV Calendar */}
+              <SettingsSection title={t('sections.caldav')}>
+                <CaldavSetup isLoading={isLoading} />
               </SettingsSection>
 
               {/* Appearance */}

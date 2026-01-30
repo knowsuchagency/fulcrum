@@ -33,6 +33,7 @@ import chatRoutes from './routes/chat'
 import assistantRoutes from './routes/assistant'
 import messagingRoutes from './routes/messaging'
 import backupRoutes from './routes/backup'
+import caldavRoutes from './routes/caldav'
 import { writeEntry } from './lib/logger'
 import type { LogEntry } from '../shared/logger'
 
@@ -100,6 +101,9 @@ export function createApp() {
 
   // Backup and restore
   app.route('/api/backup', backupRoutes)
+
+  // CalDAV calendar integration
+  app.route('/api/caldav', caldavRoutes)
 
   // Logging endpoint for frontend to send batched logs to server
   app.post('/api/logs', async (c) => {

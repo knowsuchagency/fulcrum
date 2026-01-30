@@ -13,7 +13,8 @@
     "notifications": "Notifications",
     "messaging": "Messaging",
     "appearance": "Appearance",
-    "developer": "Developer"
+    "developer": "Developer",
+    "caldav": "CalDAV Calendar"
   },
   "version": {
     "upToDate": "Up to date",
@@ -242,6 +243,38 @@
     "restartDescription": "Rebuild and restart the Fulcrum server. If the build fails, the server will continue running.",
     "restartFailed": "Restart failed",
     "checkLogs": "Build may have failed. Check journalctl --user -u fulcrum for details."
+  },
+  "caldav": {
+    "label": "CalDAV",
+    "statusConnected": "Connected ({{count}} calendars)",
+    "statusSyncing": "Syncing...",
+    "statusError": "Connection error",
+    "statusDisconnected": "Disconnected",
+    "serverUrl": "Server URL",
+    "serverUrlPlaceholder": "https://cloud.example.com/remote.php/dav",
+    "username": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password or app-specific password",
+    "syncInterval": "Sync interval (minutes)",
+    "testButton": "Test Connection",
+    "connectButton": "Connect",
+    "cancelButton": "Cancel",
+    "syncButton": "Sync Now",
+    "disconnectButton": "Disconnect",
+    "testSuccess": "Connection successful! Found {{count}} calendars.",
+    "testFailed": "Connection failed",
+    "configured": "CalDAV configured and connected",
+    "configureFailed": "Failed to configure CalDAV",
+    "toggleFailed": "Failed to toggle CalDAV",
+    "syncComplete": "Calendars synced",
+    "syncFailed": "Sync failed",
+    "disconnected": "CalDAV disconnected",
+    "disconnectFailed": "Failed to disconnect",
+    "fillRequired": "Server URL, username, and password are required",
+    "setupInstructions": "Setup instructions",
+    "helpIntro": "Enter your CalDAV server URL and credentials. Common server URLs:",
+    "helpNote": "Google Calendar requires OAuth2 which is not supported. Use standard CalDAV servers or app-specific passwords."
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",

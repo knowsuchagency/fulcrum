@@ -151,6 +151,43 @@ export interface StoredEmail {
   createdAt: string
 }
 
+// CalDAV types
+export interface CaldavCalendar {
+  id: string
+  remoteUrl: string
+  displayName: string | null
+  color: string | null
+  ctag: string | null
+  syncToken: string | null
+  timezone: string | null
+  enabled: boolean | null
+  lastSyncedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CaldavEvent {
+  id: string
+  calendarId: string
+  remoteUrl: string
+  uid: string | null
+  etag: string | null
+  summary: string | null
+  description: string | null
+  location: string | null
+  dtstart: string | null
+  dtend: string | null
+  duration: string | null
+  allDay: boolean | null
+  recurrenceRule: string | null
+  status: string | null
+  organizer: string | null
+  attendees: string[] | null
+  rawIcal: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DeleteProjectOptions {
   deleteDirectory?: boolean
   deleteApp?: boolean
@@ -1105,6 +1142,84 @@ export class FulcrumClient {
     return this.fetch('/api/messaging/send', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  }
+
+  // CalDAV
+  async getCaldavStatus(): Promise<{
+    connected: boolean
+    syncing: boolean
+    lastError: string | null
+    calendarCount: number
+  }> {
+    return this.fetch('/api/caldav/status')
+  }
+
+  async listCalendars(): Promise<CaldavCalendar[]> {
+    return this.fetch('/api/caldav/calendars')
+  }
+
+  async syncCalendars(): Promise<{ success: boolean }> {
+    return this.fetch('/api/caldav/sync', { method: 'POST' })
+  }
+
+  async listCalendarEvents(options?: {
+    calendarId?: string
+    from?: string
+    to?: string
+    limit?: number
+  }): Promise<CaldavEvent[]> {
+    const params = new URLSearchParams()
+    if (options?.calendarId) params.set('calendarId', options.calendarId)
+    if (options?.from) params.set('from', options.from)
+    if (options?.to) params.set('to', options.to)
+    if (options?.limit) params.set('limit', String(options.limit))
+    const query = params.toString()
+    return this.fetch(`/api/caldav/events${query ? `?${query}` : ''}`)
+  }
+
+  async getCalendarEvent(id: string): Promise<CaldavEvent> {
+    return this.fetch(`/api/caldav/events/${id}`)
+  }
+
+  async createCalendarEvent(input: {
+    calendarId: string
+    summary: string
+    dtstart: string
+    dtend?: string
+    duration?: string
+    description?: string
+    location?: string
+    allDay?: boolean
+    recurrenceRule?: string
+    status?: string
+  }): Promise<CaldavEvent> {
+    return this.fetch('/api/caldav/events', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  }
+
+  async updateCalendarEvent(id: string, updates: {
+    summary?: string
+    dtstart?: string
+    dtend?: string
+    duration?: string
+    description?: string
+    location?: string
+    allDay?: boolean
+    recurrenceRule?: string
+    status?: string
+  }): Promise<CaldavEvent> {
+    return this.fetch(`/api/caldav/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deleteCalendarEvent(id: string): Promise<{ success: boolean }> {
+    return this.fetch(`/api/caldav/events/${id}`, {
+      method: 'DELETE',
     })
   }
 

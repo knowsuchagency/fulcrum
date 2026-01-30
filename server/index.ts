@@ -13,6 +13,7 @@ import { startMetricsCollector, stopMetricsCollector } from './services/metrics-
 import { startGitWatcher, stopGitWatcher } from './services/git-watcher'
 import { startMessagingChannels, stopMessagingChannels } from './services/channels'
 import { startAssistantScheduler, stopAssistantScheduler } from './services/assistant-scheduler'
+import { startCaldavSync, stopCaldavSync } from './services/caldav'
 import { log } from './lib/logger'
 import { clearSensitiveEnvVars } from './lib/env'
 
@@ -162,6 +163,9 @@ startMessagingChannels()
 // Start assistant scheduler (hourly sweeps, daily rituals)
 startAssistantScheduler()
 
+// Start CalDAV calendar sync
+startCaldavSync()
+
 // Graceful shutdown - detach PTYs but keep dtach sessions running for persistence
 process.on('SIGINT', async () => {
   log.server.info('Shutting down (terminals will persist)')
@@ -169,6 +173,7 @@ process.on('SIGINT', async () => {
   stopMetricsCollector()
   stopGitWatcher()
   stopAssistantScheduler()
+  stopCaldavSync()
   await stopMessagingChannels()
   ptyManager.detachAll()
   server.close()
@@ -181,6 +186,7 @@ process.on('SIGTERM', async () => {
   stopMetricsCollector()
   stopGitWatcher()
   stopAssistantScheduler()
+  stopCaldavSync()
   await stopMessagingChannels()
   ptyManager.detachAll()
   server.close()

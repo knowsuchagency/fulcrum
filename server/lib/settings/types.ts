@@ -87,6 +87,15 @@ export interface TelegramSettings {
   botToken: string
 }
 
+// CalDAV calendar integration settings
+export interface CalDavSettings {
+  enabled: boolean
+  serverUrl: string
+  username: string
+  password: string
+  syncIntervalMinutes: number
+}
+
 // Channels settings (renamed from MessagingSettings)
 export interface ChannelsSettings {
   email: EmailSettings
@@ -144,6 +153,7 @@ export interface Settings {
     eveningRitual: RitualConfig
   }
   channels: ChannelsSettings
+  caldav: CalDavSettings
 }
 
 // Default settings with new structure
@@ -236,6 +246,13 @@ export const DEFAULT_SETTINGS: Settings = {
       botToken: '',
     },
   },
+  caldav: {
+    enabled: false,
+    serverUrl: '',
+    username: '',
+    password: '',
+    syncIntervalMinutes: 15,
+  },
 }
 
 // Old default port for migration detection
@@ -297,6 +314,11 @@ export const VALID_SETTING_PATHS = new Set([
   'channels.discord.botToken',
   'channels.telegram.enabled',
   'channels.telegram.botToken',
+  'caldav.enabled',
+  'caldav.serverUrl',
+  'caldav.username',
+  'caldav.password',
+  'caldav.syncIntervalMinutes',
 ])
 
 // Legacy flat settings interface for backward compatibility

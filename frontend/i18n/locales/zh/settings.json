@@ -13,7 +13,8 @@
     "notifications": "通知",
     "messaging": "消息",
     "appearance": "外观",
-    "developer": "开发者"
+    "developer": "开发者",
+    "caldav": "CalDAV 日历"
   },
   "version": {
     "upToDate": "已是最新版本",
@@ -242,6 +243,38 @@
     "restartDescription": "重新构建并重启 Fulcrum 服务器。如果构建失败，服务器将继续运行。",
     "restartFailed": "重启失败",
     "checkLogs": "构建可能失败。运行 journalctl --user -u fulcrum 查看详情。"
+  },
+  "caldav": {
+    "label": "CalDAV",
+    "statusConnected": "已连接（{{count}} 个日历）",
+    "statusSyncing": "同步中...",
+    "statusError": "连接错误",
+    "statusDisconnected": "未连接",
+    "serverUrl": "服务器 URL",
+    "serverUrlPlaceholder": "https://cloud.example.com/remote.php/dav",
+    "username": "用户名",
+    "usernamePlaceholder": "输入用户名",
+    "password": "密码",
+    "passwordPlaceholder": "输入密码或应用专用密码",
+    "syncInterval": "同步间隔（分钟）",
+    "testButton": "测试连接",
+    "connectButton": "连接",
+    "cancelButton": "取消",
+    "syncButton": "立即同步",
+    "disconnectButton": "断开连接",
+    "testSuccess": "连接成功！找到 {{count}} 个日历。",
+    "testFailed": "连接失败",
+    "configured": "CalDAV 已配置并连接",
+    "configureFailed": "配置 CalDAV 失败",
+    "toggleFailed": "切换 CalDAV 失败",
+    "syncComplete": "日历已同步",
+    "syncFailed": "同步失败",
+    "disconnected": "CalDAV 已断开",
+    "disconnectFailed": "断开连接失败",
+    "fillRequired": "服务器 URL、用户名和密码为必填项",
+    "setupInstructions": "设置说明",
+    "helpIntro": "输入您的 CalDAV 服务器 URL 和凭据。常见服务器 URL：",
+    "helpNote": "Google 日历需要 OAuth2，暂不支持。请使用标准 CalDAV 服务器或应用专用密码。"
   },
   "unsavedChanges": {
     "title": "未保存的更改",

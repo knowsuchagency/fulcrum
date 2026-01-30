@@ -5,7 +5,7 @@
  * Core tools are always loaded; deferred tools are loaded on-demand after search.
  */
 
-export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup' | 'email' | 'messaging' | 'assistant'
+export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup' | 'email' | 'messaging' | 'assistant' | 'caldav'
 
 export interface ToolMetadata {
   name: string
@@ -663,6 +663,56 @@ export const toolRegistry: ToolMetadata[] = [
     category: 'assistant',
     keywords: ['sweep', 'last', 'hourly', 'morning', 'evening', 'ritual'],
     defer_loading: false,
+  },
+  // CalDAV calendar tools
+  {
+    name: 'list_calendars',
+    description: 'List all CalDAV calendars synced from the configured server',
+    category: 'caldav',
+    keywords: ['calendar', 'caldav', 'list', 'schedule'],
+    defer_loading: true,
+  },
+  {
+    name: 'sync_calendars',
+    description: 'Trigger a manual sync of all CalDAV calendars and events',
+    category: 'caldav',
+    keywords: ['calendar', 'caldav', 'sync', 'refresh', 'update'],
+    defer_loading: true,
+  },
+  {
+    name: 'list_calendar_events',
+    description: 'List calendar events with optional filtering by calendar, date range, or limit',
+    category: 'caldav',
+    keywords: ['calendar', 'event', 'list', 'schedule', 'appointment', 'meeting'],
+    defer_loading: true,
+  },
+  {
+    name: 'get_calendar_event',
+    description: 'Get details of a specific calendar event by ID',
+    category: 'caldav',
+    keywords: ['calendar', 'event', 'get', 'details', 'appointment'],
+    defer_loading: true,
+  },
+  {
+    name: 'create_calendar_event',
+    description: 'Create a new calendar event on a CalDAV calendar',
+    category: 'caldav',
+    keywords: ['calendar', 'event', 'create', 'new', 'schedule', 'appointment', 'meeting'],
+    defer_loading: true,
+  },
+  {
+    name: 'update_calendar_event',
+    description: 'Update an existing calendar event',
+    category: 'caldav',
+    keywords: ['calendar', 'event', 'update', 'edit', 'modify', 'reschedule'],
+    defer_loading: true,
+  },
+  {
+    name: 'delete_calendar_event',
+    description: 'Delete a calendar event',
+    category: 'caldav',
+    keywords: ['calendar', 'event', 'delete', 'remove', 'cancel'],
+    defer_loading: true,
   },
 ]
 

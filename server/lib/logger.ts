@@ -167,4 +167,5 @@ export const log = {
   assistant: createLogger('Assistant'),
   messaging: createLogger('Messaging'),
   claude: createLogger('Claude'),
+  caldav: createLogger('CalDAV'),
 }
