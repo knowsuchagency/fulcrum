@@ -259,11 +259,11 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   caldav: {
     enabled: false,
-    serverUrl: '',
+    serverUrl: 'https://apidata.googleusercontent.com/caldav/v2/',
     username: '',
     password: '',
     syncIntervalMinutes: 15,
-    authType: 'basic',
+    authType: 'google-oauth',
     googleClientId: '',
     googleClientSecret: '',
     oauthTokens: null,

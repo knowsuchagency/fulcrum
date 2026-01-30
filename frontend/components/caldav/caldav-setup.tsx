@@ -45,10 +45,10 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
   const { data: authTypeConfig } = useConfig('caldav.authType')
   const hasCredentials = !!(serverUrlConfig?.value)
   const isEnabled = !!(enabledConfig?.value)
-  const authType = (authTypeConfig?.value as string) || 'basic'
+  const authType = (authTypeConfig?.value as string) || 'google-oauth'
 
   const [showForm, setShowForm] = useState(false)
-  const [activeTab, setActiveTab] = useState<string>('basic')
+  const [activeTab, setActiveTab] = useState<string>('google')
 
   // Basic auth fields
   const [serverUrl, setServerUrl] = useState('')
@@ -208,7 +208,7 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
       await updateConfig.mutateAsync({ key: 'caldav.serverUrl', value: '' })
       await updateConfig.mutateAsync({ key: 'caldav.username', value: '' })
       await updateConfig.mutateAsync({ key: 'caldav.password', value: '' })
-      await updateConfig.mutateAsync({ key: 'caldav.authType', value: 'basic' })
+      await updateConfig.mutateAsync({ key: 'caldav.authType', value: 'google-oauth' })
       await updateConfig.mutateAsync({ key: 'caldav.googleClientId', value: '' })
       await updateConfig.mutateAsync({ key: 'caldav.googleClientSecret', value: '' })
       await updateConfig.mutateAsync({ key: 'caldav.oauthTokens', value: null })
