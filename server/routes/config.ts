@@ -55,6 +55,15 @@ export const CONFIG_KEYS = {
   ASSISTANT_MORNING_RITUAL_PROMPT: 'assistant.morningRitual.prompt',
   ASSISTANT_EVENING_RITUAL_TIME: 'assistant.eveningRitual.time',
   ASSISTANT_EVENING_RITUAL_PROMPT: 'assistant.eveningRitual.prompt',
+  CALDAV_ENABLED: 'caldav.enabled',
+  CALDAV_SERVER_URL: 'caldav.serverUrl',
+  CALDAV_USERNAME: 'caldav.username',
+  CALDAV_PASSWORD: 'caldav.password',
+  CALDAV_SYNC_INTERVAL: 'caldav.syncIntervalMinutes',
+  CALDAV_AUTH_TYPE: 'caldav.authType',
+  CALDAV_GOOGLE_CLIENT_ID: 'caldav.googleClientId',
+  CALDAV_GOOGLE_CLIENT_SECRET: 'caldav.googleClientSecret',
+  CALDAV_OAUTH_TOKENS: 'caldav.oauthTokens',
 } as const
 
 // Legacy key mapping to new nested paths (for backward compatibility)

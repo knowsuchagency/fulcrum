@@ -12,6 +12,7 @@ import {
   type AssistantProvider,
   type AssistantModel,
   type ChannelsSettings,
+  type CalDavSettings,
   type RitualConfig,
 } from './types'
 import type { AgentType } from '@shared/types'
@@ -130,6 +131,10 @@ export function getSettings(): Settings {
       (parsed.channels as Record<string, unknown>) ?? {},
       DEFAULT_SETTINGS.channels as unknown as Record<string, unknown>
     ) as ChannelsSettings,
+    caldav: deepMergeWithDefaults(
+      (parsed.caldav as Record<string, unknown>) ?? {},
+      DEFAULT_SETTINGS.caldav as unknown as Record<string, unknown>
+    ) as CalDavSettings,
   }
 
   // Apply environment variable overrides
@@ -161,6 +166,7 @@ export function getSettings(): Settings {
     appearance: fileSettings.appearance,
     assistant: fileSettings.assistant,
     channels: fileSettings.channels,
+    caldav: fileSettings.caldav,
   }
 }
 
