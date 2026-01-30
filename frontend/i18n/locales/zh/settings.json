@@ -272,9 +272,19 @@
     "disconnected": "CalDAV 已断开",
     "disconnectFailed": "断开连接失败",
     "fillRequired": "服务器 URL、用户名和密码为必填项",
+    "tabBasic": "CalDAV 服务器",
+    "tabGoogle": "Google 日历",
+    "googleClientId": "客户端 ID",
+    "googleClientIdPlaceholder": "your-app.apps.googleusercontent.com",
+    "googleClientSecret": "客户端密钥",
+    "googleClientSecretPlaceholder": "输入您的 Google OAuth 客户端密钥",
+    "connectGoogleButton": "连接 Google 日历",
+    "googleAuthStarted": "已在浏览器中打开 Google 授权。完成登录以连接。",
+    "googleSetupHelp": "在 Google Cloud Console 中创建 OAuth 2.0 凭据。将 http://localhost:{port}/api/caldav/oauth/callback 添加为授权重定向 URI。",
+    "googleFillRequired": "客户端 ID 和客户端密钥为必填项",
     "setupInstructions": "设置说明",
     "helpIntro": "输入您的 CalDAV 服务器 URL 和凭据。常见服务器 URL：",
-    "helpNote": "Google 日历需要 OAuth2，暂不支持。请使用标准 CalDAV 服务器或应用专用密码。"
+    "helpNote": "如需使用 Google 日历，请使用 Google 日历选项卡进行 OAuth2 认证。"
   },
   "unsavedChanges": {
     "title": "未保存的更改",

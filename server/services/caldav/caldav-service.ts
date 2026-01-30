@@ -8,11 +8,11 @@
  * - Connection testing and lifecycle management
  */
 
-import { DAVClient } from 'tsdav'
+import { DAVClient, getOauthHeaders } from 'tsdav'
 import { eq, and, gte, lte, desc } from 'drizzle-orm'
 import { db, caldavCalendars, caldavEvents } from '../../db'
 import type { CaldavCalendar, CaldavEvent } from '../../db'
-import type { CalDavSettings } from '../../lib/settings/types'
+import type { CalDavSettings, CalDavOAuthTokens } from '../../lib/settings/types'
 import { getSettings } from '../../lib/settings'
 import { createLogger } from '../../lib/logger'
 import { parseIcalEvent, generateIcalEvent, updateIcalEvent } from './ical-helpers'
@@ -117,6 +117,43 @@ export async function configureCaldav(config: {
   if (config.syncIntervalMinutes !== undefined) {
     await updateSettingByPath('caldav.syncIntervalMinutes', config.syncIntervalMinutes)
   }
+  await updateSettingByPath('caldav.enabled', true)
+
+  // Restart sync with new config
+  stopCaldavSync()
+  await startCaldavSync()
+}
+
+export async function configureGoogleOAuth(config: {
+  googleClientId: string
+  googleClientSecret: string
+  syncIntervalMinutes?: number
+}): Promise<void> {
+  const { updateSettingByPath } = await import('../../lib/settings')
+
+  await updateSettingByPath('caldav.googleClientId', config.googleClientId)
+  await updateSettingByPath('caldav.googleClientSecret', config.googleClientSecret)
+  if (config.syncIntervalMinutes !== undefined) {
+    await updateSettingByPath('caldav.syncIntervalMinutes', config.syncIntervalMinutes)
+  }
+}
+
+export async function completeGoogleOAuth(tokens: {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+}): Promise<void> {
+  const { updateSettingByPath } = await import('../../lib/settings')
+
+  const oauthTokens: CalDavOAuthTokens = {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiration: Math.floor(Date.now() / 1000) + tokens.expiresIn,
+  }
+
+  await updateSettingByPath('caldav.oauthTokens', oauthTokens)
+  await updateSettingByPath('caldav.authType', 'google-oauth')
+  await updateSettingByPath('caldav.serverUrl', 'https://apidata.googleusercontent.com/caldav/v2/')
   await updateSettingByPath('caldav.enabled', true)
 
   // Restart sync with new config
@@ -355,6 +392,14 @@ export async function deleteEvent(id: string): Promise<void> {
 // --- Internal ---
 
 async function connect(config: CalDavSettings): Promise<void> {
+  if (config.authType === 'google-oauth') {
+    await connectOAuth(config)
+  } else {
+    await connectBasic(config)
+  }
+}
+
+async function connectBasic(config: CalDavSettings): Promise<void> {
   davClient = new DAVClient({
     serverUrl: config.serverUrl,
     credentials: {
@@ -365,8 +410,65 @@ async function connect(config: CalDavSettings): Promise<void> {
     defaultAccountType: 'caldav',
   })
   await davClient.login()
-  logger.info('Connected to CalDAV server', { serverUrl: config.serverUrl })
+  logger.info('Connected to CalDAV server (Basic)', { serverUrl: config.serverUrl })
 }
+
+async function connectOAuth(config: CalDavSettings): Promise<void> {
+  if (!config.oauthTokens || !config.googleClientId || !config.googleClientSecret) {
+    throw new Error('Google OAuth not configured. Complete the OAuth flow first.')
+  }
+
+  // Track current tokens so we can detect refreshes
+  let currentTokens: CalDavOAuthTokens = { ...config.oauthTokens }
+
+  davClient = new DAVClient({
+    serverUrl: config.serverUrl,
+    credentials: {
+      clientId: config.googleClientId,
+      clientSecret: config.googleClientSecret,
+      accessToken: currentTokens.accessToken,
+      refreshToken: currentTokens.refreshToken,
+      expiration: currentTokens.expiration,
+      tokenUrl: GOOGLE_TOKEN_URL,
+    },
+    authMethod: 'Custom',
+    authFunction: async (credentials) => {
+      const result = await getOauthHeaders(credentials)
+      // Persist refreshed tokens back to settings
+      if (result.tokens.access_token && result.tokens.access_token !== currentTokens.accessToken) {
+        const newTokens: CalDavOAuthTokens = {
+          accessToken: result.tokens.access_token,
+          refreshToken: result.tokens.refresh_token ?? currentTokens.refreshToken,
+          expiration: result.tokens.expires_in
+            ? Math.floor(Date.now() / 1000) + result.tokens.expires_in
+            : currentTokens.expiration,
+        }
+        currentTokens = newTokens
+        // Update credentials on the client for next call
+        credentials.accessToken = newTokens.accessToken
+        credentials.refreshToken = newTokens.refreshToken
+        credentials.expiration = newTokens.expiration
+        // Persist to settings
+        try {
+          const { updateSettingByPath } = await import('../../lib/settings')
+          await updateSettingByPath('caldav.oauthTokens', newTokens)
+          logger.info('Persisted refreshed OAuth tokens')
+        } catch (err) {
+          logger.error('Failed to persist refreshed OAuth tokens', {
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+      return result.headers
+    },
+    defaultAccountType: 'caldav',
+  })
+  await davClient.login()
+  logger.info('Connected to CalDAV server (Google OAuth)', { serverUrl: config.serverUrl })
+}
+
+// Google OAuth constants
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
 function ensureConnected(): void {
   if (!davClient) {

@@ -121,6 +121,35 @@ export function useDisableCaldav() {
   })
 }
 
+// Configure Google OAuth credentials
+export function useConfigureGoogleCaldav() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (config: {
+      googleClientId: string
+      googleClientSecret: string
+      syncIntervalMinutes?: number
+    }) =>
+      fetchJSON<{ success: boolean }>(`${API_BASE}/api/caldav/configure-google`, {
+        method: 'POST',
+        body: JSON.stringify(config),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['caldav'] })
+      queryClient.invalidateQueries({ queryKey: ['config'] })
+    },
+  })
+}
+
+// Get Google OAuth authorization URL
+export function useGetGoogleAuthUrl() {
+  return useMutation({
+    mutationFn: () =>
+      fetchJSON<{ authUrl: string }>(`${API_BASE}/api/caldav/oauth/authorize`),
+  })
+}
+
 // Manual sync
 export function useSyncCaldav() {
   const queryClient = useQueryClient()

@@ -1,19 +1,22 @@
 /**
- * CalDAV Setup Component - Server config, connection test, sync controls
+ * CalDAV Setup Component - Server config, Google OAuth, connection test, sync controls
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Loading03Icon, Tick02Icon, Cancel01Icon, RefreshIcon } from '@hugeicons/core-free-icons'
 import {
   useCaldavStatus,
   useTestCaldavConnection,
   useConfigureCaldav,
+  useConfigureGoogleCaldav,
+  useGetGoogleAuthUrl,
   useEnableCaldav,
   useDisableCaldav,
   useSyncCaldav,
@@ -29,6 +32,8 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
   const { data: status, refetch: refetchStatus } = useCaldavStatus()
   const testConnection = useTestCaldavConnection()
   const configure = useConfigureCaldav()
+  const configureGoogle = useConfigureGoogleCaldav()
+  const getAuthUrl = useGetGoogleAuthUrl()
   const enable = useEnableCaldav()
   const disable = useDisableCaldav()
   const sync = useSyncCaldav()
@@ -37,17 +42,60 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
   // Read current settings to detect if credentials exist
   const { data: enabledConfig } = useConfig('caldav.enabled')
   const { data: serverUrlConfig } = useConfig('caldav.serverUrl')
+  const { data: authTypeConfig } = useConfig('caldav.authType')
   const hasCredentials = !!(serverUrlConfig?.value)
   const isEnabled = !!(enabledConfig?.value)
+  const authType = (authTypeConfig?.value as string) || 'basic'
 
   const [showForm, setShowForm] = useState(false)
+  const [activeTab, setActiveTab] = useState<string>('basic')
+
+  // Basic auth fields
   const [serverUrl, setServerUrl] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [syncInterval, setSyncInterval] = useState('15')
 
+  // Google OAuth fields
+  const [googleClientId, setGoogleClientId] = useState('')
+  const [googleClientSecret, setGoogleClientSecret] = useState('')
+  const [googleSyncInterval, setGoogleSyncInterval] = useState('15')
+  const [isPollingForConnect, setIsPollingForConnect] = useState(false)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const isConnected = status?.connected === true
   const isSyncing = status?.syncing === true
+
+  // Poll for connection status after Google OAuth flow
+  useEffect(() => {
+    if (isPollingForConnect && !isConnected) {
+      pollIntervalRef.current = setInterval(() => {
+        refetchStatus()
+      }, 2000)
+    }
+
+    if (isConnected && isPollingForConnect) {
+      setIsPollingForConnect(false)
+      setShowForm(false)
+      setGoogleClientId('')
+      setGoogleClientSecret('')
+      toast.success(t('caldav.configured'))
+    }
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+      }
+    }
+  }, [isPollingForConnect, isConnected, refetchStatus, t])
+
+  // Set initial tab based on current auth type
+  useEffect(() => {
+    if (authType === 'google-oauth') {
+      setActiveTab('google')
+    }
+  }, [authType])
 
   const handleToggle = async (enabled: boolean) => {
     try {
@@ -61,6 +109,7 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
       } else {
         await disable.mutateAsync()
         setShowForm(false)
+        setIsPollingForConnect(false)
         refetchStatus()
       }
     } catch {
@@ -114,6 +163,34 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
     }
   }
 
+  const handleGoogleConnect = async () => {
+    if (!googleClientId.trim() || !googleClientSecret.trim()) {
+      toast.error(t('caldav.googleFillRequired'))
+      return
+    }
+
+    try {
+      // Save credentials first
+      await configureGoogle.mutateAsync({
+        googleClientId: googleClientId.trim(),
+        googleClientSecret: googleClientSecret.trim(),
+        syncIntervalMinutes: parseInt(googleSyncInterval, 10) || 15,
+      })
+
+      // Get authorization URL
+      const { authUrl } = await getAuthUrl.mutateAsync()
+
+      // Open in new window
+      window.open(authUrl, '_blank', 'noopener')
+      toast.info(t('caldav.googleAuthStarted'))
+
+      // Start polling for connection
+      setIsPollingForConnect(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('caldav.configureFailed'))
+    }
+  }
+
   const handleSync = async () => {
     try {
       await sync.mutateAsync()
@@ -127,10 +204,14 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
   const handleDisconnect = async () => {
     try {
       await disable.mutateAsync()
-      // Clear credentials
+      // Clear all credentials (basic + OAuth)
       await updateConfig.mutateAsync({ key: 'caldav.serverUrl', value: '' })
       await updateConfig.mutateAsync({ key: 'caldav.username', value: '' })
       await updateConfig.mutateAsync({ key: 'caldav.password', value: '' })
+      await updateConfig.mutateAsync({ key: 'caldav.authType', value: 'basic' })
+      await updateConfig.mutateAsync({ key: 'caldav.googleClientId', value: '' })
+      await updateConfig.mutateAsync({ key: 'caldav.googleClientSecret', value: '' })
+      await updateConfig.mutateAsync({ key: 'caldav.oauthTokens', value: null })
       toast.success(t('caldav.disconnected'))
       refetchStatus()
     } catch {
@@ -140,6 +221,8 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
 
   const isPending =
     configure.isPending ||
+    configureGoogle.isPending ||
+    getAuthUrl.isPending ||
     enable.isPending ||
     disable.isPending ||
     testConnection.isPending ||
@@ -184,86 +267,163 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
         </div>
       </div>
 
-      {/* Configuration form */}
+      {/* Configuration form with tabs */}
       {showForm && !isConnected && (
-        <div className="ml-4 sm:ml-44 space-y-3">
-          <div className="space-y-2">
-            <label className="block text-xs text-muted-foreground">{t('caldav.serverUrl')}</label>
-            <Input
-              type="url"
-              placeholder={t('caldav.serverUrlPlaceholder')}
-              value={serverUrl}
-              onChange={(e) => setServerUrl(e.target.value)}
-              className="max-w-md font-mono text-sm"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-xs text-muted-foreground">{t('caldav.username')}</label>
-            <Input
-              type="text"
-              placeholder={t('caldav.usernamePlaceholder')}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="max-w-md text-sm"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-xs text-muted-foreground">{t('caldav.password')}</label>
-            <Input
-              type="password"
-              placeholder={t('caldav.passwordPlaceholder')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="max-w-md font-mono text-sm"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-xs text-muted-foreground">{t('caldav.syncInterval')}</label>
-            <Input
-              type="number"
-              min={1}
-              max={1440}
-              value={syncInterval}
-              onChange={(e) => setSyncInterval(e.target.value)}
-              className="w-24 text-sm"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleTest}
-              disabled={isPending || !serverUrl.trim() || !username.trim() || !password.trim()}
-            >
-              {testConnection.isPending ? (
-                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="mr-2 animate-spin" />
-              ) : null}
-              {t('caldav.testButton')}
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleConnect}
-              disabled={isPending || !serverUrl.trim() || !username.trim() || !password.trim()}
-            >
-              {configure.isPending ? (
-                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="mr-2 animate-spin" />
-              ) : null}
-              {t('caldav.connectButton')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setShowForm(false)
-                setServerUrl('')
-                setUsername('')
-                setPassword('')
-              }}
-              disabled={isPending}
-            >
-              {t('caldav.cancelButton')}
-            </Button>
-          </div>
+        <div className="ml-4 sm:ml-44">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="basic">{t('caldav.tabBasic')}</TabsTrigger>
+              <TabsTrigger value="google">{t('caldav.tabGoogle')}</TabsTrigger>
+            </TabsList>
+
+            {/* Basic CalDAV tab */}
+            <TabsContent value="basic">
+              <div className="space-y-3 pt-2">
+                <div className="space-y-2">
+                  <label className="block text-xs text-muted-foreground">{t('caldav.serverUrl')}</label>
+                  <Input
+                    type="url"
+                    placeholder={t('caldav.serverUrlPlaceholder')}
+                    value={serverUrl}
+                    onChange={(e) => setServerUrl(e.target.value)}
+                    className="max-w-md font-mono text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs text-muted-foreground">{t('caldav.username')}</label>
+                  <Input
+                    type="text"
+                    placeholder={t('caldav.usernamePlaceholder')}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="max-w-md text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs text-muted-foreground">{t('caldav.password')}</label>
+                  <Input
+                    type="password"
+                    placeholder={t('caldav.passwordPlaceholder')}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="max-w-md font-mono text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs text-muted-foreground">{t('caldav.syncInterval')}</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={syncInterval}
+                    onChange={(e) => setSyncInterval(e.target.value)}
+                    className="w-24 text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleTest}
+                    disabled={isPending || !serverUrl.trim() || !username.trim() || !password.trim()}
+                  >
+                    {testConnection.isPending ? (
+                      <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="mr-2 animate-spin" />
+                    ) : null}
+                    {t('caldav.testButton')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleConnect}
+                    disabled={isPending || !serverUrl.trim() || !username.trim() || !password.trim()}
+                  >
+                    {configure.isPending ? (
+                      <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="mr-2 animate-spin" />
+                    ) : null}
+                    {t('caldav.connectButton')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowForm(false)
+                      setServerUrl('')
+                      setUsername('')
+                      setPassword('')
+                    }}
+                    disabled={isPending}
+                  >
+                    {t('caldav.cancelButton')}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Google Calendar tab */}
+            <TabsContent value="google">
+              <div className="space-y-3 pt-2">
+                <div className="space-y-2">
+                  <label className="block text-xs text-muted-foreground">{t('caldav.googleClientId')}</label>
+                  <Input
+                    type="text"
+                    placeholder={t('caldav.googleClientIdPlaceholder')}
+                    value={googleClientId}
+                    onChange={(e) => setGoogleClientId(e.target.value)}
+                    className="max-w-md font-mono text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs text-muted-foreground">{t('caldav.googleClientSecret')}</label>
+                  <Input
+                    type="password"
+                    placeholder={t('caldav.googleClientSecretPlaceholder')}
+                    value={googleClientSecret}
+                    onChange={(e) => setGoogleClientSecret(e.target.value)}
+                    className="max-w-md font-mono text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs text-muted-foreground">{t('caldav.syncInterval')}</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={googleSyncInterval}
+                    onChange={(e) => setGoogleSyncInterval(e.target.value)}
+                    className="w-24 text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleGoogleConnect}
+                    disabled={isPending || isPollingForConnect || !googleClientId.trim() || !googleClientSecret.trim()}
+                  >
+                    {(configureGoogle.isPending || getAuthUrl.isPending || isPollingForConnect) ? (
+                      <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="mr-2 animate-spin" />
+                    ) : null}
+                    {t('caldav.connectGoogleButton')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowForm(false)
+                      setIsPollingForConnect(false)
+                      setGoogleClientId('')
+                      setGoogleClientSecret('')
+                    }}
+                    disabled={isPending}
+                  >
+                    {t('caldav.cancelButton')}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground max-w-md">
+                  {t('caldav.googleSetupHelp')}
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       )}
 
@@ -305,6 +465,7 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
             <li><strong>Radicale:</strong> http://localhost:5232</li>
             <li><strong>Baikal:</strong> https://baikal.example.com/dav.php</li>
             <li><strong>iCloud:</strong> https://caldav.icloud.com (use app-specific password)</li>
+            <li><strong>Google:</strong> Use the Google Calendar tab with OAuth2</li>
           </ul>
           <p>{t('caldav.helpNote')}</p>
         </div>

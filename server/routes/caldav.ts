@@ -6,10 +6,13 @@
  */
 
 import { Hono } from 'hono'
+import { fetchOauthTokens } from 'tsdav'
 import {
   getCaldavStatus,
   testCaldavConnection,
   configureCaldav,
+  configureGoogleOAuth,
+  completeGoogleOAuth,
   enableCaldav,
   disableCaldav,
   listCalendars,
@@ -20,6 +23,12 @@ import {
   updateEvent,
   deleteEvent,
 } from '../services/caldav'
+import { getSettings } from '../lib/settings'
+
+// Google OAuth constants
+const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+const GOOGLE_CALDAV_SCOPE = 'https://www.googleapis.com/auth/calendar'
 
 const caldavRoutes = new Hono()
 
@@ -92,6 +101,110 @@ caldavRoutes.post('/disable', async (c) => {
       { error: err instanceof Error ? err.message : 'Failed to disable CalDAV' },
       500
     )
+  }
+})
+
+// POST /api/caldav/configure-google — Save Google Client ID + Secret
+caldavRoutes.post('/configure-google', async (c) => {
+  const { googleClientId, googleClientSecret, syncIntervalMinutes } = await c.req.json<{
+    googleClientId: string
+    googleClientSecret: string
+    syncIntervalMinutes?: number
+  }>()
+
+  if (!googleClientId || !googleClientSecret) {
+    return c.json({ error: 'googleClientId and googleClientSecret are required' }, 400)
+  }
+
+  try {
+    await configureGoogleOAuth({ googleClientId, googleClientSecret, syncIntervalMinutes })
+    return c.json({ success: true })
+  } catch (err) {
+    return c.json(
+      { error: err instanceof Error ? err.message : 'Configuration failed' },
+      500
+    )
+  }
+})
+
+// GET /api/caldav/oauth/authorize — Build Google authorization URL
+caldavRoutes.get('/oauth/authorize', (c) => {
+  const settings = getSettings()
+  const { googleClientId } = settings.caldav
+
+  if (!googleClientId) {
+    return c.json({ error: 'Google Client ID not configured. Call /configure-google first.' }, 400)
+  }
+
+  const port = settings.server.port
+  const redirectUri = `http://localhost:${port}/api/caldav/oauth/callback`
+
+  const params = new URLSearchParams({
+    client_id: googleClientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: GOOGLE_CALDAV_SCOPE,
+    access_type: 'offline',
+    prompt: 'consent',
+  })
+
+  const authUrl = `${GOOGLE_AUTH_URL}?${params.toString()}`
+  return c.json({ authUrl })
+})
+
+// GET /api/caldav/oauth/callback — Receive auth code from Google redirect
+caldavRoutes.get('/oauth/callback', async (c) => {
+  const code = c.req.query('code')
+  const error = c.req.query('error')
+
+  if (error) {
+    return c.html(`<html><body><h2>Authorization Failed</h2><p>${error}</p><script>setTimeout(()=>window.close(),3000)</script></body></html>`)
+  }
+
+  if (!code) {
+    return c.html('<html><body><h2>Missing authorization code</h2><script>setTimeout(()=>window.close(),3000)</script></body></html>', 400)
+  }
+
+  const settings = getSettings()
+  const { googleClientId, googleClientSecret } = settings.caldav
+  const port = settings.server.port
+  const redirectUri = `http://localhost:${port}/api/caldav/oauth/callback`
+
+  if (!googleClientId || !googleClientSecret) {
+    return c.html('<html><body><h2>Google OAuth not configured</h2><script>setTimeout(()=>window.close(),3000)</script></body></html>', 400)
+  }
+
+  try {
+    const tokens = await fetchOauthTokens({
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      authorizationCode: code,
+      redirectUrl: redirectUri,
+      tokenUrl: GOOGLE_TOKEN_URL,
+    })
+
+    if (!tokens.access_token || !tokens.refresh_token) {
+      return c.html('<html><body><h2>Failed to obtain tokens</h2><p>Missing access or refresh token. Try again with prompt=consent.</p><script>setTimeout(()=>window.close(),5000)</script></body></html>', 500)
+    }
+
+    await completeGoogleOAuth({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresIn: tokens.expires_in ?? 3600,
+    })
+
+    return c.html(`<html>
+<body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;color:#fff">
+<div style="text-align:center">
+<h2 style="color:#22c55e">Connected to Google Calendar!</h2>
+<p style="color:#a1a1aa">You can close this tab.</p>
+<script>setTimeout(()=>window.close(),2000)</script>
+</div>
+</body>
+</html>`)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Token exchange failed'
+    return c.html(`<html><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;color:#fff"><div style="text-align:center"><h2 style="color:#ef4444">Connection Failed</h2><p style="color:#a1a1aa">${message}</p><script>setTimeout(()=>window.close(),5000)</script></div></body></html>`, 500)
   }
 })
 

@@ -272,9 +272,19 @@
     "disconnected": "CalDAV disconnected",
     "disconnectFailed": "Failed to disconnect",
     "fillRequired": "Server URL, username, and password are required",
+    "tabBasic": "CalDAV Server",
+    "tabGoogle": "Google Calendar",
+    "googleClientId": "Client ID",
+    "googleClientIdPlaceholder": "your-app.apps.googleusercontent.com",
+    "googleClientSecret": "Client Secret",
+    "googleClientSecretPlaceholder": "Enter your Google OAuth client secret",
+    "connectGoogleButton": "Connect Google Calendar",
+    "googleAuthStarted": "Google authorization opened in browser. Complete the sign-in to connect.",
+    "googleSetupHelp": "Create OAuth 2.0 credentials in the Google Cloud Console. Add http://localhost:{port}/api/caldav/oauth/callback as an authorized redirect URI.",
+    "googleFillRequired": "Client ID and Client Secret are required",
     "setupInstructions": "Setup instructions",
     "helpIntro": "Enter your CalDAV server URL and credentials. Common server URLs:",
-    "helpNote": "Google Calendar requires OAuth2 which is not supported. Use standard CalDAV servers or app-specific passwords."
+    "helpNote": "For Google Calendar, use the Google Calendar tab with OAuth2 authentication."
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",

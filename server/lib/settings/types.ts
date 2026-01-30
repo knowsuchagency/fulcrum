@@ -87,6 +87,13 @@ export interface TelegramSettings {
   botToken: string
 }
 
+// CalDAV OAuth tokens (for Google Calendar)
+export interface CalDavOAuthTokens {
+  accessToken: string
+  refreshToken: string
+  expiration: number // Unix timestamp in seconds
+}
+
 // CalDAV calendar integration settings
 export interface CalDavSettings {
   enabled: boolean
@@ -94,6 +101,10 @@ export interface CalDavSettings {
   username: string
   password: string
   syncIntervalMinutes: number
+  authType: 'basic' | 'google-oauth'
+  googleClientId: string
+  googleClientSecret: string
+  oauthTokens: CalDavOAuthTokens | null
 }
 
 // Channels settings (renamed from MessagingSettings)
@@ -252,6 +263,10 @@ export const DEFAULT_SETTINGS: Settings = {
     username: '',
     password: '',
     syncIntervalMinutes: 15,
+    authType: 'basic',
+    googleClientId: '',
+    googleClientSecret: '',
+    oauthTokens: null,
   },
 }
 
@@ -319,6 +334,10 @@ export const VALID_SETTING_PATHS = new Set([
   'caldav.username',
   'caldav.password',
   'caldav.syncIntervalMinutes',
+  'caldav.authType',
+  'caldav.googleClientId',
+  'caldav.googleClientSecret',
+  'caldav.oauthTokens',
 ])
 
 // Legacy flat settings interface for backward compatibility

@@ -10,6 +10,8 @@ export {
   // Configuration
   testCaldavConnection,
   configureCaldav,
+  configureGoogleOAuth,
+  completeGoogleOAuth,
   enableCaldav,
   disableCaldav,
   // Calendars
