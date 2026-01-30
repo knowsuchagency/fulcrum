@@ -43,9 +43,14 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
   const { data: enabledConfig } = useConfig('caldav.enabled')
   const { data: serverUrlConfig } = useConfig('caldav.serverUrl')
   const { data: authTypeConfig } = useConfig('caldav.authType')
-  const hasCredentials = !!(serverUrlConfig?.value)
+  const { data: usernameConfig } = useConfig('caldav.username')
+  const { data: oauthTokensConfig } = useConfig('caldav.oauthTokens')
   const isEnabled = !!(enabledConfig?.value)
   const authType = (authTypeConfig?.value as string) || 'google-oauth'
+  // Credentials exist only if we have actual auth: OAuth tokens for Google, or username for basic
+  const hasCredentials = authType === 'google-oauth'
+    ? !!(oauthTokensConfig?.value)
+    : !!(serverUrlConfig?.value && usernameConfig?.value)
 
   const [showForm, setShowForm] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('google')
