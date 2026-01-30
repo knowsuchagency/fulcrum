@@ -102,6 +102,7 @@ export function useEnableCaldav() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['caldav'] })
+      queryClient.invalidateQueries({ queryKey: ['config', 'caldav.enabled'] })
     },
   })
 }
@@ -117,6 +118,7 @@ export function useDisableCaldav() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['caldav'] })
+      queryClient.invalidateQueries({ queryKey: ['config', 'caldav.enabled'] })
     },
   })
 }

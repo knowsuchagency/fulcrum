@@ -261,7 +261,7 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
         </label>
         <div className="flex items-center gap-3">
           <Switch
-            checked={isConnected || isEnabled || showForm}
+            checked={isEnabled || showForm}
             onCheckedChange={handleToggle}
             disabled={isLoading || isPending}
           />
