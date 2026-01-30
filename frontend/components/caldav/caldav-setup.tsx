@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Loading03Icon, Tick02Icon, Cancel01Icon, RefreshIcon } from '@hugeicons/core-free-icons'
+import { Loading03Icon, Tick02Icon, RefreshIcon } from '@hugeicons/core-free-icons'
 import {
   useCaldavStatus,
   useTestCaldavConnection,
@@ -41,12 +41,10 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
   const backendPort = usePort()
 
   // Read current settings to detect if credentials exist
-  const { data: enabledConfig } = useConfig('caldav.enabled')
   const { data: serverUrlConfig } = useConfig('caldav.serverUrl')
   const { data: authTypeConfig } = useConfig('caldav.authType')
   const { data: usernameConfig } = useConfig('caldav.username')
   const { data: oauthTokensConfig } = useConfig('caldav.oauthTokens')
-  const isEnabled = !!(enabledConfig?.value)
   const authType = (authTypeConfig?.value as string) || 'google-oauth'
   // Credentials exist only if we have actual auth: OAuth tokens for Google, or username for basic
   const hasCredentials = authType === 'google-oauth'
@@ -234,25 +232,6 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
     testConnection.isPending ||
     sync.isPending
 
-  const getStatusIcon = () => {
-    if (isConnected) {
-      return <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} className="text-green-500" />
-    }
-    if (isSyncing) {
-      return <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin text-yellow-500" />
-    }
-    return <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} className="text-muted-foreground" />
-  }
-
-  const getStatusText = () => {
-    if (isConnected && !isSyncing) {
-      return t('caldav.statusConnected', { count: status?.calendarCount ?? 0 })
-    }
-    if (isSyncing) return t('caldav.statusSyncing')
-    if (status?.lastError) return t('caldav.statusError')
-    return t('caldav.statusDisconnected')
-  }
-
   return (
     <div className="space-y-4">
       {/* Enable toggle */}
@@ -262,14 +241,22 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
         </label>
         <div className="flex items-center gap-3">
           <Switch
-            checked={isEnabled || showForm}
+            checked={isConnected || showForm}
             onCheckedChange={handleToggle}
             disabled={isLoading || isPending}
           />
-          <span className="flex items-center gap-2 text-sm">
-            {getStatusIcon()}
-            <span className="text-muted-foreground">{getStatusText()}</span>
-          </span>
+          {isConnected && (
+            <span className="flex items-center gap-2 text-sm">
+              {isSyncing ? (
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin text-yellow-500" />
+              ) : (
+                <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} className="text-green-500" />
+              )}
+              <span className="text-muted-foreground">
+                {isSyncing ? t('caldav.statusSyncing') : t('caldav.statusConnected', { count: status?.calendarCount ?? 0 })}
+              </span>
+            </span>
+          )}
         </div>
       </div>
 
