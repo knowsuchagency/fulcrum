@@ -14,7 +14,7 @@
     "messaging": "消息",
     "appearance": "外观",
     "developer": "开发者",
-    "caldav": "CalDAV 日历"
+    "caldav": "日历集成"
   },
   "version": {
     "upToDate": "已是最新版本",
@@ -280,7 +280,14 @@
     "googleClientSecretPlaceholder": "输入您的 Google OAuth 客户端密钥",
     "connectGoogleButton": "连接 Google 日历",
     "googleAuthStarted": "已在浏览器中打开 Google 授权。完成登录以连接。",
-    "googleSetupHelp": "在 Google Cloud Console 中创建 OAuth 2.0 凭据。将 http://localhost:{port}/api/caldav/oauth/callback 添加为授权重定向 URI。",
+    "googleSetupHelp": "设置 Google 日历集成：",
+    "googleStep1": "1. 前往 Google Cloud Console 创建项目（或选择现有项目）。",
+    "googleStep2": "2. 启用 CalDAV API：导航至 API 和服务 > 库，搜索 CalDAV API 并启用。",
+    "googleStep3": "3. 配置 OAuth 同意屏幕：前往 API 和服务 > OAuth 同意屏幕，将用户类型设为「外部」，填写必填字段。",
+    "googleStep4": "4. 在同意屏幕的「测试用户」部分添加您的 Google 邮箱（应用处于测试模式时必须添加）。",
+    "googleStep5": "5. 创建 OAuth 凭据：前往 API 和服务 > 凭据 > 创建凭据 > OAuth 客户端 ID。选择「Web 应用」，将 Fulcrum 回调 URL 添加为授权重定向 URI。",
+    "googleCallbackNote": "您的回调 URL：{{callbackUrl}}",
+    "googleStep6": "6. 将客户端 ID 和客户端密钥复制到上方字段，然后点击连接。",
     "googleFillRequired": "客户端 ID 和客户端密钥为必填项",
     "setupInstructions": "设置说明",
     "helpIntro": "输入您的 CalDAV 服务器 URL 和凭据。常见服务器 URL：",

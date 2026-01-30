@@ -14,7 +14,7 @@
     "messaging": "Messaging",
     "appearance": "Appearance",
     "developer": "Developer",
-    "caldav": "CalDAV Calendar"
+    "caldav": "Calendar Integration"
   },
   "version": {
     "upToDate": "Up to date",
@@ -280,7 +280,14 @@
     "googleClientSecretPlaceholder": "Enter your Google OAuth client secret",
     "connectGoogleButton": "Connect Google Calendar",
     "googleAuthStarted": "Google authorization opened in browser. Complete the sign-in to connect.",
-    "googleSetupHelp": "Create OAuth 2.0 credentials in the Google Cloud Console. Add http://localhost:{port}/api/caldav/oauth/callback as an authorized redirect URI.",
+    "googleSetupHelp": "To set up Google Calendar integration:",
+    "googleStep1": "1. Go to the Google Cloud Console and create a project (or select an existing one).",
+    "googleStep2": "2. Enable the CalDAV API: navigate to APIs & Services > Library, search for \"CalDAV API\", and enable it.",
+    "googleStep3": "3. Configure the OAuth consent screen: go to APIs & Services > OAuth consent screen, set user type to \"External\", and fill in the required fields.",
+    "googleStep4": "4. Add your Google email as a test user under the consent screen's \"Test users\" section (required while the app is in testing mode).",
+    "googleStep5": "5. Create OAuth credentials: go to APIs & Services > Credentials > Create Credentials > OAuth client ID. Select \"Web application\" and add your Fulcrum callback URL as an authorized redirect URI.",
+    "googleCallbackNote": "Your callback URL: {{callbackUrl}}",
+    "googleStep6": "6. Copy the Client ID and Client Secret into the fields above and click Connect.",
     "googleFillRequired": "Client ID and Client Secret are required",
     "setupInstructions": "Setup instructions",
     "helpIntro": "Enter your CalDAV server URL and credentials. Common server URLs:",

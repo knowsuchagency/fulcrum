@@ -418,9 +418,22 @@ export function CaldavSetup({ isLoading = false }: CaldavSetupProps) {
                     {t('caldav.cancelButton')}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground max-w-md">
-                  {t('caldav.googleSetupHelp')}
-                </p>
+                <details className="text-xs text-muted-foreground max-w-lg">
+                  <summary className="cursor-pointer hover:text-foreground font-medium">
+                    {t('caldav.googleSetupHelp')}
+                  </summary>
+                  <ol className="mt-2 space-y-1.5 list-none pl-0">
+                    <li>{t('caldav.googleStep1')}</li>
+                    <li>{t('caldav.googleStep2')}</li>
+                    <li>{t('caldav.googleStep3')}</li>
+                    <li>{t('caldav.googleStep4')}</li>
+                    <li>{t('caldav.googleStep5')}</li>
+                    <li className="pl-4 font-mono text-[11px] bg-muted/50 rounded px-2 py-1 w-fit">
+                      {t('caldav.googleCallbackNote', { callbackUrl: `${window.location.origin}/api/caldav/oauth/callback` })}
+                    </li>
+                    <li>{t('caldav.googleStep6')}</li>
+                  </ol>
+                </details>
               </div>
             </TabsContent>
           </Tabs>
