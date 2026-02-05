@@ -582,6 +582,10 @@ export async function* streamMessage(
     sessionState.set(sessionId, state)
   }
 
+  // Initialize temp files array before try block so it's always in scope
+  // for the finally block cleanup, even if errors occur early
+  const tempFiles: string[] = []
+
   try {
     log.assistant.debug('Starting assistant query', {
       sessionId,
@@ -624,7 +628,6 @@ User message: ${userMessage}`
     // Build the prompt - save images to temp files since the SDK stdin protocol
     // doesn't reliably handle base64 image content blocks (causes process exit code 1).
     // Claude Code can then view the images via its Read tool.
-    const tempFiles: string[] = []
     let fullPrompt: string
 
     if (options.attachments && options.attachments.length > 0) {
