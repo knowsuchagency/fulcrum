@@ -68,6 +68,14 @@ jobs:
         if: steps.check.outputs.has_update == 'true'
         run: bun install
 
+      - name: Bump patch version
+        if: steps.check.outputs.has_update == 'true'
+        id: bump
+        run: |
+          mise run bump
+          NEW_VERSION=$(jq -r .version package.json)
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
       - name: Run build
         if: steps.check.outputs.has_update == 'true'
         run: mise run build
@@ -82,10 +90,12 @@ jobs:
         id: cpr
         with:
           token: ${{ secrets.GH_PAT || github.token }}
-          commit-message: "chore(deps): update @anthropic-ai/claude-agent-sdk to ${{ steps.check.outputs.latest }}"
+          commit-message: "chore(deps): update @anthropic-ai/claude-agent-sdk to ${{ steps.check.outputs.latest }} (#${{ steps.bump.outputs.version }})"
           title: "chore(deps): update @anthropic-ai/claude-agent-sdk to ${{ steps.check.outputs.latest }}"
           body: |
             Updates `@anthropic-ai/claude-agent-sdk` from `${{ steps.check.outputs.current }}` to `${{ steps.check.outputs.latest }}`.
+
+            Also bumps project version to `${{ steps.bump.outputs.version }}` to trigger a new release on merge.
 
             **Verification:** Build and tests passed in this workflow before PR creation.
 
@@ -96,6 +106,6 @@ jobs:
 
       - name: Enable auto-merge
         if: steps.cpr.outputs.pull-request-number
-        run: gh pr merge --auto --squash ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge --auto --squash --delete-branch ${{ steps.cpr.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
