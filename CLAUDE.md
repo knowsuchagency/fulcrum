@@ -44,6 +44,7 @@ Fulcrum is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating 
 - Agent memory → `server/routes/memory.ts`, `server/services/memory-service.ts`, `server/routes/memory-file.ts`, `server/services/memory-file-service.ts`
 - Unified search → `server/routes/search.ts`, `server/services/search-service.ts`
 - Settings → `server/lib/settings/`, `frontend/routes/settings/`
+- Secrets (fnox) → `server/lib/settings/fnox.ts`, `cli/src/utils/fnox-setup.ts`
 
 **UI components:**
 - Shared components → `frontend/components/ui/` (shadcn)
@@ -123,6 +124,7 @@ fulcrum notify <title> <message>  # Send notification
 - `google/` - Google API integration (Calendar sync via googleapis, Gmail draft management, email sending)
 - `google-oauth.ts` - Shared Google OAuth2 client management, token refresh
 - `opencode-channel-service.ts` - OpenCode observer for channel message processing (structured JSON output, no direct tool access)
+- `observer-tracking.ts` - Observer invocation tracking with circuit breaker, aggregate stats, and action records
 - `search-service.ts` - Unified FTS5 full-text search across tasks, projects, messages, events, memories, and conversations
 - `memory-service.ts` - Persistent agent memory with SQLite FTS5 full-text search
 - `memory-file-service.ts` - Master memory file (MEMORY.md) read/write/section-update, injected into every system prompt
@@ -139,7 +141,8 @@ fulcrum notify <title> <message>  # Send notification
 - `/api/tasks/*` - Task CRUD
 - `/api/scratch-dirs` - Scratch directory listing and management
 - `/api/apps/*` - App deployment management
-- `/api/monitoring/*` - System and Claude instance monitoring, channel messages
+- `/api/monitoring/*` - System and Claude instance monitoring, channel messages, observer invocations
+- `/api/config/fnox-status` - fnox availability and secret count
 - `/api/deployments/*` - Deployment history
 - `/api/repositories/*` - Repository management
 - `/api/search` - Unified full-text search across all entity types (incl. conversations)
@@ -159,7 +162,7 @@ fulcrum notify <title> <message>  # Send notification
 - `/calendar` - Calendar view with month/week views, project/tag filters (Cmd+7)
 - `/jobs` - Systemd/launchd timer management (Cmd+6)
 - `/apps`, `/apps/new`, `/apps/$appId` - App deployment
-- `/monitoring` - System metrics dashboard (includes Review tab)
+- `/monitoring` - System metrics dashboard (includes Review tab, Observer tab)
 - `/repositories`, `/repositories/$repoId` - Repository management
 - `/terminals` - Persistent terminal tabs
 
@@ -193,6 +196,7 @@ fulcrum notify <title> <message>  # Send notification
 | `caldavCopyRules` | One-way event copy rules between calendars across accounts |
 | `caldavCopiedEvents` | Tracks copied events to avoid duplicates and detect changes |
 | `memories` | Persistent agent knowledge store with FTS5 full-text search |
+| `observerInvocations` | Observer message processing tracking (channel, sender, status, actions taken, circuit breaker) |
 
 Task statuses: `TO_DO`, `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`
 
@@ -234,6 +238,16 @@ Settings stored in `~/.fulcrum/settings.json`. See `server/lib/settings/types.ts
 **Separate config files:**
 - `notifications.json` - Multi-channel notification settings
 - `zai.json` - z.ai integration settings
+- `fnox.toml` - Encrypted secrets (API keys, tokens, webhook URLs) managed by fnox with age encryption
+- `age.txt` - Age private key for fnox encryption (generated once, never committed)
+
+**Secret storage (fnox):**
+- Sensitive credentials are encrypted in `fnox.toml` using age encryption
+- Secret paths: `integrations.*` (githubPat, cloudflareApiToken, etc.), `channels.*.botToken`, `notifications.*.webhookUrl`, `zai.apiKey`
+- Settings precedence: env var > fnox > settings.json > default
+- `fulcrum up` ensures fnox + age are installed and configured before starting the server
+- Existing plain-text secrets in settings.json are auto-migrated to fnox on server start
+- Implementation: `server/lib/settings/fnox.ts` (key mapping, CLI wrapper, in-memory cache)
 
 Environment variables override settings.json values where applicable.
 

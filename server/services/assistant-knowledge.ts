@@ -90,7 +90,13 @@ export function getDataModel(): string {
 - Content with optional tags for categorization
 - SQLite FTS5 full-text search (boolean operators, phrase matching, prefix queries)
 - Used to remember facts, preferences, decisions, and patterns across conversations
-- Browsable via Monitoring > Memory tab in the UI`
+- Browsable via Monitoring > Memory tab in the UI
+
+**Observer Invocations** - Tracks observe-only message processing
+- Records every observe-only processing attempt (non-self WhatsApp messages, unauthorized emails)
+- Tracks channel type, sender, provider, status, actions taken (tasks created, memories stored)
+- Circuit breaker status monitoring
+- Browsable via Monitoring > Observer tab in the UI`
 }
 
 /**
@@ -496,9 +502,19 @@ update_setting key="editor.app" value="cursor"
 list_settings
 \`\`\`
 
+### Secret Storage (fnox)
+
+Sensitive credentials (API keys, tokens, webhook URLs) are encrypted using fnox with age encryption.
+
+- Secrets are stored in \`~/.fulcrum/fnox.toml\` (encrypted) rather than plain text in settings.json
+- The age encryption key is at \`~/.fulcrum/age.txt\` (generated automatically on first \`fulcrum up\`)
+- Secret paths include: integration tokens, channel bot tokens, notification webhook URLs, z.ai API key
+- Settings precedence: environment variable > fnox > settings.json > default
+- Existing plain-text secrets are automatically migrated to fnox on server start
+
 ### Important Notes
 
-- Sensitive values (API tokens, webhooks) are masked when displayed
+- Sensitive values (API tokens, webhooks) are encrypted with fnox and masked when displayed
 - Use \`reset_setting\` to restore any setting to its default
 - Changes take effect immediately
 - Some settings (like server.port) require a server restart to take effect`

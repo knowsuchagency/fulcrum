@@ -78,7 +78,7 @@ Every hour, your assistant reviews pending events, checks on blocked or overdue 
 npx @knowsuchagency/fulcrum@latest up
 ```
 
-Fulcrum will check for dependencies (bun, dtach, AI agent CLI), offer to install any that are missing, and start the server on http://localhost:7777.
+Fulcrum will check for dependencies (bun, dtach, fnox, age, AI agent CLI), offer to install any that are missing, set up encrypted secret storage, and start the server on http://localhost:7777.
 
 ### Desktop App
 
@@ -216,7 +216,7 @@ A two-tier memory system gives agents both always-on context and on-demand recal
 
 ### System Monitoring
 
-Track CPU, memory, and disk usage while your agents work. Jobs is a top-level page (`/jobs`, Cmd+6) for managing systemd (Linux) or launchd (macOS) timers. The Messages tab under Monitoring shows all channel messages (WhatsApp, Discord, Telegram, Slack, Email) with filtering by channel and direction.
+Track CPU, memory, and disk usage while your agents work. Jobs is a top-level page (`/jobs`, Cmd+6) for managing systemd (Linux) or launchd (macOS) timers. The Messages tab under Monitoring shows all channel messages (WhatsApp, Discord, Telegram, Slack, Email) with filtering by channel and direction. The Observer tab tracks every observe-only message processing attempt with circuit breaker status, aggregate stats, and a filterable invocations list.
 
 ![System Monitoring](https://raw.githubusercontent.com/knowsuchagency/fulcrum/main/screenshots/system-monitoring-dark.png)
 
@@ -314,6 +314,8 @@ For browser-only access, use Tailscale or Cloudflare Tunnels to expose your serv
 
 <details>
 <summary><strong>Configuration</strong></summary>
+
+Sensitive credentials (API keys, tokens, webhook URLs) are encrypted using [fnox](https://github.com/yarlson/fnox) with age encryption. The age key and encrypted secrets live in the fulcrum directory (`age.txt` and `fnox.toml`). Non-sensitive settings are stored in `settings.json`. Existing plain-text secrets are automatically migrated to fnox on server start.
 
 Settings are stored in `.fulcrum/settings.json`. The fulcrum directory is resolved in this order:
 
