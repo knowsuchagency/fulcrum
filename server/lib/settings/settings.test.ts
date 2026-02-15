@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -17,7 +17,7 @@ describe('Settings', () => {
   let tempDir: string
   let originalEnv: Record<string, string | undefined>
 
-  beforeEach(() => {
+  beforeEach(async () => {
     tempDir = mkdtempSync(join(tmpdir(), 'fulcrum-settings-test-'))
 
     // Save original env values
@@ -33,6 +33,10 @@ describe('Settings', () => {
     delete process.env.PORT
     delete process.env.FULCRUM_GIT_REPOS_DIR
     delete process.env.GITHUB_PAT
+
+    // Clear fnox cache between tests to prevent pollution
+    const { clearFnoxCache } = await import('./')
+    clearFnoxCache()
   })
 
   afterEach(() => {
@@ -73,7 +77,7 @@ describe('Settings', () => {
   })
 
   describe('getSettings', () => {
-    test('returns defaults when no settings file exists', async () => {
+    test('returns defaults when no config exists', async () => {
       const { getSettings } = await import('./')
       const settings = getSettings()
 
@@ -82,43 +86,29 @@ describe('Settings', () => {
       expect(settings.integrations.githubPat).toBeNull()
     })
 
-    test('reads settings from file', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 2,
-          server: { port: 8888 },
-          paths: { defaultGitReposDir: '/custom/path' },
-          integrations: { githubPat: 'test-github-pat' },
-        })
-      )
+    test('reads settings from fnox cache', async () => {
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
-      const { getSettings } = await import('./')
+      updateSettingByPath('server.port', 8888)
+      updateSettingByPath('paths.defaultGitReposDir', '/custom/path')
+
       const settings = getSettings()
-
       expect(settings.server.port).toBe(8888)
       expect(settings.paths.defaultGitReposDir).toBe('/custom/path')
-      expect(settings.integrations.githubPat).toBe('test-github-pat')
     })
 
-    test('environment variables override file settings', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 2,
-          server: { port: 8888 },
-          integrations: { githubPat: 'file-key' },
-        })
-      )
+    test('environment variables override fnox values', async () => {
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
+
+      updateSettingByPath('server.port', 8888)
+      updateSettingByPath('integrations.githubPat', 'fnox-key')
 
       process.env.PORT = '9999'
       process.env.GITHUB_PAT = 'env-key'
 
-      const { getSettings } = await import('./')
       const settings = getSettings()
-
       expect(settings.server.port).toBe(9999)
       expect(settings.integrations.githubPat).toBe('env-key')
     })
@@ -133,143 +123,51 @@ describe('Settings', () => {
     })
   })
 
-  describe('migration', () => {
-    test('migrates flat settings to nested structure', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          port: 8888,
-          defaultGitReposDir: '/migrated/path',
-          githubPat: 'migrated-key',
-        })
-      )
-
-      const { getSettings } = await import('./')
-      const settings = getSettings()
-
-      // Settings should be migrated
-      expect(settings.server.port).toBe(8888)
-      expect(settings.paths.defaultGitReposDir).toBe('/migrated/path')
-      expect(settings.integrations.githubPat).toBe('migrated-key')
-
-      // File should be updated with nested structure
-      const { CURRENT_SCHEMA_VERSION } = await import('./')
-      const migrated = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(migrated._schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
-      expect(migrated.server?.port).toBe(8888)
-      expect(migrated.paths?.defaultGitReposDir).toBe('/migrated/path')
-      expect(migrated.integrations?.githubPat).toBe('migrated-key')
-
-      // Old flat keys should be removed
-      expect(migrated.port).toBeUndefined()
-      expect(migrated.defaultGitReposDir).toBeUndefined()
-      expect(migrated.githubPat).toBeUndefined()
-    })
-
-    test('does not migrate old default port (3333)', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          port: 3333, // Old default
-        })
-      )
-
-      const { getSettings } = await import('./')
-      const settings = getSettings()
-
-      // Should get new default, not old default
-      expect(settings.server.port).toBe(7777)
-    })
-
-    test('skips migration if already at current schema version', async () => {
-      const { CURRENT_SCHEMA_VERSION } = await import('./')
-      const settingsPath = join(tempDir, 'settings.json')
-      const originalContent = {
-        _schemaVersion: CURRENT_SCHEMA_VERSION,
-        server: { port: 8888 },
-      }
-      writeFileSync(settingsPath, JSON.stringify(originalContent))
-
-      const { getSettings } = await import('./')
-      getSettings()
-
-      // File should be unchanged (no unnecessary writes)
-      const content = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(content).toEqual(originalContent)
-    })
-  })
-
   describe('updateSettingByPath', () => {
-    test('creates settings file if it does not exist', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      expect(existsSync(settingsPath)).toBe(false)
-
+    test('updates setting and reads back via getSettings', async () => {
       const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
       ensureFulcrumDir()
       updateSettingByPath('server.port', 9000)
 
-      expect(existsSync(settingsPath)).toBe(true)
       const settings = getSettings()
       expect(settings.server.port).toBe(9000)
     })
 
-    test('updates nested setting and persists', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 2,
-          server: { port: 7777 },
-        })
-      )
+    test('updates nested settings', async () => {
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
-      const { updateSettingByPath, getSettings } = await import('./')
-      updateSettingByPath('server.port', 8080)
-
-      const settings = getSettings()
-      expect(settings.server.port).toBe(8080)
-
-      // Verify persistence
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(file.server.port).toBe(8080)
-    })
-
-    test('creates nested structure for deep paths', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(settingsPath, JSON.stringify({}))
-
-      const { updateSettingByPath } = await import('./')
       updateSettingByPath('integrations.githubPat', 'new-key')
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(file.integrations.githubPat).toBe('new-key')
+      const settings = getSettings()
+      expect(settings.integrations.githubPat).toBe('new-key')
     })
 
     test('throws error for unknown setting path', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(settingsPath, JSON.stringify({}))
-
-      const { updateSettingByPath } = await import('./')
+      const { updateSettingByPath, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
       expect(() => updateSettingByPath('unknown.path', 'value')).toThrow('Unknown setting path: unknown.path')
+    })
+
+    test('clears value when set to null', async () => {
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
+
+      updateSettingByPath('integrations.githubPat', 'some-key')
+      expect(getSettings().integrations.githubPat).toBe('some-key')
+
+      updateSettingByPath('integrations.githubPat', null)
+      expect(getSettings().integrations.githubPat).toBeNull()
     })
   })
 
   describe('resetSettings', () => {
     test('resets to defaults', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 2,
-          server: { port: 9999 },
-          integrations: { githubPat: 'custom-key' },
-        })
-      )
-
-      const { resetSettings, getSettings, ensureFulcrumDir } = await import('./')
+      const { updateSettingByPath, resetSettings, getSettings, ensureFulcrumDir } = await import('./')
       ensureFulcrumDir()
+
+      updateSettingByPath('server.port', 9999)
+      updateSettingByPath('integrations.githubPat', 'custom-key')
+
       resetSettings()
 
       const settings = getSettings()
@@ -292,22 +190,17 @@ describe('Settings', () => {
       expect(settings.pushover.enabled).toBe(false)
     })
 
-    test('reads notification settings from file', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          notifications: {
-            enabled: true,
-            sound: { enabled: true, customSoundFile: '/path/to/sound.wav' },
-            slack: { enabled: true, webhookUrl: 'https://hooks.slack.com/test' },
-          },
-        })
-      )
+    test('reads notification settings from fnox cache', async () => {
+      const { setFnoxValue, getNotificationSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
-      const { getNotificationSettings } = await import('./')
+      setFnoxValue('notifications.enabled', true)
+      setFnoxValue('notifications.sound.enabled', true)
+      setFnoxValue('notifications.sound.customSoundFile', '/path/to/sound.wav')
+      setFnoxValue('notifications.slack.enabled', true)
+      setFnoxValue('notifications.slack.webhookUrl', 'https://hooks.slack.com/test')
+
       const settings = getNotificationSettings()
-
       expect(settings.enabled).toBe(true)
       expect(settings.sound.enabled).toBe(true)
       expect(settings.sound.customSoundFile).toBe('/path/to/sound.wav')
@@ -440,22 +333,15 @@ describe('Settings', () => {
       expect(settings.opusModel).toBe('glm-4.7')
     })
 
-    test('reads z.ai settings from file', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          zai: {
-            enabled: true,
-            apiKey: 'test-zai-key',
-            haikuModel: 'custom-haiku',
-          },
-        })
-      )
+    test('reads z.ai settings from fnox cache', async () => {
+      const { setFnoxValue, getZAiSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
-      const { getZAiSettings } = await import('./')
+      setFnoxValue('zai.enabled', true)
+      setFnoxValue('zai.apiKey', 'test-zai-key')
+      setFnoxValue('zai.haikuModel', 'custom-haiku')
+
       const settings = getZAiSettings()
-
       expect(settings.enabled).toBe(true)
       expect(settings.apiKey).toBe('test-zai-key')
       expect(settings.haikuModel).toBe('custom-haiku')
@@ -478,174 +364,13 @@ describe('Settings', () => {
   })
 
   describe('ensureLatestSettings', () => {
-    test('adds missing keys with defaults', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 7,
-          server: { port: 8888 },
-          // Missing: paths, editor, integrations, appearance, notifications, zai
-        })
-      )
-
+    test('does not crash when called in test mode', async () => {
       const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
       ensureFulcrumDir()
-      ensureLatestSettings()
 
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // User value preserved
-      expect(file.server.port).toBe(8888)
-
-      // All sections should exist with defaults
-      expect(file.paths).toBeDefined()
-      expect(file.paths.defaultGitReposDir).toBeDefined()
-      expect(file.editor).toBeDefined()
-      expect(file.editor.app).toBe('vscode')
-      expect(file.integrations).toBeDefined()
-      expect(file.appearance).toBeDefined()
-      expect(file.notifications).toBeDefined()
-      expect(file.notifications.enabled).toBe(true)
-      expect(file.zai).toBeDefined()
-      expect(file.zai.enabled).toBe(false)
-    })
-
-    test('preserves user values while adding missing keys', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 7,
-          server: { port: 9999 },
-          appearance: { theme: 'dark' }, // User set theme but missing other appearance keys
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // User values preserved
-      expect(file.server.port).toBe(9999)
-      expect(file.appearance.theme).toBe('dark')
-
-      // Missing appearance keys added with defaults
-      expect(file.appearance.syncClaudeCodeTheme).toBe(false)
-      expect(file.appearance.claudeCodeLightTheme).toBe('light-ansi')
-      expect(file.appearance.claudeCodeDarkTheme).toBe('dark-ansi')
-    })
-
-    test('preserves extra keys not in schema', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 7,
-          server: { port: 7777 },
-          desktop: { zoomLevel: 1.5 }, // Extra key not in main schema
-          lastUpdateCheck: 1234567890, // Another extra key
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // Extra keys preserved
-      expect(file.desktop?.zoomLevel).toBe(1.5)
-      expect(file.lastUpdateCheck).toBe(1234567890)
-    })
-
-    test('always writes file and sets schema version', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          server: { port: 7777 },
-          // No schema version
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir, CURRENT_SCHEMA_VERSION } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // Schema version should be set to current
-      expect(file._schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
-    })
-
-    test('creates settings file with all defaults if none exists', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      expect(existsSync(settingsPath)).toBe(false)
-
-      const { ensureLatestSettings, ensureFulcrumDir, CURRENT_SCHEMA_VERSION } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      expect(existsSync(settingsPath)).toBe(true)
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // All default sections should exist
-      expect(file._schemaVersion).toBe(CURRENT_SCHEMA_VERSION)
-      expect(file.server.port).toBe(7777)
-      expect(file.editor.app).toBe('vscode')
-      expect(file.notifications.enabled).toBe(true)
-      expect(file.zai.enabled).toBe(false)
-    })
-
-    test('handles missing notifications section', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 7,
-          server: { port: 7777 },
-          // No notifications section
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // Notifications should be added with defaults
-      expect(file.notifications).toBeDefined()
-      expect(file.notifications.enabled).toBe(true)
-      expect(file.notifications.sound.enabled).toBe(true)
-      expect(file.notifications.slack.enabled).toBe(false)
-    })
-
-    test('handles missing zai section', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 7,
-          server: { port: 7777 },
-          // No zai section
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // zai should be added with defaults
-      expect(file.zai).toBeDefined()
-      expect(file.zai.enabled).toBe(false)
-      expect(file.zai.apiKey).toBeNull()
-      expect(file.zai.haikuModel).toBe('glm-4.5-air')
+      // Should not throw — in test mode, fnox CLI is not available,
+      // so migration and schema version set are skipped
+      expect(() => ensureLatestSettings()).not.toThrow()
     })
   })
 
@@ -658,62 +383,22 @@ describe('Settings', () => {
       expect(settings.agent.defaultAgent).toBe('claude')
     })
 
-    test('reads agent.defaultAgent from file', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 8,
-          agent: { defaultAgent: 'opencode' },
-        })
-      )
+    test('reads agent.defaultAgent from cache', async () => {
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
-      const { getSettings } = await import('./')
+      updateSettingByPath('agent.defaultAgent', 'opencode')
       const settings = getSettings()
-
       expect(settings.agent.defaultAgent).toBe('opencode')
     })
 
     test('updates agent.defaultAgent via updateSettingByPath', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 8,
-          agent: { defaultAgent: 'claude' },
-        })
-      )
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
-      const { updateSettingByPath, getSettings } = await import('./')
       updateSettingByPath('agent.defaultAgent', 'opencode')
-
       const settings = getSettings()
       expect(settings.agent.defaultAgent).toBe('opencode')
-
-      // Verify persistence
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(file.agent.defaultAgent).toBe('opencode')
-    })
-
-    test('ensureLatestSettings adds missing agent section', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 7, // Old version without agent section
-          server: { port: 7777 },
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // Agent section should be added with defaults
-      expect(file.agent).toBeDefined()
-      expect(file.agent.defaultAgent).toBe('claude')
     })
   })
 
@@ -727,61 +412,21 @@ describe('Settings', () => {
       expect(settings.tasks.startWorktreeTasksImmediately).toBe(true)
     })
 
-    test('reads task settings from file', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 1,
-          tasks: {
-            defaultTaskType: 'manual',
-            startWorktreeTasksImmediately: false,
-          },
-        })
-      )
+    test('reads task settings from cache', async () => {
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
-      const { getSettings } = await import('./')
+      updateSettingByPath('tasks.defaultTaskType', 'manual')
+      updateSettingByPath('tasks.startWorktreeTasksImmediately', false)
+
       const settings = getSettings()
-
-      expect(settings.tasks.defaultTaskType).toBe('manual')
-      expect(settings.tasks.startWorktreeTasksImmediately).toBe(false)
-    })
-
-    test('migrates old code/non-code/non-worktree/standalone terminology', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 1,
-          tasks: {
-            defaultTaskType: 'non-code',
-            startCodeTasksImmediately: false,
-          },
-        })
-      )
-
-      const { getSettings } = await import('./')
-      const settings = getSettings()
-
-      // Old values should be migrated
       expect(settings.tasks.defaultTaskType).toBe('manual')
       expect(settings.tasks.startWorktreeTasksImmediately).toBe(false)
     })
 
     test('updates task settings via updateSettingByPath', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 1,
-          tasks: {
-            defaultTaskType: 'worktree',
-            startWorktreeTasksImmediately: true,
-          },
-        })
-      )
-
-      const { updateSettingByPath, getSettings } = await import('./')
+      const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
+      ensureFulcrumDir()
 
       updateSettingByPath('tasks.defaultTaskType', 'manual')
       let settings = getSettings()
@@ -790,60 +435,6 @@ describe('Settings', () => {
       updateSettingByPath('tasks.startWorktreeTasksImmediately', false)
       settings = getSettings()
       expect(settings.tasks.startWorktreeTasksImmediately).toBe(false)
-
-      // Verify persistence
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-      expect(file.tasks.defaultTaskType).toBe('manual')
-      expect(file.tasks.startWorktreeTasksImmediately).toBe(false)
-    })
-
-    test('ensureLatestSettings adds missing tasks section', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 1,
-          server: { port: 7777 },
-          // No tasks section
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // Tasks section should be added with defaults
-      expect(file.tasks).toBeDefined()
-      expect(file.tasks.defaultTaskType).toBe('worktree')
-      expect(file.tasks.startWorktreeTasksImmediately).toBe(true)
-    })
-
-    test('preserves existing task settings in ensureLatestSettings', async () => {
-      const settingsPath = join(tempDir, 'settings.json')
-      writeFileSync(
-        settingsPath,
-        JSON.stringify({
-          _schemaVersion: 1,
-          server: { port: 7777 },
-          tasks: {
-            defaultTaskType: 'manual',
-            // Missing startWorktreeTasksImmediately
-          },
-        })
-      )
-
-      const { ensureLatestSettings, ensureFulcrumDir } = await import('./')
-      ensureFulcrumDir()
-      ensureLatestSettings()
-
-      const file = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-
-      // User value preserved
-      expect(file.tasks.defaultTaskType).toBe('manual')
-      // Missing key added with default
-      expect(file.tasks.startWorktreeTasksImmediately).toBe(true)
     })
   })
 
@@ -876,14 +467,13 @@ describe('Settings', () => {
         throw new Error(
           `getSettings() is missing fields that exist in DEFAULT_SETTINGS:\n` +
             missing.map((p) => `  - ${p}`).join('\n') +
-            `\n\nAdd them to the fileSettings object in getSettings() (server/lib/settings/core.ts).`
+            `\n\nAdd them to the settings object in getSettings() (server/lib/settings/core.ts).`
         )
       }
     })
 
     test('write-then-read roundtrip preserves value for all VALID_SETTING_PATHS', async () => {
       const { updateSettingByPath, getSettings, ensureFulcrumDir } = await import('./')
-
 
       ensureFulcrumDir()
 

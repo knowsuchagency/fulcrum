@@ -22,7 +22,7 @@ import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { WebSocket } from 'ws'
 import { log } from './lib/logger'
-import { ensureLatestSettings, getSettingByKey } from './lib/settings'
+import { ensureLatestConfig, getSettingByKey, initFnoxConfig } from './lib/settings'
 
 // Neutralinojs extension connectivity info
 interface NeutralinoConfig {
@@ -202,8 +202,9 @@ function gracefulShutdown() {
 async function main() {
   log.desktop.info('Starting Fulcrum server in desktop mode')
 
-  // Ensure settings file is up-to-date with latest schema on startup
-  ensureLatestSettings()
+  // Initialize fnox config cache and ensure config is up-to-date
+  initFnoxConfig()
+  ensureLatestConfig()
 
   // Read Neutralino config from stdin
   const nlConfig = await readNeutralinoConfig()

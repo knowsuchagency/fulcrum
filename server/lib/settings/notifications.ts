@@ -1,10 +1,8 @@
-import * as fs from 'fs'
 import { log } from '../logger'
 import type { NotificationSettings, NotificationSettingsUpdateResult } from './types'
-import { ensureFulcrumDir, getSettingsPath } from './paths'
-import { getFnoxSecret, isFnoxAvailable, setFnoxSecret, removeFnoxSecret } from './fnox'
+import { getFnoxValue, setFnoxValue } from './fnox'
 
-// Simple mutex for synchronizing settings file access
+// Simple mutex for synchronizing settings access
 let notificationSettingsLock: Promise<void> = Promise.resolve()
 
 export function withNotificationSettingsLock<T>(fn: () => T): Promise<T> {
@@ -35,75 +33,61 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   gmail: { enabled: false },
 }
 
-// Get notification settings from settings.json
+// Get notification settings from fnox
 export function getNotificationSettings(): NotificationSettings {
-  ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
+  const fv = (path: string): unknown => getFnoxValue(path)
 
-  if (!fs.existsSync(settingsPath)) {
-    // Initialize settings file with defaults including timestamp
-    const defaultSettings = { ...DEFAULT_NOTIFICATION_SETTINGS, _updatedAt: Date.now() }
-    fs.writeFileSync(settingsPath, JSON.stringify({ notifications: defaultSettings }, null, 2), 'utf-8')
-    return defaultSettings
+  const result: NotificationSettings = {
+    enabled: (fv('notifications.enabled') as boolean | null) ?? DEFAULT_NOTIFICATION_SETTINGS.enabled,
+    toast: {
+      enabled: (fv('notifications.toast.enabled') as boolean | null) ?? true,
+    },
+    desktop: {
+      enabled: (fv('notifications.desktop.enabled') as boolean | null) ?? true,
+    },
+    sound: {
+      enabled: (fv('notifications.sound.enabled') as boolean | null) ?? true,
+      customSoundFile: (fv('notifications.sound.customSoundFile') as string | undefined) ?? undefined,
+    },
+    slack: {
+      enabled: (fv('notifications.slack.enabled') as boolean | null) ?? false,
+      webhookUrl: (fv('notifications.slack.webhookUrl') as string | undefined) ?? undefined,
+      useMessagingChannel: (fv('notifications.slack.useMessagingChannel') as boolean | undefined) ?? undefined,
+    },
+    discord: {
+      enabled: (fv('notifications.discord.enabled') as boolean | null) ?? false,
+      webhookUrl: (fv('notifications.discord.webhookUrl') as string | undefined) ?? undefined,
+      useMessagingChannel: (fv('notifications.discord.useMessagingChannel') as boolean | undefined) ?? undefined,
+    },
+    pushover: {
+      enabled: (fv('notifications.pushover.enabled') as boolean | null) ?? false,
+      appToken: (fv('notifications.pushover.appToken') as string | undefined) ?? undefined,
+      userKey: (fv('notifications.pushover.userKey') as string | undefined) ?? undefined,
+    },
+    whatsapp: {
+      enabled: (fv('notifications.whatsapp.enabled') as boolean | null) ?? false,
+    },
+    telegram: {
+      enabled: (fv('notifications.telegram.enabled') as boolean | null) ?? false,
+    },
+    gmail: {
+      enabled: (fv('notifications.gmail.enabled') as boolean | null) ?? false,
+      googleAccountId: (fv('notifications.gmail.googleAccountId') as string | undefined) ?? undefined,
+    },
+    _updatedAt: (fv('notifications._updatedAt') as number | null) ?? undefined,
   }
 
-  try {
-    const content = fs.readFileSync(settingsPath, 'utf-8')
-    const parsed = JSON.parse(content) as Record<string, unknown>
-    const notifications = parsed.notifications as Partial<NotificationSettings> | undefined
-
-    if (!notifications) {
-      // Initialize notifications with defaults including timestamp
-      const defaultSettings = { ...DEFAULT_NOTIFICATION_SETTINGS, _updatedAt: Date.now() }
-      parsed.notifications = defaultSettings
-      fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
-      return defaultSettings
-    }
-
-    // If _updatedAt is missing, add it and save to ensure consistency
-    if (notifications._updatedAt === undefined) {
-      const timestamp = Date.now()
-      notifications._updatedAt = timestamp
-      parsed.notifications = notifications
-      fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
-    }
-
-    const result: NotificationSettings = {
-      enabled: notifications.enabled ?? true,
-      toast: { enabled: true, ...notifications.toast },
-      desktop: { enabled: true, ...notifications.desktop },
-      sound: { enabled: false, ...notifications.sound },
-      slack: { enabled: false, ...notifications.slack },
-      discord: { enabled: false, ...notifications.discord },
-      pushover: { enabled: false, ...notifications.pushover },
-      whatsapp: { enabled: false, ...notifications.whatsapp },
-      telegram: { enabled: false, ...notifications.telegram },
-      gmail: { enabled: false, ...notifications.gmail },
-      _updatedAt: notifications._updatedAt!,
-    }
-
-    // Overlay fnox secrets
-    const pushoverAppToken = getFnoxSecret('notifications.pushover.appToken')
-    if (pushoverAppToken) result.pushover.appToken = pushoverAppToken
-    const pushoverUserKey = getFnoxSecret('notifications.pushover.userKey')
-    if (pushoverUserKey) result.pushover.userKey = pushoverUserKey
-    const slackWebhookUrl = getFnoxSecret('notifications.slack.webhookUrl')
-    if (slackWebhookUrl) result.slack.webhookUrl = slackWebhookUrl
-    const discordWebhookUrl = getFnoxSecret('notifications.discord.webhookUrl')
-    if (discordWebhookUrl) result.discord.webhookUrl = discordWebhookUrl
-
-    return result
-  } catch {
-    // File is corrupt, reinitialize with defaults
-    const defaultSettings = { ...DEFAULT_NOTIFICATION_SETTINGS, _updatedAt: Date.now() }
-    fs.writeFileSync(settingsPath, JSON.stringify({ notifications: defaultSettings }, null, 2), 'utf-8')
-    return defaultSettings
+  // Ensure _updatedAt is set if missing
+  if (result._updatedAt === undefined) {
+    const timestamp = Date.now()
+    setFnoxValue('notifications._updatedAt', timestamp)
+    result._updatedAt = timestamp
   }
+
+  return result
 }
 
 // Update notification settings with optional optimistic locking
-// If clientTimestamp is provided and doesn't match current _updatedAt, returns conflict
-// Uses a mutex to prevent race conditions between concurrent requests
 export function updateNotificationSettings(
   updates: Partial<NotificationSettings>,
   clientTimestamp?: number
@@ -116,21 +100,9 @@ export function updateNotificationSettingsSync(
   updates: Partial<NotificationSettings>,
   clientTimestamp?: number
 ): NotificationSettingsUpdateResult {
-  ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
-
-  let parsed: Record<string, unknown> = {}
-  if (fs.existsSync(settingsPath)) {
-    try {
-      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-    } catch {
-      // Use empty if invalid
-    }
-  }
-
   const current = getNotificationSettings()
 
-  // Log incoming update for debugging - always log when enabled is being changed
+  // Log incoming update for debugging
   if (updates.enabled !== undefined) {
     log.settings.info('Notification enabled state change requested', {
       clientTimestamp,
@@ -138,20 +110,16 @@ export function updateNotificationSettingsSync(
       currentEnabled: current.enabled,
       requestedEnabled: updates.enabled,
       hasTimestamp: clientTimestamp !== undefined,
-      stack: new Error().stack,
     })
   }
 
   // Check for stale update (optimistic locking)
   if (current._updatedAt !== undefined) {
     if (clientTimestamp === undefined) {
-      // Client didn't send timestamp - log warning but allow (for CLI compatibility)
       log.settings.warn('Notification settings update without timestamp (no optimistic lock)', {
         serverTimestamp: current._updatedAt,
         attemptedChanges: updates,
-        stack: new Error().stack,
       })
-      // Allow the update but we've logged it
     } else if (clientTimestamp !== current._updatedAt) {
       log.settings.warn('Rejected stale notification settings update', {
         clientTimestamp,
@@ -162,6 +130,7 @@ export function updateNotificationSettingsSync(
     }
   }
 
+  // Merge updates
   const updated: NotificationSettings = {
     enabled: updates.enabled ?? current.enabled,
     toast: { ...current.toast, ...updates.toast },
@@ -176,39 +145,51 @@ export function updateNotificationSettingsSync(
     _updatedAt: Date.now(),
   }
 
-  // Route secrets through fnox before writing to settings.json
-  if (isFnoxAvailable()) {
-    const secretFields: Array<{ path: string; obj: Record<string, unknown>; key: string }> = [
-      { path: 'notifications.pushover.appToken', obj: updated.pushover as Record<string, unknown>, key: 'appToken' },
-      { path: 'notifications.pushover.userKey', obj: updated.pushover as Record<string, unknown>, key: 'userKey' },
-      { path: 'notifications.slack.webhookUrl', obj: updated.slack as Record<string, unknown>, key: 'webhookUrl' },
-      { path: 'notifications.discord.webhookUrl', obj: updated.discord as Record<string, unknown>, key: 'webhookUrl' },
-    ]
-    for (const { path, obj, key } of secretFields) {
-      const value = obj[key]
-      if (value && typeof value === 'string' && value.trim() !== '') {
-        setFnoxSecret(path, value as string)
-        obj[key] = undefined // Don't persist in settings.json
-      } else if (value === '' || value === null) {
-        removeFnoxSecret(path)
-        obj[key] = undefined
-      }
-    }
+  // Write all notification fields to fnox (updates cache; CLI writes only when available)
+  setFnoxValue('notifications.enabled', updated.enabled)
+  setFnoxValue('notifications.toast.enabled', updated.toast.enabled)
+  setFnoxValue('notifications.desktop.enabled', updated.desktop.enabled)
+  setFnoxValue('notifications.sound.enabled', updated.sound.enabled)
+  if (updated.sound.customSoundFile !== undefined) {
+    setFnoxValue('notifications.sound.customSoundFile', updated.sound.customSoundFile || null)
   }
-
-  parsed.notifications = updated
-  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
+  setFnoxValue('notifications.slack.enabled', updated.slack.enabled)
+  if (updated.slack.webhookUrl !== undefined) {
+    setFnoxValue('notifications.slack.webhookUrl', updated.slack.webhookUrl || null)
+  }
+  if (updated.slack.useMessagingChannel !== undefined) {
+    setFnoxValue('notifications.slack.useMessagingChannel', updated.slack.useMessagingChannel)
+  }
+  setFnoxValue('notifications.discord.enabled', updated.discord.enabled)
+  if (updated.discord.webhookUrl !== undefined) {
+    setFnoxValue('notifications.discord.webhookUrl', updated.discord.webhookUrl || null)
+  }
+  if (updated.discord.useMessagingChannel !== undefined) {
+    setFnoxValue('notifications.discord.useMessagingChannel', updated.discord.useMessagingChannel)
+  }
+  setFnoxValue('notifications.pushover.enabled', updated.pushover.enabled)
+  if (updated.pushover.appToken !== undefined) {
+    setFnoxValue('notifications.pushover.appToken', updated.pushover.appToken || null)
+  }
+  if (updated.pushover.userKey !== undefined) {
+    setFnoxValue('notifications.pushover.userKey', updated.pushover.userKey || null)
+  }
+  setFnoxValue('notifications.whatsapp.enabled', updated.whatsapp.enabled)
+  setFnoxValue('notifications.telegram.enabled', updated.telegram.enabled)
+  setFnoxValue('notifications.gmail.enabled', updated.gmail.enabled)
+  if (updated.gmail.googleAccountId !== undefined) {
+    setFnoxValue('notifications.gmail.googleAccountId', updated.gmail.googleAccountId || null)
+  }
+  setFnoxValue('notifications._updatedAt', updated._updatedAt)
 
   // Log what changed
   const changes: Record<string, { from: unknown; to: unknown }> = {}
   if (updates.enabled !== undefined && updates.enabled !== current.enabled) {
     changes.enabled = { from: current.enabled, to: updates.enabled }
-    // Log with stack trace when notifications are being disabled
     if (updates.enabled === false) {
       log.settings.warn('Notifications being DISABLED', {
         from: current.enabled,
         to: updates.enabled,
-        stack: new Error().stack,
       })
     }
   }

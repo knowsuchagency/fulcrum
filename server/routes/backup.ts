@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import * as fs from 'fs'
 import * as path from 'path'
-import { getFulcrumDir, getDatabasePath, getSettingsPath } from '../lib/settings'
+import { getFulcrumDir, getDatabasePath } from '../lib/settings'
+import { initFnoxConfig } from '../lib/settings/fnox'
 import { log } from '../lib/logger'
 
 const app = new Hono()
@@ -10,7 +11,8 @@ const app = new Hono()
 // ~/.fulcrum/backups/
 //   2024-01-15T10-30-00/
 //     fulcrum.db
-//     settings.json
+//     fnox.toml
+//     age.txt
 //     manifest.json  (metadata about the backup)
 
 function getBackupsDir(): string {
@@ -34,10 +36,11 @@ interface BackupManifest {
   version: string
   files: {
     database: boolean
-    settings: boolean
+    fnoxConfig: boolean
+    ageKey: boolean
   }
   databaseSize?: number
-  settingsSize?: number
+  fnoxConfigSize?: number
   description?: string
 }
 
@@ -91,6 +94,7 @@ app.post('/', async (c) => {
     ensureBackupsDir()
     const backupName = generateBackupName()
     const backupPath = path.join(getBackupsDir(), backupName)
+    const fulcrumDir = getFulcrumDir()
 
     fs.mkdirSync(backupPath, { recursive: true })
 
@@ -99,7 +103,8 @@ app.post('/', async (c) => {
       version: process.env.npm_package_version || '2.0.0',
       files: {
         database: false,
-        settings: false,
+        fnoxConfig: false,
+        ageKey: false,
       },
       description: body.description,
     }
@@ -123,12 +128,21 @@ app.post('/', async (c) => {
       }
     }
 
-    // Copy settings
-    const settingsPath = getSettingsPath()
-    if (fs.existsSync(settingsPath)) {
-      fs.copyFileSync(settingsPath, path.join(backupPath, 'settings.json'))
-      manifest.files.settings = true
-      manifest.settingsSize = fs.statSync(settingsPath).size
+    // Copy fnox.toml
+    const fnoxConfigPath = path.join(fulcrumDir, 'fnox.toml')
+    if (fs.existsSync(fnoxConfigPath)) {
+      fs.copyFileSync(fnoxConfigPath, path.join(backupPath, 'fnox.toml'))
+      manifest.files.fnoxConfig = true
+      manifest.fnoxConfigSize = fs.statSync(fnoxConfigPath).size
+    }
+
+    // Copy age.txt
+    const ageKeyPath = path.join(fulcrumDir, 'age.txt')
+    if (fs.existsSync(ageKeyPath)) {
+      fs.copyFileSync(ageKeyPath, path.join(backupPath, 'age.txt'))
+      // Preserve restrictive permissions
+      fs.chmodSync(path.join(backupPath, 'age.txt'), 0o600)
+      manifest.files.ageKey = true
     }
 
     // Write manifest
@@ -181,14 +195,16 @@ app.post('/:name/restore', async (c) => {
   }
 
   try {
-    const body = await c.req.json<{ database?: boolean; settings?: boolean }>().catch(() => ({}))
+    const body = await c.req.json<{ database?: boolean; config?: boolean }>().catch(() => ({}))
     const restoreDatabase = body.database !== false
-    const restoreSettings = body.settings !== false
+    const restoreConfig = body.config !== false
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as BackupManifest
-    const restored: { database: boolean; settings: boolean } = {
+    const fulcrumDir = getFulcrumDir()
+    const restored: { database: boolean; fnoxConfig: boolean; ageKey: boolean } = {
       database: false,
-      settings: false,
+      fnoxConfig: false,
+      ageKey: false,
     }
 
     // Create a pre-restore backup first
@@ -199,7 +215,7 @@ app.post('/:name/restore', async (c) => {
     const preRestoreManifest: BackupManifest = {
       createdAt: new Date().toISOString(),
       version: process.env.npm_package_version || '2.0.0',
-      files: { database: false, settings: false },
+      files: { database: false, fnoxConfig: false, ageKey: false },
       description: `Auto-backup before restoring from ${name}`,
     }
 
@@ -224,7 +240,6 @@ app.post('/:name/restore', async (c) => {
         if (fs.existsSync(walBackupPath)) {
           fs.copyFileSync(walBackupPath, `${dbPath}-wal`)
         } else if (fs.existsSync(`${dbPath}-wal`)) {
-          // Remove WAL file if backup doesn't have one
           fs.unlinkSync(`${dbPath}-wal`)
         }
         if (fs.existsSync(shmBackupPath)) {
@@ -237,26 +252,41 @@ app.post('/:name/restore', async (c) => {
       }
     }
 
-    // Restore settings
-    if (restoreSettings && manifest.files.settings) {
-      const settingsBackupPath = path.join(backupPath, 'settings.json')
-      const settingsPath = getSettingsPath()
-
-      if (fs.existsSync(settingsBackupPath)) {
-        // Backup current settings first
-        if (fs.existsSync(settingsPath)) {
-          fs.copyFileSync(settingsPath, path.join(preRestoreBackupPath, 'settings.json'))
-          preRestoreManifest.files.settings = true
+    // Restore fnox config and age key
+    if (restoreConfig) {
+      const fnoxConfigBackup = path.join(backupPath, 'fnox.toml')
+      const fnoxConfigPath = path.join(fulcrumDir, 'fnox.toml')
+      if (manifest.files.fnoxConfig && fs.existsSync(fnoxConfigBackup)) {
+        // Backup current
+        if (fs.existsSync(fnoxConfigPath)) {
+          fs.copyFileSync(fnoxConfigPath, path.join(preRestoreBackupPath, 'fnox.toml'))
+          preRestoreManifest.files.fnoxConfig = true
         }
+        fs.copyFileSync(fnoxConfigBackup, fnoxConfigPath)
+        restored.fnoxConfig = true
+      }
 
-        // Restore settings
-        fs.copyFileSync(settingsBackupPath, settingsPath)
-        restored.settings = true
+      const ageKeyBackup = path.join(backupPath, 'age.txt')
+      const ageKeyPath = path.join(fulcrumDir, 'age.txt')
+      if (manifest.files.ageKey && fs.existsSync(ageKeyBackup)) {
+        // Backup current
+        if (fs.existsSync(ageKeyPath)) {
+          fs.copyFileSync(ageKeyPath, path.join(preRestoreBackupPath, 'age.txt'))
+          preRestoreManifest.files.ageKey = true
+        }
+        fs.copyFileSync(ageKeyBackup, ageKeyPath)
+        fs.chmodSync(ageKeyPath, 0o600)
+        restored.ageKey = true
+      }
+
+      // Reinitialize fnox cache after restore
+      if (restored.fnoxConfig || restored.ageKey) {
+        initFnoxConfig()
       }
     }
 
     // Save pre-restore backup manifest if any files were backed up
-    if (preRestoreManifest.files.database || preRestoreManifest.files.settings) {
+    if (preRestoreManifest.files.database || preRestoreManifest.files.fnoxConfig || preRestoreManifest.files.ageKey) {
       fs.writeFileSync(
         path.join(preRestoreBackupPath, 'manifest.json'),
         JSON.stringify(preRestoreManifest, null, 2)
@@ -271,7 +301,7 @@ app.post('/:name/restore', async (c) => {
     return c.json({
       success: true,
       restored,
-      preRestoreBackup: preRestoreManifest.files.database || preRestoreManifest.files.settings
+      preRestoreBackup: preRestoreManifest.files.database || preRestoreManifest.files.fnoxConfig || preRestoreManifest.files.ageKey
         ? preRestoreBackupName
         : null,
       warning: restored.database

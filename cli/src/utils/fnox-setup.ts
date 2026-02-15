@@ -50,12 +50,20 @@ export function ensureFnoxSetup(fulcrumDir: string): void {
     publicKey = match[1]
   }
 
-  // Step 2: Create fnox.toml if needed
+  // Step 2: Create fnox.toml if needed, or ensure plain provider exists
   if (!existsSync(fnoxConfigPath)) {
     console.error('Creating fnox configuration...')
-    const config = `[providers.age]\ntype = "age"\nrecipients = ["${publicKey}"]\n`
+    const config = `[providers.plain]\ntype = "plain"\n\n[providers.age]\ntype = "age"\nrecipients = ["${publicKey}"]\n`
     writeFileSync(fnoxConfigPath, config, 'utf-8')
     console.error('fnox configuration created.')
+  } else {
+    // Ensure plain provider exists in existing config (upgrade from age-only)
+    const existingConfig = readFileSync(fnoxConfigPath, 'utf-8')
+    if (!existingConfig.includes('[providers.plain]')) {
+      const updatedConfig = `[providers.plain]\ntype = "plain"\n\n${existingConfig}`
+      writeFileSync(fnoxConfigPath, updatedConfig, 'utf-8')
+      console.error('Added plain provider to fnox configuration.')
+    }
   }
 
   // Step 3: Verify with a round-trip test

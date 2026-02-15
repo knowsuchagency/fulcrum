@@ -15,7 +15,7 @@ import {
   isDeveloperMode,
   getDefaultValue,
   isFnoxAvailable,
-  getFnoxSecretCount,
+  getFnoxConfigCount,
   CLAUDE_CODE_THEMES,
   type NotificationSettings,
   type ZAiSettings,
@@ -211,11 +211,11 @@ app.put('/z-ai', async (c) => {
   }
 })
 
-// GET /api/config/fnox-status - Check fnox availability and secret count
+// GET /api/config/fnox-status - Check fnox availability and config count
 app.get('/fnox-status', (c) => {
   return c.json({
     available: isFnoxAvailable(),
-    secretCount: getFnoxSecretCount(),
+    configCount: getFnoxConfigCount(),
   })
 })
 
