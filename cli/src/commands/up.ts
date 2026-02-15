@@ -17,8 +17,13 @@ import {
   isOpencodeInstalled,
   isUvInstalled,
   installUv,
+  isFnoxInstalled,
+  installFnox,
+  isAgeInstalled,
+  installAge,
 } from '../utils/install'
 import { getDependency, getInstallMethod, getInstallCommand } from '../utils/dependencies'
+import { ensureFnoxSetup } from '../utils/fnox-setup'
 import { installClaudePlugin, needsPluginUpdate } from './claude'
 import { checkForUpdates, installLatestVersion } from './update'
 import pkg from '../../../package.json'
@@ -149,6 +154,52 @@ async function handleUpCommand(flags: Record<string, string>) {
     }
   }
 
+  // Check if fnox is installed (required for secrets management)
+  if (!isFnoxInstalled()) {
+    const fnoxDep = getDependency('fnox')!
+    const method = getInstallMethod(fnoxDep)
+    console.error('fnox is required for encrypted secrets management but is not installed.')
+    console.error('  fnox encrypts sensitive settings like API keys and tokens.')
+
+    const shouldInstall = autoYes || (await confirm(`Would you like to install fnox via ${method}?`))
+    if (shouldInstall) {
+      const success = installFnox()
+      if (!success) {
+        throw new CliError('INSTALL_FAILED', 'Failed to install fnox', ExitCodes.ERROR)
+      }
+      console.error('fnox installed successfully!')
+    } else {
+      throw new CliError(
+        'MISSING_DEPENDENCY',
+        `fnox is required. Install manually: ${getInstallCommand(fnoxDep)}`,
+        ExitCodes.ERROR
+      )
+    }
+  }
+
+  // Check if age is installed (required for encryption key generation)
+  if (!isAgeInstalled()) {
+    const ageDep = getDependency('age')!
+    const method = getInstallMethod(ageDep)
+    console.error('age is required for encryption but is not installed.')
+    console.error('  age generates encryption keys used by fnox to encrypt secrets.')
+
+    const shouldInstall = autoYes || (await confirm(`Would you like to install age via ${method}?`))
+    if (shouldInstall) {
+      const success = installAge()
+      if (!success) {
+        throw new CliError('INSTALL_FAILED', 'Failed to install age', ExitCodes.ERROR)
+      }
+      console.error('age installed successfully!')
+    } else {
+      throw new CliError(
+        'MISSING_DEPENDENCY',
+        `age is required. Install manually: ${getInstallCommand(ageDep)}`,
+        ExitCodes.ERROR
+      )
+    }
+  }
+
   // Auto-install/update Claude Code plugin if Claude is installed
   if (isClaudeInstalled() && needsPluginUpdate()) {
     console.error('Updating Fulcrum plugin for Claude Code...')
@@ -213,10 +264,13 @@ async function handleUpCommand(flags: Record<string, string>) {
   }
   const ptyLibPath = join(packageRoot, 'lib', ptyLibName)
 
+  // Ensure fnox is initialized (age key + fnox.toml)
+  const fulcrumDir = getFulcrumDir()
+  ensureFnoxSetup(fulcrumDir)
+
   // Start the bundled server
   // Explicitly set FULCRUM_DIR to ensure consistent path resolution
   // regardless of where the CLI was invoked from
-  const fulcrumDir = getFulcrumDir()
   const debug = flags.debug === 'true'
   console.error(`Starting Fulcrum server${debug ? ' (debug mode)' : ''}...`)
   const serverProc = spawn('bun', [serverPath], {
@@ -231,6 +285,8 @@ async function handleUpCommand(flags: Record<string, string>) {
       FULCRUM_PACKAGE_ROOT: packageRoot,
       FULCRUM_VERSION: pkg.version,
       BUN_PTY_LIB: ptyLibPath,
+      FNOX_AGE_KEY_FILE: join(fulcrumDir, 'age.txt'),
+      FULCRUM_FNOX_INSTALLED: '1',
       // Pass CLI's alias-aware detection to the server (which can't detect aliases)
       ...(isClaudeInstalled() && { FULCRUM_CLAUDE_INSTALLED: '1' }),
       ...(isOpencodeInstalled() && { FULCRUM_OPENCODE_INSTALLED: '1' }),

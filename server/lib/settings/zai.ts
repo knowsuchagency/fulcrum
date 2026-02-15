@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import type { ZAiSettings } from './types'
 import { ensureFulcrumDir, getSettingsPath } from './paths'
+import { getFnoxSecret, isFnoxAvailable, setFnoxSecret, removeFnoxSecret } from './fnox'
 
 // ==================== z.ai Settings ====================
 // These settings control the z.ai proxy integration for Claude Code
@@ -31,13 +32,19 @@ export function getZAiSettings(): ZAiSettings {
       return DEFAULT_ZAI_SETTINGS
     }
 
-    return {
+    const result: ZAiSettings = {
       enabled: zai.enabled ?? false,
       apiKey: zai.apiKey ?? null,
       haikuModel: zai.haikuModel ?? DEFAULT_ZAI_SETTINGS.haikuModel,
       sonnetModel: zai.sonnetModel ?? DEFAULT_ZAI_SETTINGS.sonnetModel,
       opusModel: zai.opusModel ?? DEFAULT_ZAI_SETTINGS.opusModel,
     }
+
+    // Overlay fnox secret
+    const fnoxApiKey = getFnoxSecret('zai.apiKey')
+    if (fnoxApiKey) result.apiKey = fnoxApiKey
+
+    return result
   } catch {
     return DEFAULT_ZAI_SETTINGS
   }
@@ -66,8 +73,20 @@ export function updateZAiSettings(updates: Partial<ZAiSettings>): ZAiSettings {
     opusModel: updates.opusModel ?? current.opusModel,
   }
 
+  // Route apiKey through fnox
+  if (isFnoxAvailable()) {
+    if (updated.apiKey && updated.apiKey.trim() !== '') {
+      setFnoxSecret('zai.apiKey', updated.apiKey)
+      updated.apiKey = null // Don't persist in settings.json
+    } else {
+      removeFnoxSecret('zai.apiKey')
+      updated.apiKey = null
+    }
+  }
+
   parsed.zai = updated
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
 
-  return updated
+  // Return the full settings (with fnox overlay) for the caller
+  return getZAiSettings()
 }

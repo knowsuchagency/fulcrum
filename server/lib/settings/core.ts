@@ -26,6 +26,14 @@ import {
 } from './migration'
 import { DEFAULT_NOTIFICATION_SETTINGS } from './notifications'
 import { DEFAULT_ZAI_SETTINGS } from './zai'
+import {
+  getFnoxSecret,
+  isSecretPath,
+  isFnoxAvailable,
+  setFnoxSecret,
+  removeFnoxSecret,
+  FNOX_SECRET_MAP,
+} from './fnox'
 
 // Ensure settings file exists with defaults
 export function ensureSettingsFile(): void {
@@ -143,38 +151,71 @@ export function getSettings(): Settings {
     ) as CalDavSettings,
   }
 
+  // Overlay fnox secrets (precedence: env var > fnox > settings.json > default)
+  const fnoxSettings = { ...fileSettings }
+  fnoxSettings.integrations = {
+    githubPat: getFnoxSecret('integrations.githubPat') ?? fileSettings.integrations.githubPat,
+    cloudflareApiToken: getFnoxSecret('integrations.cloudflareApiToken') ?? fileSettings.integrations.cloudflareApiToken,
+    cloudflareAccountId: getFnoxSecret('integrations.cloudflareAccountId') ?? fileSettings.integrations.cloudflareAccountId,
+    googleClientId: getFnoxSecret('integrations.googleClientId') ?? fileSettings.integrations.googleClientId,
+    googleClientSecret: getFnoxSecret('integrations.googleClientSecret') ?? fileSettings.integrations.googleClientSecret,
+  }
+  fnoxSettings.channels = {
+    ...fileSettings.channels,
+    email: {
+      ...fileSettings.channels.email,
+      imap: {
+        ...fileSettings.channels.email.imap,
+        password: getFnoxSecret('channels.email.imap.password') ?? fileSettings.channels.email.imap.password,
+      },
+    },
+    slack: {
+      ...fileSettings.channels.slack,
+      botToken: getFnoxSecret('channels.slack.botToken') ?? fileSettings.channels.slack.botToken,
+      appToken: getFnoxSecret('channels.slack.appToken') ?? fileSettings.channels.slack.appToken,
+    },
+    discord: {
+      ...fileSettings.channels.discord,
+      botToken: getFnoxSecret('channels.discord.botToken') ?? fileSettings.channels.discord.botToken,
+    },
+    telegram: {
+      ...fileSettings.channels.telegram,
+      botToken: getFnoxSecret('channels.telegram.botToken') ?? fileSettings.channels.telegram.botToken,
+    },
+  }
+
   // Apply environment variable overrides
   const portEnv = parseInt(process.env.PORT || '', 10)
   const editorSshPortEnv = parseInt(process.env.FULCRUM_SSH_PORT || '', 10)
 
   return {
-    ...fileSettings,
+    ...fnoxSettings,
     server: {
-      port: !isNaN(portEnv) && portEnv > 0 ? portEnv : fileSettings.server.port,
+      port: !isNaN(portEnv) && portEnv > 0 ? portEnv : fnoxSettings.server.port,
     },
     paths: {
       defaultGitReposDir: process.env.FULCRUM_GIT_REPOS_DIR
         ? expandPath(process.env.FULCRUM_GIT_REPOS_DIR)
-        : fileSettings.paths.defaultGitReposDir,
+        : fnoxSettings.paths.defaultGitReposDir,
     },
     editor: {
-      app: fileSettings.editor.app,
-      host: process.env.FULCRUM_EDITOR_HOST ?? fileSettings.editor.host,
-      sshPort: !isNaN(editorSshPortEnv) && editorSshPortEnv > 0 ? editorSshPortEnv : fileSettings.editor.sshPort,
+      app: fnoxSettings.editor.app,
+      host: process.env.FULCRUM_EDITOR_HOST ?? fnoxSettings.editor.host,
+      sshPort: !isNaN(editorSshPortEnv) && editorSshPortEnv > 0 ? editorSshPortEnv : fnoxSettings.editor.sshPort,
     },
     integrations: {
-      githubPat: process.env.GITHUB_PAT ?? fileSettings.integrations.githubPat,
-      cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? fileSettings.integrations.cloudflareApiToken,
-      cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? fileSettings.integrations.cloudflareAccountId,
-      googleClientId: process.env.GOOGLE_CLIENT_ID ?? fileSettings.integrations.googleClientId,
-      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? fileSettings.integrations.googleClientSecret,
+      githubPat: process.env.GITHUB_PAT ?? fnoxSettings.integrations.githubPat,
+      cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? fnoxSettings.integrations.cloudflareApiToken,
+      cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? fnoxSettings.integrations.cloudflareAccountId,
+      googleClientId: process.env.GOOGLE_CLIENT_ID ?? fnoxSettings.integrations.googleClientId,
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? fnoxSettings.integrations.googleClientSecret,
     },
-    agent: fileSettings.agent,
-    tasks: fileSettings.tasks,
-    appearance: fileSettings.appearance,
-    assistant: fileSettings.assistant,
-    channels: fileSettings.channels,
-    caldav: fileSettings.caldav,
+    agent: fnoxSettings.agent,
+    tasks: fnoxSettings.tasks,
+    appearance: fnoxSettings.appearance,
+    assistant: fnoxSettings.assistant,
+    channels: fnoxSettings.channels,
+    caldav: fnoxSettings.caldav,
   }
 }
 
@@ -232,14 +273,27 @@ export function updateSettingByPath(settingPath: string, value: unknown): Settin
   }
 
   const oldValue = getNestedValue(parsed, settingPath)
-  setNestedValue(parsed, settingPath, value)
+
+  // Route secrets through fnox when available
+  if (isSecretPath(settingPath) && isFnoxAvailable()) {
+    if (value && typeof value === 'string' && value.trim() !== '') {
+      setFnoxSecret(settingPath, value as string)
+      // Store null in settings.json so the secret isn't in plain text
+      setNestedValue(parsed, settingPath, null)
+    } else {
+      // Clearing a secret: remove from fnox and null in settings.json
+      removeFnoxSecret(settingPath)
+      setNestedValue(parsed, settingPath, null)
+    }
+  } else {
+    setNestedValue(parsed, settingPath, value)
+  }
   parsed._schemaVersion = CURRENT_SCHEMA_VERSION
 
   fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
 
   // Log setting change (mask sensitive values)
-  const sensitiveKeys = ['githubPat', 'cloudflareApiToken', 'apiKey']
-  const isSensitive = sensitiveKeys.some(key => settingPath.includes(key))
+  const isSensitive = isSecretPath(settingPath)
   const logValue = isSensitive ? '***' : value
   const logOldValue = isSensitive ? '***' : oldValue
   if (oldValue !== value) {
@@ -360,6 +414,30 @@ export function ensureLatestSettings(): void {
     }
     // Remove the deployment section entirely
     delete merged.deployment
+  }
+
+  // Migrate plain-text secrets from settings.json to fnox
+  if (isFnoxAvailable()) {
+    let secretsMigrated = 0
+    for (const [fnoxKey, settingsPath] of Object.entries(FNOX_SECRET_MAP)) {
+      const value = getNestedValue(merged, settingsPath)
+      if (value && typeof value === 'string' && value.trim() !== '') {
+        try {
+          setFnoxSecret(settingsPath, value)
+          setNestedValue(merged, settingsPath, null)
+          secretsMigrated++
+          log.settings.info('Migrated secret to fnox', { path: settingsPath, fnoxKey })
+        } catch (err) {
+          log.settings.warn('Failed to migrate secret to fnox', {
+            path: settingsPath,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
+    }
+    if (secretsMigrated > 0) {
+      log.settings.info('Completed secret migration to fnox', { count: secretsMigrated })
+    }
   }
 
   // Always set to current schema version

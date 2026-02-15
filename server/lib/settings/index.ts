@@ -83,6 +83,18 @@ export {
   updateZAiSettings,
 } from './zai'
 
+// fnox secrets management
+export {
+  isFnoxAvailable,
+  isSecretPath,
+  getFnoxSecret,
+  setFnoxSecret,
+  removeFnoxSecret,
+  initFnoxSecrets,
+  getFnoxSecretCount,
+  FNOX_SECRET_MAP,
+} from './fnox'
+
 // initializeFulcrumDirectories needs to include ensureSettingsFile
 // We import from paths and core, then export a combined function
 import { ensureFulcrumDir, ensureWorktreesDir } from './paths'

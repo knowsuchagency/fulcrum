@@ -96,6 +96,27 @@ export const DEPENDENCIES: Dependency[] = [
       pacman: 'sudo pacman -S --noconfirm github-cli',
     },
   },
+  {
+    name: 'fnox',
+    command: 'fnox',
+    description: 'Encrypted secrets management',
+    required: true,
+    install: {
+      brew: 'brew install fnox',
+    },
+  },
+  {
+    name: 'age',
+    command: 'age-keygen',
+    description: 'Age encryption key generation',
+    required: true,
+    install: {
+      brew: 'brew install age',
+      apt: 'sudo apt install -y age',
+      dnf: 'sudo dnf install -y age',
+      pacman: 'sudo pacman -S --noconfirm age',
+    },
+  },
 ]
 
 /**

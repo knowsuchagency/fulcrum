@@ -112,3 +112,37 @@ export function installGh(): boolean {
   if (!dep) return false
   return installDep(dep)
 }
+
+/**
+ * Check if fnox is installed.
+ */
+export function isFnoxInstalled(): boolean {
+  return isCommandInstalled('fnox')
+}
+
+/**
+ * Install fnox.
+ * Returns true if installation succeeded.
+ */
+export function installFnox(): boolean {
+  const dep = getDependency('fnox')
+  if (!dep) return false
+  return installDep(dep)
+}
+
+/**
+ * Check if age is installed.
+ */
+export function isAgeInstalled(): boolean {
+  return isCommandInstalled('age-keygen')
+}
+
+/**
+ * Install age encryption tool.
+ * Returns true if installation succeeded.
+ */
+export function installAge(): boolean {
+  const dep = getDependency('age')
+  if (!dep) return false
+  return installDep(dep)
+}

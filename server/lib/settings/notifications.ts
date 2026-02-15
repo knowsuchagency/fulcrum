@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import { log } from '../logger'
 import type { NotificationSettings, NotificationSettingsUpdateResult } from './types'
 import { ensureFulcrumDir, getSettingsPath } from './paths'
+import { getFnoxSecret, isFnoxAvailable, setFnoxSecret, removeFnoxSecret } from './fnox'
 
 // Simple mutex for synchronizing settings file access
 let notificationSettingsLock: Promise<void> = Promise.resolve()
@@ -67,7 +68,7 @@ export function getNotificationSettings(): NotificationSettings {
       fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
     }
 
-    return {
+    const result: NotificationSettings = {
       enabled: notifications.enabled ?? true,
       toast: { enabled: true, ...notifications.toast },
       desktop: { enabled: true, ...notifications.desktop },
@@ -80,6 +81,18 @@ export function getNotificationSettings(): NotificationSettings {
       gmail: { enabled: false, ...notifications.gmail },
       _updatedAt: notifications._updatedAt!,
     }
+
+    // Overlay fnox secrets
+    const pushoverAppToken = getFnoxSecret('notifications.pushover.appToken')
+    if (pushoverAppToken) result.pushover.appToken = pushoverAppToken
+    const pushoverUserKey = getFnoxSecret('notifications.pushover.userKey')
+    if (pushoverUserKey) result.pushover.userKey = pushoverUserKey
+    const slackWebhookUrl = getFnoxSecret('notifications.slack.webhookUrl')
+    if (slackWebhookUrl) result.slack.webhookUrl = slackWebhookUrl
+    const discordWebhookUrl = getFnoxSecret('notifications.discord.webhookUrl')
+    if (discordWebhookUrl) result.discord.webhookUrl = discordWebhookUrl
+
+    return result
   } catch {
     // File is corrupt, reinitialize with defaults
     const defaultSettings = { ...DEFAULT_NOTIFICATION_SETTINGS, _updatedAt: Date.now() }
@@ -161,6 +174,26 @@ export function updateNotificationSettingsSync(
     telegram: { ...current.telegram, ...updates.telegram },
     gmail: { ...current.gmail, ...updates.gmail },
     _updatedAt: Date.now(),
+  }
+
+  // Route secrets through fnox before writing to settings.json
+  if (isFnoxAvailable()) {
+    const secretFields: Array<{ path: string; obj: Record<string, unknown>; key: string }> = [
+      { path: 'notifications.pushover.appToken', obj: updated.pushover as Record<string, unknown>, key: 'appToken' },
+      { path: 'notifications.pushover.userKey', obj: updated.pushover as Record<string, unknown>, key: 'userKey' },
+      { path: 'notifications.slack.webhookUrl', obj: updated.slack as Record<string, unknown>, key: 'webhookUrl' },
+      { path: 'notifications.discord.webhookUrl', obj: updated.discord as Record<string, unknown>, key: 'webhookUrl' },
+    ]
+    for (const { path, obj, key } of secretFields) {
+      const value = obj[key]
+      if (value && typeof value === 'string' && value.trim() !== '') {
+        setFnoxSecret(path, value as string)
+        obj[key] = undefined // Don't persist in settings.json
+      } else if (value === '' || value === null) {
+        removeFnoxSecret(path)
+        obj[key] = undefined
+      }
+    }
   }
 
   parsed.notifications = updated
