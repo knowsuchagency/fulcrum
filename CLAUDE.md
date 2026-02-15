@@ -222,7 +222,15 @@ ALTER TABLE `tasks` ADD `new_column` text;
 
 ## Configuration
 
-Settings stored in `~/.fulcrum/settings.json`. See `server/lib/settings/types.ts` for the full schema.
+All configuration stored in `~/.fulcrum/fnox.toml` using fnox. See `server/lib/settings/types.ts` for the schema and `server/lib/settings/fnox.ts` for the fnox config map.
+
+**Configuration architecture:**
+- `fnox.toml` is the single source of truth for ALL configuration (~80 settings)
+- Non-sensitive values use `plain` provider (readable without decryption)
+- Sensitive values (API keys, tokens, webhook URLs) use `age` provider (encrypted)
+- In-memory cache for fast access (loaded via `fnox export` at startup)
+- Settings precedence: env var > fnox > default
+- No more `settings.json`, `notifications.json`, or `zai.json` files
 
 **Settings sections:**
 - `server` - Port configuration
@@ -234,22 +242,24 @@ Settings stored in `~/.fulcrum/settings.json`. See `server/lib/settings/types.ts
 - `appearance` - UI theme and language
 - `assistant` - Built-in assistant settings (model, provider, observerModel/observerProvider for cost-effective observe-only processing)
 - `caldav` - CalDAV calendar integration (global enable/sync interval; account credentials stored in DB)
+- `notifications` - Multi-channel notification settings (toast, desktop, sound, Slack, Discord, Pushover, WhatsApp, Telegram, Gmail)
+- `zai` - z.ai integration settings
 
-**Separate config files:**
-- `notifications.json` - Multi-channel notification settings
-- `zai.json` - z.ai integration settings
-- `fnox.toml` - Encrypted secrets (API keys, tokens, webhook URLs) managed by fnox with age encryption
-- `age.txt` - Age private key for fnox encryption (generated once, never committed)
+**Config files:**
+- `fnox.toml` - All configuration (plain + encrypted values)
+- `age.txt` - Age private key for fnox encryption (generated once on first `fulcrum up`, never committed)
 
-**Secret storage (fnox):**
-- Sensitive credentials are encrypted in `fnox.toml` using age encryption
-- Secret paths: `integrations.*` (githubPat, cloudflareApiToken, etc.), `channels.*.botToken`, `notifications.*.webhookUrl`, `zai.apiKey`
-- Settings precedence: env var > fnox > settings.json > default
+**Migration:**
+- Existing `settings.json`, `notifications.json`, and `zai.json` are automatically migrated to fnox on server start
+- After migration, old files are renamed to `.migrated` (e.g., `settings.json.migrated`)
 - `fulcrum up` ensures fnox + age are installed and configured before starting the server
-- Existing plain-text secrets in settings.json are auto-migrated to fnox on server start
-- Implementation: `server/lib/settings/fnox.ts` (key mapping, CLI wrapper, in-memory cache)
+- Implementation: `server/lib/settings/fnox.ts` (config map, CLI wrapper, cache), `server/lib/settings/migrate-to-fnox.ts` (migration logic)
 
-Environment variables override settings.json values where applicable.
+**Backup/restore:**
+- Backups now include `fnox.toml` + `age.txt` (no more settings.json)
+- Restoring a backup restores the entire fnox configuration
+
+Environment variables override fnox values where applicable.
 
 ## App Deployment
 

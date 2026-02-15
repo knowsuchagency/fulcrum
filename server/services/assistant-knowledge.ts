@@ -502,15 +502,21 @@ update_setting key="editor.app" value="cursor"
 list_settings
 \`\`\`
 
-### Secret Storage (fnox)
+### Configuration Storage (fnox)
 
-Sensitive credentials (API keys, tokens, webhook URLs) are encrypted using fnox with age encryption.
+All Fulcrum configuration is stored in \`~/.fulcrum/fnox.toml\` using fnox. This is the single source of truth for ~80 settings.
 
-- Secrets are stored in \`~/.fulcrum/fnox.toml\` (encrypted) rather than plain text in settings.json
+**Architecture:**
+- Non-sensitive values (server.port, editor.app, appearance.theme, etc.) use the \`plain\` provider
+- Sensitive values (API keys, tokens, webhook URLs) use the \`age\` provider (encrypted)
+- In-memory cache loaded at startup via \`fnox export\` for fast access
+- Settings precedence: environment variable > fnox > default
+- No more \`settings.json\`, \`notifications.json\`, or \`zai.json\` files
+
+**Migration:**
+- Existing settings files are automatically migrated to fnox on server start
+- Old files are renamed to \`.migrated\` (e.g., \`settings.json.migrated\`) after successful migration
 - The age encryption key is at \`~/.fulcrum/age.txt\` (generated automatically on first \`fulcrum up\`)
-- Secret paths include: integration tokens, channel bot tokens, notification webhook URLs, z.ai API key
-- Settings precedence: environment variable > fnox > settings.json > default
-- Existing plain-text secrets are automatically migrated to fnox on server start
 
 ### Important Notes
 
