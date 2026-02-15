@@ -7,7 +7,6 @@ import { ToolCategorySchema } from './types'
 import { formatSuccess, handleToolError } from '../utils'
 import { searchTools, toolRegistry } from '../registry'
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const registerCoreTools: ToolRegistrar = (server, _client) => {
   server.tool(
     'search_tools',
