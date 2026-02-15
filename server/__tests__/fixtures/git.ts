@@ -31,6 +31,20 @@ export interface TestGitRepo {
 }
 
 /**
+ * A test git repository with a remote.
+ */
+export interface TestGitRepoWithRemote extends TestGitRepo {
+  /** Path to the bare remote repository */
+  remotePath: string
+  /** Push a local branch to origin */
+  pushBranch: (name: string) => void
+  /** Change origin URL to invalid path to simulate fetch failure */
+  breakRemote: () => void
+  /** Restore origin URL to the bare repo */
+  fixRemote: () => void
+}
+
+/**
  * Creates a real git repository for testing.
  * Includes an initial commit with a README.
  */
@@ -131,6 +145,58 @@ export function createTestGitRepo(): TestGitRepo {
 
     getCurrentBranch: (): string => {
       return git('rev-parse --abbrev-ref HEAD')
+    },
+  }
+}
+
+/**
+ * Creates a real git repository for testing with a bare remote configured as origin.
+ */
+export function createTestGitRepoWithRemote(): TestGitRepoWithRemote {
+  const remotePath = mkdtempSync(join(tmpdir(), 'fulcrum-git-remote-'))
+
+  // Initialize bare remote
+  execSync('git init --bare', {
+    cwd: remotePath,
+    env: {
+      ...process.env,
+      GIT_COMMITTER_NAME: 'Fulcrum Test',
+      GIT_COMMITTER_EMAIL: 'test@fulcrum.test',
+      GIT_AUTHOR_NAME: 'Fulcrum Test',
+      GIT_AUTHOR_EMAIL: 'test@fulcrum.test',
+    },
+  })
+
+  const repo = createTestGitRepo()
+  const { git, defaultBranch } = repo
+
+  // Setup remote
+  git(`remote add origin "${remotePath}"`)
+  git(`push origin "${defaultBranch}"`)
+  git(`symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/${defaultBranch}`)
+  git('fetch origin')
+
+  const originalCleanup = repo.cleanup
+
+  return {
+    ...repo,
+    remotePath,
+    pushBranch: (name: string) => {
+      git(`push origin "${name}"`)
+    },
+    breakRemote: () => {
+      git('remote set-url origin /dev/null/invalid')
+    },
+    fixRemote: () => {
+      git(`remote set-url origin "${remotePath}"`)
+    },
+    cleanup: () => {
+      originalCleanup()
+      try {
+        rmSync(remotePath, { recursive: true, force: true })
+      } catch {
+        // Ignore
+      }
     },
   }
 }

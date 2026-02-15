@@ -5,7 +5,7 @@ import { broadcast } from '../websocket/terminal-ws'
 import { sendNotification } from './notification-service'
 import { killClaudeInTerminalsForWorktree } from '../terminal/pty-instance'
 import { log } from '../lib/logger'
-import { getWorktreeBasePath, getScratchBasePath } from '../lib/settings'
+import { getWorktreeBasePath, getScratchBasePath, getSettings } from '../lib/settings'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -252,16 +252,51 @@ export async function updateTaskStatus(
       if (repo) {
         const { worktreePath, branch } = generateWorktreeInfo(repo.path, existing.title)
 
-        // Get base branch (default to 'main')
-        let baseBranch = 'main'
-        try {
-          const defaultBranch = execSync('git symbolic-ref refs/remotes/origin/HEAD', {
-            cwd: repo.path,
-            encoding: 'utf-8',
-          }).trim().replace('refs/remotes/origin/', '')
-          if (defaultBranch) baseBranch = defaultBranch
-        } catch {
-          // Fallback to 'main' if can't detect
+        // Resolve base branch with priority:
+        // 1. Task's explicit baseBranch (user's choice)
+        // 2. Repo's defaultBaseBranch (repo-level config)
+        // 3. Repo's lastBaseBranch (remember last used)
+        // 4. Git-derived default (local or remote based on setting)
+        // 5. 'main' fallback
+        let baseBranch = existing.baseBranch
+          || repo.defaultBaseBranch
+          || repo.lastBaseBranch
+
+          if (!baseBranch) {
+          const settings = getSettings()
+          const preferRemote = settings.tasks.preferRemoteBranches
+
+          let localDefault = 'main'
+          try {
+            localDefault = execSync('git symbolic-ref refs/remotes/origin/HEAD', {
+              cwd: repo.path,
+              encoding: 'utf-8',
+            }).trim().replace('refs/remotes/origin/', '') || 'main'
+          } catch {
+            try {
+              localDefault = execSync('git rev-parse --abbrev-ref HEAD', {
+                cwd: repo.path,
+                encoding: 'utf-8',
+              }).trim() || 'main'
+            } catch {
+              // Keep 'main' as fallback
+            }
+          }
+
+          if (preferRemote) {
+            const remoteRef = `origin/${localDefault}`
+            try {
+              execSync(`git rev-parse --verify ${remoteRef}`, {
+                cwd: repo.path,
+                stdio: 'ignore',
+              })
+              baseBranch = remoteRef
+            } catch {
+              baseBranch = localDefault
+            }
+          } else {
+            baseBranch = localDefault
+          }
         }
 
         const result = createGitWorktree(repo.path, worktreePath, branch, baseBranch)
@@ -271,6 +306,11 @@ export async function updateTaskStatus(
           updateData.repoPath = repo.path
           updateData.repoName = repo.displayName
           updateData.baseBranch = baseBranch
+
+          db.update(repositories)
+            .set({ lastBaseBranch: baseBranch, updatedAt: now })
+            .where(eq(repositories.id, repo.id))
+            .run()
 
           // Copy files if patterns configured
           if (repo.copyFiles) {

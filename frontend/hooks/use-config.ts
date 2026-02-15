@@ -292,6 +292,16 @@ export function useStartWorktreeTasksImmediately() {
   }
 }
 
+export function usePreferRemoteBranches() {
+  const query = useConfig(CONFIG_KEYS.PREFER_REMOTE_BRANCHES)
+
+  return {
+    ...query,
+    data: query.data?.value === undefined ? false : Boolean(query.data.value),
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
 /** @deprecated Use useStartWorktreeTasksImmediately instead */
 export const useStartCodeTasksImmediately = useStartWorktreeTasksImmediately
 

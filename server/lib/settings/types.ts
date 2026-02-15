@@ -134,6 +134,7 @@ export interface Settings {
   tasks: {
     defaultTaskType: TaskType
     startWorktreeTasksImmediately: boolean
+    preferRemoteBranches: boolean
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -193,6 +194,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tasks: {
     defaultTaskType: 'worktree',
     startWorktreeTasksImmediately: true,
+    preferRemoteBranches: false,
   },
   appearance: {
     language: null,
@@ -300,6 +302,7 @@ export const VALID_SETTING_PATHS = new Set([
   'agent.claudeCodePath',
   'tasks.defaultTaskType',
   'tasks.startWorktreeTasksImmediately',
+  'tasks.preferRemoteBranches',
   'appearance.language',
   'appearance.theme',
   'appearance.timezone',

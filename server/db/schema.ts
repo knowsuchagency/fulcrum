@@ -141,6 +141,8 @@ export const repositories = sqliteTable('repositories', {
   opencodeOptions: text('opencode_options'), // JSON: { [flag]: value } - CLI options for OpenCode
   opencodeModel: text('opencode_model'), // OpenCode model in format 'provider/model' - null means use global default
   defaultAgent: text('default_agent'), // 'claude' | 'opencode' | null - null means use global default
+  defaultBaseBranch: text('default_base_branch'), // Preferred base branch for new tasks (e.g., 'main', 'origin/main')
+  lastBaseBranch: text('last_base_branch'), // Last base branch used for task creation
   remoteUrl: text('remote_url'), // GitHub remote URL for filtering issues/PRs
   isCopierTemplate: integer('is_copier_template', { mode: 'boolean' }).default(false), // Mark as Copier template
   lastUsedAt: text('last_used_at'), // Timestamp of last task creation with this repo

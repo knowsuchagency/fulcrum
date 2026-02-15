@@ -104,6 +104,7 @@ export function getSettings(): Settings {
       // Migrate old 'code'/'non-code'/'non-worktree'/'standalone' values
       defaultTaskType: migrateTaskType((parsed.tasks as Record<string, unknown>)?.defaultTaskType as string) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
       startWorktreeTasksImmediately: ((parsed.tasks as Record<string, unknown>)?.startWorktreeTasksImmediately as boolean) ?? ((parsed.tasks as Record<string, unknown>)?.startCodeTasksImmediately as boolean) ?? DEFAULT_SETTINGS.tasks.startWorktreeTasksImmediately,
+      preferRemoteBranches: ((parsed.tasks as Record<string, unknown>)?.preferRemoteBranches as boolean) ?? DEFAULT_SETTINGS.tasks.preferRemoteBranches,
     },
     appearance: {
       language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,

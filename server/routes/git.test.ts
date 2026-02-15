@@ -1,5 +1,11 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
-import { createTestGitRepo, createTestWorktree, type TestGitRepo } from '../__tests__/fixtures/git'
+import {
+  createTestGitRepo,
+  createTestGitRepoWithRemote,
+  createTestWorktree,
+  type TestGitRepo,
+  type TestGitRepoWithRemote,
+} from '../__tests__/fixtures/git'
 import { createTestApp } from '../__tests__/fixtures/app'
 import { setupTestEnv, type TestEnv } from '../__tests__/utils/env'
 import { mkdtempSync, rmSync, existsSync } from 'node:fs'
@@ -89,6 +95,97 @@ describe('Git Routes', () => {
         rmSync(notGitDir, { recursive: true, force: true })
       }
     })
+  })
+
+  describe('GET /api/git/branches (with remote)', () => {
+    let remoteRepo: TestGitRepoWithRemote
+
+    beforeEach(() => {
+      remoteRepo = createTestGitRepoWithRemote()
+    })
+
+    afterEach(() => {
+      remoteRepo.cleanup()
+    })
+
+    test('returns remote branches when origin is configured', async () => {
+      const { get } = createTestApp()
+      const res = await get(`/api/git/branches?repo=${remoteRepo.path}`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(Array.isArray(body.remoteBranches)).toBe(true)
+      expect(body.remoteBranches.length).toBeGreaterThan(0)
+      expect(Array.isArray(body.localBranches)).toBe(true)
+      expect(body.localBranches.length).toBeGreaterThan(0)
+    })
+
+    test('returns defaultBaseBranch as local branch by default', async () => {
+      const { get } = createTestApp()
+      const res = await get(`/api/git/branches?repo=${remoteRepo.path}`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.defaultBaseBranch).toBe(remoteRepo.defaultBranch)
+      expect(body.defaultBaseBranch.startsWith('origin/')).toBe(false)
+    })
+
+    test('legacy fields remain present alongside new fields', async () => {
+      const { get } = createTestApp()
+      const res = await get(`/api/git/branches?repo=${remoteRepo.path}`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body).toHaveProperty('branches')
+      expect(body).toHaveProperty('current')
+      expect(body).toHaveProperty('defaultBranch')
+      expect(body).toHaveProperty('defaultBaseBranch')
+      expect(body).toHaveProperty('localBranches')
+      expect(body).toHaveProperty('remoteBranches')
+      expect(body).toHaveProperty('fetchError')
+    })
+
+    test('defaultBranch remains local branch name', async () => {
+      const { get } = createTestApp()
+      const res = await get(`/api/git/branches?repo=${remoteRepo.path}`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.defaultBranch.startsWith('origin/')).toBe(false)
+      expect(body.defaultBranch).toBe(remoteRepo.defaultBranch)
+    })
+
+    test('returns remote branches pushed from local', async () => {
+      const featureBranch = 'feature-remote-branch'
+      remoteRepo.createBranch(featureBranch)
+      remoteRepo.pushBranch(featureBranch)
+      remoteRepo.checkout(remoteRepo.defaultBranch)
+
+      const { get } = createTestApp()
+      const res = await get(`/api/git/branches?repo=${remoteRepo.path}`)
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(
+        body.remoteBranches.some((branch: { name: string }) => branch.name === `origin/${featureBranch}`)
+      ).toBe(true)
+    })
+
+    test(
+      'handles fetch failure gracefully',
+      async () => {
+        remoteRepo.breakRemote()
+
+        const { get } = createTestApp()
+        const res = await get(`/api/git/branches?repo=${remoteRepo.path}`)
+        const body = await res.json()
+
+        expect(res.status).toBe(200)
+        expect(body.fetchError).not.toBeNull()
+        expect(body.branches).toContain(remoteRepo.defaultBranch)
+      },
+      15_000
+    )
   })
 
   describe('GET /api/git/diff', () => {
@@ -231,6 +328,36 @@ describe('Git Routes', () => {
         expect(body.error).toContain('already exists')
       } finally {
         rmSync(worktreePath, { recursive: true, force: true })
+      }
+    })
+
+    test('creates worktree from remote base branch', async () => {
+      const remoteRepo = createTestGitRepoWithRemote()
+      const worktreePath = mkdtempSync(join(tmpdir(), 'wt-remote-test-'))
+      rmSync(worktreePath, { recursive: true })
+
+      try {
+        const { post } = createTestApp()
+        const res = await post('/api/git/worktree', {
+          repoPath: remoteRepo.path,
+          worktreePath,
+          branch: 'feature-from-remote-base',
+          baseBranch: `origin/${remoteRepo.defaultBranch}`,
+        })
+        const body = await res.json()
+
+        expect(res.status).toBe(201)
+        expect(body.success).toBe(true)
+        expect(body.worktreePath).toBe(worktreePath)
+        expect(body.branch).toBe('feature-from-remote-base')
+        expect(existsSync(worktreePath)).toBe(true)
+      } finally {
+        try {
+          remoteRepo.git(`worktree remove "${worktreePath}" --force`)
+        } catch {
+          rmSync(worktreePath, { recursive: true, force: true })
+        }
+        remoteRepo.cleanup()
       }
     })
   })

@@ -187,6 +187,7 @@ app.patch('/:id', async (c) => {
       opencodeOptions?: Record<string, string> | null
       opencodeModel?: string | null
       defaultAgent?: 'claude' | 'opencode' | null
+      defaultBaseBranch?: string | null
       isCopierTemplate?: boolean
     }>()
 

@@ -98,6 +98,11 @@
     "loadingBranches": "加载分支中...",
     "selectBranch": "选择分支",
     "current": "（当前）",
+    "default": "（默认）",
+    "branchGroups": {
+      "local": "本地分支",
+      "remote": "远程分支"
+    },
     "createTask": "创建任务",
     "noProject": "无项目（收件箱）",
     "projectHint": "无项目的任务将显示在收件箱中。",

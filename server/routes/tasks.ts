@@ -384,10 +384,14 @@ app.post('/', async (c) => {
       }
     }
 
-    // Update lastUsedAt for the repository (if it exists in our database)
+    // Update lastUsedAt and lastBaseBranch for the repository (if it exists in our database)
     if (body.repoPath) {
+      const updateData: Record<string, unknown> = { lastUsedAt: now, updatedAt: now }
+      if (body.baseBranch) {
+        updateData.lastBaseBranch = body.baseBranch
+      }
       db.update(repositories)
-        .set({ lastUsedAt: now, updatedAt: now })
+        .set(updateData)
         .where(eq(repositories.path, body.repoPath))
         .run()
     }
@@ -545,9 +549,12 @@ app.post('/:id/initialize-worktree', async (c) => {
       .where(eq(tasks.id, id))
       .run()
 
-    // Update lastUsedAt for the repository
+    const updateData: Record<string, unknown> = { lastUsedAt: now, updatedAt: now }
+    if (body.baseBranch) {
+      updateData.lastBaseBranch = body.baseBranch
+    }
     db.update(repositories)
-      .set({ lastUsedAt: now, updatedAt: now })
+      .set(updateData)
       .where(eq(repositories.path, body.repoPath))
       .run()
 

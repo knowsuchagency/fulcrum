@@ -98,6 +98,11 @@
     "loadingBranches": "Loading branches...",
     "selectBranch": "Select branch",
     "current": "(current)",
+    "default": "(default)",
+    "branchGroups": {
+      "local": "Local Branches",
+      "remote": "Remote Branches"
+    },
     "createTask": "Create Task",
     "noProject": "No project (Inbox)",
     "projectHint": "Tasks without a project appear in the Inbox.",

@@ -394,6 +394,7 @@ const CONFIG_VALIDATORS: Record<string, (value: unknown) => ValidatorResult> = {
   [CONFIG_KEYS.CLAUDE_CODE_PATH]: nullableStringValidator('Claude Code path'),
   [CONFIG_KEYS.DEFAULT_TASK_TYPE]: enumValidator(['worktree', 'manual', 'scratch'] as const, 'Default task type'),
   [CONFIG_KEYS.START_WORKTREE_TASKS_IMMEDIATELY]: booleanValidator('Start worktree tasks immediately'),
+  [CONFIG_KEYS.PREFER_REMOTE_BRANCHES]: booleanValidator('Prefer remote branches'),
   [CONFIG_KEYS.ASSISTANT_PROVIDER]: enumValidator(['claude', 'opencode'] as const, 'Assistant provider'),
   [CONFIG_KEYS.ASSISTANT_MODEL]: enumValidator(['opus', 'sonnet', 'haiku'] as const, 'Assistant model'),
   [CONFIG_KEYS.ASSISTANT_OBSERVER_MODEL]: enumValidator(['opus', 'sonnet', 'haiku'] as const, 'Assistant model'),

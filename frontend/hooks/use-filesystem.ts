@@ -22,10 +22,30 @@ interface FileTreeResponse {
   entries: FileTreeEntry[]
 }
 
+interface LocalBranchInfo {
+  name: string
+  current: boolean
+  default: boolean
+  upstream: string | null
+  ahead: number
+  behind: number
+}
+
+interface RemoteBranchInfo {
+  name: string
+  default: boolean
+}
+
 interface BranchListing {
+  // Legacy fields (backward compat)
   branches: string[]
   current: string
   defaultBranch: string
+  // New structured fields
+  defaultBaseBranch: string
+  localBranches: LocalBranchInfo[]
+  remoteBranches: RemoteBranchInfo[]
+  fetchError: string | null
 }
 
 interface GitFile {

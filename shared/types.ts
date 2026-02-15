@@ -328,8 +328,11 @@ export interface Repository {
   opencodeOptions: Record<string, string> | null
   opencodeModel: string | null
   defaultAgent: AgentType | null
+  defaultBaseBranch: string | null
+  lastBaseBranch: string | null
   remoteUrl: string | null
   isCopierTemplate: boolean
+  lastUsedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -681,6 +684,8 @@ export interface ProjectRepositoryDetails {
   startupScript: string | null
   copyFiles: string | null
   defaultAgent: AgentType | null
+  defaultBaseBranch: string | null
+  lastBaseBranch: string | null
   claudeOptions: Record<string, string> | null
   opencodeOptions: Record<string, string> | null
   opencodeModel: string | null

@@ -477,6 +477,13 @@
       "when": 1771930400000,
       "tag": "0067_add_task_type",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "6",
+      "when": 1772016800000,
+      "tag": "0068_add_repository_base_branch_fields",
+      "breakpoints": true
     }
   ]
 }

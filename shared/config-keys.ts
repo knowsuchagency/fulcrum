@@ -28,6 +28,7 @@ export const CONFIG_KEYS = {
   CLAUDE_CODE_DARK_THEME: 'appearance.claudeCodeDarkTheme',
   DEFAULT_TASK_TYPE: 'tasks.defaultTaskType',
   START_WORKTREE_TASKS_IMMEDIATELY: 'tasks.startWorktreeTasksImmediately',
+  PREFER_REMOTE_BRANCHES: 'tasks.preferRemoteBranches',
   ASSISTANT_PROVIDER: 'assistant.provider',
   ASSISTANT_MODEL: 'assistant.model',
   ASSISTANT_OBSERVER_MODEL: 'assistant.observerModel',

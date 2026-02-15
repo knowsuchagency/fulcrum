@@ -23,6 +23,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
@@ -273,11 +275,20 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   // Set default base branch when branches are loaded, reset when repo changes
   useEffect(() => {
     if (branchData) {
-      setBaseBranch(branchData.defaultBranch || branchData.branches[0] || 'main')
+      const selectedRepo = repositories?.find(r => r.path === repoPath)
+      setBaseBranch(
+        selectedRepo?.defaultBaseBranch ||
+        selectedRepo?.lastBaseBranch ||
+        branchData.defaultBaseBranch || 
+        branchData.defaultBranch || 
+        (branchData.localBranches && branchData.localBranches.length > 0 ? branchData.localBranches[0].name : null) || 
+        branchData.branches?.[0] || 
+        'main'
+      )
     } else {
       setBaseBranch('')
     }
-  }, [branchData, repoPath])
+  }, [branchData, repoPath, repositories])
 
   // Close tag dropdown when clicking outside
   useEffect(() => {
@@ -903,14 +914,58 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {branchData?.branches.map((b) => (
-                      <SelectItem key={b} value={b}>
-                        {b}
-                        {b === branchData.current && (
-                          <span className="text-muted-foreground ml-2">{t('createModal.current')}</span>
+                    {branchData?.localBranches ? (
+                      <>
+                        {branchData.localBranches.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>{t('createModal.branchGroups.local')}</SelectLabel>
+                            {branchData.localBranches.map((b) => (
+                              <SelectItem key={`local-${b.name}`} value={b.name}>
+                                <div className="flex items-center gap-2">
+                                  <span>{b.name}</span>
+                                  {b.current && (
+                                    <span className="text-[10px] bg-accent px-1.5 py-0.5 rounded-full text-accent-foreground">{t('createModal.current')}</span>
+                                  )}
+                                  {b.default && (
+                                    <span className="text-[10px] border border-border px-1.5 py-0.5 rounded-full text-muted-foreground">{t('createModal.default')}</span>
+                                  )}
+                                  {(b.ahead > 0 || b.behind > 0) && (
+                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                      {b.ahead > 0 && `↑${b.ahead}`}
+                                      {b.behind > 0 && ` ↓${b.behind}`}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         )}
-                      </SelectItem>
-                    ))}
+                        {branchData.remoteBranches && branchData.remoteBranches.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>{t('createModal.branchGroups.remote')}</SelectLabel>
+                            {branchData.remoteBranches.map((b) => (
+                              <SelectItem key={`remote-${b.name}`} value={b.name}>
+                                <div className="flex items-center gap-2">
+                                  <span>{b.name}</span>
+                                  {b.default && (
+                                    <span className="text-[10px] border border-border px-1.5 py-0.5 rounded-full text-muted-foreground">{t('createModal.default')}</span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                      </>
+                    ) : (
+                      branchData?.branches.map((b) => (
+                        <SelectItem key={b} value={b}>
+                          {b}
+                          {b === branchData.current && (
+                            <span className="text-muted-foreground ml-2">{t('createModal.current')}</span>
+                          )}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </Field>

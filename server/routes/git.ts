@@ -3,6 +3,7 @@ import { execSync } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import { getSettings } from '../lib/settings'
 
 // Execute git command and return output
 function gitExec(cwd: string, args: string, timeoutMs = 30_000): string {
@@ -210,7 +211,6 @@ function restoreOriginalBranch(repoPath: string, originalBranch: string, default
 
 const app = new Hono()
 
-// GET /api/git/branches?repo=/path/to/repo
 app.get('/branches', (c) => {
   let repoPath = c.req.query('repo')
 
@@ -218,7 +218,6 @@ app.get('/branches', (c) => {
     return c.json({ error: 'repo parameter is required' }, 400)
   }
 
-  // Expand ~ to home directory
   if (repoPath.startsWith('~')) {
     repoPath = path.join(os.homedir(), repoPath.slice(1))
   }
@@ -234,7 +233,13 @@ app.get('/branches', (c) => {
       return c.json({ error: 'Path is not a git repository' }, 400)
     }
 
-    // Get all local branches
+    let fetchError: string | null = null
+    try {
+      gitExec(repoPath, 'fetch origin --prune --no-tags', 10_000)
+    } catch (err) {
+      fetchError = err instanceof Error ? err.message : 'Failed to fetch from origin'
+    }
+
     const branchOutput = execSync('git branch --list', {
       cwd: repoPath,
       encoding: 'utf-8',
@@ -244,9 +249,8 @@ app.get('/branches', (c) => {
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
-      .map((line) => line.replace(/^\* /, '')) // Remove current branch marker
+      .map((line) => line.replace(/^\* /, ''))
 
-    // Get current branch
     let current = 'main'
     try {
       current = execSync('git rev-parse --abbrev-ref HEAD', {
@@ -254,17 +258,77 @@ app.get('/branches', (c) => {
         encoding: 'utf-8',
       }).trim()
     } catch {
-      // Use first branch if HEAD is detached
       current = branches[0] || 'main'
     }
 
-    // Get the default branch (main/master)
     const defaultBranch = getDefaultBranch(repoPath)
+
+    const localBranches = branches.map((name) => {
+      let upstream: string | null = null
+      let ahead = 0
+      let behind = 0
+
+      try {
+        upstream = gitExec(repoPath!, `config --get branch.${name}.remote`) + '/' +
+          gitExec(repoPath!, `config --get branch.${name}.merge`).replace('refs/heads/', '')
+      } catch {
+        // No upstream configured
+      }
+
+      if (upstream) {
+        try {
+          const counts = gitExec(repoPath!, `rev-list --left-right --count ${name}...${upstream}`)
+          const [a, b] = counts.split(/\s+/)
+          ahead = parseInt(a, 10) || 0
+          behind = parseInt(b, 10) || 0
+        } catch {
+          // upstream ref might not exist locally
+        }
+      }
+
+      return {
+        name,
+        current: name === current,
+        default: name === defaultBranch,
+        upstream,
+        ahead,
+        behind,
+      }
+    })
+
+    let remoteBranchNames: string[] = []
+    try {
+      const remoteOutput = gitExec(repoPath, 'branch -r --no-color')
+      remoteBranchNames = remoteOutput
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.includes(' -> '))
+    } catch {
+      // No remotes or error listing them
+    }
+
+    const remoteDefaultRef = defaultBranch ? `origin/${defaultBranch}` : null
+    const remoteBranches = remoteBranchNames.map((name) => ({
+      name,
+      default: name === remoteDefaultRef,
+    }))
+
+    const settings = getSettings()
+    const preferRemote = settings.tasks.preferRemoteBranches
+
+    let defaultBaseBranch = defaultBranch
+    if (preferRemote && remoteDefaultRef && remoteBranchNames.includes(remoteDefaultRef)) {
+      defaultBaseBranch = remoteDefaultRef
+    }
 
     return c.json({
       branches,
       current,
       defaultBranch,
+      defaultBaseBranch,
+      localBranches,
+      remoteBranches,
+      fetchError,
     })
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Failed to list branches' }, 500)

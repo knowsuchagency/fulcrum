@@ -1,9 +1,15 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { setupTestEnv, type TestEnv } from '../__tests__/utils/env'
-import { createTestGitRepo, type TestGitRepo } from '../__tests__/fixtures/git'
-import { db, tasks } from '../db'
+import {
+  createTestGitRepo,
+  createTestGitRepoWithRemote,
+  type TestGitRepo,
+  type TestGitRepoWithRemote,
+} from '../__tests__/fixtures/git'
+import { db, tasks, repositories } from '../db'
 import { eq } from 'drizzle-orm'
 import { updateTaskStatus } from './task-status'
+import { existsSync } from 'node:fs'
 
 describe('Task Status Service', () => {
   let testEnv: TestEnv
@@ -221,6 +227,91 @@ describe('Task Status Service', () => {
       const result = await updateTaskStatus('keep-pin-1', 'IN_REVIEW')
       expect(result?.status).toBe('IN_REVIEW')
       expect(result?.pinned).toBe(true)
+    })
+
+    test('uses local defaultBranch when creating worktree on TO_DO -> IN_PROGRESS', async () => {
+      const remoteRepo: TestGitRepoWithRemote = createTestGitRepoWithRemote()
+
+      try {
+        const now = new Date().toISOString()
+
+        db.insert(repositories)
+          .values({
+            id: 'repo-local-default',
+            path: remoteRepo.path,
+            displayName: 'local-default-repo',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        db.insert(tasks)
+          .values({
+            id: 'todo-to-progress-local',
+            title: 'Create worktree from local default branch',
+            status: 'TO_DO',
+            position: 0,
+            repositoryId: 'repo-local-default',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        const result = await updateTaskStatus('todo-to-progress-local', 'IN_PROGRESS')
+
+        expect(result).not.toBeNull()
+        expect(result!.status).toBe('IN_PROGRESS')
+        expect(result!.baseBranch).toBe(remoteRepo.defaultBranch)
+        expect(result!.baseBranch?.startsWith('origin/')).toBe(false)
+        expect(result!.worktreePath).toBeTruthy()
+        expect(existsSync(result!.worktreePath!)).toBe(true)
+      } finally {
+        remoteRepo.cleanup()
+      }
+    })
+
+    test('falls back to local defaultBranch when remote ref is unavailable', async () => {
+      const remoteRepo: TestGitRepoWithRemote = createTestGitRepoWithRemote()
+
+      try {
+        remoteRepo.breakRemote()
+        remoteRepo.git(`update-ref -d refs/remotes/origin/${remoteRepo.defaultBranch}`)
+
+        const now = new Date().toISOString()
+
+        db.insert(repositories)
+          .values({
+            id: 'repo-local-fallback',
+            path: remoteRepo.path,
+            displayName: 'local-fallback-repo',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        db.insert(tasks)
+          .values({
+            id: 'todo-to-progress-fallback',
+            title: 'Create worktree from local default branch fallback',
+            status: 'TO_DO',
+            position: 0,
+            repositoryId: 'repo-local-fallback',
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run()
+
+        const result = await updateTaskStatus('todo-to-progress-fallback', 'IN_PROGRESS')
+
+        expect(result).not.toBeNull()
+        expect(result!.status).toBe('IN_PROGRESS')
+        expect(result!.baseBranch).toBe(remoteRepo.defaultBranch)
+        expect(result!.baseBranch?.startsWith('origin/')).toBe(false)
+        expect(result!.worktreePath).toBeTruthy()
+        expect(existsSync(result!.worktreePath!)).toBe(true)
+      } finally {
+        remoteRepo.cleanup()
+      }
     })
 
     test('same status update still updates timestamp', async () => {

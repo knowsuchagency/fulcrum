@@ -15,6 +15,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select'
 import { useRepositories } from '@/hooks/use-repositories'
 import { useBranches } from '@/hooks/use-filesystem'
@@ -52,9 +54,17 @@ export function WorktreeTaskSettings({ task, compact }: WorktreeTaskSettingsProp
   // Set default base branch when branches are loaded
   useEffect(() => {
     if (branchData && !baseBranch) {
-      setBaseBranch(branchData.defaultBranch || branchData.branches[0] || 'main')
+      setBaseBranch(
+        selectedRepo?.defaultBaseBranch ||
+        selectedRepo?.lastBaseBranch ||
+        branchData.defaultBaseBranch || 
+        branchData.defaultBranch || 
+        (branchData.localBranches && branchData.localBranches.length > 0 ? branchData.localBranches[0].name : null) || 
+        branchData.branches?.[0] || 
+        'main'
+      )
     }
-  }, [branchData, baseBranch])
+  }, [branchData, baseBranch, selectedRepo])
 
   // Initialize search query with repo name when we have a selected repo
   useEffect(() => {
@@ -275,14 +285,58 @@ export function WorktreeTaskSettings({ task, compact }: WorktreeTaskSettingsProp
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {branchData?.branches.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                      {b === branchData.current && (
-                        <span className="text-muted-foreground ml-2">(current)</span>
+                  {branchData?.localBranches ? (
+                    <>
+                      {branchData.localBranches.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Local Branches</SelectLabel>
+                          {branchData.localBranches.map((b) => (
+                            <SelectItem key={`local-${b.name}`} value={b.name}>
+                              <div className="flex items-center gap-2">
+                                <span>{b.name}</span>
+                                {b.current && (
+                                  <span className="text-[10px] bg-accent px-1.5 py-0.5 rounded-full text-accent-foreground">current</span>
+                                )}
+                                {b.default && (
+                                  <span className="text-[10px] border border-border px-1.5 py-0.5 rounded-full text-muted-foreground">default</span>
+                                )}
+                                {(b.ahead > 0 || b.behind > 0) && (
+                                  <span className="text-[10px] text-muted-foreground font-mono">
+                                    {b.ahead > 0 && `↑${b.ahead}`}
+                                    {b.behind > 0 && ` ↓${b.behind}`}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       )}
-                    </SelectItem>
-                  ))}
+                      {branchData.remoteBranches && branchData.remoteBranches.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Remote Branches</SelectLabel>
+                          {branchData.remoteBranches.map((b) => (
+                            <SelectItem key={`remote-${b.name}`} value={b.name}>
+                              <div className="flex items-center gap-2">
+                                <span>{b.name}</span>
+                                {b.default && (
+                                  <span className="text-[10px] border border-border px-1.5 py-0.5 rounded-full text-muted-foreground">default</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </>
+                  ) : (
+                    branchData?.branches.map((b) => (
+                      <SelectItem key={b} value={b}>
+                        {b}
+                        {b === branchData.current && (
+                          <span className="text-muted-foreground ml-2">(current)</span>
+                        )}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
