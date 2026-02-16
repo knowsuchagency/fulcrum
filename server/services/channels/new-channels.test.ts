@@ -29,6 +29,7 @@ import {
   setChannelFactory,
   resetChannelFactory,
 } from './index'
+import { activeChannels } from './channel-manager'
 
 // Base mock channel class for all channels (no mock.module needed)
 class BaseMockChannel implements MessagingChannel {
@@ -85,6 +86,7 @@ describe('Discord Channel Manager (settings-based)', () => {
 
   beforeEach(() => {
     testEnv = setupTestEnv()
+    activeChannels.clear() // Extra safety: clear any stale channels from other test files
     setChannelFactory(mockChannelFactory)
   })
 
@@ -199,6 +201,7 @@ describe('Telegram Channel Manager (settings-based)', () => {
 
   beforeEach(() => {
     testEnv = setupTestEnv()
+    activeChannels.clear()
     setChannelFactory(mockChannelFactory)
   })
 
@@ -313,6 +316,7 @@ describe('Slack Channel Manager (settings-based)', () => {
 
   beforeEach(() => {
     testEnv = setupTestEnv()
+    activeChannels.clear()
     setChannelFactory(mockChannelFactory)
   })
 
@@ -429,6 +433,7 @@ describe('Multiple Channels (settings-based)', () => {
 
   beforeEach(() => {
     testEnv = setupTestEnv()
+    activeChannels.clear()
     setChannelFactory(mockChannelFactory)
   })
 

@@ -45,6 +45,9 @@ export function setupTestEnv(): TestEnv {
   return {
     fulcrumDir,
     cleanup: () => {
+      // Clear fnox cache to prevent cross-test pollution
+      clearFnoxCache()
+
       // Reset database first (closes connections)
       resetDatabase()
 

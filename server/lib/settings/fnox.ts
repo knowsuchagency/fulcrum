@@ -77,7 +77,6 @@ export const FNOX_CONFIG_MAP: Record<string, ConfigEntry> = {
   'channels.email.imap.user': { fnoxKey: 'FULCRUM_EMAIL_IMAP_USER', provider: 'plain', type: 'string' },
   'channels.email.imap.password': { fnoxKey: 'FULCRUM_EMAIL_IMAP_PASSWORD', provider: 'age', type: 'string' },
   'channels.email.pollIntervalSeconds': { fnoxKey: 'FULCRUM_EMAIL_POLL_INTERVAL', provider: 'plain', type: 'number' },
-  'channels.email.allowedSenders': { fnoxKey: 'FULCRUM_EMAIL_ALLOWED_SENDERS', provider: 'plain', type: 'json' },
 
   // Channels - Slack
   'channels.slack.enabled': { fnoxKey: 'FULCRUM_SLACK_ENABLED', provider: 'plain', type: 'boolean' },
@@ -246,8 +245,14 @@ function fnoxExportJson(): Record<string, string> {
 }
 
 // --- In-Memory Cache ---
-
-const configCache = new Map<string, string>()
+// Use globalThis to ensure a single shared cache across all module instances.
+// Bun's mock.module can create duplicate module instances, so a module-level
+// Map would result in multiple caches with stale data in different instances.
+const CACHE_KEY = '__fulcrum_fnox_config_cache__'
+if (!(globalThis as Record<string, unknown>)[CACHE_KEY]) {
+  ;(globalThis as Record<string, unknown>)[CACHE_KEY] = new Map<string, string>()
+}
+const configCache = (globalThis as Record<string, unknown>)[CACHE_KEY] as Map<string, string>
 
 export function initFnoxConfig(): void {
   if (!isFnoxAvailable()) return

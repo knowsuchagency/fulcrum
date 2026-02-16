@@ -109,7 +109,6 @@ export function getSettings(): Settings {
           password: (fv('channels.email.imap.password') as string) ?? DEFAULT_SETTINGS.channels.email.imap.password,
         },
         pollIntervalSeconds: (fv('channels.email.pollIntervalSeconds') as number) ?? DEFAULT_SETTINGS.channels.email.pollIntervalSeconds,
-        allowedSenders: (fv('channels.email.allowedSenders') as string[]) ?? DEFAULT_SETTINGS.channels.email.allowedSenders,
       },
       slack: {
         enabled: (fv('channels.slack.enabled') as boolean | null) ?? DEFAULT_SETTINGS.channels.slack.enabled,

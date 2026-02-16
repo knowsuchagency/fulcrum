@@ -64,7 +64,6 @@ describe('fnox', () => {
       expect(types.has('string')).toBe(true)
       expect(types.has('number')).toBe(true)
       expect(types.has('boolean')).toBe(true)
-      expect(types.has('json')).toBe(true)
     })
 
     test('has entries for both providers', () => {
@@ -110,8 +109,6 @@ describe('fnox', () => {
       expect(FNOX_CONFIG_MAP['editor.app'].type).toBe('string')
       expect(FNOX_CONFIG_MAP['agent.autoScrollToBottom'].provider).toBe('plain')
       expect(FNOX_CONFIG_MAP['agent.autoScrollToBottom'].type).toBe('boolean')
-      expect(FNOX_CONFIG_MAP['channels.email.allowedSenders'].provider).toBe('plain')
-      expect(FNOX_CONFIG_MAP['channels.email.allowedSenders'].type).toBe('json')
     })
   })
 
