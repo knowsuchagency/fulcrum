@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createFileRoute, Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { computeTasksByRepo } from '@/lib/project-utils'
 import { useTranslation } from 'react-i18next'
 import { useProject, useDeleteProject, useAccessProject, useUpdateProject } from '@/hooks/use-projects'
 import { useTasks } from '@/hooks/use-tasks'
@@ -673,16 +674,10 @@ function ProjectDetailView() {
   }, [projectId])
 
   // Compute tasks for each repository
-  const tasksByRepo = useMemo(() => {
-    const map = new Map<string, Task[]>()
-    for (const repo of project?.repositories ?? []) {
-      const repoTasks = allTasks.filter(
-        (task) => task.repoPath === repo.path || (task.projectId === projectId && !task.repoPath)
-      )
-      map.set(repo.id, repoTasks)
-    }
-    return map
-  }, [allTasks, project?.repositories, projectId])
+  const tasksByRepo = useMemo(
+    () => computeTasksByRepo(allTasks, project?.repositories ?? []),
+    [allTasks, project?.repositories]
+  )
 
   // Compute all active tasks for this project (non-DONE, non-CANCELED)
   const activeTasks = useMemo(() => {

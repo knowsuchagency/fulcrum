@@ -47,7 +47,7 @@ const claudeBuilder: AgentCommandBuilder = {
     let extraFlags = ''
     if (additionalOptions && Object.keys(additionalOptions).length > 0) {
       extraFlags = Object.entries(additionalOptions)
-        .map(([key, value]) => ` --${key} ${escapeForShell(value)}`)
+        .map(([key, value]) => ` --${key} ${value}`)
         .join('')
     }
 
@@ -90,7 +90,7 @@ const opencodeBuilder: AgentCommandBuilder = {
     let extraFlags = ''
     if (additionalOptions && Object.keys(additionalOptions).length > 0) {
       extraFlags = Object.entries(additionalOptions)
-        .map(([key, value]) => ` --${key} ${escapeForShell(value)}`)
+        .map(([key, value]) => ` --${key} ${value}`)
         .join('')
     }
 
