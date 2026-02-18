@@ -158,9 +158,10 @@ function isGitRepo(dirPath: string): boolean {
 
 const app = new Hono()
 
-// GET /api/git/branches?repo=/path/to/repo
+// GET /api/git/branches?repo=/path/to/repo&includeRemote=true
 app.get('/branches', (c) => {
   let repoPath = c.req.query('repo')
+  const includeRemote = c.req.query('includeRemote') === 'true'
 
   if (!repoPath) {
     return c.json({ error: 'repo parameter is required' }, 400)
@@ -182,36 +183,82 @@ app.get('/branches', (c) => {
       return c.json({ error: 'Path is not a git repository' }, 400)
     }
 
-    // Get all local branches
-    const branchOutput = execSync('git branch --list', {
+    // Import BranchInfo type from shared
+    const { BranchInfo } = require('../../shared/types')
+
+    // Get all branches (local and remote if requested)
+    const branchListFlag = includeRemote ? '--list --all' : '--list'
+    const branchOutput = execSync(`git branch ${branchListFlag}`, {
       cwd: repoPath,
       encoding: 'utf-8',
     })
 
-    const branches = branchOutput
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((line) => line.replace(/^\* /, '')) // Remove current branch marker
-
     // Get current branch
-    let current = 'main'
+    let currentBranch = 'main'
     try {
-      current = execSync('git rev-parse --abbrev-ref HEAD', {
+      currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
         cwd: repoPath,
         encoding: 'utf-8',
       }).trim()
     } catch {
-      // Use first branch if HEAD is detached
-      current = branches[0] || 'main'
+      // Use 'main' as fallback if HEAD is detached
     }
+
+    // Parse branches with type information
+    const branches: BranchInfo[] = branchOutput
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        const isCurrent = line.startsWith('*')
+        const branchName = line.replace(/^\* /, '').trim()
+
+        // Skip symbolic refs like "origin/HEAD -> origin/main"
+        if (branchName.includes(' -> ')) {
+          return null
+        }
+
+        // Handle remote branches with "remotes/" prefix
+        if (branchName.startsWith('remotes/')) {
+          // Remote branch: remotes/origin/main -> origin/main
+          const withoutRemotes = branchName.replace(/^remotes\//, '')
+          const [remoteName, ...nameParts] = withoutRemotes.split('/')
+          const shortName = nameParts.join('/')
+          return {
+            name: shortName,
+            fullName: withoutRemotes, // Store as "origin/main" for worktree creation
+            type: 'remote' as const,
+            isCurrent: false, // Remote branches can't be current
+            remoteName,
+          }
+        } else if (branchName.includes('/') && !branchName.startsWith('remotes/')) {
+          // Edge case: local branch name with "/" (e.g., "feature/nested/path")
+          return {
+            name: branchName,
+            fullName: branchName,
+            type: 'local' as const,
+            isCurrent,
+            remoteName: undefined,
+          }
+        } else {
+          // Local branch
+          return {
+            name: branchName,
+            fullName: branchName,
+            type: 'local' as const,
+            isCurrent,
+            remoteName: undefined,
+          }
+        }
+      })
+      .filter((branch): branch is BranchInfo => branch !== null)
 
     // Get the default branch (main/master)
     const defaultBranch = getDefaultBranch(repoPath)
 
     return c.json({
       branches,
-      current,
+      current: currentBranch,
       defaultBranch,
     })
   } catch (err) {

@@ -102,7 +102,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
   const { data: globalOpencodeModel } = useOpencodeModel()
   const { data: repositories } = useRepositories()
   const { data: branchData, isLoading: branchesLoading } = useBranches(
-    repoPath || null
+    repoPath || null,
+    true // Include remote branches
   )
 
   // Get the selected repository object
@@ -174,8 +175,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
 
   // Set default base branch when branches are loaded, reset when repo changes
   useEffect(() => {
-    if (branchData) {
-      setBaseBranch(branchData.defaultBranch || branchData.branches[0] || 'main')
+    if (branchData && branchData.branches.length > 0) {
+      // Prefer local branches for default, fall back to any branch
+      const localBranch = branchData.branches.find(b => b.type === 'local')
+      setBaseBranch(localBranch?.fullName || branchData.branches[0]?.fullName || 'main')
     } else {
       setBaseBranch('')
     }
@@ -511,14 +514,59 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {branchData?.branches.map((b) => (
-                      <SelectItem key={b} value={b}>
-                        {b}
-                        {b === branchData.current && (
-                          <span className="text-muted-foreground ml-2">{t('createModal.current')}</span>
-                        )}
-                      </SelectItem>
-                    ))}
+                    {branchData?.branches && (() => {
+                      const localBranches = branchData.branches.filter(b => b.type === 'local')
+                      const remoteBranches = branchData.branches.filter(b => b.type === 'remote')
+
+                      // Group remote branches by remote name
+                      const remoteGroups = remoteBranches.reduce((acc, branch) => {
+                        const remoteName = branch.remoteName || 'other'
+                        if (!acc[remoteName]) {
+                          acc[remoteName] = []
+                        }
+                        acc[remoteName].push(branch)
+                        return acc
+                      }, {} as Record<string, typeof branchData.branches>)
+
+                      return (
+                        <>
+                          {localBranches.length > 0 && (
+                            <>
+                              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                Local Branches
+                              </div>
+                              {localBranches.map((b) => (
+                                <SelectItem key={b.fullName} value={b.fullName}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{b.name}</span>
+                                    {b.isCurrent && (
+                                      <span className="text-xs text-muted-foreground">({t('createModal.current')})</span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
+
+                          {Object.entries(remoteGroups).map(([remoteName, branches]) => (
+                            <div key={remoteName}>
+                              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                                <span>{remoteName}</span>
+                                <span className="text-xs font-normal text-muted-foreground">(remote)</span>
+                              </div>
+                              {branches.map((b) => (
+                                <SelectItem key={b.fullName} value={b.fullName}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground">{remoteName}/</span>
+                                    <span>{b.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </div>
+                          ))}
+                        </>
+                      )
+                    })()}
                   </SelectContent>
                 </Select>
               </Field>

@@ -8,6 +8,17 @@ export const AGENT_DISPLAY_NAMES: Record<AgentType, string> = {
   opencode: 'OpenCode',
 }
 
+// Branch types for task creation
+export type BranchType = 'local' | 'remote'
+
+export interface BranchInfo {
+  name: string // Short name (e.g., 'main', 'feature')
+  fullName: string // Full name including remote prefix (e.g., 'main', 'origin/main')
+  type: BranchType
+  isCurrent: boolean
+  remoteName?: string // e.g., 'origin', 'upstream' (only for remote branches)
+}
+
 export const AGENT_INSTALL_COMMANDS: Record<AgentType, string> = {
   claude: 'npm install -g @anthropic-ai/claude-code',
   opencode: 'npm install -g opencode-ai@latest',

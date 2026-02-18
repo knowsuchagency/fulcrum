@@ -28,6 +28,12 @@ interface BranchListing {
   defaultBranch: string
 }
 
+interface BranchListingWithInfo {
+  branches: import('@/types').BranchInfo[]
+  current: string
+  defaultBranch: string
+}
+
 interface GitFile {
   path: string
   status: string
@@ -63,13 +69,16 @@ export function useDirectoryListing(path: string | null) {
   })
 }
 
-export function useBranches(repoPath: string | null) {
+export function useBranches(repoPath: string | null, includeRemote = false) {
   return useQuery({
-    queryKey: ['git', 'branches', repoPath],
+    queryKey: ['git', 'branches', repoPath, includeRemote],
     queryFn: () => {
-      return fetchJSON<BranchListing>(
-        `${API_BASE}/api/git/branches?repo=${encodeURIComponent(repoPath!)}`
-      )
+      const url = new URL(`${API_BASE}/api/git/branches`)
+      url.searchParams.set('repo', repoPath!)
+      if (includeRemote) {
+        url.searchParams.set('includeRemote', 'true')
+      }
+      return fetchJSON<BranchListingWithInfo>(url.toString())
     },
     enabled: !!repoPath,
   })
