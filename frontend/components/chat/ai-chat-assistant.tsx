@@ -11,7 +11,7 @@ import { ChatInput, type ChatInputHandle, type FileAttachment } from './chat-inp
 import { useChat } from '@/hooks/use-chat'
 import { usePageContext } from '@/hooks/use-page-context'
 import { useOpencodeModels } from '@/hooks/use-opencode-models'
-import { useOpencodeModel as useOpencodeModelSetting } from '@/hooks/use-config'
+import { useOpencodeModel as useOpencodeModelSetting, useAssistantModel } from '@/hooks/use-config'
 import { CLAUDE_MODEL_OPTIONS, type ClaudeModelId } from '@/stores/chat-store'
 import {
   Dialog,
@@ -65,6 +65,16 @@ export const AiChatAssistant = observer(function AiChatAssistant() {
   // Fetch OpenCode models and default from settings
   const { providers: opencodeProviders, installed: opencodeInstalled } = useOpencodeModels()
   const { data: defaultOpencodeModel } = useOpencodeModelSetting()
+  const { data: defaultAssistantModel } = useAssistantModel()
+
+  // Initialize Claude model from settings on first mount
+  const modelInitialized = useRef(false)
+  useEffect(() => {
+    if (!modelInitialized.current && defaultAssistantModel) {
+      modelInitialized.current = true
+      setModel(defaultAssistantModel as ClaudeModelId)
+    }
+  }, [defaultAssistantModel, setModel])
 
   // Initialize OpenCode model from settings when switching to opencode and no model is selected
   useEffect(() => {

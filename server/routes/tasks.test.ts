@@ -32,6 +32,128 @@ describe('Tasks Routes', () => {
       expect(body).toEqual([])
     })
 
+    test('filters tasks by status query param', async () => {
+      const now = new Date().toISOString()
+      db.insert(tasks)
+        .values([
+          {
+            id: 'status-filter-1',
+            title: 'In Progress Task',
+            status: 'IN_PROGRESS',
+            position: 0,
+            repoPath: repo.path,
+            repoName: 'test-repo',
+            baseBranch: repo.defaultBranch,
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: 'status-filter-2',
+            title: 'Done Task',
+            status: 'DONE',
+            position: 1,
+            repoPath: repo.path,
+            repoName: 'test-repo',
+            baseBranch: repo.defaultBranch,
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: 'status-filter-3',
+            title: 'Todo Task',
+            status: 'TO_DO',
+            position: 2,
+            repoPath: repo.path,
+            repoName: 'test-repo',
+            baseBranch: repo.defaultBranch,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run()
+
+      const { get } = createTestApp()
+      const res = await get('/api/tasks?status=IN_PROGRESS')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.length).toBe(1)
+      expect(body[0].id).toBe('status-filter-1')
+    })
+
+    test('filters tasks by multiple comma-separated statuses', async () => {
+      const now = new Date().toISOString()
+      db.insert(tasks)
+        .values([
+          {
+            id: 'multi-status-1',
+            title: 'In Progress',
+            status: 'IN_PROGRESS',
+            position: 0,
+            repoPath: repo.path,
+            repoName: 'test-repo',
+            baseBranch: repo.defaultBranch,
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: 'multi-status-2',
+            title: 'Todo',
+            status: 'TO_DO',
+            position: 1,
+            repoPath: repo.path,
+            repoName: 'test-repo',
+            baseBranch: repo.defaultBranch,
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: 'multi-status-3',
+            title: 'Done',
+            status: 'DONE',
+            position: 2,
+            repoPath: repo.path,
+            repoName: 'test-repo',
+            baseBranch: repo.defaultBranch,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run()
+
+      const { get } = createTestApp()
+      const res = await get('/api/tasks?status=IN_PROGRESS,TO_DO')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.length).toBe(2)
+      expect(body.map((t: { id: string }) => t.id).sort()).toEqual(['multi-status-1', 'multi-status-2'])
+    })
+
+    test('returns empty array for unmatched status filter', async () => {
+      const now = new Date().toISOString()
+      db.insert(tasks)
+        .values({
+          id: 'no-match-1',
+          title: 'In Progress Task',
+          status: 'IN_PROGRESS',
+          position: 0,
+          repoPath: repo.path,
+          repoName: 'test-repo',
+          baseBranch: repo.defaultBranch,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run()
+
+      const { get } = createTestApp()
+      const res = await get('/api/tasks?status=CANCELED')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.length).toBe(0)
+    })
+
     test('returns all tasks ordered by position', async () => {
       // Insert test tasks directly
       const now = new Date().toISOString()

@@ -42,6 +42,15 @@ import type { Deployment } from '../db/schema'
 // Re-export for API use
 export { cancelDeploymentByAppId, getActiveDeploymentId }
 
+function looksLikeId(name: string) {
+  return /^[A-Za-z0-9_-]{15,}$/.test(name)
+}
+
+function getAppDisplayName(appName: string, repo: { displayName: string | null; path: string }) {
+  if (!looksLikeId(appName)) return appName
+  return repo.displayName || repo.path.split('/').pop() || appName
+}
+
 // Cache detected Traefik config to avoid repeated detection
 let cachedTraefikConfig: TraefikConfig | null = null
 
@@ -814,11 +823,12 @@ export async function deployApp(
 
     // Send success notification if enabled for this app
     if (app.notificationsEnabled !== false) {
+      const displayName = getAppDisplayName(app.name, repo)
       sendNotification({
         title: 'Deployment Complete',
-        message: `${app.name} has been deployed successfully`,
+        message: `${displayName} has been deployed successfully`,
         appId: app.id,
-        appName: app.name,
+        appName: displayName,
         type: 'deployment_success',
       })
     }
@@ -884,11 +894,12 @@ export async function deployApp(
 
     // Send failure notification if enabled for this app
     if (app.notificationsEnabled !== false) {
+      const displayName = getAppDisplayName(app.name, repo)
       sendNotification({
         title: 'Deployment Failed',
-        message: `${app.name} deployment failed: ${errorMessage.slice(0, 100)}`,
+        message: `${displayName} deployment failed: ${errorMessage.slice(0, 100)}`,
         appId: app.id,
-        appName: app.name,
+        appName: displayName,
         type: 'deployment_failed',
       })
     }

@@ -205,10 +205,17 @@ app.get('/', (c) => {
   const projectId = c.req.query('projectId')
   const orphans = c.req.query('orphans') === 'true'
   const tag = c.req.query('tag')
+  const status = c.req.query('status')
 
   const query = db.select().from(tasks).orderBy(asc(tasks.position))
 
   let allTasks = query.all()
+
+  // Filter by status (supports comma-separated values e.g. "IN_PROGRESS,TO_DO")
+  if (status) {
+    const statuses = status.split(',')
+    allTasks = allTasks.filter((t) => statuses.includes(t.status))
+  }
 
   // Apply filters in memory (for simplicity with nullable fields)
   if (projectId) {
