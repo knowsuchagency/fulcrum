@@ -730,8 +730,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                         <button
                           type="button"
                           className={cn(
-                            'w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center justify-between',
-                            selectedProjectId === null && 'bg-accent'
+                            'group w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground flex items-center justify-between',
+                            selectedProjectId === null && 'bg-accent text-accent-foreground'
                           )}
                           onClick={() => {
                             setSelectedProjectId(null)
@@ -739,7 +739,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                             setShowProjectDropdown(false)
                           }}
                         >
-                          <span className="text-muted-foreground">{t('createModal.noProject')}</span>
+                          <span className={cn(
+                            'text-muted-foreground group-hover:text-accent-foreground',
+                            selectedProjectId === null && 'text-accent-foreground'
+                          )}>{t('createModal.noProject')}</span>
                           {selectedProjectId === null && (
                             <HugeiconsIcon icon={Tick01Icon} size={14} className="text-primary" />
                           )}
@@ -749,8 +752,8 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                             key={project.id}
                             type="button"
                             className={cn(
-                              'w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center justify-between',
-                              selectedProjectId === project.id && 'bg-accent'
+                              'group w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground flex items-center justify-between',
+                              selectedProjectId === project.id && 'bg-accent text-accent-foreground'
                             )}
                             onClick={() => {
                               setSelectedProjectId(project.id)
@@ -759,7 +762,10 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
                             }}
                           >
                             <span>{project.name}</span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className={cn(
+                              'text-xs text-muted-foreground group-hover:text-accent-foreground',
+                              selectedProjectId === project.id && 'text-accent-foreground'
+                            )}>
                               {project.taskCount ?? 0} tasks
                             </span>
                           </button>
