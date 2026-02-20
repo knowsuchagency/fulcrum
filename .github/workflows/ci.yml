@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   check:
@@ -13,8 +14,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Bun
@@ -35,6 +36,7 @@ jobs:
           commit_message: "style: auto-fix linting issues"
           commit_user_name: github-actions[bot]
           commit_user_email: github-actions[bot]@users.noreply.github.com
+          branch: ${{ github.head_ref || github.ref_name }}
 
       - name: Run typecheck
         run: mise run typecheck
@@ -46,8 +48,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

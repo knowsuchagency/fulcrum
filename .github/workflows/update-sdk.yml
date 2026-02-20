@@ -29,6 +29,7 @@ jobs:
     name: Check and Update SDK
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     steps:
@@ -103,6 +104,14 @@ jobs:
           branch: deps/update-claude-agent-sdk
           delete-branch: true
           labels: dependencies
+
+      - name: Trigger CI workflow
+        if: steps.cpr.outputs.pull-request-number
+        run: |
+          sleep 5
+          gh workflow run ci.yml --ref deps/update-claude-agent-sdk
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
 
       - name: Enable auto-merge
         if: steps.cpr.outputs.pull-request-number
