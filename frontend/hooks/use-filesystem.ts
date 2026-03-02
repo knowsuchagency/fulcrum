@@ -91,7 +91,8 @@ export function useGitDiff(worktreePath: string | null, options: { staged?: bool
       return fetchJSON<GitDiff>(`${API_BASE}/api/git/diff?${params}`)
     },
     enabled: !!worktreePath,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false, // Stop polling when tab is not visible
   })
 }
 
@@ -104,7 +105,8 @@ export function useGitStatus(worktreePath: string | null) {
       )
     },
     enabled: !!worktreePath,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false, // Stop polling when tab is not visible
   })
 }
 

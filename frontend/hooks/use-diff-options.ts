@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTaskViewState } from './use-task-view-state'
 import type { DiffOptions } from '@/types'
 
@@ -9,16 +9,19 @@ export function useDiffOptions(taskId: string) {
   const { viewState, setDiffOptions } = useTaskViewState(taskId)
   const { collapsedFiles } = viewState.diffOptions
 
+  const collapsedSet = useMemo(() => new Set(collapsedFiles), [collapsedFiles])
+
   const toggleFileCollapse = useCallback(
     (path: string) => {
-      const isCollapsed = collapsedFiles.includes(path)
-      setDiffOptions({
-        collapsedFiles: isCollapsed
-          ? collapsedFiles.filter((f) => f !== path)
-          : [...collapsedFiles, path],
-      })
+      const next = new Set(collapsedSet)
+      if (next.has(path)) {
+        next.delete(path)
+      } else {
+        next.add(path)
+      }
+      setDiffOptions({ collapsedFiles: [...next] })
     },
-    [collapsedFiles, setDiffOptions]
+    [collapsedSet, setDiffOptions]
   )
 
   const collapseAll = useCallback(
@@ -33,8 +36,8 @@ export function useDiffOptions(taskId: string) {
   }, [setDiffOptions])
 
   const isFileCollapsed = useCallback(
-    (path: string) => collapsedFiles.includes(path),
-    [collapsedFiles]
+    (path: string) => collapsedSet.has(path),
+    [collapsedSet]
   )
 
   return {

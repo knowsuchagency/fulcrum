@@ -1,8 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon, ArrowDown01Icon, MenuCollapseIcon, UnfoldMoreIcon } from '@hugeicons/core-free-icons'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useGitDiff } from '@/hooks/use-filesystem'
 import { useDiffOptions } from '@/hooks/use-diff-options'
 import { cn } from '@/lib/utils'
@@ -29,10 +28,8 @@ function parseDiff(diffText: string): FileDiff[] {
 
   for (const line of diffText.split('\n')) {
     if (line.startsWith('diff --git')) {
-      // Extract file path from "diff --git a/path b/path"
       const match = line.match(/diff --git a\/(.+?) b\//)
       const path = match?.[1] ?? 'unknown'
-
       currentFile = { path, lines: [], additions: 0, deletions: 0 }
       files.push(currentFile)
       currentFile.lines.push({ type: 'header', content: line })
@@ -76,90 +73,39 @@ function parseDiff(diffText: string): FileDiff[] {
   return files
 }
 
-interface FileDiffSectionProps {
-  file: FileDiff
-  wrap: boolean
-  isCollapsed: boolean
-  onToggle: () => void
+// ── Pre-computed class strings to avoid cn() calls per row ──
+
+const ROW_BASE = 'flex px-2 py-0.5'
+const ROW_CLASSES: Record<DiffLine['type'], string> = {
+  added: `${ROW_BASE} bg-diff-add-bg`,
+  removed: `${ROW_BASE} bg-diff-remove-bg`,
+  header: `${ROW_BASE} bg-muted/50 text-muted-foreground`,
+  hunk: `${ROW_BASE} bg-diff-add-bg/50 text-diff-add-fg`,
+  context: ROW_BASE,
 }
 
-function FileDiffSection({ file, wrap, isCollapsed, onToggle }: FileDiffSectionProps) {
-  return (
-    <Collapsible open={!isCollapsed} onOpenChange={() => onToggle()}>
-      <CollapsibleTrigger asChild>
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-card border-b border-border cursor-pointer hover:bg-muted select-none">
-          <HugeiconsIcon
-            icon={isCollapsed ? ArrowRight01Icon : ArrowDown01Icon}
-            size={12}
-            strokeWidth={2}
-            className="text-muted-foreground shrink-0"
-          />
-          <span className="font-mono text-xs text-foreground truncate flex-1">
-            {file.path}
-          </span>
-          <span className="text-xs text-muted-foreground shrink-0">
-            {file.additions > 0 && (
-              <span className="text-diff-add-fg">+{file.additions}</span>
-            )}
-            {file.additions > 0 && file.deletions > 0 && ' '}
-            {file.deletions > 0 && (
-              <span className="text-diff-remove-fg">-{file.deletions}</span>
-            )}
-          </span>
-        </div>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="font-mono text-xs">
-          {file.lines.slice(1).map((line, i) => (
-            <div
-              key={i}
-              className={cn(
-                'flex px-2 py-0.5',
-                line.type === 'added' && 'bg-diff-add-bg',
-                line.type === 'removed' && 'bg-diff-remove-bg',
-                line.type === 'header' && 'bg-muted/50 text-muted-foreground',
-                line.type === 'hunk' && 'bg-diff-add-bg/50 text-diff-add-fg'
-              )}
-            >
-              {(line.type === 'added' ||
-                line.type === 'removed' ||
-                line.type === 'context') && (
-                <>
-                  <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground">
-                    {line.oldLineNumber ?? ''}
-                  </span>
-                  <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground">
-                    {line.newLineNumber ?? ''}
-                  </span>
-                </>
-              )}
-              <span
-                className={cn(
-                  'w-4 shrink-0 select-none text-center',
-                  line.type === 'added' && 'text-diff-add-fg',
-                  line.type === 'removed' && 'text-diff-remove-fg'
-                )}
-              >
-                {line.type === 'added' && '+'}
-                {line.type === 'removed' && '-'}
-              </span>
-              <span
-                className={cn(
-                  'flex-1',
-                  wrap ? 'whitespace-pre-wrap break-all' : 'whitespace-pre',
-                  line.type === 'added' && 'text-diff-add-fg',
-                  line.type === 'removed' && 'text-diff-remove-fg'
-                )}
-              >
-                {line.content}
-              </span>
-            </div>
-          ))}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  )
+const SIGN_BASE = 'w-4 shrink-0 select-none text-center'
+const SIGN_CLASSES: Record<string, string> = {
+  added: `${SIGN_BASE} text-diff-add-fg`,
+  removed: `${SIGN_BASE} text-diff-remove-fg`,
+  other: SIGN_BASE,
 }
+
+function getContentClass(type: DiffLine['type'], wrap: boolean): string {
+  const base = wrap ? 'flex-1 whitespace-pre-wrap break-all' : 'flex-1 whitespace-pre'
+  if (type === 'added') return `${base} text-diff-add-fg`
+  if (type === 'removed') return `${base} text-diff-remove-fg`
+  return base
+}
+
+// ── Flat row types for the virtual list ──
+
+type FlatRow =
+  | { kind: 'file-header'; file: FileDiff; collapsed: boolean }
+  | { kind: 'diff-line'; line: DiffLine }
+
+const FILE_HEADER_HEIGHT = 32
+const DIFF_LINE_HEIGHT = 22
 
 interface DiffViewerProps {
   taskId: string
@@ -168,7 +114,7 @@ interface DiffViewerProps {
 }
 
 export function DiffViewer({ taskId, worktreePath, baseBranch }: DiffViewerProps) {
-  const { options, setOption, toggleFileCollapse, collapseAll, expandAll, isFileCollapsed } = useDiffOptions(taskId)
+  const { options, setOption, toggleFileCollapse, collapseAll, expandAll } = useDiffOptions(taskId)
   const { wrap, ignoreWhitespace, includeUntracked, collapsedFiles } = options
   const { data, isLoading, error } = useGitDiff(worktreePath, { ignoreWhitespace, includeUntracked, baseBranch })
 
@@ -177,16 +123,44 @@ export function DiffViewer({ taskId, worktreePath, baseBranch }: DiffViewerProps
     return parseDiff(data.diff)
   }, [data?.diff])
 
+  const collapsedSet = useMemo(() => new Set(collapsedFiles), [collapsedFiles])
+
   const allFilePaths = useMemo(() => files.map(f => f.path), [files])
   const allCollapsed = files.length > 0 && collapsedFiles.length === files.length
   const totalAdditions = useMemo(() => files.reduce((sum, f) => sum + f.additions, 0), [files])
   const totalDeletions = useMemo(() => files.reduce((sum, f) => sum + f.deletions, 0), [files])
 
+  // Build the flat row list — file headers + expanded file lines
+  const flatRows: FlatRow[] = useMemo(() => {
+    const rows: FlatRow[] = []
+    for (const file of files) {
+      const collapsed = collapsedSet.has(file.path)
+      rows.push({ kind: 'file-header', file, collapsed })
+      if (!collapsed) {
+        // Skip the first header line (the "diff --git" line) — info is in the file header row
+        for (let i = 1; i < file.lines.length; i++) {
+          rows.push({ kind: 'diff-line', line: file.lines[i] })
+        }
+      }
+    }
+    return rows
+  }, [files, collapsedSet])
+
+  // Virtualizer
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: flatRows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) =>
+      flatRows[index].kind === 'file-header' ? FILE_HEADER_HEIGHT : DIFF_LINE_HEIGHT,
+    overscan: 40,
+  })
+
   // Keyboard shortcut: Shift+C to toggle collapse/expand all
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.shiftKey && e.key === 'C' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        // Don't trigger if user is typing in an input
         const target = e.target as HTMLElement
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
           return
@@ -332,17 +306,87 @@ export function DiffViewer({ taskId, worktreePath, baseBranch }: DiffViewerProps
         </label>
       </div>
 
-      <ScrollArea className="flex-1 min-h-0">
-        {files.map((file) => (
-          <FileDiffSection
-            key={file.path}
-            file={file}
-            wrap={wrap}
-            isCollapsed={isFileCollapsed(file.path)}
-            onToggle={() => toggleFileCollapse(file.path)}
-          />
-        ))}
-      </ScrollArea>
+      {/* Virtualized diff content */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
+        <div
+          className="relative w-full font-mono text-xs"
+          style={{ height: virtualizer.getTotalSize() }}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const row = flatRows[virtualRow.index]
+
+            if (row.kind === 'file-header') {
+              const { file, collapsed } = row
+              return (
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  className="absolute left-0 w-full"
+                  style={{ top: virtualRow.start }}
+                >
+                  <div
+                    className="flex items-center gap-2 px-2 py-1.5 bg-card border-b border-border cursor-pointer hover:bg-muted select-none"
+                    onClick={() => toggleFileCollapse(file.path)}
+                  >
+                    <HugeiconsIcon
+                      icon={collapsed ? ArrowRight01Icon : ArrowDown01Icon}
+                      size={12}
+                      strokeWidth={2}
+                      className="text-muted-foreground shrink-0"
+                    />
+                    <span className="font-mono text-xs text-foreground truncate flex-1">
+                      {file.path}
+                    </span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {file.additions > 0 && (
+                        <span className="text-diff-add-fg">+{file.additions}</span>
+                      )}
+                      {file.additions > 0 && file.deletions > 0 && ' '}
+                      {file.deletions > 0 && (
+                        <span className="text-diff-remove-fg">-{file.deletions}</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )
+            }
+
+            const { line } = row
+            return (
+              <div
+                key={virtualRow.key}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
+                className="absolute left-0 w-full"
+                style={{ top: virtualRow.start }}
+              >
+                <div className={ROW_CLASSES[line.type]}>
+                  {(line.type === 'added' ||
+                    line.type === 'removed' ||
+                    line.type === 'context') && (
+                    <>
+                      <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground">
+                        {line.oldLineNumber ?? ''}
+                      </span>
+                      <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground">
+                        {line.newLineNumber ?? ''}
+                      </span>
+                    </>
+                  )}
+                  <span className={SIGN_CLASSES[line.type] ?? SIGN_CLASSES.other}>
+                    {line.type === 'added' && '+'}
+                    {line.type === 'removed' && '-'}
+                  </span>
+                  <span className={getContentClass(line.type, wrap)}>
+                    {line.content}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
