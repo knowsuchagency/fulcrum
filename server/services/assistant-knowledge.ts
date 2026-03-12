@@ -222,6 +222,11 @@ You have access to Fulcrum's MCP tools. Use them proactively to help users.
 - \`delete_caldav_copy_rule\` - Remove a copy rule
 - \`execute_caldav_copy_rule\` - Manually run a copy rule
 
+**Agent Coordination Board:**
+- \`board_read\` - Read recent messages from the coordination board (filter by time, type, project, tag)
+- \`board_post\` - Post a message (claim resources, share status, warn other agents)
+- \`board_check\` - Check if a specific resource is claimed (e.g., "port:5173")
+
 **Utilities:**
 - \`list_tags\` - See all tags in use
 - \`delete_tag\` - Delete a tag and all its associations

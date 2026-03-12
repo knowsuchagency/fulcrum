@@ -20,6 +20,7 @@ Fulcrum doesn't replace your tools—it gives you leverage over them. You config
 - **Project Management** — Tasks with dependencies, due dates, time estimates, priority levels, recurrence, labels, and attachments. Visual kanban boards.
 - **Production Deployment** — Docker Compose with automatic Traefik routing and Cloudflare DNS/tunnels.
 - **Agent Memory** — Persistent knowledge store with full-text search. Agents remember across sessions.
+- **Agent Coordination** — Filesystem-based message board for coordinating agents across worktrees. Claim ports, share status, avoid conflicts.
 - **MCP-First Architecture** — 100+ tools exposed via Model Context Protocol. Agents discover what they need.
 
 ## MCP-First Architecture
@@ -236,7 +237,7 @@ The Fulcrum plugin enables seamless integration:
 - **Automatic Status Sync** — Task moves to "In Review" when Claude stops, "In Progress" when you respond
 - **Session Continuity** — Sessions tied to task IDs
 - **MCP Server** — Task management tools available directly to Claude
-- **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`
+- **Slash Commands** — `/review`, `/pr`, `/notify`, `/linear`, `/task-info`, `/board`
 
 ```bash
 claude plugin marketplace add knowsuchagency/fulcrum
@@ -272,6 +273,7 @@ Both plugins include an MCP server with 100+ tools:
 | **Gmail** | List Google accounts, manage Gmail drafts, send emails |
 | **Jobs** | List, create, update, delete, enable/disable, and run systemd timers and launchd jobs |
 | **Assistant** | Send messages via channels (WhatsApp, Discord, Telegram, Slack, Gmail); query sweep history |
+| **Agent Coordination** | Read/post to coordination board; claim and check shared resources (ports, services) |
 
 Use `search_tools` to discover available tools by keyword or category.
 
@@ -353,10 +355,8 @@ fulcrum down                      # Stop server
 fulcrum status                    # Check server status
 fulcrum doctor                    # Check all dependencies
 fulcrum mcp                       # Start MCP server (stdio)
-fulcrum api tools                 # Compact tool reference (~2K tokens)
-fulcrum api tasks list --search bug  # Resource/action syntax
-fulcrum api GET /api/tasks        # Raw HTTP mode (backward compat)
-fulcrum api routes                # List API routes by category
+fulcrum board read                # Read agent coordination board
+fulcrum board post "msg" --type claim --tag port:5173  # Claim a resource
 ```
 
 ### Current Task (auto-detected from worktree)
@@ -377,6 +377,17 @@ fulcrum claude install            # Install Claude Code plugin + MCP server
 fulcrum claude uninstall          # Remove plugin + MCP server
 fulcrum opencode install          # Install OpenCode plugin + MCP server
 fulcrum opencode uninstall        # Remove plugin + MCP server
+```
+
+### Agent Coordination
+
+```bash
+fulcrum board read                # Read recent messages (last 1h)
+fulcrum board read --type claim   # Filter by type
+fulcrum board post "msg" --type claim --tag port:5173  # Claim a resource
+fulcrum board check port:5173     # Check if resource is claimed
+fulcrum board release-all         # Release all your claims
+fulcrum board clean               # Remove expired messages
 ```
 
 ### Notifications
