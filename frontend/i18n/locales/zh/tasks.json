@@ -18,6 +18,15 @@
     "clear": "清除筛选",
     "showLabels": "显示任务类型标签"
   },
+  "priorityFilter": {
+    "label": "优先级",
+    "priorities": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    },
+    "clear": "清除筛选"
+  },
   "newTask": "新建任务",
   "priority": {
     "high": "高",

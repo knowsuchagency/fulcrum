@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -17,11 +17,24 @@ export function BrowserPreview({ taskId }: BrowserPreviewProps) {
   const { url, setUrl } = useBrowserUrl(taskId)
   const [inputValue, setInputValue] = useState(url)
   const [key, setKey] = useState(0)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Sync input value when URL changes (e.g., on initial load)
   useEffect(() => {
     setInputValue(url)
   }, [url])
+
+  const handleIframeLoad = useCallback(() => {
+    try {
+      const href = iframeRef.current?.contentWindow?.location.href
+      if (href && href !== 'about:blank') {
+        setInputValue(href)
+        setUrl(href)
+      }
+    } catch {
+      // Cross-origin iframe — location access is blocked, silently ignore
+    }
+  }, [setUrl])
 
   const handleRefresh = useCallback(() => {
     setKey((k) => k + 1)
@@ -67,11 +80,13 @@ export function BrowserPreview({ taskId }: BrowserPreviewProps) {
       {/* Browser content */}
       <div className="flex-1 overflow-hidden bg-card">
         <iframe
+          ref={iframeRef}
           key={key}
           src={url}
           className="h-full w-full border-0"
           title="Browser Preview"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          onLoad={handleIframeLoad}
         />
       </div>
     </div>

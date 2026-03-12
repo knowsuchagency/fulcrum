@@ -18,6 +18,15 @@
     "clear": "Clear filter",
     "showLabels": "Show task type labels"
   },
+  "priorityFilter": {
+    "label": "Priority",
+    "priorities": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "clear": "Clear filter"
+  },
   "newTask": "New Task",
   "priority": {
     "high": "High",

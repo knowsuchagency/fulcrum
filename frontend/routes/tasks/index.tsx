@@ -12,7 +12,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { TagsFilter } from '@/components/tasks/tags-filter'
 import { ProjectFilter } from '@/components/tasks/project-filter'
 import { TaskTypeFilter } from '@/components/tasks/task-type-filter'
-import type { TaskType } from '../../../shared/types'
+import { PriorityFilter } from '@/components/tasks/priority-filter'
+import type { TaskType, TaskPriority } from '../../../shared/types'
 
 type ViewMode = 'kanban' | 'graph'
 
@@ -20,6 +21,7 @@ interface TasksSearch {
   project?: string // 'inbox' for tasks without project, or project ID
   tags?: string // comma-separated tag names
   types?: string // comma-separated task types (worktree, scratch, manual)
+  priorities?: string // comma-separated priorities (high, medium, low)
   view?: ViewMode
   task?: string // task ID for manual task modal
 }
@@ -30,6 +32,7 @@ export const Route = createFileRoute('/tasks/')({
     project: typeof search.project === 'string' ? search.project : undefined,
     tags: typeof search.tags === 'string' ? search.tags : undefined,
     types: typeof search.types === 'string' ? search.types : undefined,
+    priorities: typeof search.priorities === 'string' ? search.priorities : undefined,
     view: search.view === 'graph' ? 'graph' : undefined,
     task: typeof search.task === 'string' ? search.task : undefined,
   }),
@@ -37,7 +40,7 @@ export const Route = createFileRoute('/tasks/')({
 
 function TasksView() {
   const { t } = useTranslation('tasks')
-  const { project: projectFilter, tags: tagsParam, types: typesParam, view: viewMode = 'kanban', task: selectedTaskId } = Route.useSearch()
+  const { project: projectFilter, tags: tagsParam, types: typesParam, priorities: prioritiesParam, view: viewMode = 'kanban', task: selectedTaskId } = Route.useSearch()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [showTypeLabels, setShowTypeLabels] = useState(false)
@@ -53,6 +56,12 @@ function TasksView() {
     if (!typesParam) return [] as TaskType[]
     return typesParam.split(',').filter(Boolean) as TaskType[]
   }, [typesParam])
+
+  // Parse priorities from URL param (comma-separated)
+  const prioritiesFilter = useMemo(() => {
+    if (!prioritiesParam) return [] as TaskPriority[]
+    return prioritiesParam.split(',').filter(Boolean) as TaskPriority[]
+  }, [prioritiesParam])
 
   const setProjectFilter = useCallback(
     (projectId: string | null) => {
@@ -81,6 +90,17 @@ function TasksView() {
       navigate({
         to: '/tasks',
         search: (prev) => ({ ...prev, types: types.length > 0 ? types.join(',') : undefined }),
+        replace: true,
+      })
+    },
+    [navigate]
+  )
+
+  const setPrioritiesFilter = useCallback(
+    (priorities: TaskPriority[]) => {
+      navigate({
+        to: '/tasks',
+        search: (prev) => ({ ...prev, priorities: priorities.length > 0 ? priorities.join(',') : undefined }),
         replace: true,
       })
     },
@@ -117,6 +137,7 @@ function TasksView() {
           <ProjectFilter value={projectFilter ?? null} onChange={setProjectFilter} />
           <TagsFilter value={tagsFilter} onChange={setTagsFilter} />
           <TaskTypeFilter value={taskTypesFilter} onChange={setTaskTypesFilter} />
+          <PriorityFilter value={prioritiesFilter} onChange={setPrioritiesFilter} />
           <Tooltip>
             <TooltipTrigger>
               <Toggle
@@ -153,9 +174,9 @@ function TasksView() {
       </div>
       <div className="flex-1 overflow-hidden">
         {viewMode === 'kanban' && (
-          <KanbanBoard projectFilter={projectFilter ?? null} searchQuery={searchQuery} tagsFilter={tagsFilter} taskTypesFilter={taskTypesFilter} showTypeLabels={showTypeLabels} selectedTaskId={selectedTaskId} />
+          <KanbanBoard projectFilter={projectFilter ?? null} searchQuery={searchQuery} tagsFilter={tagsFilter} taskTypesFilter={taskTypesFilter} prioritiesFilter={prioritiesFilter} showTypeLabels={showTypeLabels} selectedTaskId={selectedTaskId} />
         )}
-        {viewMode === 'graph' && <TaskDependencyGraph projectFilter={projectFilter ?? null} tagsFilter={tagsFilter} taskTypesFilter={taskTypesFilter} />}
+        {viewMode === 'graph' && <TaskDependencyGraph projectFilter={projectFilter ?? null} tagsFilter={tagsFilter} taskTypesFilter={taskTypesFilter} prioritiesFilter={prioritiesFilter} />}
       </div>
     </div>
   )
