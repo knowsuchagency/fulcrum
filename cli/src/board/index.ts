@@ -9,7 +9,7 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, unlinkSync, renameSync } from 'node:fs'
-import { join, basename } from 'node:path'
+import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { getFulcrumDir } from '../utils/server'
 import type { BoardMessage, PostMessageInput, ReadOptions, MessageType, AgentType } from './types'
