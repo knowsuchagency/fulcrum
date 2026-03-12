@@ -26,6 +26,7 @@ Fulcrum is the Vibe Engineer's Cockpit. A terminal-first tool for orchestrating 
 | dtach, PTY management | [Terminal Architecture](#terminal-architecture) |
 | Log format, locations | [Logging](#logging) |
 | Directory structure | [File Organization](#file-organization) |
+| Agent coordination | [Agent Coordination Board](#agent-coordination-board) |
 
 ## Where to Find Things
 
@@ -101,6 +102,7 @@ fulcrum mcp            # Run as MCP server (stdio transport)
 fulcrum tasks          # List/manage tasks
 fulcrum notifications  # Manage notification settings
 fulcrum notify <title> <message>  # Send notification
+fulcrum board              # Agent coordination board (read/post/check/clean)
 ```
 
 ## Architecture
@@ -330,6 +332,15 @@ JSONL format: `{"ts":"...","lvl":"info","src":"PTYManager","msg":"...","ctx":{..
 # Find errors
 grep '"lvl":"error"' ~/.fulcrum/fulcrum.log | jq
 ```
+
+## Agent Coordination Board
+
+Filesystem-based message board for coordinating multiple AI agents running in separate worktrees. No server dependency — works when the Fulcrum server is down.
+
+- **Directory**: `~/.fulcrum/board/messages/` (one JSON file per message)
+- **CLI**: `fulcrum board` command group (read, post, check, release-all, clean)
+- **MCP tools**: `board_read`, `board_post`, `board_check` (always loaded, not deferred)
+- **Core library**: `cli/src/board/` (types, filesystem operations)
 
 ## File Organization
 

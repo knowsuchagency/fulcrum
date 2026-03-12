@@ -426,7 +426,10 @@ export function TaskTerminal({ taskName, cwd, taskId, className, agent = 'claude
         `When you finish working and need user input, run: fulcrum current-task review${portFlag}. ` +
         `When linking a PR: fulcrum current-task pr <url>${portFlag}. ` +
         `When linking a URL: fulcrum current-task link <url>${portFlag}. ` +
-        `For notifications: fulcrum notify "Title" "Message"${portFlag}.`
+        `For notifications: fulcrum notify "Title" "Message"${portFlag}. ` +
+        'Before claiming shared resources (ports, services), check the agent coordination board: fulcrum board read. ' +
+        'Claim resources before using them: fulcrum board post "message" --type claim --tag port:<N>. ' +
+        'Release resources when done: fulcrum board post "message" --type release --tag port:<N>.'
       const taskInfo = currentDescription ? `${currentTaskName}: ${currentDescription}` : currentTaskName
 
       // Use the agent command builder to construct the appropriate CLI command

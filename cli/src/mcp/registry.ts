@@ -5,7 +5,7 @@
  * Core tools are always loaded; deferred tools are loaded on-demand after search.
  */
 
-export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup' | 'email' | 'messaging' | 'assistant' | 'caldav' | 'memory' | 'jobs'
+export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup' | 'email' | 'messaging' | 'assistant' | 'caldav' | 'memory' | 'jobs' | 'board'
 
 export interface ToolMetadata {
   name: string
@@ -934,6 +934,29 @@ export const toolRegistry: ToolMetadata[] = [
     category: 'jobs',
     keywords: ['job', 'timer', 'run', 'trigger', 'execute', 'now'],
     defer_loading: true,
+  },
+
+  // Board tools - agent coordination, always loaded
+  {
+    name: 'board_read',
+    description: 'Read the agent coordination board for recent messages from other agents',
+    category: 'board',
+    keywords: ['board', 'coordination', 'agent', 'read', 'messages', 'status', 'conflict'],
+    defer_loading: false,
+  },
+  {
+    name: 'board_post',
+    description: 'Post a message to the agent coordination board (claims, status, warnings)',
+    category: 'board',
+    keywords: ['board', 'coordination', 'agent', 'post', 'claim', 'resource', 'port', 'announce'],
+    defer_loading: false,
+  },
+  {
+    name: 'board_check',
+    description: 'Check if a resource is claimed by another agent on the coordination board',
+    category: 'board',
+    keywords: ['board', 'coordination', 'agent', 'check', 'claim', 'resource', 'port', 'conflict'],
+    defer_loading: false,
   },
 ]
 

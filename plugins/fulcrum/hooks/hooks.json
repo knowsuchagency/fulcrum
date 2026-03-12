@@ -5,6 +5,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "fulcrum board release-all 2>/dev/null || true"
+          },
+          {
+            "type": "command",
             "command": "fulcrum current-task review 2>/dev/null || true"
           }
         ]

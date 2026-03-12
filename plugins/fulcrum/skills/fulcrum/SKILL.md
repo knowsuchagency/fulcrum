@@ -138,6 +138,42 @@ fulcrum notify "Task Complete" "Implemented the new feature and created PR #123"
 fulcrum notify "Need Input" "Which approach should I use for the database migration?"
 ```
 
+## Agent Coordination Board
+
+When multiple agents work on the same project in separate worktrees, use the coordination board to avoid conflicts (port collisions, concurrent migrations, etc.).
+
+### When to Use
+
+- **Before starting a dev server** — check if the port is already claimed
+- **Before running database migrations** — check if another agent is migrating
+- **When using shared resources** — claim them first, release when done
+
+### CLI Commands
+
+```bash
+fulcrum board                              # Read recent messages (last 1h)
+fulcrum board read --since 2h              # Custom time window
+fulcrum board read --type claim            # Filter by type
+fulcrum board read --tag port:5173         # Filter by tag
+
+fulcrum board post "Using port 5173" --type claim --tag port:5173
+fulcrum board post "Migration complete" --type info
+
+fulcrum board check port:5173              # Check if resource is claimed
+
+fulcrum board release-all                  # Release all your claims (auto-runs on Stop)
+
+fulcrum board clean                        # Remove expired messages
+fulcrum board clean --all                  # Remove ALL messages
+```
+
+### Best Practices
+
+1. **Always check before claiming** — `fulcrum board check port:<N>` before starting a dev server
+2. **Always release when done** — Post a `release` message or use `fulcrum board release-all`
+3. **Claims auto-expire** — TTL is 2 hours for claims, so crashes won't permanently block resources
+4. **The Stop hook auto-releases** — When your session ends, claims are released automatically
+
 ## Global Options
 
 - `--port=<port>` — Server port (default: 7777)
