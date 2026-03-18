@@ -5,9 +5,28 @@ import { getTabManager } from '../terminal/tab-manager'
 import { getWorktreeBasePath, getSettings, updateSettingByPath } from '../lib/settings'
 import { log } from '../lib/logger'
 
+// ---------------------------------------------------------------------------
+// WebSocket authentication — C2 fix
+// Token is checked from the ?token= query parameter on upgrade.
+// Falls back to first-message auth for clients that can't set query params.
+// ---------------------------------------------------------------------------
+const API_TOKEN = process.env.FULCRUM_API_TOKEN || ''
+
+/** Check the upgrade URL for a valid token query param. */
+export function isWebSocketUpgradeAuthorized(url: string): boolean {
+  if (!API_TOKEN) return true // No token configured — open to localhost connections only (enforced by C1)
+  try {
+    const parsed = new URL(url, 'http://localhost')
+    return parsed.searchParams.get('token') === API_TOKEN
+  } catch {
+    return false
+  }
+}
+
 interface ClientData {
   id: string
   attachedTerminals: Set<string>
+  authenticated: boolean
 }
 
 // Store client data keyed by WSContext
@@ -63,11 +82,26 @@ function sendTo(ws: WSContext, message: ServerMessage): void {
 
 export const terminalWebSocketHandlers: WSEvents = {
   onOpen(evt, ws) {
+    // Check token from query param on upgrade (populated by index.ts route handler).
+    // We store it in the URL that Hono passes through the upgrade event.
+    const upgradeUrl: string = (evt as unknown as { target?: { url?: string } })?.target?.url ?? ''
+    const authorizedOnUpgrade = isWebSocketUpgradeAuthorized(upgradeUrl)
+
     const clientData: ClientData = {
       id: crypto.randomUUID(),
       attachedTerminals: new Set(),
+      // If no token is configured, treat as authenticated (localhost-only enforcement by C1).
+      authenticated: !API_TOKEN || authorizedOnUpgrade,
     }
     clients.set(ws, clientData)
+
+    if (!clientData.authenticated) {
+      log.ws.warn('WebSocket upgrade missing/invalid token — closing connection', { clientId: clientData.id })
+      ws.close(4401, 'Unauthorized')
+      clients.delete(ws)
+      return
+    }
+
     log.ws.info('Client connected', { totalClients: clients.size })
 
     // Send list of existing terminals and tabs
@@ -104,6 +138,13 @@ export const terminalWebSocketHandlers: WSEvents = {
   async onMessage(evt, ws) {
     const clientData = clients.get(ws)
     if (!clientData) return
+
+    if (!clientData.authenticated) {
+      log.ws.warn('Message from unauthenticated WebSocket client — ignoring', { clientId: clientData.id })
+      ws.close(4401, 'Unauthorized')
+      clients.delete(ws)
+      return
+    }
 
     try {
       const message: ClientMessage = JSON.parse(

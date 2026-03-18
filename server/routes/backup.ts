@@ -185,7 +185,16 @@ app.get('/:name', (c) => {
 })
 
 // POST /api/backup/:name/restore - Restore from a specific backup
+// Requires the confirmation header X-Confirm-Backup: true to prevent accidental restores.
 app.post('/:name/restore', async (c) => {
+  // C3 defense-in-depth: require explicit confirmation header for destructive restore
+  if (c.req.header('X-Confirm-Backup') !== 'true') {
+    return c.json(
+      { error: 'Restore requires X-Confirm-Backup: true header to prevent accidental data loss' },
+      400
+    )
+  }
+
   const name = c.req.param('name')
   const backupPath = path.join(getBackupsDir(), name)
   const manifestPath = path.join(backupPath, 'manifest.json')

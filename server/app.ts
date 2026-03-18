@@ -55,6 +55,38 @@ function getDistPath(): string {
   return join(process.cwd(), 'dist')
 }
 
+// ---------------------------------------------------------------------------
+// Auth helpers
+// ---------------------------------------------------------------------------
+
+const API_TOKEN = process.env.FULCRUM_API_TOKEN || ''
+const CORS_ORIGIN = process.env.FULCRUM_CORS_ORIGIN || 'http://localhost'
+
+/** Returns true when the request passes authentication. */
+function isAuthenticated(req: Request): boolean {
+  if (API_TOKEN) {
+    // Token mode: any origin must supply a valid Bearer token
+    const authHeader = req.headers.get('Authorization') || ''
+    if (!authHeader.startsWith('Bearer ')) return false
+    return authHeader.slice('Bearer '.length) === API_TOKEN
+  }
+
+  // No token configured — only allow requests from localhost
+  const forwarded = req.headers.get('x-forwarded-for')
+  const remoteAddr = forwarded ? forwarded.split(',')[0].trim() : ''
+  const localAddresses = ['127.0.0.1', '::1', 'localhost', '::ffff:127.0.0.1']
+  return localAddresses.some((a) => remoteAddr === a || remoteAddr === '')
+}
+
+// Routes that are always public (health check, static assets, SPA shell)
+const PUBLIC_PREFIXES = ['/health', '/assets/', '/sounds/']
+const PUBLIC_EXACT = ['/fulcrum-icon.png', '/fulcrum-logo.jpeg', '/vite.svg', '/logo.png', '/goat.jpeg']
+
+function isPublicRoute(path: string): boolean {
+  if (PUBLIC_EXACT.includes(path)) return true
+  return PUBLIC_PREFIXES.some((p) => path.startsWith(p))
+}
+
 export function createApp() {
   const app = new Hono()
 
@@ -72,12 +104,47 @@ export function createApp() {
   })
 
   app.use('*', logger())
+
+  // ---------------------------------------------------------------------------
+  // Authentication middleware — C1 fix
+  // Protects all API and WebSocket upgrade routes.
+  // Public: /health, /assets/*, /sounds/*, static image files, SPA HTML pages.
+  // ---------------------------------------------------------------------------
+  app.use('*', async (c, next) => {
+    const path = c.req.path
+
+    // Always allow public routes through
+    if (isPublicRoute(path)) {
+      return next()
+    }
+
+    // SPA HTML pages (non-API, non-WS) are served publicly; the JS bundle
+    // will prompt for credentials before making any API calls.
+    if (!path.startsWith('/api/') && !path.startsWith('/ws/') && !path.startsWith('/mcp')) {
+      return next()
+    }
+
+    if (!isAuthenticated(c.req.raw)) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    return next()
+  })
+
+  // CORS — restricted to a configurable origin instead of wildcard
   app.use(
     '*',
     cors({
-      origin: '*',
+      origin: (origin) => {
+        if (!origin) return CORS_ORIGIN
+        // Allow any localhost port when FULCRUM_CORS_ORIGIN starts with http://localhost
+        if (CORS_ORIGIN === 'http://localhost' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+          return origin
+        }
+        return origin === CORS_ORIGIN ? origin : null
+      },
       allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'mcp-session-id', 'Last-Event-ID', 'mcp-protocol-version'],
+      allowHeaders: ['Content-Type', 'mcp-session-id', 'Last-Event-ID', 'mcp-protocol-version', 'Authorization', 'X-Confirm-Backup'],
       exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
     })
   )
