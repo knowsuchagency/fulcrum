@@ -613,7 +613,7 @@ install_cloudflared() {
 install_fulcrum() {
     print_step "Installing fulcrum..."
 
-    if bun install -g fulcrum@latest; then
+    if bun install -g @knowsuchagency/fulcrum@latest; then
         print_success "fulcrum installed"
     else
         print_error "Failed to install fulcrum"
