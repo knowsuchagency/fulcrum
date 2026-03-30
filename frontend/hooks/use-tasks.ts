@@ -94,6 +94,7 @@ export function useUpdateTaskStatus() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies'] })
     },
   })
 }
@@ -116,6 +117,7 @@ export function useUpdateTask() {
     onSuccess: (_, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['tasks', taskId] })
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies'] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })

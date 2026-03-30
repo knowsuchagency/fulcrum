@@ -70,7 +70,7 @@ export interface FilesViewState {
 }
 
 export interface ViewState {
-  activeTab: 'diff' | 'browser' | 'files' | 'details'
+  activeTab: 'diff' | 'browser' | 'files' | 'details' | 'terminal'
   browserUrl: string
   diffOptions: DiffOptions
   filesViewState: FilesViewState

@@ -23,6 +23,7 @@ import { useTerminalWS } from '@/hooks/use-terminal-ws'
 import { useStore } from '@/stores'
 import { buildEditorUrl, openExternalUrl } from '@/lib/editor-url'
 import { TaskTerminal } from '@/components/terminal/task-terminal'
+import { TaskShellTerminal } from '@/components/terminal/task-shell-terminal'
 import { DiffViewer } from '@/components/viewer/diff-viewer'
 import { BrowserPreview } from '@/components/viewer/browser-preview'
 import { FilesViewer } from '@/components/viewer/files-viewer'
@@ -51,6 +52,7 @@ import {
   File01Icon,
   SourceCodeCircleIcon,
   Loading03Icon,
+  CommandLineIcon,
 } from '@hugeicons/core-free-icons'
 import type { TaskLinkType } from '@/types'
 import { DeleteTaskDialog } from '@/components/delete-task-dialog'
@@ -66,7 +68,7 @@ import {
 import type { TaskStatus } from '@/types'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 
-type TabType = 'diff' | 'browser' | 'files' | 'details'
+type TabType = 'diff' | 'browser' | 'files' | 'details' | 'terminal'
 
 interface TaskViewSearch {
   tab?: TabType
@@ -76,7 +78,7 @@ interface TaskViewSearch {
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskView,
   validateSearch: (search: Record<string, unknown>): TaskViewSearch => ({
-    tab: ['diff', 'browser', 'files', 'details'].includes(search.tab as string)
+    tab: ['diff', 'browser', 'files', 'details', 'terminal'].includes(search.tab as string)
       ? (search.tab as TabType)
       : undefined,
     file: typeof search.file === 'string' ? search.file : undefined,
@@ -1014,6 +1016,10 @@ function TaskView() {
                     <HugeiconsIcon icon={More03Icon} size={14} strokeWidth={2} data-slot="icon" />
                     Details
                   </TabsTrigger>
+                  <TabsTrigger value="terminal">
+                    <HugeiconsIcon icon={CommandLineIcon} size={14} strokeWidth={2} data-slot="icon" />
+                    Terminal
+                  </TabsTrigger>
                 </TabsList>
                 {!isScratchTask && <GitStatusBadge worktreePath={task.worktreePath} />}
               </div>
@@ -1038,6 +1044,10 @@ function TaskView() {
 
               <TabsContent value="details" className="flex-1 overflow-hidden">
                 <TaskDetailsPanel task={task} />
+              </TabsContent>
+
+              <TabsContent value="terminal" className="flex-1 overflow-hidden">
+                <TaskShellTerminal taskId={task.id} taskName={task.title} cwd={task.worktreePath} />
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -1107,6 +1117,15 @@ function TaskView() {
                     />
                     Details
                   </TabsTrigger>
+                  <TabsTrigger value="terminal">
+                    <HugeiconsIcon
+                      icon={CommandLineIcon}
+                      size={14}
+                      strokeWidth={2}
+                      data-slot="icon"
+                    />
+                    Terminal
+                  </TabsTrigger>
                 </TabsList>
                 {!isScratchTask && <GitStatusBadge worktreePath={task.worktreePath} />}
               </div>
@@ -1131,6 +1150,10 @@ function TaskView() {
 
               <TabsContent value="details" className="flex-1 overflow-hidden">
                 <TaskDetailsPanel task={task} />
+              </TabsContent>
+
+              <TabsContent value="terminal" className="flex-1 overflow-hidden">
+                <TaskShellTerminal taskId={task.id} taskName={task.title} cwd={task.worktreePath} />
               </TabsContent>
             </Tabs>
           </ResizablePanel>
