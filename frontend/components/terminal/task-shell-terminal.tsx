@@ -9,6 +9,9 @@ import { MobileTerminalControls } from './mobile-terminal-controls'
 import { useTheme } from 'next-themes'
 import { log } from '@/lib/logger'
 
+/** Prefix used for synthetic tabIds assigned to task shell terminals */
+export const TASK_SHELL_TAB_PREFIX = 'task-shell:'
+
 interface TaskShellTerminalProps {
   taskId: string
   taskName: string
@@ -23,7 +26,7 @@ interface TaskShellTerminalProps {
  * duplicate-cwd detection (which only applies to terminals without a tabId).
  */
 export function TaskShellTerminal({ taskId, taskName, cwd, className }: TaskShellTerminalProps) {
-  const shellTabId = `task-shell:${taskId}`
+  const shellTabId = `${TASK_SHELL_TAB_PREFIX}${taskId}`
   const [terminalId, setTerminalId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const xtermRef = useRef<XTerm | null>(null)

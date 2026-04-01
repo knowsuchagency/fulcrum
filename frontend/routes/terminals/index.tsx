@@ -26,6 +26,7 @@ import type { Terminal as XTerm } from '@xterm/xterm'
 import type { TerminalTab, TaskStatus } from '@/types'
 import type { TerminalInfo } from '@/hooks/use-terminal-ws'
 import { log } from '@/lib/logger'
+import { TASK_SHELL_TAB_PREFIX } from '@/components/terminal/task-shell-terminal'
 
 /**
  * Convert MST terminal to TerminalInfo for backward compatibility with components
@@ -532,8 +533,9 @@ const TerminalsView = observer(function TerminalsView() {
   const visibleTerminals = useMemo(() => {
     if (activeTabId === ALL_TASKS_TAB_ID) {
       // Show terminals for active tasks, sorted by newest task first, with optional project filter
+      // Exclude task shell terminals (secondary terminals from task detail right panel)
       return terminals
-        .filter((t) => t.cwd && activeTaskWorktrees.has(t.cwd))
+        .filter((t) => t.cwd && activeTaskWorktrees.has(t.cwd) && !t.tabId?.startsWith(TASK_SHELL_TAB_PREFIX))
         .filter((t) => {
           // If no filter selected, show all (default behavior)
           if (!selectedTaskProjectId) return true
@@ -650,7 +652,8 @@ const TerminalsView = observer(function TerminalsView() {
 
     for (const terminal of terminals) {
       const isTaskTerminal = terminal.cwd && allTaskWorktrees.has(terminal.cwd)
-      if (isTaskTerminal && terminal.tabId) {
+      // Skip task shell terminals - they use a synthetic tabId and should keep it
+      if (isTaskTerminal && terminal.tabId && !terminal.tabId.startsWith(TASK_SHELL_TAB_PREFIX)) {
         log.terminalsView.debug('Removing task terminal from regular tab', {
           terminalId: terminal.id,
           name: terminal.name,

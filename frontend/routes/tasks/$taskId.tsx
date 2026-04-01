@@ -1012,13 +1012,13 @@ function TaskView() {
                     <HugeiconsIcon icon={Folder01Icon} size={14} strokeWidth={2} data-slot="icon" />
                     Files
                   </TabsTrigger>
-                  <TabsTrigger value="details">
-                    <HugeiconsIcon icon={More03Icon} size={14} strokeWidth={2} data-slot="icon" />
-                    Details
-                  </TabsTrigger>
                   <TabsTrigger value="terminal">
                     <HugeiconsIcon icon={CommandLineIcon} size={14} strokeWidth={2} data-slot="icon" />
                     Terminal
+                  </TabsTrigger>
+                  <TabsTrigger value="details">
+                    <HugeiconsIcon icon={More03Icon} size={14} strokeWidth={2} data-slot="icon" />
+                    Details
                   </TabsTrigger>
                 </TabsList>
                 {!isScratchTask && <GitStatusBadge worktreePath={task.worktreePath} />}
@@ -1042,12 +1042,12 @@ function TaskView() {
                 />
               </TabsContent>
 
-              <TabsContent value="details" className="flex-1 overflow-hidden">
-                <TaskDetailsPanel task={task} />
-              </TabsContent>
-
               <TabsContent value="terminal" className="flex-1 overflow-hidden">
                 <TaskShellTerminal taskId={task.id} taskName={task.title} cwd={task.worktreePath} />
+              </TabsContent>
+
+              <TabsContent value="details" className="flex-1 overflow-hidden">
+                <TaskDetailsPanel task={task} />
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -1108,15 +1108,6 @@ function TaskView() {
                     />
                     Files
                   </TabsTrigger>
-                  <TabsTrigger value="details">
-                    <HugeiconsIcon
-                      icon={More03Icon}
-                      size={14}
-                      strokeWidth={2}
-                      data-slot="icon"
-                    />
-                    Details
-                  </TabsTrigger>
                   <TabsTrigger value="terminal">
                     <HugeiconsIcon
                       icon={CommandLineIcon}
@@ -1125,6 +1116,15 @@ function TaskView() {
                       data-slot="icon"
                     />
                     Terminal
+                  </TabsTrigger>
+                  <TabsTrigger value="details">
+                    <HugeiconsIcon
+                      icon={More03Icon}
+                      size={14}
+                      strokeWidth={2}
+                      data-slot="icon"
+                    />
+                    Details
                   </TabsTrigger>
                 </TabsList>
                 {!isScratchTask && <GitStatusBadge worktreePath={task.worktreePath} />}
@@ -1148,12 +1148,12 @@ function TaskView() {
                 />
               </TabsContent>
 
-              <TabsContent value="details" className="flex-1 overflow-hidden">
-                <TaskDetailsPanel task={task} />
-              </TabsContent>
-
               <TabsContent value="terminal" className="flex-1 overflow-hidden">
                 <TaskShellTerminal taskId={task.id} taskName={task.title} cwd={task.worktreePath} />
+              </TabsContent>
+
+              <TabsContent value="details" className="flex-1 overflow-hidden">
+                <TaskDetailsPanel task={task} />
               </TabsContent>
             </Tabs>
           </ResizablePanel>
