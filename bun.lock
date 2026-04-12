@@ -5,7 +5,7 @@
     "": {
       "name": "vite-app",
       "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "0.2.101",
+        "@anthropic-ai/claude-agent-sdk": "0.2.104",
         "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
         "@atlaskit/pragmatic-drag-and-drop-hitbox": "^1.1.0",
         "@azurity/pure-nerd-font": "^3.0.5",
@@ -102,7 +102,7 @@
   "packages": {
     "@antfu/ni": ["@antfu/ni@25.0.0", "", { "dependencies": { "ansis": "^4.0.0", "fzf": "^0.5.2", "package-manager-detector": "^1.3.0", "tinyexec": "^1.0.1" }, "bin": { "na": "bin/na.mjs", "ni": "bin/ni.mjs", "nr": "bin/nr.mjs", "nci": "bin/nci.mjs", "nlx": "bin/nlx.mjs", "nun": "bin/nun.mjs", "nup": "bin/nup.mjs" } }, "sha512-9q/yCljni37pkMr4sPrI3G4jqdIk074+iukc5aFJl7kmDCCsiJrbZ6zKxnES1Gwg+i9RcDZwvktl23puGslmvA=="],
 
-    "@anthropic-ai/claude-agent-sdk": ["@anthropic-ai/claude-agent-sdk@0.2.101", "", { "dependencies": { "@anthropic-ai/sdk": "^0.81.0", "@modelcontextprotocol/sdk": "^1.29.0" }, "optionalDependencies": { "@img/sharp-darwin-arm64": "^0.34.2", "@img/sharp-darwin-x64": "^0.34.2", "@img/sharp-linux-arm": "^0.34.2", "@img/sharp-linux-arm64": "^0.34.2", "@img/sharp-linux-x64": "^0.34.2", "@img/sharp-linuxmusl-arm64": "^0.34.2", "@img/sharp-linuxmusl-x64": "^0.34.2", "@img/sharp-win32-arm64": "^0.34.2", "@img/sharp-win32-x64": "^0.34.2" }, "peerDependencies": { "zod": "^4.0.0" } }, "sha512-LwDQ6ueXnd1EVJbP0XICUO5en4FYJ8Cv/98/+RofoRr4l1cdAdYn1/n758DrTeGkMvTqb4lbdyMNs0RnT7mtoA=="],
+    "@anthropic-ai/claude-agent-sdk": ["@anthropic-ai/claude-agent-sdk@0.2.104", "", { "dependencies": { "@anthropic-ai/sdk": "^0.81.0", "@modelcontextprotocol/sdk": "^1.29.0" }, "optionalDependencies": { "@img/sharp-darwin-arm64": "^0.34.2", "@img/sharp-darwin-x64": "^0.34.2", "@img/sharp-linux-arm": "^0.34.2", "@img/sharp-linux-arm64": "^0.34.2", "@img/sharp-linux-x64": "^0.34.2", "@img/sharp-linuxmusl-arm64": "^0.34.2", "@img/sharp-linuxmusl-x64": "^0.34.2", "@img/sharp-win32-arm64": "^0.34.2", "@img/sharp-win32-x64": "^0.34.2" }, "peerDependencies": { "zod": "^4.0.0" } }, "sha512-lVm+nS79r6WWlDnv5AgRzTtAlbP8O6M6kkWmDZAWE3nt9agmngxls9frJFvH55uzws2+6l0yyup/JYspfijkzw=="],
 
     "@anthropic-ai/sdk": ["@anthropic-ai/sdk@0.81.0", "", { "dependencies": { "json-schema-to-ts": "^3.1.1" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["zod"], "bin": { "anthropic-ai-sdk": "bin/cli" } }, "sha512-D4K5PvEV6wPiRtVlVsJHIUhHAmOZ6IT/I9rKlTf84gR7GyyAurPJK7z9BOf/AZqC5d1DhYQGJNKRmV+q8dGhgw=="],
 
