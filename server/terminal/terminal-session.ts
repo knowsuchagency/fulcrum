@@ -123,6 +123,9 @@ export class TerminalSession {
           NODE_ENV: '',
           PORT: '',
           FNOX_AGE_KEY_FILE: '',
+          // Pre-trust this worktree's mise config so the shell hook doesn't
+          // prompt at startup and race with our scripted startup commands.
+          MISE_TRUSTED_CONFIG_PATHS: this.cwd,
           // Inject Fulcrum URL so CLI tools (like the plugin) can find the server
           // This is critical when running on non-default ports (e.g. dev mode on 8888)
           // Use localhost to support both IPv4 and IPv6 (Bun defaults to IPv6 on macOS)
@@ -214,6 +217,7 @@ export class TerminalSession {
           NODE_ENV: '',
           PORT: '',
           FNOX_AGE_KEY_FILE: '',
+          MISE_TRUSTED_CONFIG_PATHS: this.cwd,
         },
       })
 
