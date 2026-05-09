@@ -376,4 +376,76 @@ describe('Git Routes', () => {
       expect(res.status).toBe(400)
     })
   })
+
+  describe('POST /api/git/merge-to-main', () => {
+    test('squash-merges into local branch when baseBranch is a remote ref', async () => {
+      // Set up: parent repo with an "origin" remote pointing at a bare clone.
+      // Worktree branched off origin/<default> with a new commit.
+      const barePath = mkdtempSync(join(tmpdir(), 'fulcrum-bare-'))
+      rmSync(barePath, { recursive: true })
+      const wt = createTestWorktree(repo, 'feature-merge')
+
+      try {
+        execSync(`git clone --bare "${repo.path}" "${barePath}"`, { encoding: 'utf-8' })
+        repo.git(`remote add origin "${barePath}"`)
+        repo.git('fetch origin')
+
+        // Capture the parent repo's default-branch tip before the merge so we
+        // can assert the squash commit landed on it.
+        const parentTipBefore = repo.git(`rev-parse ${repo.defaultBranch}`)
+
+        // Create a real change in the worktree so the squash merge has
+        // something to commit.
+        const gitEnv = {
+          ...process.env,
+          GIT_COMMITTER_NAME: 'Fulcrum Test',
+          GIT_COMMITTER_EMAIL: 'test@fulcrum.test',
+          GIT_AUTHOR_NAME: 'Fulcrum Test',
+          GIT_AUTHOR_EMAIL: 'test@fulcrum.test',
+        }
+        execSync('git config user.email "test@fulcrum.test"', { cwd: wt.path, env: gitEnv })
+        execSync('git config user.name "Fulcrum Test"', { cwd: wt.path, env: gitEnv })
+        execSync('git config commit.gpgsign false', { cwd: wt.path, env: gitEnv })
+        execSync('echo "feature work" > feature.txt', { cwd: wt.path, env: gitEnv, shell: '/bin/sh' })
+        execSync('git add feature.txt', { cwd: wt.path, env: gitEnv })
+        execSync('git commit -m "feature commit"', {
+          cwd: wt.path,
+          encoding: 'utf-8',
+          env: gitEnv,
+        })
+
+        const { post } = createTestApp()
+        const res = await post('/api/git/merge-to-main', {
+          repoPath: repo.path,
+          worktreePath: wt.path,
+          baseBranch: `origin/${repo.defaultBranch}`,
+        })
+        const body = await res.json()
+
+        expect(res.status).toBe(200)
+        expect(body.success).toBe(true)
+        // The endpoint should report the resolved local branch, not the remote
+        // ref it was given.
+        expect(body.baseBranch).toBe(repo.defaultBranch)
+
+        // The squash commit should have advanced the local default branch.
+        // Before the fix, the merge committed onto a detached HEAD and the
+        // local branch tip stayed at parentTipBefore.
+        const parentTipAfter = repo.git(`rev-parse ${repo.defaultBranch}`)
+        expect(parentTipAfter).not.toBe(parentTipBefore)
+
+        // The new tip's first-parent log should include the squash commit
+        // reachable from the local default branch.
+        const log = repo.git(`log ${repo.defaultBranch} --oneline`)
+        expect(log).toContain('feature commit')
+
+        // And the parent repo should be back on its original branch (not
+        // detached HEAD pointing at origin/<default>).
+        expect(repo.getCurrentBranch()).toBe(repo.defaultBranch)
+      } finally {
+        wt.cleanup()
+        rmSync(barePath, { recursive: true, force: true })
+      }
+    })
+  })
 })

@@ -51,20 +51,21 @@ export function extractRepoNameFromUrl(url: string): string {
 }
 
 /**
- * If baseBranch looks like a remote ref (e.g. "origin/develop"),
- * fetch the branch from the remote so the local tracking ref is up-to-date.
- * Best-effort: silently catches all errors.
+ * Parse a branch name into remote + local-name parts if it looks like a remote
+ * tracking ref (e.g. "origin/develop"). Returns null if it's a plain local
+ * name or the prefix isn't a configured remote in the given repo.
  */
-export function fetchIfRemoteRef(repoPath: string, baseBranch: string): void {
-  // Must contain at least one slash to be a potential remote ref
+function parseRemoteRef(
+  repoPath: string,
+  baseBranch: string,
+): { remoteName: string; branchName: string } | null {
   const slashIndex = baseBranch.indexOf('/')
-  if (slashIndex <= 0) return
+  if (slashIndex <= 0) return null
 
   const remoteName = baseBranch.slice(0, slashIndex)
   const branchName = baseBranch.slice(slashIndex + 1)
-  if (!branchName) return
+  if (!branchName) return null
 
-  // Validate that remoteName is an actual configured remote
   try {
     const remotes = execSync('git remote', {
       cwd: repoPath,
@@ -76,20 +77,118 @@ export function fetchIfRemoteRef(repoPath: string, baseBranch: string): void {
       .map((r) => r.trim())
       .filter(Boolean)
 
-    if (!remotes.includes(remoteName)) return
+    if (!remotes.includes(remoteName)) return null
   } catch {
-    return
+    return null
   }
+
+  return { remoteName, branchName }
+}
+
+/**
+ * If baseBranch looks like a remote ref (e.g. "origin/develop"),
+ * fetch the branch from the remote so the local tracking ref is up-to-date.
+ * Best-effort: silently catches all errors.
+ */
+export function fetchIfRemoteRef(repoPath: string, baseBranch: string): void {
+  const parsed = parseRemoteRef(repoPath, baseBranch)
+  if (!parsed) return
 
   // Fetch the specific branch from the remote
   try {
-    execSync(`git fetch ${remoteName} ${branchName}`, {
+    execSync(`git fetch ${parsed.remoteName} ${parsed.branchName}`, {
       cwd: repoPath,
       encoding: 'utf-8',
       timeout: 30_000,
     })
   } catch {
     // Best-effort: proceed with stale ref if fetch fails
+  }
+}
+
+/**
+ * Resolve a (possibly remote) base ref like "origin/main" to a local branch
+ * name suitable for `git checkout`. When given a remote ref:
+ *   1. Fetches the remote branch.
+ *   2. Fast-forwards the existing local branch to the remote tip
+ *      (skipped if the local branch is currently checked out, or if it has
+ *      diverged from the remote).
+ *   3. If no local branch exists, creates one tracking the remote ref.
+ * For plain local refs, returns the input unchanged.
+ *
+ * Returns the local branch name to use, or null if `baseBranch` is a remote
+ * ref that could not be resolved to a usable local branch.
+ */
+export function resolveLocalBranch(repoPath: string, baseBranch: string): string | null {
+  const parsed = parseRemoteRef(repoPath, baseBranch)
+  if (!parsed) {
+    // Plain local ref — caller verifies existence via downstream commands.
+    return baseBranch
+  }
+
+  const { remoteName, branchName } = parsed
+
+  // Fetch latest from remote so subsequent ref operations see current tip.
+  fetchIfRemoteRef(repoPath, baseBranch)
+
+  // Determine current branch so we don't try to overwrite the checked-out ref.
+  let currentBranch = ''
+  try {
+    currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
+      cwd: repoPath,
+      encoding: 'utf-8',
+      timeout: 10_000,
+    }).trim()
+  } catch {
+    // ignore
+  }
+
+  // Does the local branch already exist?
+  let localExists = false
+  try {
+    execSync(`git rev-parse --verify ${branchName}`, {
+      cwd: repoPath,
+      encoding: 'utf-8',
+      timeout: 10_000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    localExists = true
+  } catch {
+    localExists = false
+  }
+
+  if (localExists) {
+    // Fast-forward the local branch to the remote tip if possible.
+    // `git fetch <remote> <branch>:<branch>` performs a non-checked-out FF
+    // update and refuses on non-FF (which is what we want — we'd rather
+    // surface a divergent local branch than silently overwrite it).
+    if (currentBranch !== branchName) {
+      try {
+        execSync(`git fetch ${remoteName} ${branchName}:${branchName}`, {
+          cwd: repoPath,
+          encoding: 'utf-8',
+          timeout: 30_000,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
+      } catch {
+        // Non-FF or other issue; leave the local branch as-is and let the
+        // caller proceed against the existing tip.
+      }
+    }
+    return branchName
+  }
+
+  // No local branch yet — create one tracking the remote ref.
+  try {
+    execSync(`git branch ${branchName} ${baseBranch}`, {
+      cwd: repoPath,
+      encoding: 'utf-8',
+      timeout: 10_000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    return branchName
+  } catch {
+    return null
   }
 }
 

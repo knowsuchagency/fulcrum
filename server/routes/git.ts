@@ -4,7 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import { triggerAutoDeployForRepo } from '../services/git-watcher'
-import { fetchIfRemoteRef } from '../lib/git-utils'
+import { fetchIfRemoteRef, resolveLocalBranch } from '../lib/git-utils'
 
 // Execute git command and return output
 function gitExec(cwd: string, args: string, timeoutMs = 30_000): string {
@@ -753,8 +753,16 @@ app.post('/merge-to-main', async (c) => {
       return c.json(dirtyCheck, 409)
     }
 
-    // Detect default branch
-    const defaultBranch = getDefaultBranch(repoPath, baseBranch)
+    // Detect default branch, resolving remote refs (e.g. "origin/main") to a
+    // local branch we can check out. Without this, `git checkout origin/main`
+    // would land in detached HEAD and the squash commit would be discarded.
+    const rawDefaultBranch = getDefaultBranch(repoPath, baseBranch)
+    const defaultBranch = resolveLocalBranch(repoPath, rawDefaultBranch)
+    if (!defaultBranch) {
+      return c.json({
+        error: `Could not resolve ${rawDefaultBranch} to a local branch. Create or check out a local branch tracking ${rawDefaultBranch} and try again.`,
+      }, 400)
+    }
 
     // Save current branch in parent repo
     let originalBranch: string
@@ -885,8 +893,15 @@ app.post('/sync-parent', async (c) => {
       return c.json({ error: 'Repository path does not exist' }, 404)
     }
 
-    // Get default branch
-    const defaultBranch = getDefaultBranch(repoPath, baseBranch)
+    // Get default branch, resolving remote refs (e.g. "origin/main") to a
+    // local branch we can check out and pull into.
+    const rawDefaultBranch = getDefaultBranch(repoPath, baseBranch)
+    const defaultBranch = resolveLocalBranch(repoPath, rawDefaultBranch)
+    if (!defaultBranch) {
+      return c.json({
+        error: `Could not resolve ${rawDefaultBranch} to a local branch. Create or check out a local branch tracking ${rawDefaultBranch} and try again.`,
+      }, 400)
+    }
 
     // Save current branch
     let originalBranch: string
